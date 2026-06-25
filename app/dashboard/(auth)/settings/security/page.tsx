@@ -3,14 +3,14 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  KeyRound,
-  CheckCircle2,
-  AlertCircle,
-  X,
-  Loader2,
-  Smartphone,
-  ShieldCheck,
+import { 
+  KeyRound, 
+  CheckCircle2, 
+  AlertCircle, 
+  X, 
+  Loader2, 
+  Smartphone, 
+  ShieldCheck, 
   Laptop,
   Check
 } from "lucide-react";
@@ -26,7 +26,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 // Impor klien Supabase & Global Language Hook
@@ -63,8 +63,7 @@ const securityTranslations = {
     tfa: {
       title: "Two-factor authentication",
       desc: "Add an extra layer of security to your account.",
-      warning:
-        "Password required. Set a password before enabling two-factor authentication. Your password is required to verify changes to this security setting.",
+      warning: "Password required. Set a password before enabling two-factor authentication. Your password is required to verify changes to this security setting.",
       btn: "Enable two-factor authentication"
     },
     sessions: {
@@ -95,8 +94,7 @@ const securityTranslations = {
     tfa: {
       title: "Autentikasi dua faktor (2FA)",
       desc: "Tambahkan lapisan keamanan ekstra ke akun Anda.",
-      warning:
-        "Membutuhkan kata sandi. Setel kata sandi terlebih dahulu sebelum mengaktifkan autentikasi dua faktor. Kata sandi diperlukan untuk memverifikasi perubahan.",
+      warning: "Membutuhkan kata sandi. Setel kata sandi terlebih dahulu sebelum mengaktifkan autentikasi dua faktor. Kata sandi diperlukan untuk memverifikasi perubahan.",
       btn: "Aktifkan autentikasi dua faktor"
     },
     sessions: {
@@ -111,7 +109,7 @@ const securityTranslations = {
 export default function AccountSecuritySettings() {
   const router = useRouter();
   const { language } = useLanguage();
-
+  
   // Membaca kamus terjemahan aktif
   const t = securityTranslations[language] || securityTranslations["English"];
 
@@ -135,10 +133,7 @@ export default function AccountSecuritySettings() {
     const loadSecurityData = async () => {
       setIsLoading(true);
       try {
-        const {
-          data: { user },
-          error
-        } = await supabase.auth.getUser();
+        const { data: { user }, error } = await supabase.auth.getUser();
         if (error || !user) {
           router.push("/dashboard/login/v2");
           return;
@@ -146,6 +141,7 @@ export default function AccountSecuritySettings() {
 
         setEmail(user.email || "");
         setProviders(user.app_metadata?.providers || []);
+
       } catch (err) {
         console.error("Gagal memuat data keamanan:", err);
       } finally {
@@ -174,17 +170,16 @@ export default function AccountSecuritySettings() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/dashboard/forgot-password` // Ganti ke URL reset password Anda jika ada
+        redirectTo: `${window.location.origin}/dashboard/forgot-password`, // Ganti ke URL reset password Anda jika ada
       });
 
       if (error) throw error;
 
       setAlertMessage({
         title: language === "English" ? "Email Sent" : "Email Terkirim",
-        description:
-          language === "English"
-            ? "We have sent a password reset link to your email."
-            : "Kami telah sukses mengirimkan tautan penyetelan kata sandi baru ke inbox email Anda.",
+        description: language === "English" 
+          ? "We have sent a password reset link to your email." 
+          : "Kami telah sukses mengirimkan tautan penyetelan kata sandi baru ke inbox email Anda.",
         variant: "default"
       });
     } catch (e: any) {
@@ -210,10 +205,9 @@ export default function AccountSecuritySettings() {
 
       setAlertMessage({
         title: language === "English" ? "Sessions Terminated" : "Sesi Diakhiri",
-        description:
-          language === "English"
-            ? "Successfully signed out of all other devices."
-            : "Sesi aktif di perangkat lain berhasil dihentikan secara aman.",
+        description: language === "English"
+          ? "Successfully signed out of all other devices."
+          : "Sesi aktif di perangkat lain berhasil dihentikan secara aman.",
         variant: "default"
       });
     } catch (e: any) {
@@ -230,7 +224,7 @@ export default function AccountSecuritySettings() {
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -268,12 +262,15 @@ export default function AccountSecuritySettings() {
       )}
 
       <div className="space-y-6">
+        
         {/* CARD 1: YOUR PASSWORD */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1 md:max-w-xl">
               <h2 className="text-foreground text-base font-semibold">{t.password.title}</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">{t.password.desc}</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {t.password.desc}
+              </p>
             </div>
 
             <div className="flex shrink-0">
@@ -281,12 +278,9 @@ export default function AccountSecuritySettings() {
                 onClick={handleSetPassword}
                 disabled={isSendingReset}
                 variant="outline"
-                className="border-border/80 inline-flex h-10 items-center gap-2 rounded-xl px-5 text-sm font-semibold">
-                {isSendingReset ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <KeyRound className="h-4 w-4" />
-                )}
+                className="h-10 rounded-xl px-5 text-sm font-semibold border-border/80 inline-flex items-center gap-2"
+              >
+                {isSendingReset ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
                 {t.password.btn}
               </Button>
             </div>
@@ -295,12 +289,12 @@ export default function AccountSecuritySettings() {
 
         {/* CARD 2: CONNECTED ACCOUNTS */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="space-y-6 p-8">
+          <CardContent className="p-8 space-y-6">
             <h2 className="text-foreground text-base font-semibold">{t.oauth.title}</h2>
-
-            <div className="max-w-2xl space-y-4">
+            
+            <div className="space-y-4 max-w-2xl">
               {/* OAUTH 1: GOOGLE */}
-              <div className="border-border/60 flex items-center justify-between rounded-xl border p-4">
+              <div className="flex items-center justify-between p-4 border border-border/60 rounded-xl">
                 <div className="flex items-center gap-3">
                   <svg viewBox="0 0 24 24" className="h-5 w-5">
                     <path
@@ -323,36 +317,26 @@ export default function AccountSecuritySettings() {
                   <span className="text-sm font-semibold">Google</span>
                 </div>
                 {providers.includes("google") ? (
-                  <Badge className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10">
+                  <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 rounded-full border border-emerald-500/20 px-3 py-1 font-semibold text-xs inline-flex items-center gap-1">
                     <Check className="h-3 w-3" /> {t.oauth.connected}
                   </Badge>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-border/85 h-8 rounded-lg px-4 text-xs font-semibold">
-                    {t.oauth.connect}
-                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs h-8 px-4 rounded-lg font-semibold border-border/85">{t.oauth.connect}</Button>
                 )}
               </div>
 
               {/* OAUTH 2: GITHUB */}
-              <div className="border-border/60 flex items-center justify-between rounded-xl border p-4">
+              <div className="flex items-center justify-between p-4 border border-border/60 rounded-xl">
                 <div className="flex items-center gap-3">
                   <GitHubLogoIcon className="h-5 w-5" />
                   <span className="text-sm font-semibold">GitHub</span>
                 </div>
                 {providers.includes("github") ? (
-                  <Badge className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10">
+                  <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 rounded-full border border-emerald-500/20 px-3 py-1 font-semibold text-xs inline-flex items-center gap-1">
                     <Check className="h-3 w-3" /> {t.oauth.connected}
                   </Badge>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-border/85 h-8 rounded-lg px-4 text-xs font-semibold">
-                    {t.oauth.connect}
-                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs h-8 px-4 rounded-lg font-semibold border-border/85">{t.oauth.connect}</Button>
                 )}
               </div>
             </div>
@@ -364,13 +348,13 @@ export default function AccountSecuritySettings() {
           <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1 md:max-w-md">
               <h2 className="text-foreground text-base font-semibold">{t.passkey.title}</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">{t.passkey.desc}</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {t.passkey.desc}
+              </p>
             </div>
 
             <div className="flex shrink-0">
-              <Button
-                variant="outline"
-                className="border-border/80 h-10 rounded-xl px-5 text-sm font-semibold">
+              <Button variant="outline" className="h-10 rounded-xl px-5 text-sm font-semibold border-border/80">
                 {t.passkey.btn}
               </Button>
             </div>
@@ -379,27 +363,24 @@ export default function AccountSecuritySettings() {
 
         {/* CARD 4: TWO-FACTOR AUTHENTICATION */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="space-y-6 p-8">
+          <CardContent className="p-8 space-y-6">
             <div className="space-y-1">
               <h2 className="text-foreground text-base font-semibold">{t.tfa.title}</h2>
               <p className="text-muted-foreground text-sm leading-relaxed">{t.tfa.desc}</p>
             </div>
 
             {/* Warning Alert 2FA */}
-            <Alert className="flex max-w-4xl gap-3 rounded-2xl border-amber-500/20 bg-amber-500/5 p-4 text-amber-600">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <Alert className="rounded-2xl border-amber-500/20 bg-amber-500/5 text-amber-600 max-w-4xl p-4 flex gap-3">
+              <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <AlertTitle className="text-sm font-semibold">Password Required</AlertTitle>
-                <AlertDescription className="text-muted-foreground text-xs leading-relaxed">
+                <AlertTitle className="font-semibold text-sm">Password Required</AlertTitle>
+                <AlertDescription className="text-xs text-muted-foreground leading-relaxed">
                   {t.tfa.warning}
                 </AlertDescription>
               </div>
             </Alert>
 
-            <Button
-              disabled
-              variant="outline"
-              className="h-10 rounded-xl px-5 text-sm font-semibold">
+            <Button disabled variant="outline" className="h-10 rounded-xl px-5 text-sm font-semibold">
               {t.tfa.btn}
             </Button>
           </CardContent>
@@ -407,29 +388,27 @@ export default function AccountSecuritySettings() {
 
         {/* CARD 5: ACTIVE SESSIONS */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="space-y-6 p-8">
+          <CardContent className="p-8 space-y-6">
             <div className="space-y-1">
               <h2 className="text-foreground text-base font-semibold">{t.sessions.title}</h2>
               <p className="text-muted-foreground text-sm leading-relaxed">{t.sessions.desc}</p>
             </div>
 
-            <div className="max-w-4xl space-y-4">
+            <div className="space-y-4 max-w-4xl">
               {/* Sesi browser saat ini */}
-              <div className="border-border/60 bg-card flex items-start justify-between gap-4 rounded-xl border p-5">
+              <div className="flex items-start justify-between p-5 border border-border/60 rounded-xl bg-card gap-4">
                 <div className="flex items-start gap-3.5">
-                  <div className="bg-muted border-border/60 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
-                    <Laptop className="text-muted-foreground h-5 w-5" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted border border-border/60">
+                    <Laptop className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <div className="flex min-w-0 flex-col space-y-1">
+                  <div className="flex flex-col space-y-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-foreground truncate text-sm font-semibold">
-                        {t.sessions.current}
-                      </span>
-                      <Badge className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/10">
+                      <span className="text-sm font-semibold text-foreground truncate">{t.sessions.current}</span>
+                      <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 rounded-full border border-emerald-500/20 text-[10px] px-2 py-0.5 font-bold">
                         ACTIVE
                       </Badge>
                     </div>
-                    <span className="text-muted-foreground font-mono text-xs leading-relaxed break-all">
+                    <span className="text-xs text-muted-foreground break-all font-mono leading-relaxed">
                       {userAgent || "Loading browser details..."}
                     </span>
                   </div>
@@ -442,7 +421,8 @@ export default function AccountSecuritySettings() {
                   onClick={handleTerminateOtherSessions}
                   disabled={isTerminating}
                   variant="outline"
-                  className="border-border/80 inline-flex h-10 items-center gap-1.5 rounded-xl px-5 text-sm font-semibold">
+                  className="h-10 rounded-xl px-5 text-sm font-semibold border-border/80 inline-flex items-center gap-1.5"
+                >
                   {isTerminating && <Loader2 className="h-4 w-4 animate-spin" />}
                   {t.sessions.btnTerm}
                 </Button>
@@ -450,6 +430,7 @@ export default function AccountSecuritySettings() {
             </div>
           </CardContent>
         </Card>
+
       </div>
     </div>
   );
