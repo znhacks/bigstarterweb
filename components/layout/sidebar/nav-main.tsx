@@ -14,7 +14,14 @@ import {
   SidebarMenuSubItem,
   useSidebar
 } from "@/components/ui/sidebar";
-import { ChevronRight, ChartPieIcon, CreditCardIcon, type LucideIcon, Loader2 } from "lucide-react";
+import {
+  ChevronRight,
+  ChartPieIcon,
+  CreditCardIcon,
+  type LucideIcon,
+  Loader2,
+  Settings
+} from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { usePathname } from "next/navigation";
@@ -49,7 +56,7 @@ type NavItem = {
 // Konfigurasi Navigasi Menu berdasarkan Hak Akses Role
 export const navItems: NavGroup[] = [
   {
-    title: "Dashboards",
+    title: "Menu",
     items: [
       {
         title: "Classic Dashboard",
@@ -77,6 +84,21 @@ export const navItems: NavGroup[] = [
             title: "Billing",
             href: "/dashboard/organization/billing",
             roles: ["Owner"] // Hanya Owner organisasi
+          }
+        ]
+      },
+      {
+        title: "Settings",
+        href: "/dashboard/settings",
+        icon: Settings,
+        items: [
+          {
+            title: "General",
+            href: "/dashboard/settings/general"
+          },
+          {
+            title: "Security",
+            href: "/dashboard/settings/security"
           }
         ]
       }

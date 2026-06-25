@@ -23,29 +23,29 @@ const sidebarNavItems = [
   },
   {
     title: "Account",
-    href: "/dashboard/pages/settings/account",
+    href: "/dashboard/settings/general",
     icon: ShieldIcon
-  },
-  {
-    title: "Billing",
-    href: "/dashboard/pages/settings/billing",
-    icon: CreditCardIcon
-  },
-  {
-    title: "Appearance",
-    href: "/dashboard/pages/settings/appearance",
-    icon: PaletteIcon
-  },
-  {
-    title: "Notifications",
-    href: "/dashboard/pages/settings/notifications",
-    icon: BellIcon
-  },
-  {
-    title: "Display",
-    href: "/dashboard/pages/settings/display",
-    icon: ContrastIcon
   }
+  // {
+  //   title: "Billing",
+  //   href: "/dashboard/pages/settings/billing",
+  //   icon: CreditCardIcon
+  // },
+  // {
+  //   title: "Appearance",
+  //   href: "/dashboard/pages/settings/appearance",
+  //   icon: PaletteIcon
+  // },
+  // {
+  //   title: "Notifications",
+  //   href: "/dashboard/pages/settings/notifications",
+  //   icon: BellIcon
+  // },
+  // {
+  //   title: "Display",
+  //   href: "/dashboard/pages/settings/display",
+  //   icon: ContrastIcon
+  // }
 ];
 
 export function SidebarNav() {

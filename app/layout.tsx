@@ -12,6 +12,7 @@ import "./globals.css";
 import { ActiveThemeProvider } from "@/components/active-theme";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { Toaster } from "@/components/ui/sonner";
+import { LanguageProvider } from "@/components/providers/language-provider";
 
 export default async function RootLayout({
   children
@@ -36,7 +37,10 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <Script src="https://dashboard.shadcnuikit.com/iframe-listener.js" strategy="afterInteractive" />
+        <Script
+          src="https://dashboard.shadcnuikit.com/iframe-listener.js"
+          strategy="afterInteractive"
+        />
       </head>
       <body
         suppressHydrationWarning
@@ -48,7 +52,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange>
           <ActiveThemeProvider initialTheme={themeSettings}>
-            {children}
+            <LanguageProvider>{children}</LanguageProvider>
             <Toaster position="top-center" richColors />
             <NextTopLoader color="var(--primary)" showSpinner={false} height={2} shadow-sm="none" />
             {process.env.NODE_ENV === "production" ? <GoogleAnalyticsInit /> : null}
