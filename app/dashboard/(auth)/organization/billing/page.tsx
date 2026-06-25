@@ -11,7 +11,8 @@ import {
   Loader2,
   ArrowUpRight,
   ArrowDown,
-  Calendar
+  RefreshCw,
+  Undo2
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,18 +23,21 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
 
+// Impor komponen PayPal & Klien Supabase
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { supabase } from "@/lib/supabase";
 
 interface Plan {
-  id?: string;
+  id: string; // Menggunakan UUID dari tabel public.plans
   name: string;
   desc: string;
   price: number;
+  max_users: number;
   buttonVariant: "secondary" | "default";
   buttonClass: string;
   features: string[];
@@ -48,6 +52,7 @@ interface AlertState {
 
 interface ActiveSubscription {
   id: string;
+  planId: string;
   planName: string;
   price: number;
   endsAt: string | null;
@@ -55,69 +60,162 @@ interface ActiveSubscription {
   cancelAtPeriodEnd: boolean;
 }
 
+// Token Desain / Detail Representatif Tambahan untuk mencocokkan baris data Supabase
+const planDesignTokens: Record<
+  string,
+  { desc: string; features: string[]; recommended?: boolean }
+> = {
+  Starter: {
+    desc: "For projects moving into production.",
+    features: [
+      "2,000 screenshots per month",
+      "40 requests per minute",
+      "PNG, JPEG, WebP, PDF, and more",
+      "Full page screenshots",
+      "Block cookie banners, chat widgets, and ads",
+      "Caching",
+      "Upload to S3-compatible storage",
+      "Choose IP location",
+      "No attribution link required"
+    ]
+  },
+  Pro: {
+    desc: "For production workloads at higher volume.",
+    recommended: true,
+    features: [
+      "10,000 screenshots per month",
+      "80 requests per minute",
+      "PNG, JPEG, WebP, PDF, and more",
+      "Full page screenshots",
+      "Block cookie banners, chat widgets, and ads",
+      "Caching",
+      "Upload to S3-compatible storage",
+      "Choose IP location",
+      "No attribution link required"
+    ]
+  },
+  Enterprise: {
+    desc: "For large-scale deployments and custom requirements.",
+    features: [
+      "50,000 screenshots per month",
+      "160 requests per minute",
+      "PNG, JPEG, WebP, PDF, and more",
+      "Full page screenshots",
+      "Block cookie banners, chat widgets, and ads",
+      "Caching",
+      "Upload to S3-compatible storage",
+      "Choose IP location",
+      "No attribution link required"
+    ]
+  }
+};
+
 export default function OrganizationBilling() {
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
 
-  // State Langganan Aktif
+  // State Dinamis dari Database Supabase
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingSub, setIsUpdatingSub] = useState(false);
 
+  // State Modal PayPal & Modal Refund
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
 
   useEffect(() => {
     const orgId = localStorage.getItem("active_org_id");
     if (orgId) {
       setActiveOrgId(orgId);
-      fetchActiveSubscription(orgId);
+      loadBillingData(orgId);
     } else {
       setIsLoading(false);
     }
-  }, []);
+  }, [billingCycle]);
 
-  const fetchActiveSubscription = async (orgId: string) => {
+  // Memuat seluruh data paket & langganan aktif langsung dari tabel database Supabase
+  const loadBillingData = async (orgId: string) => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select(
-          `
-          id,
-          status,
-          ends_at,
-          cancel_at_period_end,
-          plans (
-            name,
-            price
-          )
-        `
-        )
-        .eq("tenant_id", orgId)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data && data.plans) {
-        const planInfo = data.plans as any;
-        setActiveSub({
-          id: data.id,
-          planName: planInfo.name,
-          price: planInfo.price,
-          endsAt: data.ends_at,
-          status: data.status,
-          cancelAtPeriodEnd: !!data.cancel_at_period_end
-        });
-      } else {
-        setActiveSub(null);
-      }
-    } catch (error: any) {
-      console.error("Gagal memuat detail langganan:", error?.message || error);
+      await Promise.all([fetchPlansFromDatabase(), fetchActiveSubscription(orgId)]);
+    } catch (e: any) {
+      console.error("Gagal memuat data billing:", e);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 1. Ambil daftar paket langsung dari tabel public.plans
+  const fetchPlansFromDatabase = async () => {
+    const { data, error } = await supabase.from("plans").select("*").eq("type", billingCycle);
+
+    if (error) throw error;
+
+    if (data) {
+      const formatted: Plan[] = data.map((dbPlan: any) => {
+        const design = planDesignTokens[dbPlan.name] || {
+          desc: "Custom organization plan.",
+          features: []
+        };
+        return {
+          id: dbPlan.id,
+          name: dbPlan.name,
+          desc: design.desc,
+          price: dbPlan.price,
+          max_users: dbPlan.max_users,
+          buttonVariant: dbPlan.name === "Pro" ? "default" : "secondary",
+          buttonClass:
+            dbPlan.name === "Pro"
+              ? "bg-foreground text-background hover:bg-foreground/90"
+              : "bg-secondary text-foreground hover:bg-secondary/80",
+          features: design.features,
+          recommended: !!design.recommended
+        };
+      });
+      setPlans(formatted);
+    }
+  };
+
+  // 2. Ambil data langganan aktif dari tabel public.subscriptions
+  const fetchActiveSubscription = async (orgId: string) => {
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select(
+        `
+        id,
+        status,
+        ends_at,
+        cancel_at_period_end,
+        plan_id,
+        plans (
+          name,
+          price
+        )
+      `
+      )
+      .eq("tenant_id", orgId)
+      .in("status", ["active", "refund_requested"])
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (data && data.plans) {
+      const planInfo = data.plans as any;
+      setActiveSub({
+        id: data.id,
+        planId: data.plan_id,
+        planName: planInfo.name,
+        price: planInfo.price,
+        endsAt: data.ends_at,
+        status: data.status,
+        cancelAtPeriodEnd: !!data.cancel_at_period_end
+      });
+    } else {
+      setActiveSub(null);
     }
   };
 
@@ -130,64 +228,6 @@ export default function OrganizationBilling() {
     }
   }, [alertMessage]);
 
-  const plans: Plan[] = [
-    {
-      name: "Starter",
-      desc: "For projects moving into production.",
-      price: billingCycle === "monthly" ? 19 : 15,
-      buttonVariant: "secondary",
-      buttonClass: "bg-secondary text-foreground hover:bg-secondary/80",
-      features: [
-        "2,000 screenshots per month",
-        "40 requests per minute",
-        "PNG, JPEG, WebP, PDF, and more",
-        "Full page screenshots",
-        "Block cookie banners, chat widgets, and ads",
-        "Caching",
-        "Upload to S3-compatible storage",
-        "Choose IP location",
-        "No attribution link required"
-      ]
-    },
-    {
-      name: "Pro",
-      desc: "For production workloads at higher volume.",
-      price: billingCycle === "monthly" ? 79 : 63,
-      buttonVariant: "default",
-      buttonClass: "bg-foreground text-background hover:bg-foreground/90",
-      recommended: true,
-      features: [
-        "10,000 screenshots per month",
-        "80 requests per minute",
-        "PNG, JPEG, WebP, PDF, and more",
-        "Full page screenshots",
-        "Block cookie banners, chat widgets, and ads",
-        "Caching",
-        "Upload to S3-compatible storage",
-        "Choose IP location",
-        "No attribution link required"
-      ]
-    },
-    {
-      name: "Enterprise",
-      desc: "For large-scale deployments and custom requirements.",
-      price: billingCycle === "monthly" ? 319 : 255,
-      buttonVariant: "secondary",
-      buttonClass: "bg-secondary text-foreground hover:bg-secondary/80",
-      features: [
-        "50,000 screenshots per month",
-        "160 requests per minute",
-        "PNG, JPEG, WebP, PDF, and more",
-        "Full page screenshots",
-        "Block cookie banners, chat widgets, and ads",
-        "Caching",
-        "Upload to S3-compatible storage",
-        "Choose IP location",
-        "No attribution link required"
-      ]
-    }
-  ];
-
   const getFinalPrice = (pricePerMonth: number) => {
     return billingCycle === "yearly" ? pricePerMonth * 12 : pricePerMonth;
   };
@@ -197,22 +237,23 @@ export default function OrganizationBilling() {
     setIsCheckoutOpen(true);
   };
 
-  // Fungsi memproses pembatalan paket berlangganan (Cancellation)
+  // 1. PEMBATALAN BERTAHAP (Masa Tenggang berjalan hingga tanggal ends_at)
   const handleCancelSubscription = async () => {
     if (!activeSub || !activeOrgId) return;
     setIsUpdatingSub(true);
     try {
       const { error } = await supabase
         .from("subscriptions")
-        .update({ cancel_at_period_end: true }) // Set penangguhan pembatalan di akhir masa jatuh tempo
+        .update({ cancel_at_period_end: true }) // Matikan perpanjangan, status tetap 'active'
         .eq("id", activeSub.id);
 
       if (error) throw error;
 
       setAlertMessage({
-        title: "Subscription Cancelled",
-        description:
-          "Langganan Anda telah dibatalkan namun tetap dapat digunakan hingga masa aktif berakhir.",
+        title: "Perpanjangan Dinonaktifkan",
+        description: `Masa perpanjangan otomatis telah dimatikan. Durasi akses premium Anda tetap berjalan aktif hingga tanggal masa tenggat pada ${
+          activeSub.endsAt ? new Date(activeSub.endsAt).toLocaleDateString("id-ID") : ""
+        }.`,
         variant: "default"
       });
 
@@ -228,7 +269,7 @@ export default function OrganizationBilling() {
     }
   };
 
-  // Fungsi mengaktifkan kembali paket langganan yang sempat dibatalkan
+  // 2. AKTIFKAN KEMBALI perpanjangan langganan sebelum tenggat berakhir
   const handleResumeSubscription = async () => {
     if (!activeSub || !activeOrgId) return;
     setIsUpdatingSub(true);
@@ -242,7 +283,7 @@ export default function OrganizationBilling() {
 
       setAlertMessage({
         title: "Subscription Resumed",
-        description: "Langganan Anda berhasil diaktifkan kembali secara otomatis.",
+        description: "Langganan dan perpanjangan otomatis Anda berhasil diaktifkan kembali.",
         variant: "default"
       });
 
@@ -258,29 +299,42 @@ export default function OrganizationBilling() {
     }
   };
 
+  // 3. PENGAJUAN KLAIM REFUND (Akses premium langsung dibekukan)
+  const handleClaimRefund = async () => {
+    if (!activeSub || !activeOrgId) return;
+    setIsUpdatingSub(true);
+    try {
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ status: "refund_requested" }) // Set status ke pengajuan refund
+        .eq("id", activeSub.id);
+
+      if (error) throw error;
+
+      setAlertMessage({
+        title: "Refund Claimed",
+        description:
+          "Pengajuan pengembalian dana berhasil dikirim dan sedang dalam peninjauan admin.",
+        variant: "default"
+      });
+
+      setIsRefundDialogOpen(false);
+      await fetchActiveSubscription(activeOrgId);
+    } catch (e: any) {
+      setAlertMessage({ title: "Refund Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsUpdatingSub(false);
+    }
+  };
+
+  // Pemrosesan Database setelah Pembayaran PayPal sukses
   const handlePaymentSuccess = async (details: any) => {
-    if (!activeOrgId || !selectedPlan) return;
+    if (!activeOrgId || !selectedPlan || !selectedPlan.id) return;
 
     const finalAmount = getFinalPrice(selectedPlan.price);
 
     try {
-      let { data: planData } = await supabase
-        .from("plans")
-        .select("id")
-        .eq("name", selectedPlan.name)
-        .maybeSingle();
-
-      if (!planData) {
-        const { data: newPlan } = await supabase
-          .from("plans")
-          .insert({ name: selectedPlan.name, price: selectedPlan.price, type: billingCycle })
-          .select("id")
-          .single();
-        planData = newPlan;
-      }
-
-      const planId = planData?.id;
-
+      // 1. Simpan transaksi baru ke dalam tabel 'transactions'
       const { error: txError } = await supabase.from("transactions").insert({
         tenant_id: activeOrgId,
         amount: finalAmount,
@@ -291,6 +345,7 @@ export default function OrganizationBilling() {
 
       if (txError) throw txError;
 
+      // 2. Kalkulasi Tanggal Berakhir
       const endsAt = new Date();
       if (billingCycle === "yearly") {
         endsAt.setFullYear(endsAt.getFullYear() + 1);
@@ -298,10 +353,11 @@ export default function OrganizationBilling() {
         endsAt.setMonth(endsAt.getMonth() + 1);
       }
 
+      // 3. Update atau Insert data langganan di tabel 'subscriptions'
       const { error: subError } = await supabase.from("subscriptions").upsert(
         {
           tenant_id: activeOrgId,
-          plan_id: planId,
+          plan_id: selectedPlan.id,
           status: "active",
           cancel_at_period_end: false,
           starts_at: new Date().toISOString(),
@@ -329,9 +385,9 @@ export default function OrganizationBilling() {
     }
   };
 
-  // Helper untuk menentukan relasi perbandingan paket (Upgrade/Downgrade/Active)
+  // Menentukan jenis tombol aksi paket
   const getPlanActionType = (planName: string) => {
-    if (!activeSub) return "choose";
+    if (!activeSub || activeSub.status === "refund_requested") return "choose";
     if (activeSub.planName === planName) return "active";
 
     const planWeights: Record<string, number> = { Starter: 1, Pro: 2, Enterprise: 3 };
@@ -340,6 +396,12 @@ export default function OrganizationBilling() {
 
     return targetWeight > currentWeight ? "upgrade" : "downgrade";
   };
+
+  // Verifikasi keaktifan sesi langganan saat ini berdasarkan tanggal jatuh tempo
+  const isSubActive =
+    activeSub &&
+    activeSub.status === "active" &&
+    (activeSub.endsAt === null || new Date() < new Date(activeSub.endsAt));
 
   if (isLoading) {
     return (
@@ -408,48 +470,79 @@ export default function OrganizationBilling() {
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2.5">
                     <h3 className="text-2xl font-bold tracking-tight">
-                      {activeSub ? activeSub.planName : "Free"}
+                      {isSubActive ? activeSub.planName : "Free"}
                     </h3>
-                    <Badge className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 hover:bg-emerald-500/15">
-                      ACTIVE
-                    </Badge>
+
+                    {activeSub?.status === "refund_requested" ? (
+                      <Badge className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 hover:bg-amber-500/15">
+                        REFUND REQUESTED
+                      </Badge>
+                    ) : isSubActive && activeSub?.cancelAtPeriodEnd ? (
+                      <Badge className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-xs font-semibold text-red-600 hover:bg-red-500/15">
+                        WILL CANCEL
+                      </Badge>
+                    ) : isSubActive ? (
+                      <Badge className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/15">
+                        ACTIVE
+                      </Badge>
+                    ) : (
+                      <Badge className="border-muted-foreground/20 bg-muted text-muted-foreground rounded-full border px-2.5 py-0.5 text-xs font-semibold">
+                        FREE ACTIVE
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    {activeSub
-                      ? `Langganan aktif senilai $${activeSub.price}/bulan. ${
-                          activeSub.endsAt
-                            ? `Berakhir pada tanggal ${new Date(activeSub.endsAt).toLocaleDateString("id-ID")}`
-                            : ""
-                        }`
-                      : "For testing and hobby use."}
+                    {activeSub?.status === "refund_requested"
+                      ? "Klaim pengembalian dana Anda sedang dalam peninjauan Admin. Akses premium dibekukan sementara."
+                      : isSubActive
+                        ? `Langganan aktif senilai $${activeSub.price}/bulan. ${
+                            activeSub.endsAt
+                              ? `${
+                                  activeSub.cancelAtPeriodEnd
+                                    ? "Masa aktif premium berjalan akan berakhir pada"
+                                    : "Perpanjangan otomatis berikutnya tanggal"
+                                } ${new Date(activeSub.endsAt).toLocaleDateString("id-ID")}`
+                              : ""
+                          }`
+                        : "For testing and hobby use."}
                   </p>
                 </div>
 
-                {/* AREA MANAGEMENT PEMBATALAN LANGGANAN */}
-                {activeSub && (
-                  <div className="flex shrink-0 gap-3">
+                {/* MANAJEMEN ACTION BUTTONS UNTUK STRUKTUR PEMBATALAN GRACEFUL / REFUND */}
+                {isSubActive && (
+                  <div className="flex shrink-0 flex-wrap gap-3">
                     {activeSub.cancelAtPeriodEnd ? (
                       <Button
                         onClick={handleResumeSubscription}
                         disabled={isUpdatingSub}
                         variant="outline"
-                        className="inline-flex h-10 items-center gap-2 rounded-xl px-5 text-xs font-semibold">
+                        className="border-border/80 inline-flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold">
                         {isUpdatingSub ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Calendar className="h-4 w-4" />
+                          <RefreshCw className="h-3.5 w-3.5" />
                         )}
-                        Aktifkan Kembali Langganan
+                        Aktifkan Kembali Perpanjangan
                       </Button>
                     ) : (
-                      <Button
-                        onClick={handleCancelSubscription}
-                        disabled={isUpdatingSub}
-                        variant="destructive"
-                        className="h-10 rounded-xl px-5 text-xs font-semibold">
-                        {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
-                        Batalkan Langganan
-                      </Button>
+                      <>
+                        <Button
+                          onClick={() => setIsRefundDialogOpen(true)}
+                          disabled={isUpdatingSub}
+                          variant="outline"
+                          className="border-border/80 inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold">
+                          <Undo2 className="h-3.5 w-3.5" />
+                          Klaim Refund
+                        </Button>
+                        <Button
+                          onClick={handleCancelSubscription}
+                          disabled={isUpdatingSub}
+                          variant="destructive"
+                          className="h-10 rounded-xl px-4 text-xs font-semibold">
+                          {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
+                          Batalkan Perpanjangan
+                        </Button>
+                      </>
                     )}
                   </div>
                 )}
@@ -460,11 +553,11 @@ export default function OrganizationBilling() {
                 <li className="flex items-start gap-3">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                   <span>
-                    {activeSub?.planName === "Enterprise"
+                    {isSubActive && activeSub?.planName === "Enterprise"
                       ? "50,000"
-                      : activeSub?.planName === "Pro"
+                      : isSubActive && activeSub?.planName === "Pro"
                         ? "10,000"
-                        : activeSub?.planName === "Starter"
+                        : isSubActive && activeSub?.planName === "Starter"
                           ? "2,000"
                           : "200"}{" "}
                     screenshots per month
@@ -473,11 +566,11 @@ export default function OrganizationBilling() {
                 <li className="flex items-start gap-3">
                   <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                   <span>
-                    {activeSub?.planName === "Enterprise"
+                    {isSubActive && activeSub?.planName === "Enterprise"
                       ? "160"
-                      : activeSub?.planName === "Pro"
+                      : isSubActive && activeSub?.planName === "Pro"
                         ? "80"
-                        : activeSub?.planName === "Starter"
+                        : isSubActive && activeSub?.planName === "Starter"
                           ? "40"
                           : "20"}{" "}
                     requests per minute
@@ -504,7 +597,7 @@ export default function OrganizationBilling() {
                   <span>Upload to S3-compatible storage</span>
                 </li>
 
-                {!activeSub ? (
+                {!isSubActive ? (
                   <>
                     <li className="text-muted-foreground/70 flex items-start gap-3">
                       <X className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
@@ -531,7 +624,7 @@ export default function OrganizationBilling() {
 
               <div className="flex items-baseline gap-1 pt-2">
                 <span className="text-4xl font-bold tracking-tight">
-                  ${activeSub ? activeSub.price : "0"}
+                  ${isSubActive ? activeSub.price : "0"}
                 </span>
                 <span className="text-muted-foreground text-sm">/ month</span>
               </div>
@@ -573,6 +666,7 @@ export default function OrganizationBilling() {
           <div className="grid grid-cols-1 gap-6 pt-4 md:grid-cols-3">
             {plans.map((plan) => {
               const actionType = getPlanActionType(plan.name);
+              const isDisabled = activeSub?.status === "refund_requested" || isLoading;
 
               return (
                 <Card
@@ -604,31 +698,34 @@ export default function OrganizationBilling() {
                       </div>
                     </div>
 
-                    {/* DYNAMIC UPGRADE / DOWNGRADE ACTION BUTTONS */}
-                    {actionType === "active" ? (
+                    {/* ACTION BUTTONS (UPGRADE/DOWNGRADE) */}
+                    {actionType === "active" && isSubActive ? (
                       <Button
                         disabled
                         className="w-full cursor-default rounded-xl border border-emerald-500/20 bg-emerald-500/10 py-5 font-semibold text-emerald-600 hover:bg-emerald-500/10">
                         Plan Aktif
                       </Button>
-                    ) : actionType === "upgrade" ? (
+                    ) : actionType === "upgrade" && isSubActive ? (
                       <Button
                         onClick={() => handleChoosePlan(plan)}
-                        className="bg-foreground text-background hover:bg-foreground/90 inline-flex w-full items-center gap-1.5 rounded-xl py-5 font-semibold">
+                        disabled={isDisabled}
+                        className="bg-foreground text-background hover:bg-foreground/90 inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-5 font-semibold">
                         <ArrowUpRight className="h-4 w-4" />
                         Upgrade Plan
                       </Button>
-                    ) : actionType === "downgrade" ? (
+                    ) : actionType === "downgrade" && isSubActive ? (
                       <Button
                         onClick={() => handleChoosePlan(plan)}
+                        disabled={isDisabled}
                         variant="outline"
-                        className="border-border/80 hover:bg-accent inline-flex w-full items-center gap-1.5 rounded-xl py-5 font-semibold">
+                        className="border-border/80 hover:bg-accent inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-5 font-semibold">
                         <ArrowDown className="h-4 w-4" />
                         Downgrade Plan
                       </Button>
                     ) : (
                       <Button
                         onClick={() => handleChoosePlan(plan)}
+                        disabled={isDisabled}
                         variant={plan.buttonVariant}
                         className={`w-full rounded-xl py-5 font-semibold ${plan.buttonClass}`}>
                         Choose plan
@@ -731,6 +828,48 @@ export default function OrganizationBilling() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* DIALOG MODAL KONFIRMASI KLAIM REFUND */}
+        <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
+          <DialogContent className="border-border/80 rounded-2xl border sm:max-w-[450px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold">Klaim Pengembalian Dana</DialogTitle>
+              <DialogDescription>
+                Apakah Anda yakin ingin mengajukan klaim refund untuk paket **{activeSub?.planName}
+                **?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="text-muted-foreground space-y-4 py-3 text-sm leading-relaxed">
+              <p>
+                Setelah pengajuan diajukan, akses fitur premium organisasi Anda akan **dibekukan**
+                sementara sampai proses peninjauan selesai dilakukan oleh admin.
+              </p>
+              <p className="rounded-xl border border-dashed border-red-500/20 bg-red-500/10 p-3 text-xs font-semibold text-red-500">
+                *Proses ini membutuhkan waktu peninjauan sekitar 1-3 hari kerja. Dana akan
+                dikirimkan kembali ke akun PayPal/Kartu Kredit Anda yang digunakan saat
+                bertransaksi.
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                disabled={isUpdatingSub}
+                onClick={() => setIsRefundDialogOpen(false)}
+                className="rounded-xl">
+                Batal
+              </Button>
+              <Button
+                onClick={handleClaimRefund}
+                disabled={isUpdatingSub}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-red-700 text-white hover:bg-red-800">
+                {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
+                Ya, Ajukan Refund
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
