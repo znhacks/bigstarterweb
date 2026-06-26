@@ -16,7 +16,6 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        // Menambahkan tipe data eksplisit pada parameter cookiesToSet
         setAll(
           cookiesToSet: {
             name: string;
@@ -44,8 +43,12 @@ export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const path = url.pathname;
 
-  // Definisikan rute autentikasi publik
-  const isAuthPage = path.startsWith("/dashboard/login") || path.startsWith("/dashboard/register");
+  // Definisikan rute autentikasi publik (Ditambahkan dukungan rute forgot-password)
+  const isAuthPage =
+    path.startsWith("/dashboard/login") ||
+    path.startsWith("/dashboard/register") ||
+    path.startsWith("/dashboard/forgot-password"); // <-- Diizinkan diakses sebelum login
+
   const isJoinPage = path.startsWith("/join");
   const isAuthCallback = path.startsWith("/auth/callback");
 
