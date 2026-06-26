@@ -61,7 +61,181 @@ interface ActiveSubscription {
   cancelAtPeriodEnd: boolean;
 }
 
-// Token Desain / Detail Representatif Tambahan untuk mencocokkan baris data Supabase
+// 1. KAMUS TERJEMAHAN MULTI-BAHASA KHUSUS HALAMAN BILLING (Mendukung 3 Bahasa)
+const billingTranslations = {
+  English: {
+    title: "Your current plan",
+    desc: "View your plan details and manage billing.",
+    changeTitle: "Change your plan",
+    changeDesc: "Compare available plans and switch your subscription.",
+    cycles: {
+      monthly: "Monthly",
+      yearly: "Yearly"
+    },
+    badges: {
+      active: "ACTIVE",
+      refundRequested: "REFUND REQUESTED",
+      willCancel: "WILL CANCEL",
+      freeActive: "FREE ACTIVE"
+    },
+    subDetails: {
+      activeDesc: "Active subscription valued at {price}/month.",
+      endsOn: "Premium access ends on",
+      renewsOn: "Next automatic renewal on",
+      freeDesc: "For testing and hobby use."
+    },
+    buttons: {
+      cancelRenewal: "Cancel Renewal",
+      activateRenewal: "Reactivate Renewal",
+      claimRefund: "Claim Refund",
+      planActive: "Active Plan",
+      upgrade: "Upgrade Plan",
+      downgrade: "Downgrade Plan",
+      choose: "Choose plan",
+      cancel: "Cancel",
+      confirmRefund: "Yes, Request Refund"
+    },
+    dialogPurchase: {
+      title: "Complete Your Purchase",
+      desc: "Complete payment to start using your service plan.",
+      details: "Transaction Details",
+      currency: "Currency"
+    },
+    dialogRefund: {
+      title: "Claim Refund",
+      desc: "Are you sure you want to request a refund for the {planName} plan?",
+      warn1:
+        "Once submitted, your organization's premium access will be suspended while the review process is underway.",
+      warn2:
+        "*This review process takes 1-3 business days. Funds will be returned to the PayPal/Credit Card account used for the transaction."
+    },
+    alerts: {
+      successPay:
+        "Thank you! Payment for {planName} plan valued at {price} successfully processed. Order ID: {orderId}",
+      successCancel: "Automatic renewal disabled. Your premium access remains active until {date}.",
+      successResume: "Subscription auto-renewal successfully reactivated.",
+      successRefund: "Refund claim successfully submitted and is under review.",
+      errorPay: "An error occurred during payment. Please try again.",
+      errorDb: "Payment successful, but failed to record in database: {error}"
+    }
+  },
+  "Bahasa Indonesia": {
+    title: "Paket aktif Anda",
+    desc: "Lihat detail paket Anda dan kelola penagihan.",
+    changeTitle: "Ubah paket Anda",
+    changeDesc: "Bandingkan paket yang tersedia dan ganti langganan Anda.",
+    cycles: {
+      monthly: "Bulanan",
+      yearly: "Tahunan"
+    },
+    badges: {
+      active: "AKTIF",
+      refundRequested: "PENGEMBALIAN DIAJUKAN",
+      willCancel: "AKAN BATAL",
+      freeActive: "FREE AKTIF"
+    },
+    subDetails: {
+      activeDesc: "Langganan aktif senilai {price}/bulan.",
+      endsOn: "Masa aktif premium berakhir pada",
+      renewsOn: "Perpanjangan otomatis berikutnya tanggal",
+      freeDesc: "Untuk pengujian dan penggunaan hobi."
+    },
+    buttons: {
+      cancelRenewal: "Batalkan Perpanjangan",
+      activateRenewal: "Aktifkan Kembali Perpanjangan",
+      claimRefund: "Klaim Refund",
+      planActive: "Plan Aktif",
+      upgrade: "Upgrade Plan",
+      downgrade: "Downgrade Plan",
+      choose: "Pilih paket",
+      cancel: "Batal",
+      confirmRefund: "Ya, Ajukan Refund"
+    },
+    dialogPurchase: {
+      title: "Selesaikan Pembelian Anda",
+      desc: "Selesaikan pembayaran untuk mulai menggunakan paket layanan Anda.",
+      details: "Rincian Transaksi",
+      currency: "Mata Uang"
+    },
+    dialogRefund: {
+      title: "Klaim Pengembalian Dana",
+      desc: "Apakah Anda yakin ingin mengajukan klaim refund untuk paket {planName}?",
+      warn1:
+        "Setelah diajukan, akses fitur premium organisasi Anda akan dibekukan sementara sampai proses peninjauan selesai.",
+      warn2:
+        "*Proses ini membutuhkan waktu peninjauan sekitar 1-3 hari kerja. Dana akan dikirimkan kembali ke akun PayPal/Kartu Kredit Anda."
+    },
+    alerts: {
+      successPay:
+        "Terima kasih! Pembayaran paket {planName} senilai {price} berhasil diproses. Order ID: {orderId}",
+      successCancel:
+        "Masa perpanjangan otomatis telah dimatikan. Durasi akses premium Anda tetap berjalan aktif hingga tanggal {date}.",
+      successResume: "Langganan dan perpanjangan otomatis Anda berhasil diaktifkan kembali.",
+      successRefund:
+        "Klaim pengembalian dana Anda berhasil diajukan dan sedang dalam peninjauan admin.",
+      errorPay: "Terjadi kesalahan selama memproses pembayaran. Silakan coba kembali.",
+      errorDb: "Pembayaran sukses, namun gagal mencatat data ke database: {error}"
+    }
+  },
+  Español: {
+    title: "Tu plan actual",
+    desc: "Ver los detalles de su plan y gestionar la facturación.",
+    changeTitle: "Cambia tu plan",
+    changeDesc: "Compare los planes disponibles y cambie su suscripción.",
+    cycles: {
+      monthly: "Mensual",
+      yearly: "Anual"
+    },
+    badges: {
+      active: "ACTIVO",
+      refundRequested: "REEMBOLSO SOLICITADO",
+      willCancel: "SE CANCELARÁ",
+      freeActive: "GRATIS ACTIVO"
+    },
+    subDetails: {
+      activeDesc: "Suscripción activa valorada en {price}/mes.",
+      endsOn: "El acceso premium finaliza el",
+      renewsOn: "Próxima renovación automática el",
+      freeDesc: "Para pruebas y uso personal."
+    },
+    buttons: {
+      cancelRenewal: "Cancelar renovación ",
+      activateRenewal: "Reactivar renovación",
+      claimRefund: "Reclamar reembolso",
+      planActive: "Plan Activo",
+      upgrade: "Actualizar Plan",
+      downgrade: "Bajar de Plan",
+      choose: "Elegir plan",
+      cancel: "Cancelar",
+      confirmRefund: "Sí, solicitar reembolso"
+    },
+    dialogPurchase: {
+      title: "Complete su compra",
+      desc: "Complete el pago para comenzar a utilizar su plan de servicio.",
+      details: "Detalles de la transacción",
+      currency: "Moneda"
+    },
+    dialogRefund: {
+      title: "Reclamar Reembolso",
+      desc: "¿Está seguro de que desea solicitar un reembolso para el plan {planName}?",
+      warn1:
+        "Una vez enviado, el acceso premium de su organización se suspenderá temporalmente mientras se realiza la revisión.",
+      warn2:
+        "*Este proceso toma de 1 a 3 días hábiles. Los fondos se devolverán a la cuenta de PayPal/Tarjeta de crédito utilizada."
+    },
+    alerts: {
+      successPay:
+        "¡Gracias! Pago del plan {planName} valorado en {price} procesado con éxito. ID de pedido: {orderId}",
+      successCancel:
+        "Renovación automática desactivada. Su acceso premium permanece activo hasta el {date}.",
+      successResume: "Renovación automática de suscripción reactivada con éxito.",
+      successRefund: "Solicitud de reembolso enviada con éxito y está bajo revisión.",
+      errorPay: "Ocurrió un error durante el pago. Por favor intente de nuevo.",
+      errorDb: "Pago exitoso, pero no se pudo registrar en la base de datos: {error}"
+    }
+  }
+};
+
 const planDesignTokens: Record<
   string,
   { desc: string; features: string[]; recommended?: boolean }
@@ -112,7 +286,11 @@ const planDesignTokens: Record<
 };
 
 export default function OrganizationBilling() {
-  const { t, formatPrice } = useLanguage();
+  const { language, t, formatPrice } = useLanguage();
+
+  // Membaca kamus terjemahan aktif berdasarkan bahasa sistem
+  const tBill = billingTranslations[language] || billingTranslations["English"];
+
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
@@ -252,10 +430,11 @@ export default function OrganizationBilling() {
       if (error) throw error;
 
       setAlertMessage({
-        title: "Perpanjangan Dinonaktifkan",
-        description: `Masa perpanjangan otomatis telah dimatikan. Durasi akses premium Anda tetap berjalan aktif hingga tanggal masa tenggat pada ${
+        title: language === "English" ? "Auto-Renewal Disabled" : "Perpanjangan Dinonaktifkan",
+        description: tBill.alerts.successCancel.replace(
+          "{date}",
           activeSub.endsAt ? new Date(activeSub.endsAt).toLocaleDateString("id-ID") : ""
-        }.`,
+        ),
         variant: "default"
       });
 
@@ -284,8 +463,8 @@ export default function OrganizationBilling() {
       if (error) throw error;
 
       setAlertMessage({
-        title: "Subscription Resumed",
-        description: "Langganan dan perpanjangan otomatis Anda berhasil diaktifkan kembali.",
+        title: language === "English" ? "Subscription Resumed" : "Langganan Diaktifkan Kembali",
+        description: tBill.alerts.successResume,
         variant: "default"
       });
 
@@ -314,9 +493,8 @@ export default function OrganizationBilling() {
       if (error) throw error;
 
       setAlertMessage({
-        title: "Refund Claimed",
-        description:
-          "Pengajuan pengembalian dana berhasil dikirim dan sedang dalam peninjauan admin.",
+        title: language === "English" ? "Refund Claimed" : "Refund Diajukan",
+        description: tBill.alerts.successRefund,
         variant: "default"
       });
 
@@ -371,8 +549,11 @@ export default function OrganizationBilling() {
       if (subError) throw subError;
 
       setAlertMessage({
-        title: "Payment Successful",
-        description: `Terima kasih! Pembayaran paket ${selectedPlan.name} senilai $${finalAmount} berhasil diproses. Order ID: ${details.id}`,
+        title: language === "English" ? "Payment Successful" : "Pembayaran Berhasil",
+        description: tBill.alerts.successPay
+          .replace("{planName}", selectedPlan.name)
+          .replace("{price}", formatPrice(finalAmount))
+          .replace("{orderId}", details.id),
         variant: "default"
       });
 
@@ -381,7 +562,7 @@ export default function OrganizationBilling() {
       console.error("Gagal mengupdate database transaksi:", error);
       setAlertMessage({
         title: "Database Sync Failed",
-        description: `Pembayaran sukses, namun gagal mencatat data ke database: ${error?.message || error}`,
+        description: tBill.alerts.errorDb.replace("{error}", error?.message || error),
         variant: "destructive"
       });
     }
@@ -458,12 +639,8 @@ export default function OrganizationBilling() {
         {/* SECTION 1: YOUR CURRENT PLAN */}
         <div className="space-y-4">
           <div className="space-y-1">
-            <h2 className="text-foreground text-xl font-semibold tracking-tight">
-              Your current plan
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              View your plan details and manage billing.
-            </p>
+            <h2 className="text-foreground text-xl font-semibold tracking-tight">{tBill.title}</h2>
+            <p className="text-muted-foreground text-sm">{tBill.desc}</p>
           </div>
 
           <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
@@ -477,36 +654,36 @@ export default function OrganizationBilling() {
 
                     {activeSub?.status === "refund_requested" ? (
                       <Badge className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 hover:bg-amber-500/15">
-                        REFUND REQUESTED
+                        {tBill.badges.refundRequested}
                       </Badge>
                     ) : isSubActive && activeSub?.cancelAtPeriodEnd ? (
                       <Badge className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-xs font-semibold text-red-600 hover:bg-red-500/15">
-                        WILL CANCEL
+                        {tBill.badges.willCancel}
                       </Badge>
                     ) : isSubActive ? (
                       <Badge className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/15">
-                        ACTIVE
+                        {tBill.badges.active}
                       </Badge>
                     ) : (
                       <Badge className="border-muted-foreground/20 bg-muted text-muted-foreground rounded-full border px-2.5 py-0.5 text-xs font-semibold">
-                        FREE ACTIVE
+                        {tBill.badges.freeActive}
                       </Badge>
                     )}
                   </div>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     {activeSub?.status === "refund_requested"
-                      ? "Klaim pengembalian dana Anda sedang dalam peninjauan Admin. Akses premium dibekukan sementara."
+                      ? tBill.subDetails.activeDesc
                       : isSubActive
-                        ? `Langganan aktif senilai ${formatPrice(activeSub.price)}/bulan. ${
+                        ? `${tBill.subDetails.activeDesc.replace("{price}", formatPrice(activeSub.price))} ${
                             activeSub.endsAt
                               ? `${
                                   activeSub.cancelAtPeriodEnd
-                                    ? "Masa aktif premium berjalan akan berakhir pada"
-                                    : "Perpanjangan otomatis berikutnya tanggal"
+                                    ? tBill.subDetails.endsOn
+                                    : tBill.subDetails.renewsOn
                                 } ${new Date(activeSub.endsAt).toLocaleDateString("id-ID")}`
                               : ""
                           }`
-                        : "For testing and hobby use."}
+                        : tBill.subDetails.freeDesc}
                   </p>
                 </div>
 
@@ -524,7 +701,7 @@ export default function OrganizationBilling() {
                         ) : (
                           <RefreshCw className="h-3.5 w-3.5" />
                         )}
-                        Aktifkan Kembali Perpanjangan
+                        {tBill.buttons.activateRenewal}
                       </Button>
                     ) : (
                       <>
@@ -534,7 +711,7 @@ export default function OrganizationBilling() {
                           variant="outline"
                           className="border-border/80 inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold">
                           <Undo2 className="h-3.5 w-3.5" />
-                          Klaim Refund
+                          {tBill.buttons.claimRefund}
                         </Button>
                         <Button
                           onClick={handleCancelSubscription}
@@ -542,7 +719,7 @@ export default function OrganizationBilling() {
                           variant="destructive"
                           className="h-10 rounded-xl px-4 text-xs font-semibold">
                           {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
-                          Batalkan Perpanjangan
+                          {tBill.buttons.cancelRenewal}
                         </Button>
                       </>
                     )}
@@ -626,7 +803,7 @@ export default function OrganizationBilling() {
 
               <div className="flex items-baseline gap-1 pt-2">
                 <span className="text-4xl font-bold tracking-tight">
-                  ${isSubActive ? activeSub.price : "0"}
+                  {formatPrice(isSubActive ? activeSub.price : 0)}
                 </span>
                 <span className="text-muted-foreground text-sm">/ month</span>
               </div>
@@ -638,11 +815,9 @@ export default function OrganizationBilling() {
         <div className="space-y-6">
           <div className="space-y-1">
             <h2 className="text-foreground text-xl font-semibold tracking-tight">
-              Change your plan
+              {tBill.changeTitle}
             </h2>
-            <p className="text-muted-foreground text-sm">
-              Compare available plans and switch your subscription.
-            </p>
+            <p className="text-muted-foreground text-sm">{tBill.changeDesc}</p>
           </div>
 
           <div className="flex justify-center">
@@ -654,12 +829,12 @@ export default function OrganizationBilling() {
                 <TabsTrigger
                   value="monthly"
                   className="data-[state=active]:border-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
-                  Monthly
+                  {tBill.cycles.monthly}
                 </TabsTrigger>
                 <TabsTrigger
                   value="yearly"
                   className="data-[state=active]:border-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
-                  Yearly
+                  {tBill.cycles.yearly}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -707,7 +882,7 @@ export default function OrganizationBilling() {
                       <Button
                         disabled
                         className="w-full cursor-default rounded-xl border border-emerald-500/20 bg-emerald-500/10 py-5 font-semibold text-emerald-600 hover:bg-emerald-500/10">
-                        Plan Aktif
+                        {tBill.buttons.planActive}
                       </Button>
                     ) : actionType === "upgrade" && isSubActive ? (
                       <Button
@@ -715,7 +890,7 @@ export default function OrganizationBilling() {
                         disabled={isDisabled}
                         className="bg-foreground text-background hover:bg-foreground/90 inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-5 font-semibold">
                         <ArrowUpRight className="h-4 w-4" />
-                        Upgrade Plan
+                        {tBill.buttons.upgrade}
                       </Button>
                     ) : actionType === "downgrade" && isSubActive ? (
                       <Button
@@ -724,7 +899,7 @@ export default function OrganizationBilling() {
                         variant="outline"
                         className="border-border/80 hover:bg-accent inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-5 font-semibold">
                         <ArrowDown className="h-4 w-4" />
-                        Downgrade Plan
+                        {tBill.buttons.downgrade}
                       </Button>
                     ) : (
                       <Button
@@ -732,7 +907,7 @@ export default function OrganizationBilling() {
                         disabled={isDisabled}
                         variant={plan.buttonVariant}
                         className={`w-full rounded-xl py-5 font-semibold ${plan.buttonClass}`}>
-                        Choose plan
+                        {tBill.buttons.choose}
                       </Button>
                     )}
 
@@ -760,10 +935,8 @@ export default function OrganizationBilling() {
         <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
           <DialogContent className="border-border/80 rounded-2xl border sm:max-w-[450px]">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold">Complete Your Purchase</DialogTitle>
-              <DialogDescription>
-                Selesaikan pembayaran untuk mulai menggunakan paket layanan Anda.
-              </DialogDescription>
+              <DialogTitle className="text-xl font-bold">{tBill.dialogPurchase.title}</DialogTitle>
+              <DialogDescription>{tBill.dialogPurchase.desc}</DialogDescription>
             </DialogHeader>
 
             {selectedPlan && (
@@ -784,7 +957,7 @@ export default function OrganizationBilling() {
                     </div>
                   )}
                   <div className="border-border/60 text-muted-foreground flex items-center justify-between border-t pt-2 text-xs">
-                    <span>Currency</span>
+                    <span>{tBill.dialogPurchase.currency}</span>
                     <span>USD</span>
                   </div>
                 </div>
@@ -839,22 +1012,16 @@ export default function OrganizationBilling() {
         <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
           <DialogContent className="border-border/80 rounded-2xl border sm:max-w-[450px]">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold">Klaim Pengembalian Dana</DialogTitle>
+              <DialogTitle className="text-xl font-bold">{tBill.dialogRefund.title}</DialogTitle>
               <DialogDescription>
-                Apakah Anda yakin ingin mengajukan klaim refund untuk paket **{activeSub?.planName}
-                **?
+                {tBill.dialogRefund.desc.replace("{planName}", activeSub?.planName || "")}
               </DialogDescription>
             </DialogHeader>
 
             <div className="text-muted-foreground space-y-4 py-3 text-sm leading-relaxed">
-              <p>
-                Setelah pengajuan diajukan, akses fitur premium organisasi Anda akan **dibekukan**
-                sementara sampai proses peninjauan selesai dilakukan oleh admin.
-              </p>
+              <p>{tBill.dialogRefund.warn1}</p>
               <p className="rounded-xl border border-dashed border-red-500/20 bg-red-500/10 p-3 text-xs font-semibold text-red-500">
-                *Proses ini membutuhkan waktu peninjauan sekitar 1-3 hari kerja. Dana akan
-                dikirimkan kembali ke akun PayPal/Kartu Kredit Anda yang digunakan saat
-                bertransaksi.
+                {tBill.dialogRefund.warn2}
               </p>
             </div>
 
@@ -864,14 +1031,14 @@ export default function OrganizationBilling() {
                 disabled={isUpdatingSub}
                 onClick={() => setIsRefundDialogOpen(false)}
                 className="rounded-xl">
-                Batal
+                {tBill.buttons.cancel}
               </Button>
               <Button
                 onClick={handleClaimRefund}
                 disabled={isUpdatingSub}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-red-700 text-white hover:bg-red-800">
                 {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
-                Ya, Ajukan Refund
+                {tBill.buttons.confirmRefund}
               </Button>
             </DialogFooter>
           </DialogContent>
