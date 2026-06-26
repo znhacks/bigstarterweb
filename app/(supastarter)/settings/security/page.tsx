@@ -3,36 +3,26 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  KeyRound, 
-  CheckCircle2, 
-  AlertCircle, 
-  X, 
-  Loader2, 
-  Smartphone, 
-  ShieldCheck, 
+import {
+  KeyRound,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Loader2,
+  ShieldCheck,
   Laptop,
-  Check
+  Check,
+  Fingerprint
 } from "lucide-react";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 
 // Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
-import { Badge } from "@/components/ui/badge";
 
 interface AlertState {
   title: string;
@@ -40,15 +30,15 @@ interface AlertState {
   variant?: "default" | "destructive";
 }
 
-// 1. KAMUS TERJEMAHAN KHUSUS HALAMAN SECURITY
+// 1. KAMUS TERJEMAHAN KHUSUS HALAMAN SECURITY (Mendukung 3 Bahasa)
 const securityTranslations = {
   English: {
     title: "Security settings",
     subTitle: "Manage your account security, passwords, and active sessions.",
     password: {
-      title: "Your password",
-      desc: "You have not set a password yet. To set one, you need to go through the password reset flow. Click the button below to send an email to reset your password.",
-      btn: "Set password"
+      title: "Change password",
+      desc: "To change your password, click the button below to send an email to reset your password and follow the instructions in the email.",
+      btn: "Change password"
     },
     oauth: {
       title: "Connected accounts",
@@ -63,8 +53,10 @@ const securityTranslations = {
     tfa: {
       title: "Two-factor authentication",
       desc: "Add an extra layer of security to your account.",
-      warning: "Password required. Set a password before enabling two-factor authentication. Your password is required to verify changes to this security setting.",
-      btn: "Enable two-factor authentication"
+      warning:
+        "Password required. Set a password before enabling two-factor authentication. Your password is required to verify changes to this security setting.",
+      btn: "Enable two-factor authentication",
+      activeBtn: "Two-Factor Authentication is Enabled"
     },
     sessions: {
       title: "Active sessions",
@@ -77,9 +69,9 @@ const securityTranslations = {
     title: "Pengaturan Keamanan",
     subTitle: "Kelola keamanan akun, kata sandi, dan sesi aktif Anda.",
     password: {
-      title: "Kata sandi Anda",
-      desc: "Anda belum menyetel kata sandi. Untuk menyetelnya, Anda perlu melalui alur penyetelan ulang kata sandi. Klik tombol di bawah untuk mengirim email penyetelan.",
-      btn: "Setel kata sandi"
+      title: "Ubah kata sandi",
+      desc: "Untuk mengubah kata sandi Anda, klik tombol di bawah untuk mengirim email penyetelan ulang kata sandi dan ikuti petunjuk di dalam email tersebut.",
+      btn: "Ubah kata sandi"
     },
     oauth: {
       title: "Akun terhubung",
@@ -94,8 +86,10 @@ const securityTranslations = {
     tfa: {
       title: "Autentikasi dua faktor (2FA)",
       desc: "Tambahkan lapisan keamanan ekstra ke akun Anda.",
-      warning: "Membutuhkan kata sandi. Setel kata sandi terlebih dahulu sebelum mengaktifkan autentikasi dua faktor. Kata sandi diperlukan untuk memverifikasi perubahan.",
-      btn: "Aktifkan autentikasi dua faktor"
+      warning:
+        "Membutuhkan kata sandi. Setel kata sandi terlebih dahulu sebelum mengaktifkan autentikasi dua faktor. Kata sandi diperlukan untuk memverifikasi perubahan.",
+      btn: "Aktifkan autentikasi dua faktor",
+      activeBtn: "Autentikasi Dua Faktor Aktif"
     },
     sessions: {
       title: "Sesi aktif",
@@ -103,20 +97,54 @@ const securityTranslations = {
       current: "Sesi saat ini",
       btnTerm: "Akhiri sesi perangkat lain"
     }
+  },
+  Español: {
+    title: "Configuración de seguridad",
+    subTitle: "Administre la seguridad de su cuenta, las contraseñas y las sesiones activas.",
+    password: {
+      title: "Cambiar contraseña",
+      desc: "Para cambiar tu contraseña, haz clic en el botón de abajo para enviar un correo electrónico para restablecer tu contraseña y sigue las instrucciones en el correo.",
+      btn: "Cambiar contraseña"
+    },
+    oauth: {
+      title: "Cuentas conectadas",
+      connected: "Conectado",
+      connect: "Conectar"
+    },
+    passkey: {
+      title: "Llaves de paso (Passkeys)",
+      desc: "Utilice llaves de paso como una alternativa segura a las contraseñas.",
+      btn: "+ Agregar llave de paso"
+    },
+    tfa: {
+      title: "Autenticación de dos factores (2FA)",
+      desc: "Agregue una capa adicional de seguridad a su cuenta.",
+      warning:
+        "Se requiere contraseña. Establece una contraseña antes de habilitar la autenticación de dos factores. Se requiere tu contraseña para verificar los cambios.",
+      btn: "Habilitar autenticación de dos factores",
+      activeBtn: "Autenticación de Dos Factores Activada"
+    },
+    sessions: {
+      title: "Sesiones activas",
+      desc: "Estas son todas las sesiones activas de su cuenta. Haga clic en la X para finalizar una sesión específica.",
+      current: "Sesión actual",
+      btnTerm: "Cerrar otras sesiones"
+    }
   }
 };
 
 export default function AccountSecuritySettings() {
   const router = useRouter();
   const { language } = useLanguage();
-  
-  // Membaca kamus terjemahan aktif
+
+  // Membaca kamus terjemahan aktif secara dinamis
   const t = securityTranslations[language] || securityTranslations["English"];
 
   // State data dari Supabase
   const [email, setEmail] = useState("");
   const [providers, setProviders] = useState<string[]>([]);
   const [userAgent, setUserAgent] = useState("");
+  const [isMfaEnabled, setIsMfaEnabled] = useState(false);
 
   // State loading & interaksi
   const [isLoading, setIsLoading] = useState(true);
@@ -125,7 +153,6 @@ export default function AccountSecuritySettings() {
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
 
   useEffect(() => {
-    // Deteksi User Agent Browser lokal
     if (typeof window !== "undefined") {
       setUserAgent(window.navigator.userAgent);
     }
@@ -133,15 +160,26 @@ export default function AccountSecuritySettings() {
     const loadSecurityData = async () => {
       setIsLoading(true);
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error
+        } = await supabase.auth.getUser();
         if (error || !user) {
-          router.push("/login");
+          router.push("/dashboard/login/v2");
           return;
         }
 
         setEmail(user.email || "");
         setProviders(user.app_metadata?.providers || []);
 
+        // Memeriksa keaktifan autentikasi dua faktor (MFA/2FA) secara nyata dari Supabase
+        const { data: mfaData, error: mfaError } = await supabase.auth.mfa.listFactors();
+        if (!mfaError && mfaData && mfaData.all.length > 0) {
+          const verifiedFactors = mfaData.all.filter((factor) => factor.status === "verified");
+          if (verifiedFactors.length > 0) {
+            setIsMfaEnabled(true);
+          }
+        }
       } catch (err) {
         console.error("Gagal memuat data keamanan:", err);
       } finally {
@@ -162,24 +200,35 @@ export default function AccountSecuritySettings() {
     }
   }, [alertMessage]);
 
-  // Handler Kirim Email Reset / Setel Password Nyata via Supabase Auth
+  // Handler Kirim Email Ganti Password Nyata via Supabase Auth
   const handleSetPassword = async () => {
     if (!email) return;
     setIsSendingReset(true);
     setAlertMessage(null);
 
     try {
+      // Mengarahkan tautan klik email verifikasi ke form pengetikan sandi baru secara terintegrasi
+      const redirectToUrl = `${window.location.origin}/auth/callback?next=/dashboard/update-password`;
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/forgot-password`, // Ganti ke URL reset password Anda jika ada
+        redirectTo: redirectToUrl
       });
 
       if (error) throw error;
 
       setAlertMessage({
-        title: language === "English" ? "Email Sent" : "Email Terkirim",
-        description: language === "English" 
-          ? "We have sent a password reset link to your email." 
-          : "Kami telah sukses mengirimkan tautan penyetelan kata sandi baru ke inbox email Anda.",
+        title:
+          language === "English"
+            ? "Email Sent"
+            : language === "Español"
+              ? "Correo Enviado"
+              : "Email Terkirim",
+        description:
+          language === "English"
+            ? "We have sent a password reset link to your email."
+            : language === "Español"
+              ? "Hemos enviado un enlace de restablecimiento de contraseña a tu correo electrónico."
+              : "Kami telah sukses mengirimkan tautan penyetelan kata sandi baru ke inbox email Anda.",
         variant: "default"
       });
     } catch (e: any) {
@@ -193,21 +242,41 @@ export default function AccountSecuritySettings() {
     }
   };
 
+  // Handler Hubungkan Provider Sosial (Google/GitHub) Tambahan ke Sesi Akun Aktif
+  const handleConnectProvider = async (provider: "google" | "github") => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/dashboard/settings/security` // redirect kembali ke halaman ini setelah sukses menghubungkan
+        }
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      setAlertMessage({
+        title: "Connection Failed",
+        description: e.message || "Gagal menghubungkan akun sosial tambahan.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Handler Hentikan Sesi di Perangkat Lain via Supabase
   const handleTerminateOtherSessions = async () => {
     setIsTerminating(true);
     setAlertMessage(null);
 
     try {
-      // Mengeluarkan semua sesi di perangkat lain kecuali perangkat saat ini
+      // Mengeluarkan semua sesi di perangkat lain kecuali perangkat saat ini secara aman
       const { error } = await supabase.auth.signOut({ scope: "others" });
       if (error) throw error;
 
       setAlertMessage({
         title: language === "English" ? "Sessions Terminated" : "Sesi Diakhiri",
-        description: language === "English"
-          ? "Successfully signed out of all other devices."
-          : "Sesi aktif di perangkat lain berhasil dihentikan secara aman.",
+        description:
+          language === "English"
+            ? "Successfully signed out of all other devices."
+            : "Sesi aktif di perangkat lain berhasil dihentikan secara aman.",
         variant: "default"
       });
     } catch (e: any) {
@@ -224,7 +293,7 @@ export default function AccountSecuritySettings() {
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -262,15 +331,12 @@ export default function AccountSecuritySettings() {
       )}
 
       <div className="space-y-6">
-        
-        {/* CARD 1: YOUR PASSWORD */}
+        {/* CARD 1: YOUR PASSWORD (GANTI PASSWORD) */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1 md:max-w-xl">
               <h2 className="text-foreground text-base font-semibold">{t.password.title}</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {t.password.desc}
-              </p>
+              <p className="text-muted-foreground text-sm leading-relaxed">{t.password.desc}</p>
             </div>
 
             <div className="flex shrink-0">
@@ -278,9 +344,12 @@ export default function AccountSecuritySettings() {
                 onClick={handleSetPassword}
                 disabled={isSendingReset}
                 variant="outline"
-                className="h-10 rounded-xl px-5 text-sm font-semibold border-border/80 inline-flex items-center gap-2"
-              >
-                {isSendingReset ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                className="border-border/80 inline-flex h-10 items-center gap-2 rounded-xl px-5 text-sm font-semibold">
+                {isSendingReset ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <KeyRound className="h-4 w-4" />
+                )}
                 {t.password.btn}
               </Button>
             </div>
@@ -289,12 +358,12 @@ export default function AccountSecuritySettings() {
 
         {/* CARD 2: CONNECTED ACCOUNTS */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="p-8 space-y-6">
+          <CardContent className="space-y-6 p-8">
             <h2 className="text-foreground text-base font-semibold">{t.oauth.title}</h2>
-            
-            <div className="space-y-4 max-w-2xl">
+
+            <div className="max-w-2xl space-y-4">
               {/* OAUTH 1: GOOGLE */}
-              <div className="flex items-center justify-between p-4 border border-border/60 rounded-xl">
+              <div className="border-border/60 flex items-center justify-between rounded-xl border p-4">
                 <div className="flex items-center gap-3">
                   <svg viewBox="0 0 24 24" className="h-5 w-5">
                     <path
@@ -317,120 +386,43 @@ export default function AccountSecuritySettings() {
                   <span className="text-sm font-semibold">Google</span>
                 </div>
                 {providers.includes("google") ? (
-                  <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 rounded-full border border-emerald-500/20 px-3 py-1 font-semibold text-xs inline-flex items-center gap-1">
+                  <Badge className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10">
                     <Check className="h-3 w-3" /> {t.oauth.connected}
                   </Badge>
                 ) : (
-                  <Button size="sm" variant="outline" className="text-xs h-8 px-4 rounded-lg font-semibold border-border/85">{t.oauth.connect}</Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleConnectProvider("google")}
+                    variant="outline"
+                    className="border-border/85 h-8 rounded-lg px-4 text-xs font-semibold">
+                    {t.oauth.connect}
+                  </Button>
                 )}
               </div>
 
               {/* OAUTH 2: GITHUB */}
-              <div className="flex items-center justify-between p-4 border border-border/60 rounded-xl">
+              <div className="border-border/60 flex items-center justify-between rounded-xl border p-4">
                 <div className="flex items-center gap-3">
                   <GitHubLogoIcon className="h-5 w-5" />
                   <span className="text-sm font-semibold">GitHub</span>
                 </div>
                 {providers.includes("github") ? (
-                  <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 rounded-full border border-emerald-500/20 px-3 py-1 font-semibold text-xs inline-flex items-center gap-1">
+                  <Badge className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10">
                     <Check className="h-3 w-3" /> {t.oauth.connected}
                   </Badge>
                 ) : (
-                  <Button size="sm" variant="outline" className="text-xs h-8 px-4 rounded-lg font-semibold border-border/85">{t.oauth.connect}</Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleConnectProvider("github")}
+                    variant="outline"
+                    className="border-border/85 h-8 rounded-lg px-4 text-xs font-semibold">
+                    {t.oauth.connect}
+                  </Button>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
-
-        {/* CARD 3: PASSKEYS */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
-            <div className="space-y-1 md:max-w-md">
-              <h2 className="text-foreground text-base font-semibold">{t.passkey.title}</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {t.passkey.desc}
-              </p>
-            </div>
-
-            <div className="flex shrink-0">
-              <Button variant="outline" className="h-10 rounded-xl px-5 text-sm font-semibold border-border/80">
-                {t.passkey.btn}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* CARD 4: TWO-FACTOR AUTHENTICATION */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="p-8 space-y-6">
-            <div className="space-y-1">
-              <h2 className="text-foreground text-base font-semibold">{t.tfa.title}</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">{t.tfa.desc}</p>
-            </div>
-
-            {/* Warning Alert 2FA */}
-            <Alert className="rounded-2xl border-amber-500/20 bg-amber-500/5 text-amber-600 max-w-4xl p-4 flex gap-3">
-              <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <AlertTitle className="font-semibold text-sm">Password Required</AlertTitle>
-                <AlertDescription className="text-xs text-muted-foreground leading-relaxed">
-                  {t.tfa.warning}
-                </AlertDescription>
-              </div>
-            </Alert>
-
-            <Button disabled variant="outline" className="h-10 rounded-xl px-5 text-sm font-semibold">
-              {t.tfa.btn}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* CARD 5: ACTIVE SESSIONS */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="p-8 space-y-6">
-            <div className="space-y-1">
-              <h2 className="text-foreground text-base font-semibold">{t.sessions.title}</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">{t.sessions.desc}</p>
-            </div>
-
-            <div className="space-y-4 max-w-4xl">
-              {/* Sesi browser saat ini */}
-              <div className="flex items-start justify-between p-5 border border-border/60 rounded-xl bg-card gap-4">
-                <div className="flex items-start gap-3.5">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted border border-border/60">
-                    <Laptop className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex flex-col space-y-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground truncate">{t.sessions.current}</span>
-                      <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 rounded-full border border-emerald-500/20 text-[10px] px-2 py-0.5 font-bold">
-                        ACTIVE
-                      </Badge>
-                    </div>
-                    <span className="text-xs text-muted-foreground break-all font-mono leading-relaxed">
-                      {userAgent || "Loading browser details..."}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tombol Hentikan Sesi Lain */}
-              <div className="flex justify-end pt-2">
-                <Button
-                  onClick={handleTerminateOtherSessions}
-                  disabled={isTerminating}
-                  variant="outline"
-                  className="h-10 rounded-xl px-5 text-sm font-semibold border-border/80 inline-flex items-center gap-1.5"
-                >
-                  {isTerminating && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {t.sessions.btnTerm}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
       </div>
     </div>
   );

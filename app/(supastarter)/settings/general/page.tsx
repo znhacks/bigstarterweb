@@ -35,9 +35,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-// Impor klien Supabase & Global Language Hook
+// Impor klien Supabase, Global Language Hook, dan REUSABLE IMAGE CROPPER DIALOG
 import { supabase } from "@/lib/supabase";
 import { useLanguage, LanguageType, dictionaries } from "@/components/providers/language-provider";
+import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 
 interface AlertState {
   title: string;
@@ -59,9 +60,13 @@ export default function AccountGeneralSettings() {
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  // State Manajemen Pemotongan Gambar (Cropping)
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+
   // State loading & interaksi
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false); // Menggunakan isUploadingAvatar dengan benar
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [isSavingLang, setIsSavingLang] = useState(false);
@@ -91,7 +96,6 @@ export default function AccountGeneralSettings() {
         setUserId(user.id);
         setEmail(user.email || "");
 
-        // MENGAMBIL AVATAR & NAMA LENGKAP NYATA DARI TABEL PROFILES
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("full_name, avatar")
@@ -102,7 +106,7 @@ export default function AccountGeneralSettings() {
 
         if (profileData) {
           setFullName(profileData.full_name || "");
-          setAvatarUrl(profileData.avatar || null); // Mengisi preview dengan URL avatar asli dari DB
+          setAvatarUrl(profileData.avatar || null);
         }
       } catch (error: any) {
         console.error("Gagal memuat data akun:", error);
@@ -133,31 +137,47 @@ export default function AccountGeneralSettings() {
     fileInputRef.current?.click();
   };
 
-  // HANDLER UPLOAD GAMBAR NYATA KE SUPABASE STORAGE
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 1. MEMBUKA MODAL CROPPER SAAT FILE AVATAR DIPILIH
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !userId) return;
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageSrc(reader.result as string); // Simpan sumber gambar mentah
+        setCropperOpen(true); // Buka dialog pemotongan
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 2. PROSES UPLOAD REAL BERKAS WEBP HASIL POTONGAN KE SUPABASE STORAGE & DATABASE PROFILES
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!userId) return;
 
     setIsUploadingAvatar(true);
     setAlertMessage(null);
 
     try {
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${userId}/${Date.now()}.${fileExt}`; // Path folder rapi berdasarkan ID User
+      // Menggunakan ekstensi berkas .webp hasil konversi canvas
+      const filePath = `users/${userId}/${Date.now()}.webp`;
 
-      // 1. Unggah file gambar ke Bucket "avatars" di Supabase Storage
+      // A. Unggah berkas webp terkompresi ke Supabase Storage (Bucket 'avatars')
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+        .upload(filePath, croppedBlob, {
+          contentType: "image/webp",
+          cacheControl: "3600",
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
-      // 2. Dapatkan Public URL hasil upload gambar
+      // B. Dapatkan Public URL hasil upload gambar
       const {
         data: { publicUrl }
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      // 3. Simpan tautan URL gambar tersebut ke kolom "avatar" di tabel "profiles" Anda
+      // C. Simpan tautan URL gambar tersebut ke kolom "avatar" di tabel "profiles"
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ avatar: publicUrl })
@@ -341,7 +361,6 @@ export default function AccountGeneralSettings() {
               <div
                 onClick={isUploadingAvatar || isSavingLang ? undefined : handleAvatarClick}
                 className="group bg-muted border-border/60 hover:bg-muted/80 relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-all">
-                {/* Perbaikan: Menggunakan state isUploadingAvatar dengan benar */}
                 {isUploadingAvatar ? (
                   <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
                 ) : avatarUrl ? (
@@ -525,6 +544,15 @@ export default function AccountGeneralSettings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* REUSABLE IMAGE CROPPER DIALOG */}
+      <ImageCropperDialog
+        open={cropperOpen}
+        onOpenChange={setCropperOpen}
+        imageSrc={imageSrc}
+        onCropComplete={handleCropComplete}
+        aspectRatio={1} // Memotong secara melingkar/persegi 1:1
+      />
     </div>
   );
 }

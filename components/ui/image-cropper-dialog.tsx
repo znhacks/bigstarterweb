@@ -1,48 +1,58 @@
 "use client";
 
 import * as React from "react";
-import { useState, useCallback } from "react";
-import Cropper from "react-easy-crop";
+import { useState, useRef, useCallback } from "react";
+import ReactCrop, { centerCrop, makeAspectCrop, Crop, PixelCrop } from "react-image-crop";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+
+// @ts-ignore - Mengabaikan pemeriksaan tipe data untuk berkas CSS eksternal
+import "react-image-crop/dist/ReactCrop.css";
 
 interface ImageCropperDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   imageSrc: string | null;
   onCropComplete: (croppedBlob: Blob) => void;
-  aspectRatio?: number;
 }
 
 export function ImageCropperDialog({
   open,
   onOpenChange,
   imageSrc,
-  onCropComplete,
-  aspectRatio = 1
+  onCropComplete
 }: ImageCropperDialogProps) {
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  const onCropChange = useCallback((crop: { x: number; y: number }) => {
-    setCrop(crop);
+  // Helper untuk membuat grid seleksi kotak (1:1) berada di tengah gambar secara otomatis saat dimuat
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+
+    const initialCrop = centerCrop(
+      makeAspectCrop(
+        {
+          unit: "%",
+          width: 80 // Mengambil 80% area gambar di awal
+        },
+        1, // Mengunci rasio perbandingan 1:1 (Kotak)
+        width,
+        height
+      ),
+      width,
+      height
+    );
+
+    setCrop(initialCrop);
   }, []);
 
-  const onZoomChange = useCallback((zoom: number) => {
-    setZoom(zoom);
-  }, []);
-
-  const onCropCompleteCallback = useCallback((croppedArea: any, croppedAreaPixels: any) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
-
-  // Memproses pemotongan gambar dan konversi ke WebP terkompresi
+  // Memproses pemotongan gambar berbasis koordinat piksel grid
   const handleSave = async () => {
-    if (!imageSrc || !croppedAreaPixels) return;
+    if (!imgRef.current || !completedCrop) return;
 
     try {
-      const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
+      const croppedBlob = await getCroppedImg(imgRef.current, completedCrop);
       onCropComplete(croppedBlob);
       onOpenChange(false);
     } catch (e) {
@@ -59,38 +69,29 @@ export function ImageCropperDialog({
 
         {imageSrc && (
           <div className="space-y-6">
-            {/* Area Wadah Pemotong Gambar */}
-            <div className="relative h-[280px] w-full overflow-hidden rounded-xl bg-neutral-900">
-              <Cropper
-                image={imageSrc}
+            {/* Area Grid Pemotong Gambar */}
+            <div className="flex max-h-[350px] items-center justify-center overflow-hidden rounded-xl bg-neutral-900 p-4">
+              <ReactCrop
                 crop={crop}
-                zoom={zoom}
-                aspect={aspectRatio}
-                onCropChange={onCropChange}
-                onCropComplete={onCropCompleteCallback}
-                onZoomChange={onZoomChange}
-              />
-            </div>
-
-            {/* Slider Kontrol Zoom */}
-            <div className="space-y-1.5 px-1">
-              <label className="text-muted-foreground text-xs font-semibold">Zoom</label>
-              <input
-                type="range"
-                value={zoom}
-                min={1}
-                max={3}
-                step={0.1}
-                aria-label="Zoom"
-                onChange={(e) => setZoom(Number(e.target.value))}
-                className="bg-muted accent-foreground h-1 w-full cursor-pointer appearance-none rounded-lg"
-              />
+                onChange={(c) => setCrop(c)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={1} // Mengunci rasio grid agar tetap KOTAK (1:1) saat ujung ditarik
+                keepSelection>
+                <img
+                  ref={imgRef}
+                  alt="Crop Source"
+                  src={imageSrc}
+                  onLoad={onImageLoad}
+                  className="max-h-[300px] w-auto object-contain"
+                />
+              </ReactCrop>
             </div>
 
             {/* Tombol Aksi */}
-            <div className="flex justify-end border-t pt-2">
+            <div className="flex justify-end border-t pt-3">
               <Button
                 onClick={handleSave}
+                disabled={!completedCrop}
                 className="bg-foreground text-background hover:bg-foreground/90 rounded-full px-6 py-2 text-sm font-semibold shadow-sm">
                 Save
               </Button>
@@ -103,22 +104,9 @@ export function ImageCropperDialog({
 }
 
 // ==========================================
-// HELPER CANVAS: Konversi gambar ke format WebP Kecil Terkompresi (80% Quality)
+// HELPER CANVAS: Ekstraksi potongan gambar ke format WebP Terkompresi (80% Quality)
 // ==========================================
-const createImage = (url: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
-    const image = new Image();
-    image.addEventListener("load", () => resolve(image));
-    image.addEventListener("error", (error) => reject(error));
-    image.setAttribute("crossOrigin", "anonymous"); // Mencegah isu CORS Canvas
-    image.src = url;
-  });
-
-async function getCroppedImg(
-  imageSrc: string,
-  pixelCrop: { x: number; y: number; width: number; height: number }
-): Promise<Blob> {
-  const image = await createImage(imageSrc);
+async function getCroppedImg(image: HTMLImageElement, pixelCrop: PixelCrop): Promise<Blob> {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
@@ -126,18 +114,25 @@ async function getCroppedImg(
     throw new Error("No 2d context found");
   }
 
+  // Hitung skala perbandingan antara ukuran render gambar di browser vs ukuran asli file gambar
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
+
   // Atur dimensi output gambar (Skala kecil 400x400px agar hemat storage & cepat dimuat)
   const OUTPUT_SIZE = 400;
   canvas.width = OUTPUT_SIZE;
   canvas.height = OUTPUT_SIZE;
 
-  // Render potongan gambar ke dalam canvas
+  // Aktifkan pemulusan gambar resolusi tinggi
+  ctx.imageSmoothingQuality = "high";
+
+  // Gambar potongan ke dalam canvas menggunakan koordinat skala asli
   ctx.drawImage(
     image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
+    pixelCrop.x * scaleX,
+    pixelCrop.y * scaleY,
+    pixelCrop.width * scaleX,
+    pixelCrop.height * scaleY,
     0,
     0,
     OUTPUT_SIZE,
