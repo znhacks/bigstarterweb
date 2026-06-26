@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Users, Upload, CheckCircle2, AlertCircle, X, Loader2, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,8 +19,9 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-// Impor klien Supabase
+// Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/components/providers/language-provider";
 
 interface AlertState {
   title: string;
@@ -28,6 +30,9 @@ interface AlertState {
 }
 
 export default function OrganizationGeneralSettings() {
+  const router = useRouter();
+  const { language, t } = useLanguage();
+
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -38,6 +43,7 @@ export default function OrganizationGeneralSettings() {
 
   // State loading & interaksi
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
@@ -54,7 +60,7 @@ export default function OrganizationGeneralSettings() {
     }
   }, []);
 
-  // Ambil data detail organisasi & Hak Akses Role sekaligus
+  // Ambil data detail organisasi & Hak Akses Role dari Supabase secara Paralel
   const fetchOrgAndRoleDetails = async (orgId: string) => {
     setIsLoading(true);
     try {
@@ -62,11 +68,14 @@ export default function OrganizationGeneralSettings() {
       const {
         data: { user }
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("Pengguna tidak terautentikasi.");
+      if (!user) {
+        router.push("/dashboard/login/v2");
+        return;
+      }
 
-      // 2. Ambil rincian tenant nama & data role keanggotaan secara paralel
+      // 2. Ambil rincian nama tenant & data role keanggotaan secara paralel
       const [tenantRes, membershipRes] = await Promise.all([
-        supabase.from("tenants").select("name").eq("id", orgId).single(),
+        supabase.from("tenants").select("name, logo").eq("id", orgId).single(),
         supabase
           .from("memberships")
           .select("role")
@@ -78,6 +87,8 @@ export default function OrganizationGeneralSettings() {
       if (tenantRes.error) throw tenantRes.error;
       if (tenantRes.data) {
         setOrgName(tenantRes.data.name);
+        // Memuat URL avatar/logo asli organisasi jika ada di database
+        setLogoPreview((tenantRes.data as any).logo || null);
       }
 
       if (membershipRes.data) {
@@ -110,14 +121,58 @@ export default function OrganizationGeneralSettings() {
     fileInputRef.current?.click();
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // HANDLER UPLOAD LOGO ORGANISASI NYATA KE SUPABASE STORAGE & DATABASE
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file || !activeOrgId) return;
+
+    setIsUploadingLogo(true);
+    setAlertMessage(null);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `organizations/${activeOrgId}/${Date.now()}.${fileExt}`; // Path folder rapi berdasar ID Organisasi
+
+      // 1. Unggah file gambar ke Bucket "avatars" di Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // 2. Dapatkan Public URL hasil upload gambar
+      const {
+        data: { publicUrl }
+      } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+      // 3. Simpan tautan URL gambar tersebut ke kolom "logo" (atau "avatar") di tabel "tenants" Anda
+      const { error: tenantError } = await supabase
+        .from("tenants")
+        .update({ logo: publicUrl })
+        .eq("id", activeOrgId);
+
+      if (tenantError) throw tenantError;
+
+      // Update state preview di layar secara instan
+      setLogoPreview(publicUrl);
+
+      // Memicu event kustom agar logo sidebar ikut terupdate otomatis
+      window.dispatchEvent(new Event("storage"));
+
+      setAlertMessage({
+        title: "Success",
+        description: "Logo organisasi berhasil diperbarui di database.",
+        variant: "default"
+      });
+    } catch (error: any) {
+      console.error("Gagal mengunggah logo:", error);
+      setAlertMessage({
+        title: "Upload Failed",
+        description: error.message || "Gagal mengunggah logo organisasi.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingLogo(false);
     }
   };
 
@@ -246,6 +301,18 @@ export default function OrganizationGeneralSettings() {
         </Alert>
       )}
 
+      {/* TAMPILAN BANNER INFO READ-ONLY JIKA USER ADALAH MEMBER */}
+      {isReadOnly && (
+        <Alert className="rounded-2xl border-amber-500/20 bg-amber-500/10 text-amber-600">
+          <ShieldAlert className="h-4 w-4 text-amber-600" />
+          <AlertTitle>Read-Only Mode</AlertTitle>
+          <AlertDescription>
+            Anda masuk sebagai anggota (**Member**). Anda hanya diizinkan untuk melihat pengaturan
+            organisasi dan tidak memiliki hak akses untuk memodifikasinya.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="space-y-6">
         {/* Card 1: Organization Logo */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
@@ -264,14 +331,17 @@ export default function OrganizationGeneralSettings() {
                 onChange={handleLogoChange}
                 accept="image/*"
                 className="hidden"
-                disabled={isReadOnly}
+                disabled={isReadOnly || isUploadingLogo}
               />
               <div
-                onClick={isReadOnly ? undefined : handleLogoClick}
+                onClick={isReadOnly || isUploadingLogo ? undefined : handleLogoClick}
                 className={`group bg-muted border-border/60 relative flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border transition-all ${
                   isReadOnly ? "cursor-default" : "hover:bg-muted/80 cursor-pointer"
                 }`}>
-                {logoPreview ? (
+                {/* Visual Loading Spinner saat proses upload gambar ke Supabase Storage */}
+                {isUploadingLogo ? (
+                  <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+                ) : logoPreview ? (
                   <img
                     src={logoPreview}
                     alt="Organization Logo"
@@ -280,8 +350,8 @@ export default function OrganizationGeneralSettings() {
                 ) : (
                   <Users className="text-muted-foreground h-6 w-6 transition-transform group-hover:scale-105" />
                 )}
-                {/* Hanya munculkan ikon hover upload jika bukan Read-Only */}
-                {!isReadOnly && (
+                {/* Hanya munculkan ikon hover upload jika bukan Read-Only dan tidak sedang Loading */}
+                {!isReadOnly && !isUploadingLogo && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                     <Upload className="h-5 w-5 text-white" />
                   </div>
