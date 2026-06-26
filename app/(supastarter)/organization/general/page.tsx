@@ -19,9 +19,55 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-// Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
+
+// 1. Impor Komponen ImageSwitcher Baru
+import { ImageSwitcher } from "@/components/layout/language-switcher"; // Opsional penyesuaian path
+import { ImageType } from "@/components/providers/language-provider";
+import { ImageSwitcher } from "@/components/layout/image-switcher";
+
+// Impor komponen dialog penyesuai yang baru saja dibuat
+import { ImageProvider } from "@/components/providers/image-provider";
+import { ImageSwitcher } from "@/components/layout/image-switcher";
+import { useIsTablet } from "@/hooks/use-mobile";
+
+// Impor modul baru
+import { ImageSwitcher } from "@/components/layout/image-switcher";
+import { ImageProvider } from "@/components/providers/image-provider";
+
+// Import dialog penampung pemotong gambar baru kita
+import { ImageCropper } from "@/components/superadmin/organizations-list";
+import { ImageType } from "@/components/providers/language-provider";
+
+// Import komponen dialog dari file baru
+import { ImageSelection } from "@/components/layout/image-selection";
+import { Image } from "lucide-react";
+
+import { ImageSelectionProvider } from "@/components/providers/image-selection-provider";
+
+import { ImageSelectionSwitcher } from "@/components/layout/image-selection-switcher";
+
+// Impor komponen ImageCropper
+import { ImageCropperDialog } from "@/components/layout/image-cropper-dialog";
+
+// IMPOR KOMPONEN CROPPER BARU KITA
+import { ImageCropperDialog } from "@/components/layout/image-cropper-dialog";
+
+import { ImageCropper } from "@/components/layout/image-cropper";
+
+// IMPOR IMAGE CROPPER DIALOG YANG TELAH DIBUAT PADA LANGKAH 2
+import { ImageCropperDialog } from "@/components/layout/image-cropper-dialog";
+
+// IMPOR KOMPONEN CROPPER
+import { ImageCropperDialog } from "@/components/layout/image-cropper-dialog";
+
+import { ImageCropper } from "@/components/layout/image-cropper";
+
+import { ImageCropperDialog } from "@/components/layout/image-cropper-dialog";
+
+// IMPOR DIALOG PEMOTONG GAMBAR YANG REUSABLE
+import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 
 interface AlertState {
   title: string;
@@ -40,6 +86,10 @@ export default function OrganizationGeneralSettings() {
 
   // State Hak Akses Role
   const [userRole, setUserRole] = useState<"Owner" | "Admin" | "Member" | null>(null);
+
+  // State untuk manajemen pemotongan gambar (Cropping)
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
 
   // State loading & interaksi
   const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +114,6 @@ export default function OrganizationGeneralSettings() {
   const fetchOrgAndRoleDetails = async (orgId: string) => {
     setIsLoading(true);
     try {
-      // 1. Ambil data user aktif saat ini
       const {
         data: { user }
       } = await supabase.auth.getUser();
@@ -73,7 +122,6 @@ export default function OrganizationGeneralSettings() {
         return;
       }
 
-      // 2. Ambil rincian nama tenant & data role keanggotaan secara paralel
       const [tenantRes, membershipRes] = await Promise.all([
         supabase.from("tenants").select("name, logo").eq("id", orgId).single(),
         supabase
@@ -87,7 +135,6 @@ export default function OrganizationGeneralSettings() {
       if (tenantRes.error) throw tenantRes.error;
       if (tenantRes.data) {
         setOrgName(tenantRes.data.name);
-        // Memuat URL avatar/logo asli organisasi jika ada di database
         setLogoPreview((tenantRes.data as any).logo || null);
       }
 
@@ -116,36 +163,51 @@ export default function OrganizationGeneralSettings() {
     }
   }, [alertMessage]);
 
-  // Simulasi klik untuk upload logo
   const handleLogoClick = () => {
     fileInputRef.current?.click();
   };
 
-  // HANDLER UPLOAD LOGO ORGANISASI NYATA KE SUPABASE STORAGE & DATABASE
-  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 1. MEMBUKA MODAL CROPPER SAAT FILE GAMBAR DIPILIH
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !activeOrgId) return;
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageSrc(reader.result as string); // Simpan sumber gambar mentah
+        setCropperOpen(true); // Buka dialog pemotongan
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 2. PROSES UPLOAD REAL BERKAS WEBP HASIL POTONGAN KE SUPABASE STORAGE
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    if (!activeOrgId) return;
 
     setIsUploadingLogo(true);
     setAlertMessage(null);
 
     try {
-      const fileExt = file.name.split(".").pop();
-      const filePath = `organizations/${activeOrgId}/${Date.now()}.${fileExt}`; // Path folder rapi berdasar ID Organisasi
+      // Menggunakan ekstensi berkas .webp karena dikonversi secara real oleh canvas
+      const filePath = `organizations/${activeOrgId}/${Date.now()}.webp`;
 
-      // 1. Unggah file gambar ke Bucket "avatars" di Supabase Storage
+      // A. Unggah berkas webp terkompresi ke Supabase Storage (Bucket 'avatars')
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+        .upload(filePath, croppedBlob, {
+          contentType: "image/webp",
+          cacheControl: "3600",
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
-      // 2. Dapatkan Public URL hasil upload gambar
+      // B. Dapatkan URL Publik
       const {
         data: { publicUrl }
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      // 3. Simpan tautan URL gambar tersebut ke kolom "logo" (atau "avatar") di tabel "tenants" Anda
+      // C. Update kolom logo di tabel tenants
       const { error: tenantError } = await supabase
         .from("tenants")
         .update({ logo: publicUrl })
@@ -153,15 +215,13 @@ export default function OrganizationGeneralSettings() {
 
       if (tenantError) throw tenantError;
 
-      // Update state preview di layar secara instan
+      // Sukses
       setLogoPreview(publicUrl);
-
-      // Memicu event kustom agar logo sidebar ikut terupdate otomatis
-      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new Event("storage")); // Refresh Sidebar Icon
 
       setAlertMessage({
-        title: "Success",
-        description: "Logo organisasi berhasil diperbarui di database.",
+        title: "Logo Updated",
+        description: "Logo organisasi berhasil diperkecil (.webp) dan disimpan di database.",
         variant: "default"
       });
     } catch (error: any) {
@@ -243,7 +303,6 @@ export default function OrganizationGeneralSettings() {
     }
   };
 
-  // Tentukan apakah user hanya memiliki hak akses baca saja (role: Member)
   const isReadOnly = userRole === "Member";
 
   if (isLoading) {
@@ -335,7 +394,7 @@ export default function OrganizationGeneralSettings() {
               />
               <div
                 onClick={isReadOnly || isUploadingLogo ? undefined : handleLogoClick}
-                className={`group bg-muted border-border/60 relative flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border transition-all ${
+                className={`group bg-muted border-border/60 relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center rounded-xl border transition-all ${
                   isReadOnly ? "cursor-default" : "hover:bg-muted/80 cursor-pointer"
                 }`}>
                 {/* Visual Loading Spinner saat proses upload gambar ke Supabase Storage */}
@@ -444,6 +503,15 @@ export default function OrganizationGeneralSettings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* REUSABLE IMAGE CROPPER DIALOG */}
+      <ImageCropperDialog
+        open={cropperOpen}
+        onOpenChange={setCropperOpen}
+        imageSrc={imageSrc}
+        onCropComplete={handleCropComplete}
+        aspectRatio={1} // Memotong secara melingkar/persegi 1:1
+      />
     </div>
   );
 }
