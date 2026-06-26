@@ -31,6 +31,7 @@ import {
 // Impor komponen PayPal & Klien Supabase
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/components/providers/language-provider";
 
 interface Plan {
   id: string; // Menggunakan UUID dari tabel public.plans
@@ -111,6 +112,7 @@ const planDesignTokens: Record<
 };
 
 export default function OrganizationBilling() {
+  const { t, formatPrice } = useLanguage();
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
@@ -427,7 +429,7 @@ export default function OrganizationBilling() {
   }
 
   return (
-    <PayPalScriptProvider options={{ "client-id": "test", currency: "USD" }}>
+    <PayPalScriptProvider options={{ "client-id": "test", currency: t.currency.code }}>
       <div className="mx-auto w-full max-w-5xl space-y-10 px-4 py-10">
         {/* SHADCN ALERT NOTIFICATION */}
         {alertMessage && (
@@ -495,7 +497,7 @@ export default function OrganizationBilling() {
                     {activeSub?.status === "refund_requested"
                       ? "Klaim pengembalian dana Anda sedang dalam peninjauan Admin. Akses premium dibekukan sementara."
                       : isSubActive
-                        ? `Langganan aktif senilai $${activeSub.price}/bulan. ${
+                        ? `Langganan aktif senilai ${formatPrice(activeSub.price)}/bulan. ${
                             activeSub.endsAt
                               ? `${
                                   activeSub.cancelAtPeriodEnd
@@ -691,7 +693,9 @@ export default function OrganizationBilling() {
                         <p className="text-muted-foreground min-h-[40px] text-sm">{plan.desc}</p>
                       </div>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-bold tracking-tight">${plan.price}</span>
+                        <span className="text-4xl font-bold tracking-tight">
+                          {formatPrice(plan.price)}
+                        </span>
                         <span className="text-muted-foreground text-sm">
                           / month {billingCycle === "yearly" && " (billed yearly)"}
                         </span>

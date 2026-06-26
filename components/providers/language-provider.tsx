@@ -2,11 +2,10 @@
 
 import * as React from "react";
 import { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
-// 1. DAFTAR BAHASA YANG DIDUKUNG (Tambahkan di sini jika ingin menambah bahasa baru, misal: | "Français" | "日本語")
 export type LanguageType = "English" | "Bahasa Indonesia" | "Español";
 
-// 2. KONTRAK TIPE DATA (Memastikan semua bahasa memiliki struktur & kunci terjemahan yang sama persis)
 export interface TranslationSchema {
   common: {
     save: string;
@@ -17,6 +16,13 @@ export interface TranslationSchema {
     success: string;
     error: string;
     loading: string;
+  };
+  // Tambahan Konfigurasi Mata Uang & Lokalitas
+  currency: {
+    code: string;
+    symbol: string;
+    rate: number; // Kurs konversi dari USD
+    locale: string;
   };
   sidebar: {
     dashboards: string;
@@ -55,7 +61,6 @@ export interface TranslationSchema {
   };
 }
 
-// 3. KAMUS TERJEMAHAN (Cukup tambahkan blok bahasa baru di bawah ini untuk mendaftarkan bahasa baru)
 export const dictionaries: Record<LanguageType, TranslationSchema> = {
   English: {
     common: {
@@ -67,6 +72,12 @@ export const dictionaries: Record<LanguageType, TranslationSchema> = {
       success: "Success",
       error: "Error",
       loading: "Loading..."
+    },
+    currency: {
+      code: "USD",
+      symbol: "$",
+      rate: 1,
+      locale: "en-US"
     },
     sidebar: {
       dashboards: "Dashboards",
@@ -120,6 +131,12 @@ export const dictionaries: Record<LanguageType, TranslationSchema> = {
       error: "Error",
       loading: "Memuat..."
     },
+    currency: {
+      code: "IDR",
+      symbol: "Rp",
+      rate: 15000, // Simulasi kurs: $1 = Rp 15.000
+      locale: "id-ID"
+    },
     sidebar: {
       dashboards: "Dashboard",
       classic: "Dashboard Klasik",
@@ -144,7 +161,7 @@ export const dictionaries: Record<LanguageType, TranslationSchema> = {
       subTitle: "Kelola pengaturan umum akun Anda.",
       avatar: "Avatar Anda",
       avatarDesc:
-        "Untuk mengubah avatar Anda, klik gambar pada kotak ini dan pilih berkas dari komputer Anda untuk diunggah.",
+        "To change your avatar click the picture in this block and select a file from your computer to upload.",
       language: "Bahasa Anda",
       languageDesc:
         "Untuk mengubah bahasa aplikasi pada akun Anda, pilih bahasa dari daftar lalu klik simpan.",
@@ -171,6 +188,12 @@ export const dictionaries: Record<LanguageType, TranslationSchema> = {
       success: "Éxito",
       error: "Error",
       loading: "Cargando..."
+    },
+    currency: {
+      code: "EUR",
+      symbol: "€",
+      rate: 0.92, // Kurs: $1 = €0.92
+      locale: "es-ES"
     },
     sidebar: {
       dashboards: "Tableros",
@@ -217,8 +240,9 @@ export const dictionaries: Record<LanguageType, TranslationSchema> = {
 
 interface LanguageContextType {
   language: LanguageType;
-  setLanguage: (lang: LanguageType) => void;
+  setLanguage: (lang: LanguageType) => Promise<void>;
   t: TranslationSchema;
+  formatPrice: (usdAmount: number) => string; // Helper pemformat harga dinamis
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -227,21 +251,77 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<LanguageType>("English");
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("app_language") as LanguageType;
-    if (savedLang && dictionaries[savedLang]) {
-      setLanguageState(savedLang);
-    }
+    const fetchUserLanguage = async () => {
+      try {
+        // 1. Coba ambil dari profil Supabase
+        const {
+          data: { user }
+        } = await supabase.auth.getUser();
+        if (user && user.user_metadata?.language) {
+          const userLang = user.user_metadata.language as LanguageType;
+          if (dictionaries[userLang]) {
+            setLanguageState(userLang);
+            localStorage.setItem("app_language", userLang);
+            return;
+          }
+        }
+
+        // 2. Coba ambil dari localStorage jika ada
+        const savedLang = localStorage.getItem("app_language") as LanguageType;
+        if (savedLang && dictionaries[savedLang]) {
+          setLanguageState(savedLang);
+          return;
+        }
+
+        // 3. FITUR BARU: Deteksi Bahasa Browser Pengguna Secara Otomatis
+        if (typeof window !== "undefined") {
+          const browserLang = window.navigator.language.toLowerCase();
+          if (browserLang.startsWith("id")) {
+            setLanguageState("Bahasa Indonesia");
+            localStorage.setItem("app_language", "Bahasa Indonesia");
+          } else if (browserLang.startsWith("es")) {
+            setLanguageState("Español");
+            localStorage.setItem("app_language", "Español");
+          } else {
+            setLanguageState("English");
+            localStorage.setItem("app_language", "English");
+          }
+        }
+      } catch (e) {
+        console.error("Gagal mendeteksi bahasa otomatis:", e);
+      }
+    };
+
+    fetchUserLanguage();
   }, []);
 
-  const setLanguage = (lang: LanguageType) => {
+  const setLanguage = async (lang: LanguageType) => {
     setLanguageState(lang);
     localStorage.setItem("app_language", lang);
+
+    try {
+      await supabase.auth.updateUser({
+        data: { language: lang }
+      });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const t = dictionaries[language];
 
+  // 4. FITUR BARU: Helper Pemformat Mata Uang Berdasarkan Negara Terpilih
+  const formatPrice = (usdAmount: number) => {
+    const convertedAmount = Math.round(usdAmount * t.currency.rate);
+    return new Intl.NumberFormat(t.currency.locale, {
+      style: "currency",
+      currency: t.currency.code,
+      maximumFractionDigits: t.currency.code === "IDR" ? 0 : 2
+    }).format(convertedAmount);
+  };
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, formatPrice }}>
       {children}
     </LanguageContext.Provider>
   );
