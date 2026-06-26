@@ -19,55 +19,12 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
+// Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
-
-// 1. Impor Komponen ImageSwitcher Baru
-import { ImageSwitcher } from "@/components/layout/language-switcher"; // Opsional penyesuaian path
-import { ImageType } from "@/components/providers/language-provider";
-import { ImageSwitcher } from "@/components/layout/image-switcher";
-
-// Impor komponen dialog penyesuai yang baru saja dibuat
-import { ImageProvider } from "@/components/providers/image-provider";
-import { ImageSwitcher } from "@/components/layout/image-switcher";
-import { useIsTablet } from "@/hooks/use-mobile";
-
-// Impor modul baru
-import { ImageSwitcher } from "@/components/layout/image-switcher";
-import { ImageProvider } from "@/components/providers/image-provider";
-
-// Import dialog penampung pemotong gambar baru kita
-import { ImageCropper } from "@/components/superadmin/organizations-list";
-import { ImageType } from "@/components/providers/language-provider";
-
-// Import komponen dialog dari file baru
-import { ImageSelection } from "@/components/layout/image-selection";
-import { Image } from "lucide-react";
-
-import { ImageSelectionProvider } from "@/components/providers/image-selection-provider";
-
-import { ImageSelectionSwitcher } from "@/components/layout/image-selection-switcher";
-
-// Impor komponen ImageCropper
-import { ImageCropperDialog } from "@/components/layout/image-cropper-dialog";
-
-// IMPOR KOMPONEN CROPPER BARU KITA
-import { ImageCropperDialog } from "@/components/layout/image-cropper-dialog";
-
-import { ImageCropper } from "@/components/layout/image-cropper";
-
-// IMPOR IMAGE CROPPER DIALOG YANG TELAH DIBUAT PADA LANGKAH 2
-import { ImageCropperDialog } from "@/components/layout/image-cropper-dialog";
-
-// IMPOR KOMPONEN CROPPER
-import { ImageCropperDialog } from "@/components/layout/image-cropper-dialog";
-
-import { ImageCropper } from "@/components/layout/image-cropper";
-
-import { ImageCropperDialog } from "@/components/layout/image-cropper-dialog";
-
-// IMPOR DIALOG PEMOTONG GAMBAR YANG REUSABLE
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
+
+// SATU-SATUNYA IMPOR CROPPER DIALOG YANG DIBUTUHKAN
 
 interface AlertState {
   title: string;
@@ -114,6 +71,7 @@ export default function OrganizationGeneralSettings() {
   const fetchOrgAndRoleDetails = async (orgId: string) => {
     setIsLoading(true);
     try {
+      // 1. Ambil data user aktif saat ini
       const {
         data: { user }
       } = await supabase.auth.getUser();
@@ -122,6 +80,7 @@ export default function OrganizationGeneralSettings() {
         return;
       }
 
+      // 2. Ambil rincian nama tenant & data role keanggotaan secara paralel
       const [tenantRes, membershipRes] = await Promise.all([
         supabase.from("tenants").select("name, logo").eq("id", orgId).single(),
         supabase
@@ -167,7 +126,7 @@ export default function OrganizationGeneralSettings() {
     fileInputRef.current?.click();
   };
 
-  // 1. MEMBUKA MODAL CROPPER SAAT FILE GAMBAR DIPILIH
+  // MEMBUKA MODAL CROPPER SAAT FILE GAMBAR DIPILIH
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -180,7 +139,7 @@ export default function OrganizationGeneralSettings() {
     }
   };
 
-  // 2. PROSES UPLOAD REAL BERKAS WEBP HASIL POTONGAN KE SUPABASE STORAGE
+  // PROSES UPLOAD REAL BERKAS WEBP HASIL POTONGAN KE SUPABASE STORAGE
   const handleCropComplete = async (croppedBlob: Blob) => {
     if (!activeOrgId) return;
 
@@ -303,6 +262,7 @@ export default function OrganizationGeneralSettings() {
     }
   };
 
+  // Tentukan apakah user hanya memiliki hak akses baca saja (role: Member)
   const isReadOnly = userRole === "Member";
 
   if (isLoading) {

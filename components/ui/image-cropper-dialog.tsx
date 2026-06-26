@@ -14,7 +14,7 @@ interface ImageCropperDialogProps {
   aspectRatio?: number;
 }
 
-export default function ImageCropperDialog({
+export function ImageCropperDialog({
   open,
   onOpenChange,
   imageSrc,
