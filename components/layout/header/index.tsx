@@ -11,6 +11,7 @@ import UserMenu from "@/components/layout/header/user-menu";
 import { ThemeCustomizerPanel } from "@/components/theme-customizer";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
+import { LanguageSwitcher } from "./language-switcher";
 
 export function SiteHeader() {
   const { toggleSidebar, open } = useSidebar();
@@ -36,6 +37,7 @@ export function SiteHeader() {
           </Button>
           <Notifications />
           <ThemeSwitch />
+          <LanguageSwitcher />
           <ThemeCustomizerPanel />
           <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
           <UserMenu />
