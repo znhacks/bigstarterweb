@@ -79,7 +79,7 @@ export function NavUser() {
       localStorage.removeItem("active_org_id");
 
       // Redirect ke halaman login v2
-      router.push("/dashboard/login");
+      router.push("/login");
       router.refresh();
     } catch (error) {
       console.error("Gagal keluar akun:", error);

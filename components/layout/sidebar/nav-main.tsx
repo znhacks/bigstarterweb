@@ -66,39 +66,39 @@ export const navItems: NavGroup[] = [
       },
       {
         title: "Organization",
-        href: "/dashboard/organization",
+        href: "/organization",
         icon: CreditCardIcon,
         roles: ["Owner", "Admin", "Member"],
         items: [
           {
             title: "General",
-            href: "/dashboard/organization/general",
+            href: "/organization/general",
             roles: ["Owner", "Admin", "Member"] // Hanya Owner & Admin
           },
           {
             title: "Member",
-            href: "/dashboard/organization/member",
+            href: "/organization/member",
             roles: ["Owner", "Admin"] // Semua bisa melihat daftar anggota
           },
           {
             title: "Billing",
-            href: "/dashboard/organization/billing",
+            href: "/organization/billing",
             roles: ["Owner"] // Hanya Owner organisasi
           }
         ]
       },
       {
         title: "Settings",
-        href: "/dashboard/settings",
+        href: "/settings",
         icon: Settings,
         items: [
           {
             title: "General",
-            href: "/dashboard/settings/general"
+            href: "/settings/general"
           },
           {
             title: "Security",
-            href: "/dashboard/settings/security"
+            href: "/settings/security"
           }
         ]
       }

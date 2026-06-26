@@ -42,5 +42,5 @@ export async function GET(request: Request) {
   }
 
   // Jika terjadi kesalahan kode, alihkan ke halaman error
-  return NextResponse.redirect(`${origin}/dashboard/login/v2?error=auth-code-error`);
+  return NextResponse.redirect(`${origin}/login?error=auth-code-error`);
 }

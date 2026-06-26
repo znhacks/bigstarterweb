@@ -85,7 +85,7 @@ export function PaywallGate({ children, allowedPlans, fallback }: PaywallGatePro
           </p>
         </div>
         <Button asChild size="sm" className="h-8 rounded-lg text-xs font-semibold">
-          <Link href="/dashboard/organization/billing">Upgrade Sekarang</Link>
+          <Link href="/organization/billing">Upgrade Sekarang</Link>
         </Button>
       </CardContent>
     </Card>

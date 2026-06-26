@@ -45,9 +45,7 @@ export async function middleware(request: NextRequest) {
 
   // Definisikan rute autentikasi publik (Ditambahkan dukungan rute forgot-password)
   const isAuthPage =
-    path.startsWith("/dashboard/login") ||
-    path.startsWith("/dashboard/register") ||
-    path.startsWith("/dashboard/forgot-password"); // <-- Diizinkan diakses sebelum login
+    path.startsWith("/login") || path.startsWith("/register") || path.startsWith("/forgot-password"); // <-- Diizinkan diakses sebelum login
 
   const isJoinPage = path.startsWith("/join");
   const isAuthCallback = path.startsWith("/auth/callback");
@@ -56,13 +54,13 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     if (isJoinPage) {
       const nextTarget = encodeURIComponent(`${url.pathname}${url.search}`);
-      url.pathname = "/dashboard/register";
+      url.pathname = "/register";
       url.search = `?next=${nextTarget}`;
       return NextResponse.redirect(url);
     }
 
     if (!isAuthPage && !isAuthCallback) {
-      url.pathname = "/dashboard/login";
+      url.pathname = "/login";
       return NextResponse.redirect(url);
     }
   }
@@ -70,7 +68,7 @@ export async function middleware(request: NextRequest) {
   // ALUR 2: JIKA USER SUDAH LOGIN
   if (user) {
     if (isAuthPage) {
-      url.pathname = "/dashboard/default";
+      url.pathname = "/default";
       url.search = "";
       return NextResponse.redirect(url);
     }

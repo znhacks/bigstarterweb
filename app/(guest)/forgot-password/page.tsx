@@ -136,7 +136,7 @@ export default function Page() {
           <p className="text-muted-foreground flex items-center gap-1 text-xs">
             Already have an account?{" "}
             <Link
-              href="login"
+              href="/login"
               className="text-foreground inline-flex items-center gap-0.5 font-semibold hover:underline">
               Log in <ArrowLeft className="h-3 w-3 rotate-180" />
             </Link>
