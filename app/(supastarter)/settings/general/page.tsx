@@ -61,6 +61,7 @@ export default function AccountGeneralSettings() {
 
   // State loading & interaksi
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false); // Menggunakan isUploadingAvatar dengan benar
   const [isSavingName, setIsSavingName] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [isSavingLang, setIsSavingLang] = useState(false);
@@ -83,16 +84,17 @@ export default function AccountGeneralSettings() {
           error: userError
         } = await supabase.auth.getUser();
         if (userError || !user) {
-          router.push("/login");
+          router.push("/dashboard/login/v2");
           return;
         }
 
         setUserId(user.id);
         setEmail(user.email || "");
 
+        // MENGAMBIL AVATAR & NAMA LENGKAP NYATA DARI TABEL PROFILES
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name")
+          .select("full_name, avatar")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -100,6 +102,7 @@ export default function AccountGeneralSettings() {
 
         if (profileData) {
           setFullName(profileData.full_name || "");
+          setAvatarUrl(profileData.avatar || null); // Mengisi preview dengan URL avatar asli dari DB
         }
       } catch (error: any) {
         console.error("Gagal memuat data akun:", error);
@@ -130,14 +133,54 @@ export default function AccountGeneralSettings() {
     fileInputRef.current?.click();
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // HANDLER UPLOAD GAMBAR NYATA KE SUPABASE STORAGE
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file || !userId) return;
+
+    setIsUploadingAvatar(true);
+    setAlertMessage(null);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${userId}/${Date.now()}.${fileExt}`; // Path folder rapi berdasarkan ID User
+
+      // 1. Unggah file gambar ke Bucket "avatars" di Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // 2. Dapatkan Public URL hasil upload gambar
+      const {
+        data: { publicUrl }
+      } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+      // 3. Simpan tautan URL gambar tersebut ke kolom "avatar" di tabel "profiles" Anda
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ avatar: publicUrl })
+        .eq("id", userId);
+
+      if (profileError) throw profileError;
+
+      // Update state preview di layar secara instan
+      setAvatarUrl(publicUrl);
+      setAlertMessage({
+        title: "Success",
+        description: "Foto profil Anda berhasil diperbarui di database.",
+        variant: "default"
+      });
+    } catch (error: any) {
+      console.error("Gagal mengunggah avatar:", error);
+      setAlertMessage({
+        title: "Upload Failed",
+        description: error.message || "Gagal mengunggah foto profil.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -228,7 +271,7 @@ export default function AccountGeneralSettings() {
       localStorage.removeItem("active_org_id");
 
       setTimeout(() => {
-        router.push("/login");
+        router.push("/dashboard/login/v2");
         router.refresh();
       }, 1500);
     } catch (error: any) {
@@ -293,11 +336,15 @@ export default function AccountGeneralSettings() {
                 onChange={handleAvatarChange}
                 accept="image/*"
                 className="hidden"
+                disabled={isUploadingAvatar || isSavingName || isSavingEmail || isSavingLang}
               />
               <div
-                onClick={handleAvatarClick}
+                onClick={isUploadingAvatar || isSavingLang ? undefined : handleAvatarClick}
                 className="group bg-muted border-border/60 hover:bg-muted/80 relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-all">
-                {avatarUrl ? (
+                {/* Perbaikan: Menggunakan state isUploadingAvatar dengan benar */}
+                {isUploadingAvatar ? (
+                  <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+                ) : avatarUrl ? (
                   <img
                     src={avatarUrl}
                     alt="User Avatar"
@@ -310,9 +357,11 @@ export default function AccountGeneralSettings() {
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                  <Upload className="h-6 w-6 text-white" />
-                </div>
+                {!isUploadingAvatar && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Upload className="h-6 w-6 text-white" />
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -339,7 +388,6 @@ export default function AccountGeneralSettings() {
                     <SelectValue placeholder="Select Language" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* LOOPING OTOMATIS: Semua bahasa baru dari kamus terjemahan akan terdaftar di sini secara otomatis */}
                     {Object.keys(dictionaries).map((langName) => (
                       <SelectItem key={langName} value={langName}>
                         {langName}

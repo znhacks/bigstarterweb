@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
-import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
-// Inisialisasi klien Supabase admin/server untuk mencatat undangan
+// Impor modul dispatcher & kamus template email internasional baru kita
+import { sendEmail } from "@/lib/mail/dispatcher";
+import { generateInviteEmailHTML, emailTranslations } from "@/lib/mail/templates";
+import { LanguageType } from "@/components/providers/language-provider";
+
+// Inisialisasi klien Supabase admin/server untuk mencatat database undangan
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 );
-
-const mailersend = new MailerSend({
-  apiKey: process.env.MAILERSEND_API_KEY || ""
-});
 
 export async function POST(req: Request) {
   try {
@@ -24,7 +26,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing email or role" }, { status: 400 });
     }
 
-    // 1. Dapatkan ID organisasi (tenant_id) berdasarkan nama organisasi
+    // 1. Deteksi Bahasa Aktif Pengirim (Inviter) dari Sesi Cookies Server secara Aman
+    const cookieStore = await cookies();
+    const serverSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          }
+        }
+      }
+    );
+
+    const {
+      data: { user }
+    } = await serverSupabase.auth.getUser();
+    const inviterLanguage = (user?.user_metadata?.language as LanguageType) || "English";
+
+    // 2. Dapatkan ID organisasi (tenant_id) berdasarkan nama organisasi
     const { data: tenantData, error: tenantError } = await supabase
       .from("tenants")
       .select("id")
@@ -38,7 +59,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Kelola penyimpanan data undangan ke tabel 'invitations' secara manual
+    // 3. Kelola penyimpanan data undangan ke tabel 'invitations' secara manual
     const { data: existingInvite } = await supabase
       .from("invitations")
       .select("id")
@@ -63,46 +84,27 @@ export async function POST(req: Request) {
       if (insertError) throw insertError;
     }
 
-    // 3. Meng-encode data parameter ke Base64 untuk URL Join
+    // 4. Meng-encode data parameter ke Base64 untuk URL Join
     const tokenData = JSON.stringify({ email, role, orgName });
     const token = Buffer.from(tokenData).toString("base64");
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const joinLink = `${appUrl}/join?token=${token}`;
 
-    const htmlContent = `
-      <div style="font-family: sans-serif; padding: 20px; max-width: 500px; border: 1px solid #eaeaea; border-radius: 8px;">
-        <h2>Undangan Masuk Organisasi</h2>
-        <p>Halo,</p>
-        <p>Anda telah diundang untuk bergabung dengan organisasi <strong>${orgName}</strong> sebagai <strong>${role}</strong>.</p>
-        <p style="margin: 24px 0;">
-          <a href="${joinLink}" style="background-color: #000; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block;">
-            Terima Undangan & Gabung
-          </a>
-        </p>
-        <p style="color: #666; font-size: 12px;">Jika Anda merasa tidak melakukan pendaftaran ini, abaikan email ini.</p>
-      </div>
-    `;
+    // 5. Kompilasi Subjek & Struktur HTML Email dengan Gaya Tailwind-like sesuai Bahasa Aktif
+    const t = emailTranslations[inviterLanguage] || emailTranslations.English;
+    const subject = `${t.subject}${orgName}`;
+    const htmlContent = generateInviteEmailHTML(orgName, role, joinLink, inviterLanguage);
 
-    // 4. Konfigurasi Pengirim dengan fallback
-    const senderEmail = process.env.MAILERSEND_SENDER_EMAIL || "MS_test@trial-xxxxx.mlsender.net";
-    const sentFrom = new Sender(senderEmail, "Acme Support");
+    // 6. Kirim Email Menggunakan Dispatcher Multi-Provider (Membaca .env.local)
+    await sendEmail({
+      to: email,
+      subject,
+      html: htmlContent
+    });
 
-    // Konfigurasi Penerima
-    const recipients = [new Recipient(email, "Invitee User")];
-
-    // Buat parameter pengiriman email MailerSend
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo(recipients)
-      .setSubject(`Undangan bergabung ke ${orgName}`)
-      .setHtml(htmlContent);
-
-    // Proses pengiriman email
-    const data = await mailersend.email.send(emailParams);
-
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
-    // MENAMPILKAN ERROR ASLI DI TERMINAL VS CODE ANDA
+    // Menampilkan error asli di terminal VS Code/CMD Anda
     console.error("CRITICAL_INVITE_API_ERROR:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

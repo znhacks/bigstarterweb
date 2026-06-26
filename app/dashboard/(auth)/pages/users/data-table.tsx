@@ -51,21 +51,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 // Impor klien Supabase
 import { supabase } from "@/lib/supabase";
 
+// PERBAIKAN TIPE DATA: Menyelaraskan seluruh properti kolom agar dikenali TypeScript secara aman
 export type User = {
   id: number;
-  dbId: string; // Menyimpan ID UUID asli dari Supabase
+  dbId: string; // Menyimpan ID UUID asli dari Supabase untuk fungsi aksi Hapus
   firstName: string;
   lastName: string;
-  name: string; // Diperlukan sebagai accessor pencarian kolom nama
-  email: string;
-  role: string;
+  name: string; // Ditambahkan agar row.getValue("name") dan row.original.name dikenali
+  email: string; // Ditambahkan agar row.getValue("email") dikenali
+  role: string; // Ditambahkan agar row.getValue("role") dikenali
   image: string;
   country: string;
   status: "active" | "inactive" | "pending";
   plan_name: string;
 };
 
-// Fungsi kustom untuk memproses filter multi-pilihan (array-based filtering)
+// Fungsi kustom untuk memproses filter berbasis array (multi-select)
 const multiSelectFilterFn: FilterFn<any> = (row, columnId, filterValue: string[]) => {
   if (!filterValue || filterValue.length === 0) return true;
   const rowValue = String(row.getValue(columnId)).toLowerCase();
@@ -101,9 +102,10 @@ export const columns: ColumnDef<User>[] = [
       <div className="flex items-center gap-4">
         <Avatar>
           <AvatarImage src={row.original.image} alt={row.original.name} />
-          <AvatarFallback>{generateAvatarFallback(row.getValue("name"))}</AvatarFallback>
+          {/* generateAvatarFallback menggunakan data name dari baris tabel secara dinamis */}
+          <AvatarFallback>{generateAvatarFallback(row.getValue("name") || "U")}</AvatarFallback>
         </Avatar>
-        <div className="font-semibold capitalize">{row.getValue("name")}</div>
+        <div className="text-foreground font-semibold capitalize">{row.getValue("name")}</div>
       </div>
     )
   },
@@ -121,7 +123,7 @@ export const columns: ColumnDef<User>[] = [
       );
     },
     cell: ({ row }) => <span className="capitalize">{row.getValue("role")}</span>,
-    filterFn: multiSelectFilterFn // Daftarkan fungsi filter kustom
+    filterFn: multiSelectFilterFn
   },
   {
     accessorKey: "plan_name",
@@ -255,12 +257,14 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   }, [initialData]);
 
   // Memuat data secara dinamis dari database Supabase Anda
+  // Memuat data secara dinamis dari database Supabase Anda
   const loadUsersFromSupabase = async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.from("profiles").select(`
           id,
           full_name,
+          avatar, -- <-- Memuat kolom avatar dari database
           memberships (
             role,
             tenants (
@@ -292,13 +296,14 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           dbId: prof.id,
           firstName: fullName.split(" ")[0] || "",
           lastName: fullName.split(" ").slice(1).join(" ") || "",
-          name: fullName, // Menggabungkan nama lengkap agar terindeks pencarian kolom "name"
+          name: fullName,
           role: firstMembership?.role || "Member",
           plan_name: planName,
           email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
-          country: "United States", // Fallback pendukung visual kolom
+          country: "United States",
           status: statusVal as "active" | "inactive" | "pending",
-          image: `https://i.pravatar.cc/150?img=${(index % 70) + 1}`
+          // MENGGUNAKAN AVATAR DARI SUPABASE DATABASE SECARA NYATA
+          image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`
         };
       });
 
@@ -346,7 +351,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   });
 
-  // Handler Toggle Filter Status
+  // Handler Toggle Filter Status (Array-based filtering)
   const handleStatusToggle = (value: string) => {
     const updated = selectedStatuses.includes(value)
       ? selectedStatuses.filter((v) => v !== value)
@@ -411,7 +416,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
             className="border-border/80 h-10 max-w-sm rounded-xl"
           />
-          {/* POPOVER STATUS FILTER */}
+          {/* POPOVER STATUS FILTER (Telah dihubungkan ke Handler) */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="border-border/80 h-10 rounded-xl">
@@ -449,7 +454,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             </PopoverContent>
           </Popover>
 
-          {/* POPOVER PLAN FILTER */}
+          {/* POPOVER PLAN FILTER (Telah dihubungkan ke Handler) */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="border-border/80 h-10 rounded-xl">
@@ -484,7 +489,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             </PopoverContent>
           </Popover>
 
-          {/* POPOVER ROLE FILTER */}
+          {/* POPOVER ROLE FILTER (Telah dihubungkan ke Handler) */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="border-border/80 h-10 rounded-xl">
