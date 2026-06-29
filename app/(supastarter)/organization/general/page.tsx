@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Upload, CheckCircle2, AlertCircle, X, Loader2, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +22,8 @@ import {
 // Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
+
+// IMPOR DIALOG PEMOTONG GAMBAR YANG REUSABLE
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 
 interface AlertState {
@@ -29,94 +31,6 @@ interface AlertState {
   description: string;
   variant?: "default" | "destructive";
 }
-
-// 1. KAMUS TERJEMAHAN KHUSUS HALAMAN ORGANIZATION GENERAL (Mendukung 3 Bahasa)
-const orgTranslations = {
-  English: {
-    title: "Organization Settings",
-    subTitle: "Manage the settings of the organization.",
-    readOnlyTitle: "Read-Only Mode",
-    readOnlyDesc:
-      "You are logged in as a **Member**. You are only allowed to view organization settings and do not have access to modify them.",
-    logo: {
-      title: "Organization logo",
-      desc: "Upload a logo for your organization."
-    },
-    name: {
-      title: "Organization name"
-    },
-    delete: {
-      title: "Delete organization",
-      desc: "Permanently delete your organization. Once you delete your organization, there is no going back. To confirm, please click the button on the right:",
-      btn: "Delete organization",
-      dialogTitle: "Are you absolutely sure?",
-      dialogDesc:
-        "This action will permanently delete the organization {orgName} along with all associated memberships and subscriptions. This action cannot be undone."
-    },
-    alerts: {
-      successLogo: "Organization logo successfully updated in database.",
-      successName: "Organization name successfully updated.",
-      successDelete: "Organization successfully deleted.",
-      errorLoad: "Failed to load organization details and permissions."
-    }
-  },
-  "Bahasa Indonesia": {
-    title: "Pengaturan Organisasi",
-    subTitle: "Kelola pengaturan umum organisasi Anda.",
-    readOnlyTitle: "Mode Baca Saja",
-    readOnlyDesc:
-      "Anda masuk sebagai anggota (**Member**). Anda hanya diizinkan untuk melihat pengaturan organisasi dan tidak memiliki hak akses untuk memodifikasinya.",
-    logo: {
-      title: "Logo organisasi",
-      desc: "Unggah logo untuk organisasi Anda."
-    },
-    name: {
-      title: "Nama organisasi"
-    },
-    delete: {
-      title: "Hapus organisasi",
-      desc: "Hapus organisasi Anda secara permanen. Setelah dihapus, data tidak dapat dikembalikan. Untuk konfirmasi, silakan klik tombol di samping:",
-      btn: "Hapus organisasi",
-      dialogTitle: "Apakah Anda benar-benar yakin?",
-      dialogDesc:
-        "Tindakan ini akan menghapus organisasi {orgName} beserta seluruh data relasi keanggotaan dan paket berlangganannya. Tindakan ini tidak dapat dibatalkan."
-    },
-    alerts: {
-      successLogo: "Logo organisasi berhasil diperbarui di database.",
-      successName: "Nama organisasi berhasil diperbarui.",
-      successDelete: "Organisasi berhasil dihapus secara permanen.",
-      errorLoad: "Gagal memuat rincian dan hak akses organisasi."
-    }
-  },
-  Español: {
-    title: "Configuración de la organización",
-    subTitle: "Administre la configuración general de la organización.",
-    readOnlyTitle: "Modo de solo lectura",
-    readOnlyDesc:
-      "Ha iniciado sesión como **Miembro**. Solo se le permite ver la configuración de la organización y no tiene acceso para modificarla.",
-    logo: {
-      title: "Logotipo de la organización",
-      desc: "Sube un logotipo para tu organización."
-    },
-    name: {
-      title: "Nombre de la organización"
-    },
-    delete: {
-      title: "Eliminar organización",
-      desc: "Eliminar permanentemente su organización. Una vez que elimines tu organización, no hay marcha atrás. Para confirmar, ingresa tu contraseña a continuación:",
-      btn: "Eliminar organización",
-      dialogTitle: "¿Estás absolutamente seguro?",
-      dialogDesc:
-        "Esta acción eliminará permanentemente la organización {orgName} junto con todas las membresías y suscripciones. Esta acción no se puede deshacer."
-    },
-    alerts: {
-      successLogo: "El logotipo de la organización se actualizó correctamente en la base de datos.",
-      successName: "El nombre de la organización se actualizó correctamente.",
-      successDelete: "Organización eliminada permanentemente.",
-      errorLoad: "No se pudieron cargar los detalles y permisos de la organización."
-    }
-  }
-};
 
 export default function OrganizationGeneralSettings() {
   const router = useRouter();
@@ -128,14 +42,12 @@ export default function OrganizationGeneralSettings() {
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State Hak Akses Role
   const [userRole, setUserRole] = useState<"Owner" | "Admin" | "Member" | null>(null);
 
   // State untuk manajemen pemotongan gambar (Cropping)
   const [cropperOpen, setCropperOpen] = useState(false);
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
 
   // State loading & interaksi
   const [isLoading, setIsLoading] = useState(true);
@@ -210,23 +122,6 @@ export default function OrganizationGeneralSettings() {
       return () => clearTimeout(timer);
     }
   }, [alertMessage]);
-
-  const handleLogoClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  // MEMBUKA MODAL CROPPER SAAT FILE GAMBAR DIPILIH
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageSrc(reader.result as string); // Simpan sumber gambar mentah
-        setCropperOpen(true); // Buka dialog pemotongan
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   // PROSES UPLOAD REAL BERKAS WEBP HASIL POTONGAN KE SUPABASE STORAGE
   const handleCropComplete = async (croppedBlob: Blob) => {
@@ -428,16 +323,9 @@ export default function OrganizationGeneralSettings() {
             </div>
 
             <div className="flex items-center gap-4">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleLogoChange}
-                accept="image/*"
-                className="hidden"
-                disabled={isReadOnly || isUploadingLogo}
-              />
+              {/* INPUT FILE SUDAH DIHAPUS DARI SINI (KARENA SUDAH DIKELOLA INTERNALLY DI DALAM DIALOG DIBAWAH) */}
               <div
-                onClick={isReadOnly || isUploadingLogo ? undefined : handleLogoClick}
+                onClick={isReadOnly || isUploadingLogo ? undefined : () => setCropperOpen(true)}
                 className={`group bg-muted border-border/60 relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center rounded-xl border transition-all ${
                   isReadOnly ? "cursor-default" : "hover:bg-muted/80 cursor-pointer"
                 }`}>
@@ -544,14 +432,100 @@ export default function OrganizationGeneralSettings() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* REUSABLE IMAGE CROPPER DIALOG */}
+      {/* REUSABLE IMAGE CROPPER DIALOG (Bawaan drag and drop & tab input URL) */}
       <ImageCropperDialog
         open={cropperOpen}
         onOpenChange={setCropperOpen}
-        imageSrc={imageSrc}
         onCropComplete={handleCropComplete}
-        aspectRatio={1} // Memotong secara melingkar/persegi 1:1
       />
     </div>
   );
 }
+
+// Kamus Terjemahan Halaman Organisasi
+const orgTranslations = {
+  English: {
+    title: "Organization Settings",
+    subTitle: "Manage the settings of the organization.",
+    readOnlyTitle: "Read-Only Mode",
+    readOnlyDesc:
+      "You are logged in as a **Member**. You are only allowed to view organization settings and do not have access to modify them.",
+    logo: {
+      title: "Organization logo",
+      desc: "Upload a logo for your organization."
+    },
+    name: {
+      title: "Organization name"
+    },
+    delete: {
+      title: "Delete organization",
+      desc: "Permanently delete your organization. Once you delete your organization, there is no going back. To confirm, please click the button on the right:",
+      btn: "Delete organization",
+      dialogTitle: "Are you absolutely sure?",
+      dialogDesc:
+        "This action will permanently delete the organization {orgName} along with all associated memberships and subscriptions. This action cannot be undone."
+    },
+    alerts: {
+      successLogo: "Organization logo successfully updated in database.",
+      successName: "Organization name successfully updated.",
+      successDelete: "Organization successfully deleted.",
+      errorLoad: "Failed to load organization details and permissions."
+    }
+  },
+  "Bahasa Indonesia": {
+    title: "Pengaturan Organisasi",
+    subTitle: "Kelola pengaturan umum organisasi Anda.",
+    readOnlyTitle: "Mode Baca Saja",
+    readOnlyDesc:
+      "Anda masuk sebagai anggota (**Member**). Anda hanya diizinkan untuk melihat pengaturan organisasi dan tidak memiliki hak akses untuk memodifikasinya.",
+    logo: {
+      title: "Logo organisasi",
+      desc: "Unggah logo untuk organisasi Anda."
+    },
+    name: {
+      title: "Nama organisasi"
+    },
+    delete: {
+      title: "Hapus organisasi",
+      desc: "Hapus organisasi Anda secara permanen. Setelah dihapus, data tidak dapat dikembalikan. Untuk konfirmasi, silakan klik tombol di samping:",
+      btn: "Hapus organisasi",
+      dialogTitle: "Apakah Anda benar-benar yakin?",
+      dialogDesc:
+        "Tindakan ini akan menghapus organisasi {orgName} beserta seluruh data relasi keanggotaan dan paket berlangganannya. Tindakan ini tidak dapat dibatalkan."
+    },
+    alerts: {
+      successLogo: "Logo organisasi berhasil diperbarui di database.",
+      successName: "Nama organisasi berhasil diperbarui.",
+      successDelete: "Organisasi berhasil dihapus secara permanen.",
+      errorLoad: "Gagal memuat rincian dan hak akses organisasi."
+    }
+  },
+  Español: {
+    title: "Configuración de la organización",
+    subTitle: "Administre la configuración general de la organización.",
+    readOnlyTitle: "Modo de solo lectura",
+    readOnlyDesc:
+      "Ha iniciado sesión como **Miembro**. Solo se le permite ver la configuración de la organización y no tiene acceso para modificarla.",
+    logo: {
+      title: "Logotipo de la organización",
+      desc: "Sube un logotipo para tu organización."
+    },
+    name: {
+      title: "Nombre de la organización"
+    },
+    delete: {
+      title: "Eliminar organización",
+      desc: "Eliminar permanentemente su organización. Once you delete your organization, there is no going back. To confirm, please enter your password below:",
+      btn: "Eliminar organización",
+      dialogTitle: "¿Estás absolutamente seguro?",
+      dialogDesc:
+        "Esta acción eliminará permanentemente la organización {orgName} junto con todas las membresías y suscripciones. Esta acción no se puede deshacer."
+    },
+    alerts: {
+      successLogo: "El logotipo de la organización se actualizó correctamente en la base de datos.",
+      successName: "El nombre de la organización se actualizó correctamente.",
+      successDelete: "Organización eliminada permanentemente.",
+      errorLoad: "No se pudieron cargar los detalles y permisos de la organización."
+    }
+  }
+};
