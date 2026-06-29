@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -62,7 +62,6 @@ export default function AccountGeneralSettings() {
 
   // State Manajemen Pemotongan Gambar (Cropping)
   const [cropperOpen, setCropperOpen] = useState(false);
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
 
   // State loading & interaksi
   const [isLoading, setIsLoading] = useState(true);
@@ -73,8 +72,6 @@ export default function AccountGeneralSettings() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLocalLanguage(language);
@@ -96,6 +93,7 @@ export default function AccountGeneralSettings() {
         setUserId(user.id);
         setEmail(user.email || "");
 
+        // MENGAMBIL AVATAR & NAMA LENGKAP NYATA DARI TABEL PROFILES
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("full_name, avatar")
@@ -106,7 +104,7 @@ export default function AccountGeneralSettings() {
 
         if (profileData) {
           setFullName(profileData.full_name || "");
-          setAvatarUrl(profileData.avatar || null);
+          setAvatarUrl(profileData.avatar || null); // Mengisi preview dengan URL avatar asli dari DB
         }
       } catch (error: any) {
         console.error("Gagal memuat data akun:", error);
@@ -133,24 +131,7 @@ export default function AccountGeneralSettings() {
     }
   }, [alertMessage]);
 
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  // 1. MEMBUKA MODAL CROPPER SAAT FILE AVATAR DIPILIH
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageSrc(reader.result as string); // Simpan sumber gambar mentah
-        setCropperOpen(true); // Buka dialog pemotongan
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // 2. PROSES UPLOAD REAL BERKAS WEBP HASIL POTONGAN KE SUPABASE STORAGE & DATABASE PROFILES
+  // PROSES UPLOAD REAL BERKAS WEBP HASIL POTONGAN KE SUPABASE STORAGE & DATABASE PROFILES
   const handleCropComplete = async (croppedBlob: Blob) => {
     if (!userId) return;
 
@@ -205,11 +186,10 @@ export default function AccountGeneralSettings() {
   };
 
   // Menyimpan perubahan bahasa ke Global Context
-  const handleSaveLanguage = () => {
+  const handleSaveLanguage = async () => {
     setIsSavingLang(true);
-    setTimeout(() => {
-      setLanguage(localLanguage); // Menyimpan secara global
-      setIsSavingLang(false);
+    try {
+      await setLanguage(localLanguage); // Menyimpan secara global
       setAlertMessage({
         title:
           localLanguage === "English"
@@ -220,7 +200,15 @@ export default function AccountGeneralSettings() {
         description: t.common.success,
         variant: "default"
       });
-    }, 800);
+    } catch (error: any) {
+      setAlertMessage({
+        title: "Error",
+        description: error.message || "Gagal memperbarui preferensi bahasa.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingLang(false);
+    }
   };
 
   // Menyimpan nama lengkap ke tabel 'profiles'
@@ -350,16 +338,9 @@ export default function AccountGeneralSettings() {
             </div>
 
             <div className="flex shrink-0 items-center gap-4">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleAvatarChange}
-                accept="image/*"
-                className="hidden"
-                disabled={isUploadingAvatar || isSavingName || isSavingEmail || isSavingLang}
-              />
+              {/* INPUT FILE SUDAH DIHAPUS DARI SINI (KARENA SUDAH DIKELOLA INTERNALLY DI DALAM DIALOG DIBAWAH) */}
               <div
-                onClick={isUploadingAvatar || isSavingLang ? undefined : handleAvatarClick}
+                onClick={isUploadingAvatar || isSavingLang ? undefined : () => setCropperOpen(true)}
                 className="group bg-muted border-border/60 hover:bg-muted/80 relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-all">
                 {isUploadingAvatar ? (
                   <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
@@ -545,13 +526,11 @@ export default function AccountGeneralSettings() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* REUSABLE IMAGE CROPPER DIALOG */}
+      {/* REUSABLE IMAGE CROPPER DIALOG (Bawaan drag and drop & tab input URL) */}
       <ImageCropperDialog
         open={cropperOpen}
         onOpenChange={setCropperOpen}
-        imageSrc={imageSrc}
         onCropComplete={handleCropComplete}
-        aspectRatio={1} // Memotong secara melingkar/persegi 1:1
       />
     </div>
   );

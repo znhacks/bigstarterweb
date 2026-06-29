@@ -16,7 +16,7 @@ import "cropperjs/dist/cropper.css";
 interface ImageCropperDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  imageSrc: string | null; // Kita perbolehkan null di awal untuk mendeteksi mode pilihan berkas
+  imageSrc?: string | null; // Kita perbolehkan null di awal untuk mendeteksi mode pilihan berkas
   onCropComplete: (croppedBlob: Blob) => void;
 }
 
