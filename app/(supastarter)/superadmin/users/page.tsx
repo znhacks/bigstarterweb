@@ -1,26 +1,40 @@
-import Link from "next/link";
 import { generateMeta } from "@/lib/utils";
-
-import { PlusCircledIcon } from "@radix-ui/react-icons";
-import { Button } from "@/components/ui/button";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 // Impor komponen Data Table dan tipe data User
 import UsersDataTable, { User } from "./data-table";
 
+// Kamus terjemahan ringan khusus server untuk judul header halaman
+const bahasa = {
+  English: {
+    title: "Superadmin Users",
+    desc: "Manage, view, and oversee all registered user profiles and organization memberships."
+  },
+  "Bahasa Indonesia": {
+    title: "Pengguna Superadmin",
+    desc: "Kelola, lihat, dan awasi semua profil pengguna terdaftar dan keanggotaan organisasi."
+  },
+  Español: {
+    title: "Usuarios Superadmin",
+    desc: "Administre, vea y controle todos los perfiles de usuario registrados y membresías de organizaciones."
+  }
+};
+
 export async function generateMetadata() {
   return generateMeta({
-    title: "Login Page v2",
+    title: "Users List",
+    additionalTitle: true,
     description:
-      "A login form with email and password. There's an option to login with Google and a link to sign up if you don't have an account.",
-    canonical: "/login/v2"
+      "Manage user records and list data efficiently. A professional admin dashboard page built with React, TypeScript, Tailwind CSS, shadcn/ui, and Tanstack Table.",
+    canonical: "/pages/users"
   });
 }
 
 export default async function Page() {
   const cookieStore = await cookies();
 
+  // Inisialisasi klien Supabase khusus Server
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -28,12 +42,28 @@ export default async function Page() {
       cookies: {
         getAll() {
           return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {}
         }
       }
     }
   );
 
-  // Kueri seleksi bersih tanpa menyisipkan komentar di dalamnya
+  // 1. Ambil data user aktif terlebih dahulu di server untuk mengetahui bahasanya
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  const userLanguage = user?.user_metadata?.language || "English";
+
+  // Ambil kamus terjemahan yang sesuai di server
+  const t = bahasa[userLanguage as keyof typeof bahasa] || bahasa["English"];
+
+  // 2. Ambil data gabungan dari Supabase secara Server-Side
   const { data: profiles, error } = await supabase
     .from("profiles")
     .select(
@@ -63,6 +93,7 @@ export default async function Page() {
     console.error("Gagal memuat data pengguna server-side:", error.message);
   }
 
+  // 3. Petakan hasil kueri ke tipe data User[]
   const formattedUsers: User[] = (profiles || []).map((prof: any, index: number) => {
     const fullName = prof.full_name || "Unknown User";
     const firstMembership = prof.memberships?.[0];
@@ -88,16 +119,15 @@ export default async function Page() {
   });
 
   return (
-    <>
-      <div className="flex items-center justify-between space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Users</h1>
-        <Button asChild>
-          <Link href="#">
-            <PlusCircledIcon className="mr-2 h-4 w-4" /> Add New User
-          </Link>
-        </Button>
+    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-10">
+      {/* Header Halaman menggunakan teks bahasa yang terjemahkan di server */}
+      <div className="space-y-1">
+        <h1 className="text-3xl font-semibold tracking-tight">{t.title}</h1>
+        <p className="text-muted-foreground text-sm">{t.desc}</p>
       </div>
+
+      {/* Kirim data ke Komponen Tabel Klien */}
       <UsersDataTable data={formattedUsers} />
-    </>
+    </div>
   );
 }

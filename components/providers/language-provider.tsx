@@ -159,14 +159,14 @@ export const dictionaries: Record<LanguageType, TranslationSchema> = {
     accountSettings: {
       title: "Pengaturan Akun",
       subTitle: "Kelola pengaturan umum akun Anda.",
-      avatar: "Avatar Anda",
+      avatar: "Avatar",
       avatarDesc:
         "To change your avatar click the picture in this block and select a file from your computer to upload.",
-      language: "Bahasa Anda",
+      language: "Bahasa",
       languageDesc:
-        "Untuk mengubah bahasa aplikasi pada akun Anda, pilih bahasa dari daftar lalu klik simpan.",
-      name: "Nama Anda",
-      email: "Email Anda",
+        "Untuk mengubah bahasa aplikasi pada akun, pilih bahasa dari daftar lalu klik simpan.",
+      name: "Nama",
+      email: "Email",
       emailDesc:
         "Untuk mengubah email Anda, masukkan email baru lalu klik simpan. Anda harus mengonfirmasi email baru sebelum email tersebut aktif.",
       delete: "Hapus akun",

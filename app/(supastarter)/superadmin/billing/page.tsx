@@ -14,7 +14,7 @@ import {
   Check,
   Ban
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -57,8 +57,128 @@ interface AlertState {
   variant?: "default" | "destructive";
 }
 
+// 1. KAMUS TERJEMAHAN MULTI-BAHASA KHUSUS SUPERADMIN BILLING (Mendukung 3 Bahasa)
+const superadminBillingTranslations = {
+  English: {
+    title: "Superadmin Billing",
+    subTitle: "Global overview of transactions, active subscriptions, and refund requests.",
+    kpis: {
+      revenue: "Total Revenue",
+      active: "Active Subscriptions",
+      refunds: "Pending Refunds"
+    },
+    tabs: {
+      refunds: "Refund Requests",
+      active: "Active Subscriptions",
+      history: "Transaction History"
+    },
+    placeholders: {
+      noRefunds: "No pending refund requests found.",
+      noActive: "No active subscriptions found.",
+      noTransactions: "No transactions found.",
+      refundAmount: "Refund amount",
+      expiry: "Expiry date",
+      renewOff: "(Auto-renew off)",
+      unlimited: "Unlimited",
+      purchasedOn: "Purchased {planName} on {date}"
+    },
+    buttons: {
+      reject: "Reject Refund",
+      approve: "Approve & Terminate"
+    },
+    alerts: {
+      approveTitle: "Refund Approved",
+      approveDesc:
+        "Refund claim approved. The associated organization account has been automatically downgraded to the Free Plan.",
+      rejectTitle: "Refund Rejected",
+      rejectDesc:
+        "Refund request rejected. The organization's premium access has been reactivated.",
+      failed: "Action Failed"
+    }
+  },
+  "Bahasa Indonesia": {
+    title: "Keuangan Superadmin",
+    subTitle: "Ikhtisar global transaksi, langganan aktif, dan permintaan pengembalian dana.",
+    kpis: {
+      revenue: "Total Pendapatan",
+      active: "Langganan Aktif",
+      refunds: "Pending Refund"
+    },
+    tabs: {
+      refunds: "Permintaan Refund",
+      active: "Langganan Aktif",
+      history: "Riwayat Transaksi"
+    },
+    placeholders: {
+      noRefunds: "Tidak ada permintaan refund tertunda.",
+      noActive: "Tidak ada langganan aktif ditemukan.",
+      noTransactions: "Tidak ada transaksi ditemukan.",
+      refundAmount: "Nominal refund",
+      expiry: "Tanggal kadaluarsa",
+      renewOff: "(Perpanjangan otomatis mati)",
+      unlimited: "Tidak terbatas",
+      purchasedOn: "Membeli paket {planName} pada tanggal {date}"
+    },
+    buttons: {
+      reject: "Tolak Refund",
+      approve: "Setujui & Hentikan"
+    },
+    alerts: {
+      approveTitle: "Refund Disetujui",
+      approveDesc:
+        "Pengajuan refund disetujui. Akun organisasi terkait otomatis diturunkan kembali ke Paket Free.",
+      rejectTitle: "Refund Ditolak",
+      rejectDesc:
+        "Pengajuan refund ditolak. Akses premium organisasi tersebut telah diaktifkan kembali.",
+      failed: "Tindakan Gagal"
+    }
+  },
+  Español: {
+    title: "Facturación de Superadmin",
+    subTitle:
+      "Descripción global de transacciones, suscripciones activas y solicitudes de reembolso.",
+    kpis: {
+      revenue: "Ingresos Totales",
+      active: "Suscripciones Activas",
+      refunds: "Reembolsos Pendientes"
+    },
+    tabs: {
+      refunds: "Solicitudes de Reembolso",
+      active: "Suscripciones Activas",
+      history: "Historial de Transacciones"
+    },
+    placeholders: {
+      noRefunds: "No se encontraron solicitudes de reembolso pendientes.",
+      noActive: "No se encontraron suscripciones activas.",
+      noTransactions: "No se encontraron transacciones.",
+      refundAmount: "Monto de reembolso",
+      expiry: "Fecha de caducidad",
+      renewOff: "(Renovación automática desactivada)",
+      unlimited: "Ilimitado",
+      purchasedOn: "Compró el plan {planName} el {date}"
+    },
+    buttons: {
+      reject: "Rechazar Reembolso",
+      approve: "Aprobar y Terminar"
+    },
+    alerts: {
+      approveTitle: "Reembolso Aprobado",
+      approveDesc:
+        "Solicitud de reembolso aprobada. La cuenta de la organización asociada se ha degradado automáticamente al Plan Gratis.",
+      rejectTitle: "Reembolso Rechazado",
+      rejectDesc:
+        "Solicitud de reembolso rechazada. Se ha reactivado el acceso premium de la organización.",
+      failed: "Acción Fallida"
+    }
+  }
+};
+
 export default function SuperadminBillingDashboard() {
-  const { formatPrice } = useLanguage();
+  const { language, formatPrice } = useLanguage();
+
+  // Membaca kamus terjemahan aktif
+  const tAdmin =
+    superadminBillingTranslations[language] || superadminBillingTranslations["English"];
 
   // State Data Global
   const [transactions, setTransactions] = useState<SuperadminTransaction[]>([]);
@@ -185,15 +305,18 @@ export default function SuperadminBillingDashboard() {
       if (txError) throw txError;
 
       setAlertMessage({
-        title: "Refund Approved",
-        description:
-          "Klaim pengembalian dana disetujui. Akun organisasi terkait otomatis diturunkan ke Paket Free.",
+        title: tAdmin.alerts.approveTitle,
+        description: tAdmin.alerts.approveDesc,
         variant: "default"
       });
 
       await loadSuperadminData();
     } catch (e: any) {
-      setAlertMessage({ title: "Action Failed", description: e.message, variant: "destructive" });
+      setAlertMessage({
+        title: tAdmin.alerts.failed,
+        description: e.message,
+        variant: "destructive"
+      });
     } finally {
       setIsProcessingAction(null);
     }
@@ -211,15 +334,18 @@ export default function SuperadminBillingDashboard() {
       if (error) throw error;
 
       setAlertMessage({
-        title: "Refund Rejected",
-        description:
-          "Pengajuan refund ditolak. Akses premium organisasi tersebut telah diaktifkan kembali.",
+        title: tAdmin.alerts.rejectTitle,
+        description: tAdmin.alerts.rejectDesc,
         variant: "default"
       });
 
       await loadSuperadminData();
     } catch (e: any) {
-      setAlertMessage({ title: "Action Failed", description: e.message, variant: "destructive" });
+      setAlertMessage({
+        title: tAdmin.alerts.failed,
+        description: e.message,
+        variant: "destructive"
+      });
     } finally {
       setIsProcessingAction(null);
     }
@@ -237,10 +363,8 @@ export default function SuperadminBillingDashboard() {
     <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
       {/* Header Dashboard */}
       <div className="space-y-1">
-        <h1 className="text-foreground text-3xl font-bold tracking-tight">Superadmin Billing</h1>
-        <p className="text-muted-foreground text-sm">
-          Global overview of transactions, active subscriptions, and refund requests.
-        </p>
+        <h1 className="text-foreground text-3xl font-bold tracking-tight">{tAdmin.title}</h1>
+        <p className="text-muted-foreground text-sm">{tAdmin.subTitle}</p>
       </div>
 
       {/* SHADCN ALERT NOTIFICATION */}
@@ -274,7 +398,7 @@ export default function SuperadminBillingDashboard() {
           <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
               <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                Total Revenue
+                {tAdmin.kpis.revenue}
               </span>
               <h3 className="text-foreground text-3xl font-bold tracking-tight">
                 {formatPrice(totalRevenue)}
@@ -291,7 +415,7 @@ export default function SuperadminBillingDashboard() {
           <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
               <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                Active Subscriptions
+                {tAdmin.kpis.active}
               </span>
               <h3 className="text-foreground text-3xl font-bold tracking-tight">
                 {activeSubsCount}
@@ -309,7 +433,7 @@ export default function SuperadminBillingDashboard() {
           <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
               <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                Pending Refunds
+                {tAdmin.kpis.refunds}
               </span>
               <h3 className="text-foreground text-3xl font-bold tracking-tight">
                 {refundRequests.length}
@@ -330,17 +454,17 @@ export default function SuperadminBillingDashboard() {
               <TabsTrigger
                 value="refunds"
                 className="data-[state=active]:border-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-semibold shadow-none transition-all data-[state=active]:bg-transparent">
-                Refund Requests ({refundRequests.length})
+                {tAdmin.tabs.refunds} ({refundRequests.length})
               </TabsTrigger>
               <TabsTrigger
                 value="subscriptions"
                 className="data-[state=active]:border-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-semibold shadow-none transition-all data-[state=active]:bg-transparent">
-                Active Subscriptions ({subscriptions.length})
+                {tAdmin.tabs.active} ({subscriptions.length})
               </TabsTrigger>
               <TabsTrigger
                 value="transactions"
                 className="data-[state=active]:border-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-semibold shadow-none transition-all data-[state=active]:bg-transparent">
-                Transaction History ({transactions.length})
+                {tAdmin.tabs.history} ({transactions.length})
               </TabsTrigger>
             </TabsList>
 
@@ -348,7 +472,7 @@ export default function SuperadminBillingDashboard() {
             <TabsContent value="refunds" className="mt-0 space-y-4 focus-visible:outline-none">
               {refundRequests.length === 0 ? (
                 <div className="text-muted-foreground py-10 text-center text-sm">
-                  No pending refund requests found.
+                  {tAdmin.placeholders.noRefunds}
                 </div>
               ) : (
                 refundRequests.map((sub) => (
@@ -369,7 +493,7 @@ export default function SuperadminBillingDashboard() {
                           </Badge>
                         </div>
                         <p className="text-muted-foreground text-xs">
-                          Refund amount:{" "}
+                          {tAdmin.placeholders.refundAmount}:{" "}
                           <strong className="text-foreground">
                             {formatPrice(sub.plans?.price || 0)}
                           </strong>
@@ -389,7 +513,7 @@ export default function SuperadminBillingDashboard() {
                         ) : (
                           <Ban className="h-4 w-4" />
                         )}
-                        Reject Refund
+                        {tAdmin.buttons.reject}
                       </Button>
                       <Button
                         onClick={() =>
@@ -407,7 +531,7 @@ export default function SuperadminBillingDashboard() {
                         ) : (
                           <Check className="h-4 w-4" />
                         )}
-                        Approve & Terminate
+                        {tAdmin.buttons.approve}
                       </Button>
                     </div>
                   </div>
@@ -421,7 +545,7 @@ export default function SuperadminBillingDashboard() {
               className="mt-0 space-y-4 focus-visible:outline-none">
               {subscriptions.length === 0 ? (
                 <div className="text-muted-foreground py-10 text-center text-sm">
-                  No active subscriptions found.
+                  {tAdmin.placeholders.noActive}
                 </div>
               ) : (
                 subscriptions.map((sub) => (
@@ -442,14 +566,14 @@ export default function SuperadminBillingDashboard() {
                           </Badge>
                         </div>
                         <p className="text-muted-foreground text-xs">
-                          Expiry date:{" "}
+                          {tAdmin.placeholders.expiry}:{" "}
                           <strong className="text-foreground">
                             {sub.ends_at
                               ? new Date(sub.ends_at).toLocaleDateString("id-ID")
-                              : "Unlimited"}
+                              : tAdmin.placeholders.unlimited}
                           </strong>{" "}
                           {sub.cancel_at_period_end && (
-                            <span className="text-red-500">(Auto-renew off)</span>
+                            <span className="text-red-500">{tAdmin.placeholders.renewOff}</span>
                           )}
                         </p>
                       </div>
@@ -469,7 +593,7 @@ export default function SuperadminBillingDashboard() {
             <TabsContent value="transactions" className="mt-0 space-y-4 focus-visible:outline-none">
               {transactions.length === 0 ? (
                 <div className="text-muted-foreground py-10 text-center text-sm">
-                  No transactions found.
+                  {tAdmin.placeholders.noTransactions}
                 </div>
               ) : (
                 transactions.map((tx) => (
@@ -495,8 +619,9 @@ export default function SuperadminBillingDashboard() {
                           <span className="text-muted-foreground text-xs">({tx.order_id})</span>
                         </div>
                         <p className="text-muted-foreground text-xs">
-                          Purchased <strong className="text-foreground">{tx.plan_name} Plan</strong>{" "}
-                          on {new Date(tx.created_at).toLocaleDateString("id-ID")}
+                          {tAdmin.placeholders.purchasedOn
+                            .replace("{planName}", tx.plan_name)
+                            .replace("{date}", new Date(tx.created_at).toLocaleDateString("id-ID"))}
                         </p>
                       </div>
                     </div>

@@ -14,6 +14,25 @@ export async function generateMetadata() {
   });
 }
 
+// Menyelaraskan penamaan kunci Bahasa Indonesia dengan kamus global
+const organizationAdmin = {
+  English: {
+    title: "Superadmin Organizations",
+    detail:
+      "Manage and oversee all registered organizations, active plans, member counts, and metadata."
+  },
+  "Bahasa Indonesia": {
+    title: "Organisasi Superadmin",
+    detail:
+      "Kelola dan awasi semua organisasi yang terdaftar, paket yang aktif, jumlah anggota, serta metadata."
+  },
+  Español: {
+    title: "Organizaciones del Superadministrador",
+    detail:
+      "Administra y supervisa todas las organizaciones registradas, los planes activos, la cantidad de miembros y los metadatos."
+  }
+};
+
 export default async function SuperadminOrganizationsPage() {
   const cookieStore = await cookies();
 
@@ -30,7 +49,19 @@ export default async function SuperadminOrganizationsPage() {
     }
   );
 
-  // Ambil data gabungan komprehensif dari Supabase (Server-side)
+  // 1. Ambil data user aktif di server untuk mendeteksi bahasa pengaturannya
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  const userLanguage = user?.user_metadata?.language || "English";
+
+  // Normalisasi jika ada perbedaan penamaan kunci bahasa
+  const activeLanguage = userLanguage === "Indonesia" ? "Bahasa Indonesia" : userLanguage;
+  const t =
+    organizationAdmin[activeLanguage as keyof typeof organizationAdmin] ||
+    organizationAdmin["English"];
+
+  // 2. Ambil data gabungan komprehensif dari Supabase (Server-side)
   const { data: tenants, error } = await supabase
     .from("tenants")
     .select(
@@ -57,7 +88,7 @@ export default async function SuperadminOrganizationsPage() {
     console.error("Gagal mengambil data organisasi di sisi server:", error.message);
   }
 
-  // Petakan hasil kueri mentah Supabase ke dalam format tipe data SuperadminOrganization[]
+  // 3. Petakan hasil kueri mentah Supabase ke dalam format tipe data SuperadminOrganization[]
   const formattedOrgs: SuperadminOrganization[] = (tenants || []).map((tenant: any) => {
     const firstSub = tenant.subscriptions?.[0];
     const planInfo = firstSub?.plans;
@@ -76,18 +107,13 @@ export default async function SuperadminOrganizationsPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
-      {/* Header Halaman */}
+      {/* Header Halaman menggunakan teks bahasa yang diterjemahkan di server */}
       <div className="space-y-1">
-        <h1 className="text-foreground text-3xl font-bold tracking-tight">
-          Superadmin Organizations
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Manage and oversee all registered organizations, active plans, member counts, and
-          metadata.
-        </p>
+        <h1 className="text-foreground text-3xl font-bold tracking-tight">{t.title}</h1>
+        <p className="text-muted-foreground text-sm">{t.detail}</p>
       </div>
 
-      {/* Panggil komponen klien dengan mengirimkan properti hasil fetch server */}
+      {/* Kirim data ke Komponen Klien */}
       <OrganizationsList data={formattedOrgs} />
     </div>
   );
