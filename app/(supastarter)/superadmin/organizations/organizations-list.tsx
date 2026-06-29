@@ -228,53 +228,6 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
 
   return (
     <div className="space-y-8">
-      {/* KPI METRICS */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card className="border-border/80 rounded-2xl border shadow-sm">
-          <CardContent className="flex items-center justify-between p-6">
-            <div className="space-y-1">
-              <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                {tOrgList.kpis.total}
-              </span>
-              <h3 className="text-foreground text-3xl font-bold tracking-tight">{totalOrgs}</h3>
-            </div>
-            <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-xl">
-              <Building className="text-primary h-6 w-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/80 rounded-2xl border shadow-sm">
-          <CardContent className="flex items-center justify-between p-6">
-            <div className="space-y-1">
-              <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                {tOrgList.kpis.premium}
-              </span>
-              <h3 className="text-foreground text-3xl font-bold tracking-tight">
-                {activePremiumOrgs}
-              </h3>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
-              <CreditCard className="h-6 w-6 text-emerald-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/80 rounded-2xl border shadow-sm">
-          <CardContent className="flex items-center justify-between p-6">
-            <div className="space-y-1">
-              <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                {tOrgList.kpis.members}
-              </span>
-              <h3 className="text-foreground text-3xl font-bold tracking-tight">{totalMembers}</h3>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10">
-              <Users className="h-6 w-6 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* SEARCH BAR */}
       <div className="relative flex w-full max-w-md items-center">
         <Search className="text-muted-foreground/60 absolute left-3.5 h-4 w-4" />

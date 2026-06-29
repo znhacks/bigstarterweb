@@ -3,15 +3,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  BadgeCheck,
-  Bell,
-  ChevronRightIcon,
-  CreditCard,
-  LogOut,
-  Sparkles,
-  Loader2
-} from "lucide-react";
+import { BadgeCheck, ChevronRightIcon, LogOut, Sparkles, Loader2 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -35,6 +27,7 @@ export default function UserMenu() {
   // State data user & profil
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [avatar, setAvatar] = useState(""); // Menyimpan URL avatar dari database
   const [isLoading, setIsLoading] = useState(true);
 
   // Memuat data user dari Supabase
@@ -49,18 +42,20 @@ export default function UserMenu() {
 
       setEmail(user.email || "");
 
-      // Mengambil nama lengkap dari tabel profiles
+      // Mengambil nama lengkap & URL avatar secara nyata dari tabel profiles
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, avatar") // <-- Memuat kolom avatar dari database
         .eq("id", user.id)
         .single();
 
       if (profileData) {
         setFullName(profileData.full_name);
+        setAvatar(profileData.avatar || ""); // Menyimpan URL avatar ke state
       } else {
         // Fallback jika profile belum ada
         setFullName(user.user_metadata?.full_name || user.email?.split("@")[0] || "User");
+        setAvatar("");
       }
     } catch (error) {
       console.error("Gagal memuat profil pengguna:", error);
@@ -111,19 +106,28 @@ export default function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Avatar className="cursor-pointer">
-          <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-            {getInitials(fullName)}
-          </AvatarFallback>
+        <Avatar className="cursor-pointer border">
+          {/* RENDER AVATAR USER DARI SUPABASE JIKA ADA */}
+          {avatar ? (
+            <AvatarImage src={avatar} alt={fullName} className="object-cover" />
+          ) : (
+            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+              {getInitials(fullName)}
+            </AvatarFallback>
+          )}
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-60" align="end">
         <DropdownMenuLabel className="p-0">
           <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-            <Avatar>
-              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                {getInitials(fullName)}
-              </AvatarFallback>
+            <Avatar className="border">
+              {avatar ? (
+                <AvatarImage src={avatar} alt={fullName} className="object-cover" />
+              ) : (
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                  {getInitials(fullName)}
+                </AvatarFallback>
+              )}
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="text-foreground truncate font-semibold">{fullName}</span>

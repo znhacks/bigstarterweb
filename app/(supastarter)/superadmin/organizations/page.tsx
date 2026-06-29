@@ -106,7 +106,7 @@ export default async function SuperadminOrganizationsPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
+    <div className="mx-auto w-full space-y-8 px-4 py-10">
       {/* Header Halaman menggunakan teks bahasa yang diterjemahkan di server */}
       <div className="space-y-1">
         <h1 className="text-foreground text-3xl font-bold tracking-tight">{t.title}</h1>

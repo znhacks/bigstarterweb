@@ -566,7 +566,7 @@ export default function SuperadminBillingDashboard() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
+    <div className="mx-auto w-full space-y-8 px-4 py-10">
       {/* Header Dashboard */}
       <div className="space-y-1">
         <h1 className="text-foreground text-3xl font-bold tracking-tight">{tAdmin.title}</h1>

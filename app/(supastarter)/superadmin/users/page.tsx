@@ -119,7 +119,7 @@ export default async function Page() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-10">
+    <div className="mx-auto w-full space-y-8 px-4 py-10">
       {/* Header Halaman menggunakan teks bahasa yang terjemahkan di server */}
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">{t.title}</h1>

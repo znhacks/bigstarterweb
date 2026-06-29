@@ -45,6 +45,7 @@ import { supabase } from "@/lib/supabase";
 interface Organization {
   id: string;
   name: string;
+  logo?: string | null;
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -81,7 +82,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
       setUser(currentUser);
 
-      // 2. Dapatkan relasi keanggotaan (memberships) beserta detail organisasi (tenants)
+      // 2. Dapatkan relasi keanggotaan beserta detail organisasi (Kueri bersih tanpa komentar)
       const { data, error } = await supabase
         .from("memberships")
         .select(
@@ -89,7 +90,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           tenant_id,
           tenants (
             id,
-            name
+            name,
+            logo
           )
         `
         )
@@ -100,7 +102,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       // Transformasi data relasi gabungan ke struktur Array Organization
       const orgs: Organization[] = (data || [])
         .map((item: any) => item.tenants)
-        .filter((tenant): tenant is Organization => tenant !== null);
+        .filter((tenant): tenant is Organization => tenant !== null)
+        .map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          logo: t.logo || null
+        }));
 
       setOrganizations(orgs);
 
@@ -112,8 +119,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       } else {
         setActiveOrg(null);
       }
-    } catch (error) {
-      console.error("Gagal memuat data organisasi:", error);
+    } catch (error: any) {
+      console.error("Gagal memuat data organisasi:", error?.message || error);
     } finally {
       setIsLoading(false);
     }
@@ -170,7 +177,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       const newOrg: Organization = {
         id: tenantData.id,
-        name: tenantData.name
+        name: tenantData.name,
+        logo: null
       };
 
       // 3. Update state lokal & jadikan sebagai organisasi aktif
@@ -195,14 +203,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton className="hover:text-foreground h-10 group-data-[collapsible=icon]:px-0!">
-                    <Logo />
+                    {activeOrg?.logo ? (
+                      <img
+                        src={activeOrg.logo}
+                        alt={activeOrg.name}
+                        className="size-6 shrink-0 rounded-md object-cover"
+                      />
+                    ) : (
+                      <Logo />
+                    )}
                     <span className="text-foreground truncate font-semibold">
                       {isLoading ? (
                         <span className="text-muted-foreground text-xs">Loading org...</span>
                       ) : activeOrg ? (
                         activeOrg.name
                       ) : (
-                        "No organization" // <-- Teks berubah dari "Select Org" menjadi "No organization" jika kosong
+                        "No organization"
                       )}
                     </span>
                     <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
@@ -230,8 +246,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         key={org.id}
                         className="flex cursor-pointer items-center gap-3"
                         onSelect={() => handleSelectOrg(org)}>
-                        <div className="flex size-8 items-center justify-center rounded-md border">
-                          <Building2 className="text-muted-foreground size-4" />
+                        <div className="bg-background flex size-8 items-center justify-center overflow-hidden rounded-md border">
+                          {org.logo ? (
+                            <img src={org.logo} alt={org.name} className="size-full object-cover" />
+                          ) : (
+                            <Building2 className="text-muted-foreground size-4" />
+                          )}
                         </div>
                         <div className="flex flex-1 flex-col">
                           <span className="text-sm font-medium">{org.name}</span>
@@ -274,23 +294,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </ScrollArea>
         </SidebarContent>
         <SidebarFooter>
-          <Card className="gap-4 overflow-hidden py-4 group-data-[collapsible=icon]:hidden">
-            <CardHeader className="px-3">
-              <CardTitle>Unlock Everything</CardTitle>
-              <CardDescription>
-                Get instant access to all premium dashboards, templates, and UI components. Pay
-                once, use forever in unlimited projects.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="px-3">
-              <Button className="w-full" asChild>
-                <Link href="https://shadcnuikit.com/pricing" target="_blank">
-                  <span className="size-2 shrink-0 rounded-full bg-green-500"></span>
-                  Get Full Access
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
           <NavUser />
         </SidebarFooter>
       </Sidebar>

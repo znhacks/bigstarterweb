@@ -26,15 +26,6 @@ export function SiteHeader() {
         <Search />
 
         <div className="ml-auto flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="link"
-            className="relative animate-pulse bg-linear-to-r from-violet-600 via-fuchsia-600 to-cyan-600 bg-clip-text font-medium text-transparent hover:bg-transparent"
-            asChild>
-            <Link href="https://shadcnuikit.com/pricing" target="_blank">
-              Get Pro
-            </Link>
-          </Button>
           <Notifications />
           <ThemeSwitch />
           <LanguageSwitcher />

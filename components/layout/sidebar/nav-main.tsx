@@ -123,7 +123,7 @@ export const navItems: NavGroup[] = [
       },
       {
         title: "Organization",
-        href: "/superadmin/organization",
+        href: "/superadmin/organizations",
         icon: Building2
       },
       {

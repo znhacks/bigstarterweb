@@ -32,6 +32,7 @@ export function NavUser() {
   // State data user & profil
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [avatar, setAvatar] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   // Fungsi untuk memuat data user yang aktif dari Supabase
@@ -49,15 +50,17 @@ export function NavUser() {
       // Mengambil nama lengkap dari tabel profiles
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, avatar")
         .eq("id", user.id)
         .single();
 
       if (profileData) {
         setFullName(profileData.full_name);
+        setAvatar(profileData.avatar || "");
       } else {
         // Fallback jika profile belum terbuat, gunakan nama metadata atau pangkas email
         setFullName(user.user_metadata?.full_name || user.email?.split("@")[0] || "User");
+        setAvatar("");
       }
     } catch (error) {
       console.error("Gagal memuat profil pengguna:", error);
@@ -117,11 +120,15 @@ export function NavUser() {
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-              <Avatar className="rounded-full">
-                {/* Fallback inisial jika avatar tidak ada */}
-                <AvatarFallback className="bg-primary/10 text-primary rounded-full text-xs font-semibold">
-                  {getInitials(fullName)}
-                </AvatarFallback>
+              <Avatar className="cursor-pointer border">
+                {/* RENDER AVATAR USER DARI SUPABASE JIKA ADA */}
+                {avatar ? (
+                  <AvatarImage src={avatar} alt={fullName} className="object-cover" />
+                ) : (
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                    {getInitials(fullName)}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{fullName}</span>
@@ -137,10 +144,15 @@ export function NavUser() {
             sideOffset={4}>
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-full">
-                  <AvatarFallback className="bg-primary/10 text-primary rounded-full text-xs font-semibold">
-                    {getInitials(fullName)}
-                  </AvatarFallback>
+                <Avatar className="cursor-pointer border">
+                  {/* RENDER AVATAR USER DARI SUPABASE JIKA ADA */}
+                  {avatar ? (
+                    <AvatarImage src={avatar} alt={fullName} className="object-cover" />
+                  ) : (
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                      {getInitials(fullName)}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{fullName}</span>
