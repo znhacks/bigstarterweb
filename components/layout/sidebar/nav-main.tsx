@@ -66,7 +66,6 @@ export const navItems: NavGroup[] = [
         title: "Classic Dashboard",
         href: "/dashboard",
         icon: ChartPieIcon
-        // Tanpa properti roles berarti bersifat PUBLIK (semua user bisa melihat)
       },
       {
         title: "Organization",
@@ -77,17 +76,17 @@ export const navItems: NavGroup[] = [
           {
             title: "General",
             href: "/organization/general",
-            roles: ["Owner", "Admin", "Member"] // Hanya Owner & Admin
+            roles: ["Owner", "Admin", "Member"]
           },
           {
             title: "Member",
             href: "/organization/member",
-            roles: ["Owner", "Admin"] // Semua bisa melihat daftar anggota
+            roles: ["Owner", "Admin"]
           },
           {
             title: "Billing",
             href: "/organization/billing",
-            roles: ["Owner"] // Hanya Owner organisasi
+            roles: ["Owner"]
           }
         ]
       },
@@ -116,7 +115,6 @@ export const navItems: NavGroup[] = [
         title: "Dashboard",
         href: "/superadmin/dashboard",
         icon: ChartPieIcon
-        // Tanpa properti roles berarti bersifat PUBLIK (semua user bisa melihat)
       },
       {
         title: "Users",
@@ -141,30 +139,49 @@ export function NavMain() {
   const pathname = usePathname();
   const { isMobile } = useSidebar();
 
-  // State untuk menyimpan role aktif user
+  // State untuk melacak grup user (users / superadmin) dan role organisasi internal
+  const [userGroup, setUserGroup] = useState<"users" | "superadmin" | null>(null);
   const [userRole, setUserRole] = useState<"Owner" | "Admin" | "Member" | null>(null);
   const [isLoadingRole, setIsLoadingRole] = useState(true);
 
-  // Ambil data role aktif dari Supabase berdasarkan active_org_id
+  // Ambil data role aktif dari Supabase
   const fetchUserRole = async () => {
-    const orgId = localStorage.getItem("active_org_id");
-    if (!orgId) {
-      setUserRole(null);
-      setIsLoadingRole(false);
-      return;
-    }
-
     try {
       const {
         data: { user }
       } = await supabase.auth.getUser();
+
       if (!user) {
+        setUserGroup(null);
         setUserRole(null);
         setIsLoadingRole(false);
         return;
       }
 
-      // Query ke tabel memberships
+      // PERBAIKAN: Menambahkan pengecekan email fallback superadmin@example.com
+      const isSuperAdmin =
+        user.app_metadata?.role === "superadmin" ||
+        user.user_metadata?.role === "superadmin" ||
+        user.email === "superadmin@example.com"; // Fallback untuk mempermudah development
+
+      if (isSuperAdmin) {
+        setUserGroup("superadmin");
+        setUserRole(null); // Superadmin tidak memerlukan role organisasi spesifik
+        setIsLoadingRole(false);
+        return;
+      }
+
+      // 2. Jika bukan superadmin, kategorikan sebagai grup "users"
+      setUserGroup("users");
+
+      const orgId = localStorage.getItem("active_org_id");
+      if (!orgId) {
+        setUserRole(null);
+        setIsLoadingRole(false);
+        return;
+      }
+
+      // Query ke tabel memberships untuk pengguna biasa
       const { data, error } = await supabase
         .from("memberships")
         .select("role")
@@ -236,8 +253,14 @@ export function NavMain() {
     );
   }
 
-  // Filter seluruh grup menu
+  // Filter seluruh grup menu utama berdasarkan userGroup ("users" atau "superadmin")
   const filteredNavItems = navItems
+    .filter((group) => {
+      // Jika grup menu tidak membatasi roles, tampilkan untuk semua
+      if (!group.roles) return true;
+      // Jika membatasi, pastikan grup sesuai dengan userGroup saat ini
+      return userGroup ? group.roles.includes(userGroup) : false;
+    })
     .map((group) => ({
       ...group,
       items: filterMenuByRole(group.items)

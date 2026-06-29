@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateMeta } from "@/lib/utils";
-import { LoginForm } from "./components/login-form"; // Impor Client Component login form
+import { LoginForm } from "./components/login-form";
 
 export function generateMetadata() {
   return generateMeta({

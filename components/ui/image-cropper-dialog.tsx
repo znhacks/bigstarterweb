@@ -1,8 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, useRef, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -16,7 +22,7 @@ import "cropperjs/dist/cropper.css";
 interface ImageCropperDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  imageSrc?: string | null; // Kita perbolehkan null di awal untuk mendeteksi mode pilihan berkas
+  imageSrc?: string | null;
   onCropComplete: (croppedBlob: Blob) => void;
 }
 
@@ -32,20 +38,27 @@ export function ImageCropperDialog({
   // State Manajemen Pemuatan Berkas
   const [imageSrc, setImageSrc] = useState<string | null>(initialImageSrc);
   const [urlInput, setUrlInput] = useState("");
+  const [urlPreview, setUrlPreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [isDragging, setIsDragging] = useState(false);
 
   // State Sliders Kontrol
   const [zoom, setZoom] = useState(1);
+  const [minZoom, setMinZoom] = useState(0.1); // Batas terkecil dinamis (berdasarkan kotak hijau)
+  const [maxZoom, setMaxZoom] = useState(3); // Batas terbesar dinamis
+
   const [rotation, setRotation] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Sinkronisasi state internal saat modal ditutup atau gambar diganti
+  // Reset seluruh state ketika modal ditutup atau gambar diganti
   useEffect(() => {
     if (!open) {
       setImageSrc(null);
       setUrlInput("");
+      setUrlPreview(null);
       setZoom(1);
+      setMinZoom(0.1);
+      setMaxZoom(3);
       setRotation(0);
       setIsDragging(false);
     } else {
@@ -53,7 +66,56 @@ export function ImageCropperDialog({
     }
   }, [open, initialImageSrc]);
 
-  // Handler memicu input file
+  // Menangkap aksi Tempel Gambar secara global (Ctrl + V) saat modal terbuka
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      if (!open) return;
+      const items = e.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf("image") !== -1) {
+            const file = items[i].getAsFile();
+            if (file) {
+              loadImage(file);
+            }
+          }
+        }
+      }
+    };
+
+    window.addEventListener("paste", handleGlobalPaste);
+    return () => window.removeEventListener("paste", handleGlobalPaste);
+  }, [open]);
+
+  // KUNCI UTAMA: Menghitung rasio zoom minimal agar gambar tidak lebih kecil dari KOTAK HIJAU (crop box)
+  const getMinRatioLimit = (): number => {
+    const cropper = cropperRef.current?.cropper;
+    if (!cropper) return 0.1;
+
+    const cropBoxData = cropper.getCropBoxData();
+    const imageData = cropper.getImageData();
+
+    // Mencari rasio terbesar agar gambar selalu menutupi kotak hijau secara penuh
+    return Math.max(
+      cropBoxData.width / imageData.naturalWidth,
+      cropBoxData.height / imageData.naturalHeight
+    );
+  };
+
+  // Handler saat Cropper selesai memuat gambar
+  const handleCropperReady = () => {
+    const cropper = cropperRef.current?.cropper;
+    if (cropper) {
+      const minLimit = getMinRatioLimit();
+
+      setMinZoom(minLimit); // Kunci slider paling kiri di batas kotak hijau
+      setZoom(minLimit); // Atur posisi awal slider pas di batas kotak hijau
+      setMaxZoom(minLimit * 4); // Batas maksimal zoom hingga 4x
+
+      cropper.zoomTo(minLimit); // Paksa gambar pas di batas minimal kotak hijau
+    }
+  };
+
   const handleDropzoneClick = () => {
     fileInputRef.current?.click();
   };
@@ -65,7 +127,7 @@ export function ImageCropperDialog({
     }
   };
 
-  // Drag & Drop event handlers
+  // Drag & Drop handlers
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -92,13 +154,19 @@ export function ImageCropperDialog({
     reader.readAsDataURL(file);
   };
 
-  const handleLoadUrl = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUrlPreview = () => {
     if (urlInput.trim()) {
-      setImageSrc(urlInput.trim());
+      setUrlPreview(urlInput.trim());
     }
   };
 
+  const handleUrlSaveProceed = () => {
+    if (urlPreview) {
+      setImageSrc(urlPreview);
+    }
+  };
+
+  // Handler pergeseran slider Zoom
   const handleZoomSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
     setZoom(val);
@@ -108,6 +176,24 @@ export function ImageCropperDialog({
     }
   };
 
+  // KUNCI KEAMANAN: Membatalkan aksi perkecil (zoom-out) jika pengguna melewati batas minimal KOTAK HIJAU
+  const handleZoomEvent = (e: CustomEvent<any>) => {
+    const cropper = cropperRef.current?.cropper;
+    if (!cropper) return;
+
+    const minLimit = getMinRatioLimit();
+
+    // Jika rasio baru di bawah batas kotak hijau, gagalkan aksi perkecil & kunci di batas minimal
+    if (e.detail.ratio < minLimit) {
+      e.preventDefault(); // Batalkan aksi perkecil bawaan CropperJS
+      cropper.zoomTo(minLimit); // Kunci paksa ke batas minimal kotak hijau
+      setZoom(minLimit);
+    } else {
+      setZoom(e.detail.ratio);
+    }
+  };
+
+  // Handler perubahan nilai slider Rotasi secara reaktif (0° - 360°)
   const handleRotateSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value);
     setRotation(val);
@@ -150,39 +236,41 @@ export function ImageCropperDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-border/80 overflow-hidden rounded-2xl border sm:max-w-[500px]">
+      <DialogContent className="border-border/80 overflow-hidden rounded-2xl border p-6 sm:max-w-[480px]">
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-            {imageSrc && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setImageSrc(null)}
-                className="text-muted-foreground hover:text-foreground -ml-1 h-8 w-8 rounded-lg">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
+          <div className="space-y-1">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              {imageSrc && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setImageSrc(null)}
+                  className="text-muted-foreground hover:text-foreground -ml-1 h-8 w-8 rounded-lg">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              Update Profile Photo
+            </DialogTitle>
+            {!imageSrc && (
+              <DialogDescription className="text-muted-foreground text-xs">
+                Choose a new photo from your device or paste a URL from the internet.
+              </DialogDescription>
             )}
-            {imageSrc ? "Adjust Image" : "Upload Image"}
-          </DialogTitle>
+          </div>
         </DialogHeader>
 
-        {/* TAMPILAN 1: PILIH GAMBAR (JIKA BELUM ADA GAMBAR YANG DI-LOAD) */}
+        {/* TAMPILAN 1: PILIH GAMBAR */}
         {!imageSrc ? (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
-            <TabsList className="border-border/60 h-auto w-full justify-start space-x-6 rounded-none border-b bg-transparent p-0">
-              <TabsTrigger
-                value="upload"
-                className="data-[state=active]:border-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2.5 text-sm font-semibold shadow-none transition-all data-[state=active]:bg-transparent">
-                Upload File
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-5">
+            <TabsList className="bg-muted/60 grid h-11 w-full grid-cols-2 rounded-xl p-1">
+              <TabsTrigger value="upload" className="rounded-lg py-2 text-xs font-semibold">
+                <Upload className="mr-2 h-3.5 w-3.5" /> Upload File
               </TabsTrigger>
-              <TabsTrigger
-                value="url"
-                className="data-[state=active]:border-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2.5 text-sm font-semibold shadow-none transition-all data-[state=active]:bg-transparent">
-                From URL
+              <TabsTrigger value="url" className="rounded-lg py-2 text-xs font-semibold">
+                <Link2 className="mr-2 h-3.5 w-3.5" /> From URL
               </TabsTrigger>
             </TabsList>
 
-            {/* TAB UPLOAD: DRAG AND DROP */}
             <TabsContent value="upload" className="mt-0 focus-visible:outline-none">
               <div
                 onDragOver={handleDragOver}
@@ -192,7 +280,7 @@ export function ImageCropperDialog({
                 className={`flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-200 ${
                   isDragging
                     ? "border-primary bg-primary/5 scale-[0.99]"
-                    : "border-border/80 hover:bg-accent/5 hover:border-muted-foreground/45"
+                    : "border-border/80 hover:bg-accent/5"
                 }`}>
                 <input
                   type="file"
@@ -211,34 +299,66 @@ export function ImageCropperDialog({
               </div>
             </TabsContent>
 
-            {/* TAB URL: INPUT LINK GAMBAR */}
-            <TabsContent value="url" className="mt-0 focus-visible:outline-none">
-              <form onSubmit={handleLoadUrl} className="space-y-4 py-2">
-                <div className="space-y-2">
-                  <Label htmlFor="image-url">Image URL</Label>
-                  <div className="relative">
-                    <Link2 className="text-muted-foreground/60 absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                    <Input
-                      id="image-url"
-                      type="url"
-                      required
-                      placeholder="https://example.com/image.jpg"
-                      value={urlInput}
-                      onChange={(e) => setUrlInput(e.target.value)}
-                      className="border-border/80 h-10 rounded-xl pl-10"
+            <TabsContent value="url" className="mt-0 space-y-5 focus-visible:outline-none">
+              <div className="flex w-full gap-2">
+                <Input
+                  type="url"
+                  placeholder="https://example.com/image.jpg"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  className="border-border/80 h-10 flex-1 rounded-xl text-xs"
+                />
+                <Button
+                  type="button"
+                  onClick={handleUrlPreview}
+                  variant="secondary"
+                  className="h-10 rounded-xl px-4 text-xs font-semibold">
+                  Preview
+                </Button>
+              </div>
+
+              {urlPreview && (
+                <div className="flex flex-col items-center justify-center space-y-4 pt-2 text-center">
+                  <div className="border-border/60 h-28 w-28 overflow-hidden rounded-full border shadow-sm">
+                    <img
+                      src={urlPreview}
+                      alt="URL Preview"
+                      className="h-full w-full object-cover"
+                      onError={() => {
+                        alert("Gagal memuat gambar dari URL. Pastikan tautan benar.");
+                        setUrlPreview(null);
+                      }}
                     />
                   </div>
+                  <div className="max-w-xs space-y-1">
+                    <p className="text-muted-foreground font-mono text-[11px] break-all">
+                      {urlPreview}
+                    </p>
+                    <p className="text-muted-foreground text-[10px] italic">
+                      Or paste an image (Ctrl+V)
+                    </p>
+                  </div>
                 </div>
-                <div className="flex justify-end">
-                  <Button type="submit" className="h-10 rounded-xl px-5 font-semibold">
-                    Load Image
-                  </Button>
-                </div>
-              </form>
+              )}
+
+              <div className="flex justify-end gap-2 border-t pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="h-10 rounded-xl text-xs font-semibold">
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUrlSaveProceed}
+                  disabled={!urlPreview}
+                  className="bg-foreground text-background hover:bg-foreground/90 h-10 rounded-xl px-5 text-xs font-semibold">
+                  Save
+                </Button>
+              </div>
             </TabsContent>
           </Tabs>
         ) : (
-          /* TAMPILAN 2: AREA CROPPER & SLIDERS (JIKA GAMBAR SUDAH DI-LOAD) */
+          /* TAMPILAN 2: AREA CROPPER & SLIDERS */
           <div className="space-y-6">
             <div className="border-border/60 overflow-hidden rounded-xl border bg-neutral-900">
               <Cropper
@@ -248,15 +368,17 @@ export function ImageCropperDialog({
                 initialAspectRatio={1}
                 aspectRatio={1} // Mengunci rasio pemotongan agar tetap KOTAK (1:1)
                 guides={true}
-                viewMode={1} // Mencegah kotak seleksi keluar dari gambar
-                dragMode="move" // Mengizinkan pengguna menggeser gambar di dalam wadah
+                viewMode={1} // PERBAIKAN: Menggunakan viewMode 1 agar gambar dibatasi oleh KOTAK HIJAU (crop box), bukan kotak merah (canvas)
+                dragMode="move"
                 background={false}
                 responsive={true}
-                autoCropArea={0.7}
+                autoCropArea={1.0} // Otomatis seleksi penuh dari dimensi terkecil gambar
                 checkOrientation={false}
                 cropBoxMovable={false} // Kunci Posisi Box Seleksi agar tidak bisa digeser
                 cropBoxResizable={false} // Kunci Ukuran Box Seleksi agar tidak bisa ditarik ujungnya
                 toggleDragModeOnDblclick={false}
+                ready={handleCropperReady} // Ambil rasio zoom minimal aman saat gambar selesai dimuat
+                zoom={handleZoomEvent} // INTERSEPSI FILTER: Kunci penggeser agar tidak bisa memperkecil melewati KOTAK HIJAU (crop box)
               />
             </div>
 
@@ -268,14 +390,14 @@ export function ImageCropperDialog({
                   <span className="flex items-center gap-1.5">
                     <ZoomIn className="h-3.5 w-3.5" /> Zoom
                   </span>
-                  <span className="font-mono">{zoom.toFixed(1)}x</span>
+                  <span className="font-mono">{zoom.toFixed(2)}x</span>
                 </div>
                 <input
                   type="range"
                   value={zoom}
-                  min={1}
-                  max={3}
-                  step={0.1}
+                  min={minZoom} // Nilai paling kiri slider dikunci tepat di batas minimal rasio aman gambar terhadap KOTAK HIJAU
+                  max={maxZoom}
+                  step={0.001} // Langkah sangat tipis agar pergeseran sangat mulus
                   aria-label="Zoom"
                   onChange={handleZoomSlider}
                   className="bg-muted analytics-accent-foreground h-1 w-full cursor-pointer appearance-none rounded-lg"

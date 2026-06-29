@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle2, Loader2, KeyIcon } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, KeyIcon, ShieldAlert } from "lucide-react";
 
 // Impor klien Supabase Anda
 import { supabase } from "@/lib/supabase";
@@ -28,6 +28,21 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Fungsi pembantu untuk mengarahkan pengguna berdasarkan role
+  const handleRedirect = (user: any) => {
+    const isSuperAdmin =
+      user?.app_metadata?.role === "superadmin" ||
+      user?.user_metadata?.role === "superadmin" ||
+      user?.email === "superadmin@example.com"; // Fallback deteksi email dummy
+
+    if (isSuperAdmin) {
+      router.push("/superadmin/dashboard");
+    } else {
+      router.push(nextTarget || "/dashboard");
+    }
+    router.refresh();
+  };
 
   // 1. Handler Login dengan Password Tradisional
   const handlePasswordLogin = async (e: React.FormEvent) => {
@@ -47,8 +62,7 @@ export function LoginForm() {
       if (data.user) {
         setSuccessMsg("Login berhasil! Mengalihkan halaman...");
         setTimeout(() => {
-          router.push(nextTarget || "/dashboard/default");
-          router.refresh();
+          handleRedirect(data.user);
         }, 1500);
       }
     } catch (err: any) {
@@ -58,7 +72,44 @@ export function LoginForm() {
     }
   };
 
-  // 2. Handler Login dengan Magic Link (OTP Email)
+  // 2. Handler Quick Login untuk Akun Dummy Superadmin
+  const handleQuickSuperadminLogin = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    const dummyEmail = "superadmin@example.com";
+    const dummyPassword = "superadmin123";
+
+    setEmail(dummyEmail);
+    setPassword(dummyPassword);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: dummyEmail,
+        password: dummyPassword
+      });
+
+      if (error) {
+        throw new Error(
+          "Akun dummy belum terdaftar di database Supabase Anda. Pastikan untuk membuat user 'superadmin@example.com' dengan password 'superadmin123' terlebih dahulu."
+        );
+      }
+
+      if (data.user) {
+        setSuccessMsg("Login Superadmin berhasil! Mengalihkan halaman...");
+        setTimeout(() => {
+          handleRedirect(data.user);
+        }, 1500);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 3. Handler Login dengan Magic Link (OTP Email)
   const handleMagicLinkLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -92,7 +143,7 @@ export function LoginForm() {
     }
   };
 
-  // 3. Handler OAuth Google
+  // 4. Handler OAuth Google
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setErrorMsg(null);
@@ -128,6 +179,26 @@ export function LoginForm() {
           <AlertDescription>{successMsg}</AlertDescription>
         </Alert>
       )}
+
+      {/* QUICK LOGIN DEMO SUPERADMIN */}
+      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
+        <div className="mb-2 flex items-center gap-2 text-amber-700 dark:text-amber-500">
+          <ShieldAlert className="h-4 w-4" />
+          <span className="text-xs font-semibold">Demo Sandbox Mode</span>
+        </div>
+        <p className="text-muted-foreground mb-3 text-[11px] leading-relaxed">
+          Gunakan tombol di bawah untuk masuk otomatis menggunakan akun demonstrasi superadmin.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleQuickSuperadminLogin}
+          disabled={isLoading}
+          className="h-8 w-full border-amber-500/30 text-xs font-medium text-amber-700 hover:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/10">
+          {isLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+          Quick Login: Superadmin (Demo)
+        </Button>
+      </div>
 
       {/* TABS CONTROLLER */}
       <Tabs defaultValue="password" className="w-full">

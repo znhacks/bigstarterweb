@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import { SiteHeader } from "@/components/layout/header";
+import { LanguageProvider } from "@/components/providers/language-provider";
 
 export default async function AuthLayout({
   children
@@ -31,11 +32,13 @@ export default async function AuthLayout({
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="bg-muted/40 flex flex-1 flex-col">
-          <div className="@container/main p-(--content-padding) xl:group-data-[theme-content-layout=centered]/layout:container xl:group-data-[theme-content-layout=centered]/layout:mx-auto">
-            {children}
+        <LanguageProvider>
+          <div className="bg-muted/40 flex flex-1 flex-col">
+            <div className="@container/main p-(--content-padding) xl:group-data-[theme-content-layout=centered]/layout:container xl:group-data-[theme-content-layout=centered]/layout:mx-auto">
+              {children}
+            </div>
           </div>
-        </div>
+        </LanguageProvider>
       </SidebarInset>
     </SidebarProvider>
   );
