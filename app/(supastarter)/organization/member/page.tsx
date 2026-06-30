@@ -46,6 +46,7 @@ import {
 // Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
+import { plans } from "@/config/billing";
 
 interface Member {
   id: string;
@@ -301,32 +302,35 @@ export default function OrganizationMembers() {
   // Ambil batasan maksimal anggota dari paket langganan aktif di Supabase
   const fetchMaxUsersLimit = async (orgId: string) => {
     try {
+      // 1. Ambil plan_id murni dari tabel subscriptions tanpa melakukan JOIN SQL
       const { data, error } = await supabase
         .from("subscriptions")
-        .select(
-          `
-          status,
-          plans (
-            max_users
-          )
-        `
-        )
+        .select("plan_id, status, ends_at")
         .eq("tenant_id", orgId)
-        .eq("status", "active")
         .maybeSingle();
 
       if (error) throw error;
 
-      if (data && data.plans) {
-        const planInfo = data.plans as any;
-        setMaxUsers(planInfo.max_users || 9999);
+      // 2. Evaluasi status kedaluwarsa secara mandiri (Lazy Evaluation)
+      const endsAt = data?.ends_at ? new Date(data.ends_at) : null;
+      const isExpired = endsAt ? new Date() > endsAt : false;
+
+      // Jika tidak langganan aktif atau sudah expired, set statusnya sebagai "free"
+      const activePlanId = data && data.status === "active" && !isExpired ? data.plan_id : "free";
+
+      // 3. Cari limit maksimal pengguna di file konfigurasi statis kita
+      const planConfig = plans.find((p) => p.id === activePlanId);
+
+      if (planConfig) {
+        // Sesuaikan properti limit antara "maxUsers" atau properti limit Anda
+        setMaxUsers(planConfig.maxUsers);
       } else {
-        // Fallback default limit: Free Plan = 2 anggota
-        setMaxUsers(2);
+        setMaxUsers(2); // Fallback aman jika config tidak ditemukan
       }
-    } catch (error) {
-      console.error("Gagal memuat limit maksimal paket:", error);
-      setMaxUsers(2); // Fallback aman
+    } catch (error: any) {
+      // Menampilkan pesan error yang lebih detail di console terminal
+      console.error("Gagal memuat limit maksimal paket secara mendetail:", error?.message || error);
+      setMaxUsers(2); // Fallback aman jika terjadi gangguan koneksi/database
     }
   };
 

@@ -32,7 +32,7 @@ export const plans: Plan[] = [
       "PNG, JPEG, WebP format",
       "Attribution link required"
     ],
-    maxUsers: 2,
+    maxUsers: 5,
     maxScreenshots: 200,
     prices: {
       monthly: { amount: 0 },
@@ -50,7 +50,7 @@ export const plans: Plan[] = [
       "No attribution link required",
       "Choose IP location"
     ],
-    maxUsers: 5,
+    maxUsers: 10,
     maxScreenshots: 2000,
     prices: {
       monthly: {
@@ -77,7 +77,7 @@ export const plans: Plan[] = [
       "Choose IP location",
       "Priority Support"
     ],
-    maxUsers: 15,
+    maxUsers: 20,
     maxScreenshots: 10000,
     prices: {
       monthly: {
