@@ -1047,26 +1047,27 @@ export default function OrganizationBilling() {
                     {/* Tombol Pembayaran PayPal dengan nominal yang sudah dipotong (finalPrice) */}
                     <div className="min-h-[150px] space-y-3">
                       <PayPalButtons
-                        style={{ layout: "vertical", shape: "rect", label: "pay" }}
-                        createOrder={(data, actions) => {
-                          return actions.order.create({
-                            intent: "CAPTURE",
-                            purchase_units: [
-                              {
-                                description: `PREPAID:${selectedPlan.id}:${billingCycle}`,
-                                custom_id: activeOrgId || undefined,
-                                amount: {
-                                  currency_code: "USD",
-                                  value: finalPrice.toString() // Menggunakan harga terpotong prorasi
-                                }
-                              }
-                            ]
+                        style={{ layout: "vertical", shape: "rect", label: "subscribe" }}
+                        createSubscription={(data, actions) => {
+                          const activePlanId =
+                            billingCycle === "yearly"
+                              ? selectedPlan.prices.yearly.paypalPlanId
+                              : selectedPlan.prices.monthly.paypalPlanId;
+
+                          if (!activePlanId) {
+                            alert("PayPal Plan ID tidak ditemukan untuk paket ini.");
+                            throw new Error("Missing Plan ID");
+                          }
+
+                          return actions.subscription.create({
+                            plan_id: activePlanId,
+                            custom_id: activeOrgId || undefined // Kirim ID organisasi di custom_id
                           });
                         }}
                         onApprove={async (data, actions) => {
-                          if (actions.order) {
-                            const details = await actions.order.capture();
-                            await handlePaymentSuccess(details);
+                          if (data.subscriptionID) {
+                            // Verifikasi sinkronus tetap berjalan dengan mengirimkan ID Langganan
+                            await handlePaymentSuccess({ id: data.subscriptionID });
                             setIsCheckoutOpen(false);
                           }
                         }}
@@ -1074,7 +1075,7 @@ export default function OrganizationBilling() {
                           setAlertMessage({
                             title: "Payment Failed",
                             description:
-                              "Terjadi kesalahan selama memproses pembayaran. Silakan coba kembali.",
+                              "Terjadi kesalahan selama memproses langganan PayPal. Silakan coba kembali.",
                             variant: "destructive"
                           });
                           setIsCheckoutOpen(false);

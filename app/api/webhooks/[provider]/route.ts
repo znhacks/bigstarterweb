@@ -56,23 +56,23 @@ export async function POST(req: Request, { params }: { params: { provider: strin
 
     if (txError) throw txError;
 
-    // Hitung tanggal masa aktif prepaid
-    const endsAt = new Date();
-    if (result.billingCycle === "yearly") {
-      endsAt.setFullYear(endsAt.getFullYear() + 1);
-    } else {
-      endsAt.setMonth(endsAt.getMonth() + 1);
-    }
+    // 2. Tentukan Tanggal Berakhir (ends_at) Berdasarkan Tanggal Tagihan Berikutnya
+    const endsAt = result.nextBillingTime
+      ? new Date(result.nextBillingTime).toISOString()
+      : new Date(
+          Date.now() + (result.billingCycle === "yearly" ? 365 : 30) * 24 * 60 * 60 * 1000
+        ).toISOString();
 
-    // Perbarui paket aktif organisasi
+    // 3. Daftarkan / Perbarui Paket Langganan Berulang Aktif Organisasi
     const { error: subError } = await supabaseAdmin.from("subscriptions").upsert(
       {
         tenant_id: result.tenantId,
         plan_id: result.planId,
         status: "active",
-        cancel_at_period_end: true, // Prepaid
+        cancel_at_period_end: false, // FALSE: Berlangganan otomatis diperpanjang tiap bulan
         starts_at: new Date().toISOString(),
-        ends_at: endsAt.toISOString(),
+        ends_at: endsAt,
+        provider_subscription_id: result.orderId, // Simpan Subscription ID asli
         updated_at: new Date().toISOString()
       },
       { onConflict: "tenant_id" }

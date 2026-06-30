@@ -1,18 +1,15 @@
 // lib/billing/providers/paypal.ts
 import { BillingProviderDriver, UnifiedVerificationResult } from "../types";
+import { plans } from "@/config/billing";
 
 class PaypalDriver implements BillingProviderDriver {
   async verifyPayload(payload: any): Promise<UnifiedVerificationResult> {
-    // 1. Dapatkan Order ID dari PayPal payload
-    const orderId =
-      payload.resource?.supplementary_data?.related_ids?.order_id ||
-      payload.resource?.billing_agreement_id ||
-      payload.resource?.id ||
-      payload.orderId; // Fallback untuk direct verify
+    // Membaca ID Langganan (berawalan I-xxxxxxxxxxxx) dari Webhook atau direct verification
+    const subscriptionId = payload.resource?.id || payload.subscriptionId || payload.id;
 
-    if (!orderId) throw new Error("PayPal Order ID tidak ditemukan.");
+    if (!subscriptionId) throw new Error("PayPal Subscription ID tidak ditemukan.");
 
-    // 2. Autentikasi ke PayPal API
+    // 1. Dapatkan Token Akses PayPal
     const authRequest = await fetch(
       `${process.env.PAYPAL_API_URL || "https://api-m.sandbox.paypal.com"}/v1/oauth2/token`,
       {
@@ -28,36 +25,59 @@ class PaypalDriver implements BillingProviderDriver {
     );
     const { access_token } = await authRequest.json();
 
-    // 3. Ambil detail transaksi resmi dari PayPal
-    const orderRequest = await fetch(
-      `${process.env.PAYPAL_API_URL || "https://api-m.sandbox.paypal.com"}/v2/checkout/orders/${orderId}`,
-      { headers: { Authorization: `Bearer ${access_token}` } }
+    // 2. Ambil detail data langganan langsung dari PayPal Subscriptions API
+    const subscriptionRequest = await fetch(
+      `${process.env.PAYPAL_API_URL || "https://api-m.sandbox.paypal.com"}/v1/billing/subscriptions/${subscriptionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          Accept: "application/json"
+        }
+      }
     );
-    const orderDetails = await orderRequest.json();
+    const subDetails = await subscriptionRequest.json();
 
-    if (orderDetails.status !== "COMPLETED" && orderDetails.status !== "APPROVED") {
-      throw new Error("Transaksi PayPal belum diselesaikan.");
+    if (subDetails.status !== "ACTIVE" && subDetails.status !== "APPROVED") {
+      throw new Error(`Status langganan PayPal adalah ${subDetails.status}. Diharapkan ACTIVE.`);
     }
 
-    const purchaseUnit = orderDetails.purchase_units?.[0];
-    const tenantId = purchaseUnit?.custom_id;
-    const description = purchaseUnit?.description || ""; // Format: "PREPAID:pro:monthly"
+    const tenantId = subDetails.custom_id; // ID Organisasi kita
+    const paypalPlanId = subDetails.plan_id; // ID Plan dari PayPal
 
-    if (!tenantId || !description.startsWith("PREPAID:")) {
-      throw new Error("Metadata organisasi tidak valid.");
+    if (!tenantId) {
+      throw new Error("ID Organisasi (custom_id) tidak ditemukan pada transaksi.");
     }
 
-    const [_, planId, billingCycle] = description.split(":");
-    const amount = parseFloat(purchaseUnit?.amount?.value || "0");
+    // 3. Cari plan statis mana yang memiliki paypalPlanId cocok di config/billing.ts
+    let matchedPlanId = "free";
+    let billingCycle: "monthly" | "yearly" = "monthly";
+    let amount = 0;
 
-    // Kembalikan data dalam format standar yang seragam
+    for (const p of plans) {
+      if (p.prices.monthly.paypalPlanId === paypalPlanId) {
+        matchedPlanId = p.id;
+        billingCycle = "monthly";
+        amount = p.prices.monthly.amount;
+        break;
+      }
+      if (p.prices.yearly.paypalPlanId === paypalPlanId) {
+        matchedPlanId = p.id;
+        billingCycle = "yearly";
+        amount = p.prices.yearly.amount;
+        break;
+      }
+    }
+
+    const nextBillingTime = subDetails.billing_info?.next_billing_time;
+
     return {
       success: true,
       tenantId,
-      planId,
-      billingCycle: billingCycle as "monthly" | "yearly",
+      planId: matchedPlanId,
+      billingCycle,
       amount,
-      orderId
+      orderId: subscriptionId,
+      nextBillingTime: nextBillingTime ? new Date(nextBillingTime).toISOString() : undefined
     };
   }
 }
