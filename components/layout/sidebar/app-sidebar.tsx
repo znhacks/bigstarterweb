@@ -39,7 +39,6 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 
-// Impor klien Supabase yang sudah dibuat sebelumnya
 import { supabase } from "@/lib/supabase";
 
 interface Organization {
@@ -53,25 +52,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
   const isTablet = useIsTablet();
 
-  // State User Supabase
   const [user, setUser] = useState<any>(null);
 
-  // State Organisasi
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
 
-  // State loading & modal
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
 
-  // Membaca user aktif & memuat daftar organisasi dari Supabase
   const loadUserAndOrganizations = async () => {
     setIsLoading(true);
     try {
-      // 1. Dapatkan user yang sedang login
       const {
         data: { user: currentUser },
         error: userError
@@ -82,7 +76,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
       setUser(currentUser);
 
-      // 2. Dapatkan relasi keanggotaan beserta detail organisasi (Kueri bersih tanpa komentar)
       const { data, error } = await supabase
         .from("memberships")
         .select(
@@ -99,7 +92,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       if (error) throw error;
 
-      // Transformasi data relasi gabungan ke struktur Array Organization
       const orgs: Organization[] = (data || [])
         .map((item: any) => item.tenants)
         .filter((tenant): tenant is Organization => tenant !== null)
@@ -111,7 +103,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       setOrganizations(orgs);
 
-      // 3. Tentukan organisasi aktif (baca dari localStorage jika ada, atau default ke indeks pertama)
       if (orgs.length > 0) {
         const savedOrgId = localStorage.getItem("active_org_id");
         const matchedOrg = orgs.find((o) => o.id === savedOrgId);
@@ -138,26 +129,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setOpen(!isTablet);
   }, [isTablet]);
 
-  // Handler pergantian organisasi aktif (Ditambahkan reload halaman otomatis)
   const handleSelectOrg = (org: Organization) => {
     setActiveOrg(org);
     localStorage.setItem("active_org_id", org.id);
 
-    // Memicu event storage untuk komponen lain yang mendengarkan
     window.dispatchEvent(new Event("storage"));
 
-    // Melakukan reload halaman secara bersih agar semua komponen memuat ulang data organisasi baru
     window.location.reload();
   };
 
-  // Handler menyimpan organisasi baru ke Supabase
   const handleCreateOrg = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newOrgName.trim() || !user) return;
 
     setIsSubmitting(true);
     try {
-      // 1. Insert organisasi baru ke tabel tenants
       const { data: tenantData, error: tenantError } = await supabase
         .from("tenants")
         .insert({ name: newOrgName.trim() })
@@ -166,7 +152,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       if (tenantError) throw tenantError;
 
-      // 2. Hubungkan user ini ke tenant baru di tabel memberships sebagai "Owner" (Kapital)
       const { error: membershipError } = await supabase.from("memberships").insert({
         user_id: user.id,
         tenant_id: tenantData.id,
@@ -181,7 +166,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         logo: null
       };
 
-      // 3. Update state lokal & jadikan sebagai organisasi aktif
       setOrganizations((prev) => [...prev, newOrg]);
       handleSelectOrg(newOrg);
 
@@ -246,7 +230,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         key={org.id}
                         className="flex cursor-pointer items-center gap-3"
                         onSelect={() => handleSelectOrg(org)}>
-                        <div className="bg-background flex size-8 items-center justify-center overflow-hidden rounded-md border">
+                        <div
+                          className={`flex size-8 items-center justify-center overflow-hidden ${
+                            org.logo ? "" : "bg-background rounded-md border"
+                          }`}>
                           {org.logo ? (
                             <img src={org.logo} alt={org.name} className="size-full object-cover" />
                           ) : (
@@ -298,7 +285,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarFooter>
       </Sidebar>
 
-      {/* Dialog Modal Tambah Organisasi */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

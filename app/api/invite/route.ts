@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import { createClient } from "@supabase/supabase-js";
+import { checkSeatLimit } from "@/lib/billing/enforcer"; // Import Seat-Based Enforcer
 
 // Inisialisasi klien Supabase admin/server untuk mencatat undangan
 const supabase = createClient(
@@ -35,6 +36,20 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: `Organisasi '${orgName}' tidak ditemukan di database.` },
         { status: 404 }
+      );
+    }
+
+    // --- INTEGRASI SEAT-BASED LIMIT CHECK (TAHAP 7) ---
+    // Sebelum mencatat undangan baru dan mengirimkan email, kita periksa kuota anggota organisasi saat ini.
+    const seatCheck = await checkSeatLimit(tenantData.id);
+
+    if (!seatCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Limit Terlampaui",
+          message: `Paket ${seatCheck.planName} Anda hanya mengizinkan maksimal ${seatCheck.max} anggota. Saat ini organisasi Anda sudah memiliki ${seatCheck.current} anggota. Silakan lakukan upgrade paket di halaman penagihan untuk mengundang lebih banyak anggota.`
+        },
+        { status: 403 }
       );
     }
 
