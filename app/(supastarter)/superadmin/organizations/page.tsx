@@ -5,13 +5,14 @@ import { createServerClient } from "@supabase/ssr";
 // Impor komponen klien dan tipe data yang sesuai
 import { OrganizationsList, SuperadminOrganization } from "./organizations-list";
 import { getTranslations } from "next-intl/server";
+import { constructMetadata } from "@/lib/metadata";
 
 export async function generateMetadata() {
-  return generateMeta({
-    title: "Superadmin Organizations",
-    additionalTitle: true,
-    description: "Manage and oversee all registered organizations and tenants on the platform.",
-    canonical: "/superadmin/organizations"
+  const t = await getTranslations("metadata.superadmin.organizations");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
   });
 }
 

@@ -48,6 +48,8 @@ import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
 import { plans } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { constructMetadata } from "@/lib/metadata";
 
 interface Member {
   id: string;
@@ -68,6 +70,15 @@ interface AlertState {
   title: string;
   description: string;
   variant?: "default" | "destructive";
+}
+
+export async function generateMetadata() {
+  const t = await getTranslations("metadata.users.organization.member");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
+  });
 }
 
 export default function OrganizationMembers() {

@@ -29,6 +29,15 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+export async function generateMetadata() {
+  const t = await getTranslations("metadata.forgot-password");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
+  });
+}
+
 export default function Page() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -149,3 +158,5 @@ export default function Page() {
 
 // Impor ikon pendukung sukses tambahan
 import { CheckCircle2 as CheckCircle2Icon } from "lucide-react";
+import { constructMetadata } from "@/lib/metadata";
+import { getTranslations } from "next-intl/server";

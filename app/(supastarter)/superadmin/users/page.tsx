@@ -5,14 +5,14 @@ import { createServerClient } from "@supabase/ssr";
 // Impor komponen Data Table dan tipe data User
 import UsersDataTable, { User } from "./data-table";
 import { getTranslations } from "next-intl/server";
+import { constructMetadata } from "@/lib/metadata";
 
 export async function generateMetadata() {
-  return generateMeta({
-    title: "Users List",
-    additionalTitle: true,
-    description:
-      "Manage user records and list data efficiently. A professional admin dashboard page built with React, TypeScript, Tailwind CSS, shadcn/ui, and Tanstack Table.",
-    canonical: "/pages/users"
+  const t = await getTranslations("metadata.superadmin.users");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
   });
 }
 

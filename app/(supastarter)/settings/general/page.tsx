@@ -32,6 +32,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/lib/supabase";
 import { useTranslations, useLocale } from "next-intl";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
+import { constructMetadata } from "@/lib/metadata";
+import { getTranslations } from "next-intl/server";
 
 interface AlertState {
   title: string;
@@ -45,6 +47,15 @@ const supportedLocales = [
   { code: "id", label: "Bahasa Indonesia" },
   { code: "es", label: "Español" }
 ] as const;
+
+export async function generateMetadata() {
+  const t = await getTranslations("metadata.users.settings.general");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
+  });
+}
 
 export default function AccountGeneralSettings() {
   const router = useRouter();

@@ -6,11 +6,16 @@ import { Loader2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DemoSandbox } from "./components/demosanbox";
 import { constructMetadata } from "@/lib/metadata";
+import { getTranslations } from "next-intl/server";
 
-export const metadata = constructMetadata({
-  title: "Login",
-  description: "Halaman ini menjelaskan tentang profil perusahaan kami."
-});
+export async function generateMetadata() {
+  const t = await getTranslations("metadata.login");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
+  });
+}
 
 export default function Page() {
   return (

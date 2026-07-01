@@ -17,6 +17,17 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle, Loader2, EyeOff, Eye } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { getTranslations } from "next-intl/server";
+import { constructMetadata } from "@/lib/metadata";
+
+export async function generateMetadata() {
+  const t = await getTranslations("metadata.update-password");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
+  });
+}
 
 export default function UpdatePasswordPage() {
   const router = useRouter();

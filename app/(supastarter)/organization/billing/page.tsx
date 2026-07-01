@@ -33,6 +33,8 @@ import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
 import { plans, Plan } from "@/config/billing"; // Import berkas konfigurasi statis
 import { useLocale, useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { constructMetadata } from "@/lib/metadata";
 
 interface AlertState {
   title: string;
@@ -59,6 +61,15 @@ interface ActiveSubscription {
   endsAt: string | null;
   status: string;
   cancelAtPeriodEnd: boolean;
+}
+
+export async function generateMetadata() {
+  const t = await getTranslations("metadata.users.organization.billing");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
+  });
 }
 
 export default function OrganizationBilling() {

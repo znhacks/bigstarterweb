@@ -12,13 +12,15 @@ import { TeamMembersCard } from "./components/theme-members";
 import { TotalRevenueCard } from "./components/total-revenue";
 
 import { Download } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import { constructMetadata } from "@/lib/metadata";
 
 export async function generateMetadata() {
-  return generateMeta({
-    title: "Admin Dashboard Template",
-    description:
-      "Track revenue, subscriptions, and team activity with a modern interface. A professional admin page built with React, Next.js, TypeScript, Tailwind CSS, and shadcn/ui.",
-    canonical: "/default"
+  const t = await getTranslations("metadata.users.dashboard");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
   });
 }
 

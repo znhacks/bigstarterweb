@@ -25,11 +25,22 @@ import { supabase } from "@/lib/supabase";
 // IMPOR DIALOG PEMOTONG GAMBAR YANG REUSABLE
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 import { useLocale, useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { constructMetadata } from "@/lib/metadata";
 
 interface AlertState {
   title: string;
   description: string;
   variant?: "default" | "destructive";
+}
+
+export async function generateMetadata() {
+  const t = await getTranslations("metadata.users.organization.general");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
+  });
 }
 
 export default function OrganizationGeneralSettings() {

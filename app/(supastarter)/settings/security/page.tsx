@@ -21,11 +21,22 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { constructMetadata } from "@/lib/metadata";
 
 interface AlertState {
   title: string;
   description: string;
   variant?: "default" | "destructive";
+}
+
+export async function generateMetadata() {
+  const t = await getTranslations("metadata.users.settings.security");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
+  });
 }
 
 export default function AccountSecuritySettings() {

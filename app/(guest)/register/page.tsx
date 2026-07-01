@@ -2,13 +2,15 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateMeta } from "@/lib/utils";
 import { RegisterForm } from "./components/register-form"; // Import komponen Client Form
+import { getTranslations } from "next-intl/server";
+import { constructMetadata } from "@/lib/metadata";
 
 export async function generateMetadata() {
-  return generateMeta({
-    title: "Register Page v2",
-    description:
-      "A login form with email and password. There's an option to login with Google and a link to sign up if you don't have an account.",
-    canonical: "/register/v2"
+  const t = await getTranslations("metadata.register");
+
+  return constructMetadata({
+    title: t("title"),
+    description: t("description")
   });
 }
 
