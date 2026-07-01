@@ -1,11 +1,6 @@
 // lib/billing/enforcer.ts
-import { createClient } from "@supabase/supabase-js";
 import { plans } from "@/config/billing";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 
 interface LimitCheckResult {
   allowed: boolean;

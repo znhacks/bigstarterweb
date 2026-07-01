@@ -1,19 +1,12 @@
 import { generateMeta } from "@/lib/utils";
-
 import { ApiKeysDataTable } from "./components/datatable";
-import { UpgradePlanCard } from "./components/upgrade-plan-card";
-import { SuccessfulConversionsCard } from "./components/successful-conversions-card";
-import { FailedConversionsCard } from "./components/failed-conversions-card";
-import { ApiCallsCard } from "./components/api-calls-card";
-import { ApiKey } from "./components/datatable";
-import apiKeysData from "./data.json";
 
 export async function generateMetadata() {
   return generateMeta({
-    title: "Api Keys",
+    title: "API Keys",
     additionalTitle: true,
     description:
-      "Securely manage API keys, track usage analytics, and monitor conversion success rates with real-time metrics. A professional API management dashboard built with React, Next.js, TypeScript, Tailwind CSS, and shadcn/ui.",
+      "Create and revoke API keys to access the public REST API. Keys are scoped to the active organization.",
     canonical: "/apps/api-keys"
   });
 }
@@ -21,16 +14,19 @@ export async function generateMetadata() {
 export default function Page() {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Api Keys Management</h1>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold tracking-tight">API Keys</h1>
+        <p className="text-muted-foreground text-sm">
+          Manage API keys for the active organization. Use them as{" "}
+          <code className="font-mono">Authorization: Bearer sk_live_…</code> against{" "}
+          <code className="font-mono">/api/v1/*</code>. See the interactive docs at{" "}
+          <a href="/api-docs" className="text-foreground underline">
+            /api-docs
+          </a>
+          .
+        </p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <UpgradePlanCard />
-        <SuccessfulConversionsCard />
-        <FailedConversionsCard />
-        <ApiCallsCard />
-      </div>
-      <ApiKeysDataTable data={apiKeysData as unknown as ApiKey[]} />
+      <ApiKeysDataTable />
     </div>
   );
 }
