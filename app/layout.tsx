@@ -13,6 +13,8 @@ import { ActiveThemeProvider } from "@/components/active-theme";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/components/providers/language-provider";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale } from "next-intl/server";
 
 export default async function RootLayout({
   children
@@ -20,6 +22,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
+  const locale = await getLocale();
   const themeSettings = {
     preset: (cookieStore.get("theme_preset")?.value ?? DEFAULT_THEME.preset) as any,
     scale: (cookieStore.get("theme_scale")?.value ?? DEFAULT_THEME.scale) as any,
@@ -35,7 +38,7 @@ export default async function RootLayout({
   );
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <Script
           src="https://dashboard.shadcnuikit.com/iframe-listener.js"
@@ -52,7 +55,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange>
           <ActiveThemeProvider initialTheme={themeSettings}>
-            <LanguageProvider>{children}</LanguageProvider>
+            <NextIntlClientProvider locale={locale}>{children}</NextIntlClientProvider>
             <Toaster position="top-center" richColors />
             <NextTopLoader color="var(--primary)" showSpinner={false} height={2} shadow-sm="none" />
             {process.env.NODE_ENV === "production" ? <GoogleAnalyticsInit /> : null}

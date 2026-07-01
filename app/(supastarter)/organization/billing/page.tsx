@@ -32,6 +32,7 @@ import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
 import { plans, Plan } from "@/config/billing"; // Import berkas konfigurasi statis
+import { useLocale, useTranslations } from "next-intl";
 
 interface AlertState {
   title: string;
@@ -41,6 +42,7 @@ interface AlertState {
 
 interface Transaction {
   id: string;
+  tenant_id: string;
   amount: number;
   plan_name: string;
   order_id: string;
@@ -59,120 +61,11 @@ interface ActiveSubscription {
   cancelAtPeriodEnd: boolean;
 }
 
-const billingTranslations = {
-  English: {
-    title: "Your current plan",
-    desc: "View your plan details and manage billing.",
-    changeTitle: "Change your plan",
-    changeDesc: "Compare available plans and switch your subscription.",
-    cycles: { monthly: "Monthly", yearly: "Yearly" },
-    badges: {
-      active: "ACTIVE",
-      refundRequested: "REFUND REQUESTED",
-      willCancel: "WILL CANCEL",
-      freeActive: "FREE ACTIVE"
-    },
-    subDetails: {
-      activeDesc: "Active subscription valued at {price}/month.",
-      endsOn: "Premium access ends on",
-      renewsOn: "Next automatic renewal on",
-      freeDesc: "For testing and hobby use."
-    },
-    buttons: {
-      cancelRenewal: "Cancel Renewal",
-      activateRenewal: "Reactivate Renewal",
-      claimRefund: "Claim Refund",
-      planActive: "Active Plan",
-      upgrade: "Upgrade Plan",
-      downgrade: "Downgrade Plan",
-      choose: "Choose plan",
-      cancel: "Cancel",
-      confirmRefund: "Yes, Request Refund"
-    },
-    dialogPurchase: {
-      title: "Complete Your Purchase",
-      desc: "Complete payment to start using your service plan.",
-      details: "Transaction Details",
-      currency: "Currency"
-    },
-    dialogRefund: {
-      title: "Claim Refund",
-      desc: "Are you sure you want to request a refund for the {planName} plan?",
-      warn1:
-        "Once submitted, your organization's premium access will be suspended while the review process is underway.",
-      warn2:
-        "*This review process takes 1-3 business days. Funds will be returned to the PayPal/Credit Card account used for the transaction."
-    },
-    alerts: {
-      successPay:
-        "Thank you! Payment for {planName} plan valued at {price} successfully processed. Order ID: {orderId}",
-      successCancel: "Automatic renewal disabled. Your premium access remains active until {date}.",
-      successResume: "Subscription auto-renewal successfully reactivated.",
-      successRefund: "Refund claim successfully submitted and is under review.",
-      errorPay: "An error occurred during payment. Please try again.",
-      errorDb: "Payment validation failed: {error}"
-    }
-  },
-  "Bahasa Indonesia": {
-    title: "Paket aktif Anda",
-    desc: "Lihat detail paket Anda dan kelola penagihan.",
-    changeTitle: "Ubah paket Anda",
-    changeDesc: "Bandingkan paket yang tersedia dan ganti langganan Anda.",
-    cycles: { monthly: "Bulanan", yearly: "Tahunan" },
-    badges: {
-      active: "AKTIF",
-      refundRequested: "PENGEMBALIAN DIAJUKAN",
-      willCancel: "AKAN BATAL",
-      freeActive: "FREE AKTIF"
-    },
-    subDetails: {
-      activeDesc: "Langganan aktif senilai {price}/bulan.",
-      endsOn: "Masa aktif premium berakhir pada",
-      renewsOn: "Perpanjangan otomatis berikutnya tanggal",
-      freeDesc: "Untuk pengujian dan penggunaan hobi."
-    },
-    buttons: {
-      cancelRenewal: "Batalkan Perpanjangan",
-      activateRenewal: "Aktifkan Kembali Perpanjangan",
-      claimRefund: "Klaim Refund",
-      planActive: "Plan Aktif",
-      upgrade: "Upgrade Plan",
-      downgrade: "Downgrade Plan",
-      choose: "Pilih paket",
-      cancel: "Batal",
-      confirmRefund: "Ya, Ajukan Refund"
-    },
-    dialogPurchase: {
-      title: "Selesaikan Pembelian Anda",
-      desc: "Selesaikan pembayaran untuk mulai menggunakan paket layanan Anda.",
-      details: "Rincian Transaksi",
-      currency: "Mata Uang"
-    },
-    dialogRefund: {
-      title: "Klaim Pengembalian Dana",
-      desc: "Apakah Anda yakin ingin mengajukan klaim refund untuk paket {planName}?",
-      warn1:
-        "Setelah diajukan, akses fitur premium organisasi Anda akan dibekukan sementara sampai proses peninjauan selesai.",
-      warn2:
-        "*Proses ini membutuhkan waktu peninjauan sekitar 1-3 hari kerja. Dana akan dikirimkan kembali ke akun PayPal/Kartu Kredit Anda."
-    },
-    alerts: {
-      successPay:
-        "Terima kasih! Pembayaran paket {planName} senilai {price} berhasil diproses. Order ID: {orderId}",
-      successCancel:
-        "Masa perpanjangan otomatis telah dimatikan. Durasi akses premium Anda tetap berjalan aktif hingga tanggal {date}.",
-      successResume: "Langganan dan perpanjangan otomatis Anda berhasil diaktifkan kembali.",
-      successRefund:
-        "Klaim pengembalian dana Anda berhasil diajukan dan sedang dalam peninjauan admin.",
-      errorPay: "Terjadi kesalahan selama memproses pembayaran. Silakan coba kembali.",
-      errorDb: "Validasi pembayaran gagal diproses: {error}"
-    }
-  }
-};
-
 export default function OrganizationBilling() {
-  const { language, t, formatPrice } = useLanguage();
-  const tBill = billingTranslations[language] || billingTranslations["English"];
+  const { formatPrice } = useLanguage();
+  const locale = useLocale();
+
+  const t = useTranslations("organization-billing");
 
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
@@ -304,8 +197,8 @@ export default function OrganizationBilling() {
       if (error) throw error;
 
       setAlertMessage({
-        title: language === "English" ? "Auto-Renewal Disabled" : "Perpanjangan Dinonaktifkan",
-        description: tBill.alerts.successCancel.replace(
+        title: locale === "English" ? "Auto-Renewal Disabled" : "Perpanjangan Dinonaktifkan",
+        description: t("alerts.successCancel").replace(
           "{date}",
           activeSub.endsAt ? new Date(activeSub.endsAt).toLocaleDateString("id-ID") : ""
         ),
@@ -336,8 +229,8 @@ export default function OrganizationBilling() {
       if (error) throw error;
 
       setAlertMessage({
-        title: language === "English" ? "Subscription Resumed" : "Langganan Diaktifkan Kembali",
-        description: tBill.alerts.successResume,
+        title: locale === "English" ? "Subscription Resumed" : "Langganan Diaktifkan Kembali",
+        description: t("alerts.successResume"),
         variant: "default"
       });
 
@@ -365,8 +258,8 @@ export default function OrganizationBilling() {
       if (error) throw error;
 
       setAlertMessage({
-        title: language === "English" ? "Refund Claimed" : "Refund Diajukan",
-        description: tBill.alerts.successRefund,
+        title: locale === "English" ? "Refund Claimed" : "Refund Diajukan",
+        description: t("alerts.successRefund"),
         variant: "default"
       });
 
@@ -407,8 +300,8 @@ export default function OrganizationBilling() {
           : selectedPlan.prices.monthly.amount;
 
       setAlertMessage({
-        title: language === "English" ? "Payment Successful" : "Pembayaran Berhasil",
-        description: tBill.alerts.successPay
+        title: locale === "English" ? "Payment Successful" : "Pembayaran Berhasil",
+        description: t("alerts.successPay")
           .replace("{planName}", selectedPlan.name)
           .replace("{price}", formatPrice(finalPrice))
           .replace("{orderId}", details.id),
@@ -420,7 +313,7 @@ export default function OrganizationBilling() {
       console.error("Verification failed:", error);
       setAlertMessage({
         title: "Verification Failed",
-        description: tBill.alerts.errorDb.replace("{error}", error?.message || error),
+        description: t("alerts.errorDb").replace("{error}", error?.message || error),
         variant: "destructive"
       });
     } finally {
@@ -580,8 +473,8 @@ export default function OrganizationBilling() {
 
         <div className="space-y-4">
           <div className="space-y-1">
-            <h2 className="text-foreground text-xl font-semibold tracking-tight">{tBill.title}</h2>
-            <p className="text-muted-foreground text-sm">{tBill.desc}</p>
+            <h2 className="text-foreground text-xl font-semibold tracking-tight">{t("title")}</h2>
+            <p className="text-muted-foreground text-sm">{t("desc")}</p>
           </div>
 
           <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
@@ -595,36 +488,36 @@ export default function OrganizationBilling() {
 
                     {activeSub?.status === "refund_requested" ? (
                       <Badge className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 hover:bg-amber-500/15">
-                        {tBill.badges.refundRequested}
+                        {t("badges.refundRequested")}
                       </Badge>
                     ) : isSubActive && activeSub?.cancelAtPeriodEnd ? (
                       <Badge className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-xs font-semibold text-red-600 hover:bg-red-500/15">
-                        {tBill.badges.willCancel}
+                        {t("badges.willCancel")}
                       </Badge>
                     ) : isSubActive ? (
                       <Badge className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/15">
-                        {tBill.badges.active}
+                        {t("badges.active")}
                       </Badge>
                     ) : (
                       <Badge className="border-muted-foreground/20 bg-muted text-muted-foreground rounded-full border px-2.5 py-0.5 text-xs font-semibold">
-                        {tBill.badges.freeActive}
+                        {t("badges.freeActive")}
                       </Badge>
                     )}
                   </div>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     {activeSub?.status === "refund_requested"
-                      ? tBill.subDetails.activeDesc
+                      ? t("subDetails.activeDesc")
                       : isSubActive
-                        ? `${tBill.subDetails.activeDesc.replace("{price}", formatPrice(activeSub.price))} ${
+                        ? `${t("subDetails.activeDesc").replace("{price}", formatPrice(activeSub.price))} ${
                             activeSub.endsAt
                               ? `${
                                   activeSub.cancelAtPeriodEnd
-                                    ? tBill.subDetails.endsOn
-                                    : tBill.subDetails.renewsOn
+                                    ? t("subDetails.endsOn")
+                                    : t("subDetails.renewsOn")
                                 } ${new Date(activeSub.endsAt).toLocaleDateString("id-ID")}`
                               : ""
                           }`
-                        : tBill.subDetails.freeDesc}
+                        : t("subDetails.freeDesc")}
                   </p>
                 </div>
 
@@ -641,7 +534,7 @@ export default function OrganizationBilling() {
                         ) : (
                           <RefreshCw className="h-3.5 w-3.5" />
                         )}
-                        {tBill.buttons.activateRenewal}
+                        {t("buttons.activateRenewal")}
                       </Button>
                     ) : (
                       <>
@@ -651,7 +544,7 @@ export default function OrganizationBilling() {
                           variant="outline"
                           className="border-border/80 inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold">
                           <Undo2 className="h-3.5 w-3.5" />
-                          {tBill.buttons.claimRefund}
+                          {t("buttons.claimRefund")}
                         </Button>
                         <Button
                           onClick={handleCancelSubscription}
@@ -659,7 +552,7 @@ export default function OrganizationBilling() {
                           variant="destructive"
                           className="h-10 rounded-xl px-4 text-xs font-semibold">
                           {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
-                          {tBill.buttons.cancelRenewal}
+                          {t("buttons.cancelRenewal")}
                         </Button>
                       </>
                     )}
@@ -680,9 +573,9 @@ export default function OrganizationBilling() {
         <div className="space-y-6">
           <div className="space-y-1">
             <h2 className="text-foreground text-xl font-semibold tracking-tight">
-              {tBill.changeTitle}
+              {t("changeTitle")}
             </h2>
-            <p className="text-muted-foreground text-sm">{tBill.changeDesc}</p>
+            <p className="text-muted-foreground text-sm">{t("changeDesc")}</p>
           </div>
 
           <div className="flex justify-center">
@@ -694,12 +587,12 @@ export default function OrganizationBilling() {
                 <TabsTrigger
                   value="monthly"
                   className="data-[state=active]:border-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
-                  {tBill.cycles.monthly}
+                  {t("cycles.monthly")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="yearly"
                   className="data-[state=active]:border-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
-                  {tBill.cycles.yearly}
+                  {t("cycles.yearly")}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -740,7 +633,7 @@ export default function OrganizationBilling() {
                       <Button
                         disabled
                         className="w-full cursor-default rounded-xl border border-emerald-500/20 bg-emerald-500/10 py-5 font-semibold text-emerald-600 hover:bg-emerald-500/10">
-                        {tBill.buttons.planActive}
+                        {t("buttons.planActive")}
                       </Button>
                     ) : actionType === "upgrade" && isSubActive ? (
                       <Button
@@ -748,7 +641,7 @@ export default function OrganizationBilling() {
                         disabled={isDisabled}
                         className="bg-foreground text-background hover:bg-foreground/90 inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-5 font-semibold">
                         <ArrowUpRight className="h-4 w-4" />
-                        {tBill.buttons.upgrade}
+                        {t("buttons.upgrade")}
                       </Button>
                     ) : actionType === "downgrade" && isSubActive ? (
                       <div className="w-full space-y-2">
@@ -756,7 +649,7 @@ export default function OrganizationBilling() {
                           disabled
                           variant="outline"
                           className="w-full cursor-not-allowed rounded-xl py-5 font-semibold opacity-60">
-                          {tBill.buttons.downgrade}
+                          {t("buttons.downgrade")}
                         </Button>
                         <p className="text-muted-foreground px-2 text-center text-[10px] leading-normal">
                           *Downgrade can only be processed after your current prepaid plan expires.
@@ -768,7 +661,7 @@ export default function OrganizationBilling() {
                         disabled={isDisabled}
                         variant="default"
                         className="bg-foreground text-background hover:bg-foreground/90 w-full rounded-xl py-5 font-semibold">
-                        {tBill.buttons.choose}
+                        {t("buttons.choose")}
                       </Button>
                     )}
 
@@ -795,10 +688,10 @@ export default function OrganizationBilling() {
           <div className="border-border/60 space-y-4 border-t pt-6">
             <div className="space-y-1">
               <h2 className="text-foreground text-xl font-semibold tracking-tight">
-                {language === "English" ? "Billing History" : "Riwayat Pembayaran"}
+                {locale === "English" ? "Billing History" : "Riwayat Pembayaran"}
               </h2>
               <p className="text-muted-foreground text-sm">
-                {language === "English"
+                {locale === "English"
                   ? "View your past transactions and download official invoices/receipts."
                   : "Lihat transaksi masa lalu Anda dan unduh invoice/kuitansi resmi."}
               </p>
@@ -821,7 +714,7 @@ export default function OrganizationBilling() {
                     {transactions.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="text-muted-foreground py-10 text-center">
-                          {language === "English"
+                          {locale === "English"
                             ? "No transaction history found."
                             : "Belum ada riwayat transaksi."}
                         </td>
@@ -831,7 +724,7 @@ export default function OrganizationBilling() {
                         <tr key={tx.id} className="hover:bg-muted/10 transition-colors">
                           <td className="px-6 py-4 font-medium">
                             {new Date(tx.created_at).toLocaleDateString(
-                              language === "English" ? "en-US" : "id-ID",
+                              locale === "English" ? "en-US" : "id-ID",
                               {
                                 year: "numeric",
                                 month: "long",
@@ -862,7 +755,7 @@ export default function OrganizationBilling() {
                                 setIsInvoiceOpen(true);
                               }}
                               className="h-8 rounded-lg text-xs font-semibold">
-                              {language === "English" ? "View Invoice" : "Lihat Invoice"}
+                              {locale === "English" ? "View Invoice" : "Lihat Invoice"}
                             </Button>
                           </td>
                         </tr>
@@ -881,12 +774,12 @@ export default function OrganizationBilling() {
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <div className="space-y-1">
               <AlertTitle className="font-bold text-amber-900">
-                {language === "English"
+                {locale === "English"
                   ? "Action Required: Plan Expiring Soon!"
                   : "Perhatian: Masa Aktif Paket Hampir Habis!"}
               </AlertTitle>
               <AlertDescription className="text-sm leading-normal text-amber-800/90">
-                {language === "English"
+                {locale === "English"
                   ? `Your premium prepaid access to the ${activeSub.planName} plan will expire in ${daysLeft} day(s). Renew or upgrade today to avoid interruption to your workflow.`
                   : `Masa aktif akses premium paket ${activeSub.planName} Anda akan berakhir dalam ${daysLeft} hari lagi. Lakukan pembelian ulang atau upgrade hari ini agar alur kerja Anda tidak terganggu.`}
               </AlertDescription>
@@ -998,8 +891,8 @@ export default function OrganizationBilling() {
         <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
           <DialogContent className="border-border/80 rounded-2xl border sm:max-w-[450px]">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold">{tBill.dialogPurchase.title}</DialogTitle>
-              <DialogDescription>{tBill.dialogPurchase.desc}</DialogDescription>
+              <DialogTitle className="text-xl font-bold">{t("dialogPurchase.title")}</DialogTitle>
+              <DialogDescription>{t("dialogPurchase.desc")}</DialogDescription>
             </DialogHeader>
 
             {selectedPlan &&
@@ -1091,16 +984,16 @@ export default function OrganizationBilling() {
         <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
           <DialogContent className="border-border/80 rounded-2xl border sm:max-w-[450px]">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold">{tBill.dialogRefund.title}</DialogTitle>
+              <DialogTitle className="text-xl font-bold">{t("dialogRefund.title")}</DialogTitle>
               <DialogDescription>
-                {tBill.dialogRefund.desc.replace("{planName}", activeSub?.planName || "")}
+                {t("dialogRefund.desc").replace("{planName}", activeSub?.planName || "")}
               </DialogDescription>
             </DialogHeader>
 
             <div className="text-muted-foreground space-y-4 py-3 text-sm leading-relaxed">
-              <p>{tBill.dialogRefund.warn1}</p>
+              <p>{t("dialogRefund.warn1")}</p>
               <p className="rounded-xl border border-dashed border-red-500/20 bg-red-500/10 p-3 text-xs font-semibold text-red-500">
-                {tBill.dialogRefund.warn2}
+                {t("dialogRefund.warn2")}
               </p>
             </div>
 
@@ -1110,14 +1003,14 @@ export default function OrganizationBilling() {
                 disabled={isUpdatingSub}
                 onClick={() => setIsRefundDialogOpen(false)}
                 className="rounded-xl">
-                {tBill.buttons.cancel}
+                {t("buttons.cancel")}
               </Button>
               <Button
                 onClick={handleClaimRefund}
                 disabled={isUpdatingSub}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-red-700 text-white hover:bg-red-800">
                 {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
-                {tBill.buttons.confirmRefund}
+                {t("buttons.confirmRefund")}
               </Button>
             </DialogFooter>
           </DialogContent>

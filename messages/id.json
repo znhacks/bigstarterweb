@@ -1,0 +1,273 @@
+{
+  "common": {
+    "save": "Simpan",
+    "cancel": "Batal",
+    "delete": "Hapus",
+    "active": "Aktif",
+    "inactive": "Tidak Aktif",
+    "success": "Sukses",
+    "error": "Error",
+    "loading": "Memuat..."
+  },
+  "currency": {
+    "code": "IDR",
+    "symbol": "Rp",
+    "rate": 15000,
+    "locale": "id-ID"
+  },
+  "sidebar": {
+    "dashboards": "Dashboard",
+    "classic": "Dashboard Klasik",
+    "organization": "Organisasi",
+    "general": "Umum",
+    "member": "Anggota",
+    "billing": "Tagihan",
+    "newOrg": "Organisasi Baru",
+    "noOrg": "Tidak ada organisasi",
+    "loadingOrg": "Memuat org..."
+  },
+  "userMenu": {
+    "upgrade": "Upgrade ke Pro",
+    "account": "Akun",
+    "billing": "Tagihan",
+    "notifications": "Notifikasi",
+    "logout": "Keluar akun",
+    "credits": "Kredit"
+  },
+  "organization-general": {
+    "title": "Pengaturan Organisasi",
+    "subTitle": "Kelola pengaturan umum organisasi Anda.",
+    "readOnlyTitle": "Mode Baca Saja",
+    "readOnlyDesc": "Anda masuk sebagai anggota (**Member**). Anda hanya diizinkan untuk melihat pengaturan organisasi dan tidak memiliki hak akses untuk memodifikasinya.",
+    "logo": {
+      "title": "Logo organisasi",
+      "desc": "Unggah logo untuk organisasi Anda."
+    },
+    "name": {
+      "title": "Nama organisasi"
+    },
+    "delete": {
+      "title": "Hapus organisasi",
+      "desc": "Hapus organisasi Anda secara permanen. Setelah dihapus, data tidak dapat dikembalikan. Untuk konfirmasi, silakan klik tombol di samping:",
+      "btn": "Hapus organisasi",
+      "dialogTitle": "Apakah Anda benar-benar yakin?",
+      "dialogDesc": "Tindakan ini akan menghapus organisasi {orgName} beserta seluruh data relasi keanggotaan dan paket berlangganannya. Tindakan ini tidak dapat dibatalkan."
+    },
+    "alerts": {
+      "successLogo": "Logo organisasi berhasil diperbarui di database.",
+      "successName": "Nama organisasi berhasil diperbarui.",
+      "successDelete": "Organisasi berhasil dihapus secara permanen.",
+      "errorLoad": "Gagal memuat rincian dan hak akses organisasi."
+    }
+  },
+  "organization-member": {
+    "title": "Kelola Anggota",
+    "subTitle": "Lihat dan kelola anggota, peran, serta undangan tertunda.",
+    "limit": "Limit: {count} / {max} Anggota",
+    "tabs": {
+      "active": "Anggota aktif",
+      "pending": "Undangan tertunda"
+    },
+    "placeholders": {
+      "noActive": "Tidak ada anggota aktif ditemukan.",
+      "noPending": "Tidak ada undangan tertunda ditemukan.",
+      "invitedTo": "Diundang sebagai",
+      "statusPending": "Tertunda"
+    },
+    "inviteCard": {
+      "title": "Undang anggota",
+      "desc": "Tambahkan seseorang ke organisasi Anda dengan mengirimkan email undangan dan menetapkan peran mereka.",
+      "limitAlertTitle": "Batas Kuota Anggota Tercapai",
+      "limitAlertDesc": "Organisasi Anda telah mencapai batas kuota maksimal untuk paket saat ini yaitu **{max} anggota**. Silakan lakukan upgrade paket Anda di menu **Billing** untuk menambah lebih banyak anggota.",
+      "email": "Email",
+      "role": "Peran",
+      "selectRole": "Pilih Peran",
+      "btnInvite": "Undang",
+      "btnSending": "Mengirim..."
+    },
+    "dialogDelete": {
+      "title": "Apakah Anda benar-benar yakin?",
+      "desc": "Tindakan ini akan menghapus {name} ({email}) dari organisasi. Mereka tidak akan memiliki akses lagi ke workspace ini.",
+      "btnCancel": "Batal",
+      "btnRemove": "Hapus"
+    },
+    "alerts": {
+      "roleUpdated": "Role anggota berhasil diperbarui.",
+      "memberRemoved": "Anggota berhasil dihapus dari organisasi.",
+      "inviteCancelled": "Undangan berhasil ditarik kembali.",
+      "inviteSent": "Undangan telah sukses dikirim ke {email}.",
+      "errorInvite": "Gagal mengirim email undangan. Silakan periksa kredensial MailerSend Anda."
+    }
+  },
+  "organization-billing": {
+    "title": "Paket aktif Anda",
+    "desc": "Lihat detail paket Anda dan kelola penagihan.",
+    "changeTitle": "Ubah paket Anda",
+    "changeDesc": "Bandingkan paket yang tersedia dan ganti langganan Anda.",
+    "cycles": {
+      "monthly": "Bulanan",
+      "yearly": "Tahunan"
+    },
+    "badges": {
+      "active": "AKTIF",
+      "refundRequested": "PENGEMBALIAN DIAJUKAN",
+      "willCancel": "AKAN BATAL",
+      "freeActive": "FREE AKTIF"
+    },
+    "subDetails": {
+      "activeDesc": "Langganan aktif senilai {price}/bulan.",
+      "endsOn": "Masa aktif premium berakhir pada",
+      "renewsOn": "Perpanjangan otomatis berikutnya tanggal",
+      "freeDesc": "Untuk pengujian dan penggunaan hobi."
+    },
+    "buttons": {
+      "cancelRenewal": "Batalkan Perpanjangan",
+      "activateRenewal": "Aktifkan Kembali Perpanjangan",
+      "claimRefund": "Klaim Refund",
+      "planActive": "Plan Aktif",
+      "upgrade": "Upgrade Plan",
+      "downgrade": "Downgrade Plan",
+      "choose": "Pilih paket",
+      "cancel": "Batal",
+      "confirmRefund": "Ya, Ajukan Refund"
+    },
+    "dialogPurchase": {
+      "title": "Selesaikan Pembelian Anda",
+      "desc": "Selesaikan pembayaran untuk mulai menggunakan paket layanan Anda.",
+      "details": "Rincian Transaksi",
+      "currency": "Mata Uang"
+    },
+    "dialogRefund": {
+      "title": "Klaim Pengembalian Dana",
+      "desc": "Apakah Anda yakin ingin mengajukan klaim refund untuk paket {planName}?",
+      "warn1": "Setelah diajukan, akses fitur premium organisasi Anda akan dibekukan sementara sampai proses peninjauan selesai.",
+      "warn2": "*Proses ini membutuhkan waktu peninjauan sekitar 1-3 hari kerja. Dana akan dikirimkan kembali ke akun PayPal/Kartu Kredit Anda."
+    },
+    "alerts": {
+      "successPay": "Terima kasih! Pembayaran paket {planName} senilai {price} berhasil diproses. Order ID: {orderId}",
+      "successCancel": "Masa perpanjangan otomatis telah dimatikan. Durasi akses premium Anda tetap berjalan aktif hingga tanggal {date}.",
+      "successResume": "Langganan dan perpanjangan otomatis Anda berhasil diaktifkan kembali.",
+      "successRefund": "Klaim pengembalian dana Anda berhasil diajukan dan sedang dalam peninjauan admin.",
+      "errorPay": "Terjadi kesalahan selama memproses pembayaran. Silakan coba kembali.",
+      "errorDb": "Validasi pembayaran gagal diproses: {error}"
+    }
+  },
+  "account-general": {
+    "title": "Pengaturan Akun",
+    "subTitle": "Kelola pengaturan umum akun Anda.",
+    "avatar": "Avatar",
+    "avatarDesc": "To change your avatar click the picture in this block and select a file from your computer to upload.",
+    "language": "Bahasa",
+    "languageDesc": "Untuk mengubah bahasa aplikasi pada akun, pilih bahasa dari daftar lalu klik simpan.",
+    "name": "Nama",
+    "email": "Email",
+    "emailDesc": "Untuk mengubah email Anda, masukkan email baru lalu klik simpan. Anda harus mengonfirmasi email baru sebelum email tersebut aktif.",
+    "delete": "Hapus akun",
+    "deleteDesc": "Hapus akun Anda secara permanen. Setelah dihapus, data tidak dapat dikembalikan. Untuk konfirmasi, silakan klik tombol di samping:",
+    "deleteButton": "Hapus akun",
+    "dialogTitle": "Apakah Anda benar-benar yakin?",
+    "dialogDesc": "Tindakan ini akan menghapus akun Anda beserta seluruh profil dari database secara permanen. Tindakan ini tidak dapat dibatalkan."
+  },
+  "account-security": {
+    "title": "Pengaturan Keamanan",
+    "subTitle": "Kelola keamanan akun, kata sandi, dan sesi aktif Anda.",
+    "password": {
+      "title": "Ubah kata sandi",
+      "desc": "Untuk mengubah kata sandi Anda, klik tombol di bawah untuk mengirim email penyetelan ulang kata sandi dan ikuti petunjuk di dalam email tersebut.",
+      "btn": "Ubah kata sandi"
+    },
+    "oauth": {
+      "title": "Akun terhubung",
+      "connected": "Terhubung",
+      "connect": "Hubungkan"
+    },
+    "passkey": {
+      "title": "Kunci Akses (Passkeys)",
+      "desc": "Gunakan kunci akses (passkey) sebagai alternatif masuk yang aman dibanding kata sandi biasa.",
+      "btn": "+ Tambah passkey"
+    },
+    "tfa": {
+      "title": "Autentikasi dua faktor (2FA)",
+      "desc": "Tambahkan lapisan keamanan ekstra ke akun Anda.",
+      "warning": "Membutuhkan kata sandi. Setel kata sandi terlebih dahulu sebelum mengaktifkan autentikasi dua faktor. Kata sandi diperlukan untuk memverifikasi perubahan.",
+      "btn": "Aktifkan autentikasi dua faktor",
+      "activeBtn": "Autentikasi Dua Faktor Aktif"
+    },
+    "sessions": {
+      "title": "Sesi aktif",
+      "desc": "Ini adalah semua sesi masuk aktif dari akun Anda. Klik tanda X untuk mengakhiri sesi tertentu.",
+      "current": "Sesi saat ini",
+      "btnTerm": "Akhiri sesi perangkat lain"
+    }
+  },
+  "superadmin": {
+    "users": {
+      "title": "Pengguna Superadmin",
+      "desc": "Kelola, lihat, dan awasi semua profil pengguna terdaftar dan keanggotaan organisasi.",
+      "data-table": {
+        "headers": {
+          "name": "Nama",
+          "role": "Peran",
+          "plan": "Paket",
+          "email": "Email",
+          "country": "Negara",
+          "status": "Status"
+        },
+        "actions": {
+          "view": "Lihat pengguna",
+          "delete": "Hapus"
+        },
+        "filters": {
+          "search": "Cari pengguna...",
+          "status": "Status",
+          "plan": "Paket",
+          "role": "Peran",
+          "columns": "Kolom",
+          "noStatus": "Status tidak ditemukan.",
+          "noPlan": "Paket tidak ditemukan.",
+          "noRole": "Peran tidak ditemukan."
+        },
+        "footer": {
+          "selected": "{selected} dari {total} baris dipilih.",
+          "previous": "Sebelumnya",
+          "next": "Berikutnya",
+          "noResults": "Tidak ada hasil."
+        },
+        "confirmDelete": "Apakah Anda yakin ingin menghapus pengguna ini?"
+      }
+    },
+    "organizations": {
+      "title": "Organisasi Superadmin",
+      "detail": "Kelola dan awasi semua organisasi yang terdaftar, paket yang aktif, jumlah anggota, serta metadata.",
+      "list": {
+        "kpis": {
+          "total": "Total Organisasi",
+          "premium": "Langganan Premium",
+          "members": "Total Seluruh Anggota"
+        },
+        "searchPlaceholder": "Cari organisasi berdasarkan nama...",
+        "placeholders": {
+          "noOrgs": "Organisasi tidak ditemukan.",
+          "members": "anggota",
+          "createdOn": "Dibuat pada tanggal",
+          "freeAccess": "Akses Gratis",
+          "plan": "PAKET"
+        },
+        "buttons": {
+          "cancel": "Batal",
+          "delete": "Hapus Organisasi"
+        },
+        "dialogDelete": {
+          "title": "Apakah Anda benar-benar yakin?",
+          "desc": "Tindakan ini akan menghapus organisasi {orgName} beserta seluruh data relasi langganan, transaksi, dan keanggotaan anggotanya secara permanen dari database. Tindakan ini tidak dapat dibatalkan."
+        },
+        "alerts": {
+          "deletedTitle": "Organisasi Dihapus",
+          "deletedDesc": "Organisasi '{orgName}' beserta seluruh data relasi dan keanggotaannya berhasil dihapus dari database.",
+          "failedTitle": "Penghapusan Gagal",
+          "failedDesc": "Gagal menghapus organisasi."
+        }
+      }
+    }
+  }
+}

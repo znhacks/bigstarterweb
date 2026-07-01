@@ -21,10 +21,10 @@ import {
 
 // Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
-import { useLanguage } from "@/components/providers/language-provider";
 
 // IMPOR DIALOG PEMOTONG GAMBAR YANG REUSABLE
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
+import { useLocale, useTranslations } from "next-intl";
 
 interface AlertState {
   title: string;
@@ -34,10 +34,11 @@ interface AlertState {
 
 export default function OrganizationGeneralSettings() {
   const router = useRouter();
-  const { language, t } = useLanguage();
+  const t = useTranslations("organization-general");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
 
   // Membaca kamus bahasa aktif untuk halaman organisasi
-  const tOrg = orgTranslations[language] || orgTranslations["English"];
 
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
@@ -105,7 +106,7 @@ export default function OrganizationGeneralSettings() {
       console.error("Error fetching org details & role:", error);
       setAlertMessage({
         title: "Error",
-        description: tOrg.alerts.errorLoad,
+        description: t("alerts.errorLoad"),
         variant: "destructive"
       });
     } finally {
@@ -163,8 +164,8 @@ export default function OrganizationGeneralSettings() {
       window.dispatchEvent(new Event("storage")); // Refresh Sidebar Icon
 
       setAlertMessage({
-        title: language === "English" ? "Success" : "Sukses",
-        description: tOrg.alerts.successLogo,
+        title: locale === "en" ? "Success" : "Sukses",
+        description: t("alerts.successLogo"),
         variant: "default"
       });
     } catch (error: any) {
@@ -194,8 +195,8 @@ export default function OrganizationGeneralSettings() {
       if (error) throw error;
 
       setAlertMessage({
-        title: language === "English" ? "Success" : "Sukses",
-        description: tOrg.alerts.successName,
+        title: locale === "en" ? "Success" : "Sukses",
+        description: t("alerts.successName"),
         variant: "default"
       });
 
@@ -228,8 +229,8 @@ export default function OrganizationGeneralSettings() {
       localStorage.removeItem("active_org_id");
 
       setAlertMessage({
-        title: language === "English" ? "Success" : "Sukses",
-        description: tOrg.alerts.successDelete,
+        title: locale === "en" ? "Success" : "Sukses",
+        description: t("alerts.successDelete"),
         variant: "default"
       });
 
@@ -276,8 +277,8 @@ export default function OrganizationGeneralSettings() {
     <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-10">
       {/* Header Halaman */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{tOrg.title}</h1>
-        <p className="text-muted-foreground text-sm">{tOrg.subTitle}</p>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
       </div>
 
       {/* SHADCN ALERT NOTIFICATION */}
@@ -308,8 +309,8 @@ export default function OrganizationGeneralSettings() {
       {isReadOnly && (
         <Alert className="rounded-2xl border-amber-500/20 bg-amber-500/10 text-amber-600">
           <ShieldAlert className="h-4 w-4 text-amber-600" />
-          <AlertTitle>{tOrg.readOnlyTitle}</AlertTitle>
-          <AlertDescription>{tOrg.readOnlyDesc}</AlertDescription>
+          <AlertTitle>{t("readOnlyTitle")}</AlertTitle>
+          <AlertDescription>{t("readOnlyDesc")}</AlertDescription>
         </Alert>
       )}
 
@@ -318,8 +319,8 @@ export default function OrganizationGeneralSettings() {
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1 md:max-w-md">
-              <h2 className="text-foreground text-base font-semibold">{tOrg.logo.title}</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">{tOrg.logo.desc}</p>
+              <h2 className="text-foreground text-base font-semibold">{t("logo.title")}</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">{t("logo.desc")}</p>
             </div>
 
             <div className="flex items-center gap-4">
@@ -357,7 +358,7 @@ export default function OrganizationGeneralSettings() {
           <CardContent className="flex flex-col gap-6 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="md:max-w-md">
-                <h2 className="text-foreground text-base font-semibold">{tOrg.name.title}</h2>
+                <h2 className="text-foreground text-base font-semibold">{t("name.title")}</h2>
               </div>
               <div className="w-full md:max-w-xl">
                 <Input
@@ -381,7 +382,7 @@ export default function OrganizationGeneralSettings() {
                   size="sm"
                   className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-2 rounded-lg px-5 text-xs">
                   {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
-                  {t.common.save}
+                  {tCommon("save")}
                 </Button>
               </div>
             )}
@@ -393,8 +394,8 @@ export default function OrganizationGeneralSettings() {
           <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
             <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
               <div className="space-y-1.5 md:max-w-xl">
-                <h2 className="text-destructive text-base font-semibold">{tOrg.delete.title}</h2>
-                <p className="text-muted-foreground text-sm leading-relaxed">{tOrg.delete.desc}</p>
+                <h2 className="text-destructive text-base font-semibold">{t("delete.title")}</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">{t("delete.desc")}</p>
               </div>
 
               <div className="flex shrink-0">
@@ -402,7 +403,7 @@ export default function OrganizationGeneralSettings() {
                   onClick={() => setIsConfirmOpen(true)}
                   variant="destructive"
                   className="h-auto rounded-full bg-red-700 px-6 py-2 text-sm font-medium text-white hover:bg-red-800">
-                  {tOrg.delete.btn}
+                  {t("delete.btn")}
                 </Button>
               </div>
             </CardContent>
@@ -414,19 +415,19 @@ export default function OrganizationGeneralSettings() {
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{tOrg.delete.dialogTitle}</AlertDialogTitle>
+            <AlertDialogTitle>{t("delete.dialogTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {tOrg.delete.dialogDesc.replace("{orgName}", orgName)}
+              {t("delete.dialogDesc").replace("{ orgName }", orgName)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteOrganization}
               disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground inline-flex items-center gap-2">
               {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {t.common.delete}
+              {tCommon("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -441,91 +442,3 @@ export default function OrganizationGeneralSettings() {
     </div>
   );
 }
-
-// Kamus Terjemahan Halaman Organisasi
-const orgTranslations = {
-  English: {
-    title: "Organization Settings",
-    subTitle: "Manage the settings of the organization.",
-    readOnlyTitle: "Read-Only Mode",
-    readOnlyDesc:
-      "You are logged in as a **Member**. You are only allowed to view organization settings and do not have access to modify them.",
-    logo: {
-      title: "Organization logo",
-      desc: "Upload a logo for your organization."
-    },
-    name: {
-      title: "Organization name"
-    },
-    delete: {
-      title: "Delete organization",
-      desc: "Permanently delete your organization. Once you delete your organization, there is no going back. To confirm, please click the button on the right:",
-      btn: "Delete organization",
-      dialogTitle: "Are you absolutely sure?",
-      dialogDesc:
-        "This action will permanently delete the organization {orgName} along with all associated memberships and subscriptions. This action cannot be undone."
-    },
-    alerts: {
-      successLogo: "Organization logo successfully updated in database.",
-      successName: "Organization name successfully updated.",
-      successDelete: "Organization successfully deleted.",
-      errorLoad: "Failed to load organization details and permissions."
-    }
-  },
-  "Bahasa Indonesia": {
-    title: "Pengaturan Organisasi",
-    subTitle: "Kelola pengaturan umum organisasi Anda.",
-    readOnlyTitle: "Mode Baca Saja",
-    readOnlyDesc:
-      "Anda masuk sebagai anggota (**Member**). Anda hanya diizinkan untuk melihat pengaturan organisasi dan tidak memiliki hak akses untuk memodifikasinya.",
-    logo: {
-      title: "Logo organisasi",
-      desc: "Unggah logo untuk organisasi Anda."
-    },
-    name: {
-      title: "Nama organisasi"
-    },
-    delete: {
-      title: "Hapus organisasi",
-      desc: "Hapus organisasi Anda secara permanen. Setelah dihapus, data tidak dapat dikembalikan. Untuk konfirmasi, silakan klik tombol di samping:",
-      btn: "Hapus organisasi",
-      dialogTitle: "Apakah Anda benar-benar yakin?",
-      dialogDesc:
-        "Tindakan ini akan menghapus organisasi {orgName} beserta seluruh data relasi keanggotaan dan paket berlangganannya. Tindakan ini tidak dapat dibatalkan."
-    },
-    alerts: {
-      successLogo: "Logo organisasi berhasil diperbarui di database.",
-      successName: "Nama organisasi berhasil diperbarui.",
-      successDelete: "Organisasi berhasil dihapus secara permanen.",
-      errorLoad: "Gagal memuat rincian dan hak akses organisasi."
-    }
-  },
-  Español: {
-    title: "Configuración de la organización",
-    subTitle: "Administre la configuración general de la organización.",
-    readOnlyTitle: "Modo de solo lectura",
-    readOnlyDesc:
-      "Ha iniciado sesión como **Miembro**. Solo se le permite ver la configuración de la organización y no tiene acceso para modificarla.",
-    logo: {
-      title: "Logotipo de la organización",
-      desc: "Sube un logotipo para tu organización."
-    },
-    name: {
-      title: "Nombre de la organización"
-    },
-    delete: {
-      title: "Eliminar organización",
-      desc: "Eliminar permanentemente su organización. Once you delete your organization, there is no going back. To confirm, please enter your password below:",
-      btn: "Eliminar organización",
-      dialogTitle: "¿Estás absolutamente seguro?",
-      dialogDesc:
-        "Esta acción eliminará permanentemente la organización {orgName} junto con todas las membresías y suscripciones. Esta acción no se puede deshacer."
-    },
-    alerts: {
-      successLogo: "El logotipo de la organización se actualizó correctamente en la base de datos.",
-      successName: "El nombre de la organización se actualizó correctamente.",
-      successDelete: "Organización eliminada permanentemente.",
-      errorLoad: "No se pudieron cargar los detalles y permisos de la organización."
-    }
-  }
-};

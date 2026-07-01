@@ -1,17 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  CheckCircle2,
-  AlertCircle,
-  X,
-  Loader2,
-  Upload,
-  User as UserIcon,
-  ShieldAlert
-} from "lucide-react";
+import { LOCALE_COOKIE } from "@/i18n/routing";
+import { CheckCircle2, AlertCircle, X, Loader2, Upload, User as UserIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,9 +28,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-// Impor klien Supabase, Global Language Hook, dan REUSABLE IMAGE CROPPER DIALOG
+// Impor klien Supabase, REUSABLE IMAGE CROPPER, dan Next-intl Hooks
 import { supabase } from "@/lib/supabase";
-import { useLanguage, LanguageType, dictionaries } from "@/components/providers/language-provider";
+import { useTranslations, useLocale } from "next-intl";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 
 interface AlertState {
@@ -46,13 +39,24 @@ interface AlertState {
   variant?: "default" | "destructive";
 }
 
+// Definisikan daftar bahasa yang didukung secara statis
+const supportedLocales = [
+  { code: "en", label: "English" },
+  { code: "id", label: "Bahasa Indonesia" },
+  { code: "es", label: "Español" }
+] as const;
+
 export default function AccountGeneralSettings() {
   const router = useRouter();
 
-  // Menggunakan global state bahasa
-  const { language, setLanguage, t } = useLanguage();
+  // Integrasi next-intl
+  const locale = useLocale();
+  const t = useTranslations("account-general");
+  const tCommon = useTranslations("common");
 
-  const [localLanguage, setLocalLanguage] = useState<LanguageType>(language);
+  // State Bahasa Lokal
+  const [localLanguage, setLocalLanguage] = useState<string>(locale);
+  const [isSavingLang, startTransition] = useTransition();
 
   // State Data User & Profil
   const [userId, setUserId] = useState<string | null>(null);
@@ -68,14 +72,13 @@ export default function AccountGeneralSettings() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
-  const [isSavingLang, setIsSavingLang] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   useEffect(() => {
-    setLocalLanguage(language);
-  }, [language]);
+    setLocalLanguage(locale);
+  }, [locale]);
 
   useEffect(() => {
     const loadAccountData = async () => {
@@ -93,7 +96,7 @@ export default function AccountGeneralSettings() {
         setUserId(user.id);
         setEmail(user.email || "");
 
-        // MENGAMBIL AVATAR & NAMA LENGKAP NYATA DARI TABEL PROFILES
+        // MENGAMBIL AVATAR & NAMA LENGKAP DARI TABEL PROFILES
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("full_name, avatar")
@@ -104,7 +107,7 @@ export default function AccountGeneralSettings() {
 
         if (profileData) {
           setFullName(profileData.full_name || "");
-          setAvatarUrl(profileData.avatar || null); // Mengisi preview dengan URL avatar asli dari DB
+          setAvatarUrl(profileData.avatar || null);
         }
       } catch (error: any) {
         console.error("Gagal memuat data akun:", error);
@@ -131,7 +134,7 @@ export default function AccountGeneralSettings() {
     }
   }, [alertMessage]);
 
-  // PROSES UPLOAD REAL BERKAS WEBP HASIL POTONGAN KE SUPABASE STORAGE & DATABASE PROFILES
+  // PROSES UPLOAD FOTO PROFIL KE SUPABASE
   const handleCropComplete = async (croppedBlob: Blob) => {
     if (!userId) return;
 
@@ -139,10 +142,9 @@ export default function AccountGeneralSettings() {
     setAlertMessage(null);
 
     try {
-      // Menggunakan ekstensi berkas .webp hasil konversi canvas
       const filePath = `users/${userId}/${Date.now()}.webp`;
 
-      // A. Unggah berkas webp terkompresi ke Supabase Storage (Bucket 'avatars')
+      // A. Unggah ke Supabase Storage (Bucket 'avatars')
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, croppedBlob, {
@@ -153,12 +155,12 @@ export default function AccountGeneralSettings() {
 
       if (uploadError) throw uploadError;
 
-      // B. Dapatkan Public URL hasil upload gambar
+      // B. Dapatkan Public URL
       const {
         data: { publicUrl }
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      // C. Simpan tautan URL gambar tersebut ke kolom "avatar" di tabel "profiles"
+      // C. Simpan ke database
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ avatar: publicUrl })
@@ -166,11 +168,10 @@ export default function AccountGeneralSettings() {
 
       if (profileError) throw profileError;
 
-      // Update state preview di layar secara instan
       setAvatarUrl(publicUrl);
       setAlertMessage({
         title: "Success",
-        description: "Foto profil Anda berhasil diperbarui di database.",
+        description: "Foto profil Anda berhasil diperbarui.",
         variant: "default"
       });
     } catch (error: any) {
@@ -185,30 +186,20 @@ export default function AccountGeneralSettings() {
     }
   };
 
-  // Menyimpan perubahan bahasa ke Global Context
-  const handleSaveLanguage = async () => {
-    setIsSavingLang(true);
-    try {
-      await setLanguage(localLanguage); // Menyimpan secara global
+  // Menyimpan perubahan bahasa: tulis cookie NEXT_LOCALE lalu refresh.
+  // Tidak ada perubahan URL karena localePrefix = "never" (tanpa segment [locale]).
+  const handleSaveLanguage = () => {
+    if (localLanguage === locale) return;
+    setAlertMessage(null);
+    document.cookie = `${LOCALE_COOKIE}=${localLanguage};path=/;max-age=31536000;SameSite=Lax`;
+    startTransition(() => {
+      router.refresh();
       setAlertMessage({
-        title:
-          localLanguage === "English"
-            ? "Language Updated"
-            : localLanguage === "Español"
-              ? "Idioma Actualizado"
-              : "Bahasa Diperbarui",
-        description: t.common.success,
+        title: localLanguage === "en" ? "Language Updated" : "Bahasa Diperbarui",
+        description: tCommon("success"),
         variant: "default"
       });
-    } catch (error: any) {
-      setAlertMessage({
-        title: "Error",
-        description: error.message || "Gagal memperbarui preferensi bahasa.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSavingLang(false);
-    }
+    });
   };
 
   // Menyimpan nama lengkap ke tabel 'profiles'
@@ -226,14 +217,14 @@ export default function AccountGeneralSettings() {
       if (error) throw error;
 
       setAlertMessage({
-        title: t.common.success,
-        description: t.common.success,
+        title: tCommon("success"),
+        description: tCommon("success"),
         variant: "default"
       });
     } catch (error: any) {
       setAlertMessage({
-        title: t.common.error,
-        description: error.message || t.common.error,
+        title: tCommon("error"),
+        description: error.message || tCommon("error"),
         variant: "destructive"
       });
     } finally {
@@ -241,7 +232,7 @@ export default function AccountGeneralSettings() {
     }
   };
 
-  // Menyimpan perubahan email (OTP Verifikasi)
+  // Menyimpan perubahan email
   const handleSaveEmail = async () => {
     setIsSavingEmail(true);
     setAlertMessage(null);
@@ -252,14 +243,14 @@ export default function AccountGeneralSettings() {
       if (error) throw error;
 
       setAlertMessage({
-        title: t.common.success,
+        title: tCommon("success"),
         description: "Email verification request initiated.",
         variant: "default"
       });
     } catch (error: any) {
       setAlertMessage({
-        title: t.common.error,
-        description: error.message || t.common.error,
+        title: tCommon("error"),
+        description: error.message || tCommon("error"),
         variant: "destructive"
       });
     } finally {
@@ -284,7 +275,7 @@ export default function AccountGeneralSettings() {
       }, 1500);
     } catch (error: any) {
       setAlertMessage({
-        title: t.common.error,
+        title: tCommon("error"),
         description: error.message || "Failed to delete account.",
         variant: "destructive"
       });
@@ -296,8 +287,8 @@ export default function AccountGeneralSettings() {
     <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-10">
       {/* Header Halaman */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{t.accountSettings.title}</h1>
-        <p className="text-muted-foreground text-sm">{t.accountSettings.subTitle}</p>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
       </div>
 
       {/* SHADCN ALERT NOTIFICATION */}
@@ -329,16 +320,11 @@ export default function AccountGeneralSettings() {
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1 md:max-w-md">
-              <h2 className="text-foreground text-base font-semibold">
-                {t.accountSettings.avatar}
-              </h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {t.accountSettings.avatarDesc}
-              </p>
+              <h2 className="text-foreground text-base font-semibold">{t("avatar")}</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">{t("avatarDesc")}</p>
             </div>
 
             <div className="flex shrink-0 items-center gap-4">
-              {/* INPUT FILE SUDAH DIHAPUS DARI SINI (KARENA SUDAH DIKELOLA INTERNALLY DI DALAM DIALOG DIBAWAH) */}
               <div
                 onClick={isUploadingAvatar || isSavingLang ? undefined : () => setCropperOpen(true)}
                 className="group bg-muted border-border/60 hover:bg-muted/80 relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-all">
@@ -372,25 +358,21 @@ export default function AccountGeneralSettings() {
           <CardContent className="flex flex-col gap-6 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="space-y-1 md:max-w-md">
-                <h2 className="text-foreground text-base font-semibold">
-                  {t.accountSettings.language}
-                </h2>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  {t.accountSettings.languageDesc}
-                </p>
+                <h2 className="text-foreground text-base font-semibold">{t("language")}</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">{t("languageDesc")}</p>
               </div>
               <div className="w-full md:max-w-xl">
                 <Select
                   value={localLanguage}
-                  onValueChange={(val: LanguageType) => setLocalLanguage(val)}
+                  onValueChange={(val: string) => setLocalLanguage(val)}
                   disabled={isSavingLang}>
                   <SelectTrigger className="border-border/80 h-10 w-full focus:ring-1">
                     <SelectValue placeholder="Select Language" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.keys(dictionaries).map((langName) => (
-                      <SelectItem key={langName} value={langName}>
-                        {langName}
+                    {supportedLocales.map((loc) => (
+                      <SelectItem key={loc.code} value={loc.code}>
+                        {loc.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -405,7 +387,7 @@ export default function AccountGeneralSettings() {
                 size="sm"
                 className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
                 {isSavingLang && <Loader2 className="h-3 w-3 animate-spin" />}
-                {t.common.save}
+                {tCommon("save")}
               </Button>
             </div>
           </CardContent>
@@ -416,9 +398,7 @@ export default function AccountGeneralSettings() {
           <CardContent className="flex flex-col gap-6 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="md:max-w-md">
-                <h2 className="text-foreground text-base font-semibold">
-                  {t.accountSettings.name}
-                </h2>
+                <h2 className="text-foreground text-base font-semibold">{t("name")}</h2>
               </div>
               <div className="w-full md:max-w-xl">
                 <Input
@@ -439,7 +419,7 @@ export default function AccountGeneralSettings() {
                 size="sm"
                 className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
                 {isSavingName && <Loader2 className="h-3 w-3 animate-spin" />}
-                {t.common.save}
+                {tCommon("save")}
               </Button>
             </div>
           </CardContent>
@@ -450,12 +430,8 @@ export default function AccountGeneralSettings() {
           <CardContent className="flex flex-col gap-6 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="space-y-1 md:max-w-md">
-                <h2 className="text-foreground text-base font-semibold">
-                  {t.accountSettings.email}
-                </h2>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  {t.accountSettings.emailDesc}
-                </p>
+                <h2 className="text-foreground text-base font-semibold">{t("email")}</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">{t("emailDesc")}</p>
               </div>
               <div className="w-full md:max-w-xl">
                 <Input
@@ -476,7 +452,7 @@ export default function AccountGeneralSettings() {
                 size="sm"
                 className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
                 {isSavingEmail && <Loader2 className="h-3 w-3 animate-spin" />}
-                {t.common.save}
+                {tCommon("save")}
               </Button>
             </div>
           </CardContent>
@@ -486,12 +462,8 @@ export default function AccountGeneralSettings() {
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1.5 md:max-w-xl">
-              <h2 className="text-destructive text-base font-semibold">
-                {t.accountSettings.delete}
-              </h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {t.accountSettings.deleteDesc}
-              </p>
+              <h2 className="text-destructive text-base font-semibold">{t("delete")}</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">{t("deleteDesc")}</p>
             </div>
 
             <div className="flex shrink-0">
@@ -499,7 +471,7 @@ export default function AccountGeneralSettings() {
                 onClick={() => setIsConfirmOpen(true)}
                 variant="destructive"
                 className="h-auto rounded-full bg-red-700 px-6 py-2 text-sm font-medium text-white hover:bg-red-800">
-                {t.accountSettings.deleteButton}
+                {t("deleteButton")}
               </Button>
             </div>
           </CardContent>
@@ -510,23 +482,23 @@ export default function AccountGeneralSettings() {
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t.accountSettings.dialogTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{t.accountSettings.dialogDesc}</AlertDialogDescription>
+            <AlertDialogTitle>{t("dialogTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("dialogDesc")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteAccount}
               disabled={isDeleting}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground inline-flex items-center gap-2">
               {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {t.common.delete}
+              {tCommon("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* REUSABLE IMAGE CROPPER DIALOG (Bawaan drag and drop & tab input URL) */}
+      {/* REUSABLE IMAGE CROPPER DIALOG */}
       <ImageCropperDialog
         open={cropperOpen}
         onOpenChange={setCropperOpen}

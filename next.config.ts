@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { config } from "dotenv";
+import createNextIntlPlugin from "next-intl/plugin";
 
 config();
 
@@ -21,4 +22,6 @@ const nextConfig: NextConfig = {
   }
 };
 
-export default nextConfig;
+const withNextIntl = createNextIntlPlugin();
+
+export default withNextIntl(nextConfig);

@@ -161,7 +161,7 @@ export const dictionaries: Record<LanguageType, TranslationSchema> = {
       subTitle: "Kelola pengaturan umum akun Anda.",
       avatar: "Avatar",
       avatarDesc:
-        "To change your avatar click the picture in this block and select a file from your computer to upload.",
+        "Untuk mengubah avatar Anda, klik gambar di blok ini dan pilih file dari komputer Anda untuk diunggah.",
       language: "Bahasa",
       languageDesc:
         "Untuk mengubah bahasa aplikasi pada akun, pilih bahasa dari daftar lalu klik simpan.",

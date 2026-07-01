@@ -19,10 +19,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-
-// Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
-import { useLanguage } from "@/components/providers/language-provider";
+import { useLocale, useTranslations } from "next-intl";
 
 interface AlertState {
   title: string;
@@ -30,115 +28,11 @@ interface AlertState {
   variant?: "default" | "destructive";
 }
 
-// 1. KAMUS TERJEMAHAN KHUSUS HALAMAN SECURITY (Mendukung 3 Bahasa)
-const securityTranslations = {
-  English: {
-    title: "Security settings",
-    subTitle: "Manage your account security, passwords, and active sessions.",
-    password: {
-      title: "Change password",
-      desc: "To change your password, click the button below to send an email to reset your password and follow the instructions in the email.",
-      btn: "Change password"
-    },
-    oauth: {
-      title: "Connected accounts",
-      connected: "Connected",
-      connect: "Connect"
-    },
-    passkey: {
-      title: "Passkeys",
-      desc: "Use passkeys as a secure alternative to passwords.",
-      btn: "+ Add passkey"
-    },
-    tfa: {
-      title: "Two-factor authentication",
-      desc: "Add an extra layer of security to your account.",
-      warning:
-        "Password required. Set a password before enabling two-factor authentication. Your password is required to verify changes to this security setting.",
-      btn: "Enable two-factor authentication",
-      activeBtn: "Two-Factor Authentication is Enabled"
-    },
-    sessions: {
-      title: "Active sessions",
-      desc: "These are all the active sessions of your account. Click the X to end a specific session.",
-      current: "Current session",
-      btnTerm: "Terminate other sessions"
-    }
-  },
-  "Bahasa Indonesia": {
-    title: "Pengaturan Keamanan",
-    subTitle: "Kelola keamanan akun, kata sandi, dan sesi aktif Anda.",
-    password: {
-      title: "Ubah kata sandi",
-      desc: "Untuk mengubah kata sandi Anda, klik tombol di bawah untuk mengirim email penyetelan ulang kata sandi dan ikuti petunjuk di dalam email tersebut.",
-      btn: "Ubah kata sandi"
-    },
-    oauth: {
-      title: "Akun terhubung",
-      connected: "Terhubung",
-      connect: "Hubungkan"
-    },
-    passkey: {
-      title: "Kunci Akses (Passkeys)",
-      desc: "Gunakan kunci akses (passkey) sebagai alternatif masuk yang aman dibanding kata sandi biasa.",
-      btn: "+ Tambah passkey"
-    },
-    tfa: {
-      title: "Autentikasi dua faktor (2FA)",
-      desc: "Tambahkan lapisan keamanan ekstra ke akun Anda.",
-      warning:
-        "Membutuhkan kata sandi. Setel kata sandi terlebih dahulu sebelum mengaktifkan autentikasi dua faktor. Kata sandi diperlukan untuk memverifikasi perubahan.",
-      btn: "Aktifkan autentikasi dua faktor",
-      activeBtn: "Autentikasi Dua Faktor Aktif"
-    },
-    sessions: {
-      title: "Sesi aktif",
-      desc: "Ini adalah semua sesi masuk aktif dari akun Anda. Klik tanda X untuk mengakhiri sesi tertentu.",
-      current: "Sesi saat ini",
-      btnTerm: "Akhiri sesi perangkat lain"
-    }
-  },
-  Español: {
-    title: "Configuración de seguridad",
-    subTitle: "Administre la seguridad de su cuenta, las contraseñas y las sesiones activas.",
-    password: {
-      title: "Cambiar contraseña",
-      desc: "Para cambiar tu contraseña, haz clic en el botón de abajo para enviar un correo electrónico para restablecer tu contraseña y sigue las instrucciones en el correo.",
-      btn: "Cambiar contraseña"
-    },
-    oauth: {
-      title: "Cuentas conectadas",
-      connected: "Conectado",
-      connect: "Conectar"
-    },
-    passkey: {
-      title: "Llaves de paso (Passkeys)",
-      desc: "Utilice llaves de paso como una alternativa segura a las contraseñas.",
-      btn: "+ Agregar llave de paso"
-    },
-    tfa: {
-      title: "Autenticación de dos factores (2FA)",
-      desc: "Agregue una capa adicional de seguridad a su cuenta.",
-      warning:
-        "Se requiere contraseña. Establece una contraseña antes de habilitar la autenticación de dos factores. Se requiere tu contraseña para verificar los cambios.",
-      btn: "Habilitar autenticación de dos factores",
-      activeBtn: "Autenticación de Dos Factores Activada"
-    },
-    sessions: {
-      title: "Sesiones activas",
-      desc: "Estas son todas las sesiones activas de su cuenta. Haga clic en la X para finalizar una sesión específica.",
-      current: "Sesión actual",
-      btnTerm: "Cerrar otras sesiones"
-    }
-  }
-};
-
 export default function AccountSecuritySettings() {
   const router = useRouter();
-  const { language } = useLanguage();
+  const locale = useLocale();
 
-  // Membaca kamus terjemahan aktif secara dinamis
-  const t = securityTranslations[language] || securityTranslations["English"];
+  const t = useTranslations("account-security");
 
   // State data dari Supabase
   const [email, setEmail] = useState("");
@@ -218,15 +112,11 @@ export default function AccountSecuritySettings() {
 
       setAlertMessage({
         title:
-          language === "English"
-            ? "Email Sent"
-            : language === "Español"
-              ? "Correo Enviado"
-              : "Email Terkirim",
+          locale === "en" ? "Email Sent" : locale === "es" ? "Correo Enviado" : "Email Terkirim",
         description:
-          language === "English"
+          locale === "en"
             ? "We have sent a password reset link to your email."
-            : language === "Español"
+            : locale === "es"
               ? "Hemos enviado un enlace de restablecimiento de contraseña a tu correo electrónico."
               : "Kami telah sukses mengirimkan tautan penyetelan kata sandi baru ke inbox email Anda.",
         variant: "default"
@@ -272,9 +162,9 @@ export default function AccountSecuritySettings() {
       if (error) throw error;
 
       setAlertMessage({
-        title: language === "English" ? "Sessions Terminated" : "Sesi Diakhiri",
+        title: locale === "en" ? "Sessions Terminated" : "Sesi Diakhiri",
         description:
-          language === "English"
+          locale === "en"
             ? "Successfully signed out of all other devices."
             : "Sesi aktif di perangkat lain berhasil dihentikan secara aman.",
         variant: "default"
@@ -302,8 +192,8 @@ export default function AccountSecuritySettings() {
     <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-10">
       {/* Header Halaman */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{t.title}</h1>
-        <p className="text-muted-foreground text-sm">{t.subTitle}</p>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
       </div>
 
       {/* SHADCN ALERT NOTIFICATION */}
@@ -335,8 +225,8 @@ export default function AccountSecuritySettings() {
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1 md:max-w-xl">
-              <h2 className="text-foreground text-base font-semibold">{t.password.title}</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">{t.password.desc}</p>
+              <h2 className="text-foreground text-base font-semibold">{t("password.title")}</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">{t("password.desc")}</p>
             </div>
 
             <div className="flex shrink-0">
@@ -350,7 +240,7 @@ export default function AccountSecuritySettings() {
                 ) : (
                   <KeyRound className="h-4 w-4" />
                 )}
-                {t.password.btn}
+                {t("password.btn")}
               </Button>
             </div>
           </CardContent>
@@ -359,7 +249,7 @@ export default function AccountSecuritySettings() {
         {/* CARD 2: CONNECTED ACCOUNTS */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="space-y-6 p-8">
-            <h2 className="text-foreground text-base font-semibold">{t.oauth.title}</h2>
+            <h2 className="text-foreground text-base font-semibold">{t("oauth.title")}</h2>
 
             <div className="max-w-2xl space-y-4">
               {/* OAUTH 1: GOOGLE */}
@@ -387,7 +277,7 @@ export default function AccountSecuritySettings() {
                 </div>
                 {providers.includes("google") ? (
                   <Badge className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10">
-                    <Check className="h-3 w-3" /> {t.oauth.connected}
+                    <Check className="h-3 w-3" /> {t("oauth.connected")}
                   </Badge>
                 ) : (
                   <Button
@@ -395,7 +285,7 @@ export default function AccountSecuritySettings() {
                     onClick={() => handleConnectProvider("google")}
                     variant="outline"
                     className="border-border/85 h-8 rounded-lg px-4 text-xs font-semibold">
-                    {t.oauth.connect}
+                    {t("oauth.connect")}
                   </Button>
                 )}
               </div>
@@ -408,7 +298,7 @@ export default function AccountSecuritySettings() {
                 </div>
                 {providers.includes("github") ? (
                   <Badge className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10">
-                    <Check className="h-3 w-3" /> {t.oauth.connected}
+                    <Check className="h-3 w-3" /> {t("oauth.connected")}
                   </Badge>
                 ) : (
                   <Button
@@ -416,7 +306,7 @@ export default function AccountSecuritySettings() {
                     onClick={() => handleConnectProvider("github")}
                     variant="outline"
                     className="border-border/85 h-8 rounded-lg px-4 text-xs font-semibold">
-                    {t.oauth.connect}
+                    {t("oauth.connect")}
                   </Button>
                 )}
               </div>

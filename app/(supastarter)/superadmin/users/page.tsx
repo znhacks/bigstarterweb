@@ -4,22 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 
 // Impor komponen Data Table dan tipe data User
 import UsersDataTable, { User } from "./data-table";
-
-// Kamus terjemahan ringan khusus server untuk judul header halaman
-const bahasa = {
-  English: {
-    title: "Superadmin Users",
-    desc: "Manage, view, and oversee all registered user profiles and organization memberships."
-  },
-  "Bahasa Indonesia": {
-    title: "Pengguna Superadmin",
-    desc: "Kelola, lihat, dan awasi semua profil pengguna terdaftar dan keanggotaan organisasi."
-  },
-  Español: {
-    title: "Usuarios Superadmin",
-    desc: "Administre, vea y controle todos los perfiles de usuario registrados y membresías de organizaciones."
-  }
-};
+import { getTranslations } from "next-intl/server";
 
 export async function generateMetadata() {
   return generateMeta({
@@ -33,6 +18,7 @@ export async function generateMetadata() {
 
 export default async function Page() {
   const cookieStore = await cookies();
+  const t = await getTranslations("superadmin.users");
 
   // Inisialisasi klien Supabase khusus Server
   const supabase = createServerClient(
@@ -58,10 +44,6 @@ export default async function Page() {
   const {
     data: { user }
   } = await supabase.auth.getUser();
-  const userLanguage = user?.user_metadata?.language || "English";
-
-  // Ambil kamus terjemahan yang sesuai di server
-  const t = bahasa[userLanguage as keyof typeof bahasa] || bahasa["English"];
 
   // 2. Ambil data gabungan dari Supabase secara Server-Side
   const { data: profiles, error } = await supabase
@@ -122,8 +104,8 @@ export default async function Page() {
     <div className="mx-auto w-full space-y-8 px-4 py-10">
       {/* Header Halaman menggunakan teks bahasa yang terjemahkan di server */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{t.title}</h1>
-        <p className="text-muted-foreground text-sm">{t.desc}</p>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("desc")}</p>
       </div>
 
       {/* Kirim data ke Komponen Tabel Klien */}

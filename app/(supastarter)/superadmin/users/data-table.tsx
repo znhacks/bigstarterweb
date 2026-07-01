@@ -15,7 +15,7 @@ import {
   useReactTable,
   FilterFn
 } from "@tanstack/react-table";
-import { ArrowUpDown, Columns, MoreHorizontal, PlusCircle, Loader2, Check } from "lucide-react";
+import { ArrowUpDown, Columns, MoreHorizontal, PlusCircle, Loader2 } from "lucide-react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -50,14 +50,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 // Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
-import { useLanguage, LanguageType } from "@/components/providers/language-provider";
+import { useTranslations } from "next-intl";
 
 export type User = {
   id: number;
-  dbId: string; // Menyimpan ID UUID asli dari Supabase untuk fungsi aksi Hapus
+  dbId: string;
   firstName: string;
   lastName: string;
-  name: string; // Diperlukan sebagai accessor pencarian kolom nama
+  name: string;
   email: string;
   role: string;
   image: string;
@@ -66,112 +66,14 @@ export type User = {
   plan_name: string;
 };
 
-// KAMUS TERJEMAHAN KHUSUS TABEL PENGGUNA (Mendukung 3 Bahasa)
-const tableTranslations = {
-  English: {
-    headers: {
-      name: "Name",
-      role: "Role",
-      plan: "Plan",
-      email: "Email",
-      country: "Country",
-      status: "Status"
-    },
-    actions: {
-      view: "View user",
-      delete: "Delete"
-    },
-    filters: {
-      search: "Search users...",
-      status: "Status",
-      plan: "Plan",
-      role: "Role",
-      columns: "Columns",
-      noStatus: "No status found.",
-      noPlan: "No plan found.",
-      noRole: "No role found."
-    },
-    footer: {
-      selected: "{selected} of {total} row(s) selected.",
-      previous: "Previous",
-      next: "Next",
-      noResults: "No results."
-    },
-    confirmDelete: "Are you sure you want to delete this user?"
-  },
-  "Bahasa Indonesia": {
-    headers: {
-      name: "Nama",
-      role: "Peran",
-      plan: "Paket",
-      email: "Email",
-      country: "Negara",
-      status: "Status"
-    },
-    actions: {
-      view: "Lihat pengguna",
-      delete: "Hapus"
-    },
-    filters: {
-      search: "Cari pengguna...",
-      status: "Status",
-      plan: "Paket",
-      role: "Peran",
-      columns: "Kolom",
-      noStatus: "Status tidak ditemukan.",
-      noPlan: "Paket tidak ditemukan.",
-      noRole: "Peran tidak ditemukan."
-    },
-    footer: {
-      selected: "{selected} dari {total} baris dipilih.",
-      previous: "Sebelumnya",
-      next: "Berikutnya",
-      noResults: "Tidak ada hasil."
-    },
-    confirmDelete: "Apakah Anda yakin ingin menghapus pengguna ini?"
-  },
-  Español: {
-    headers: {
-      name: "Nombre",
-      role: "Rol",
-      plan: "Plan",
-      email: "Correo electrónico",
-      country: "País",
-      status: "Estado"
-    },
-    actions: {
-      view: "Ver usuario",
-      delete: "Eliminar"
-    },
-    filters: {
-      search: "Buscar usuarios...",
-      status: "Estado",
-      plan: "Plan",
-      role: "Rol",
-      columns: "Columnas",
-      noStatus: "No se encontró el estado.",
-      noPlan: "No se encontró el plan.",
-      noRole: "No se encontró el rol."
-    },
-    footer: {
-      selected: "{selected} de {total} fila(s) seleccionadas.",
-      previous: "Anterior",
-      next: "Siguiente",
-      noResults: "Sin resultados."
-    },
-    confirmDelete: "¿Está seguro de que desea eliminar a este usuario?"
-  }
-};
-
-// Fungsi kustom untuk memproses filter berbasis array (multi-select)
 const multiSelectFilterFn: FilterFn<any> = (row, columnId, filterValue: string[]) => {
   if (!filterValue || filterValue.length === 0) return true;
   const rowValue = String(row.getValue(columnId)).toLowerCase();
   return filterValue.map((v) => v.toLowerCase()).includes(rowValue);
 };
 
-// Generator Kolom Dinamis (Menerjemahkan tajuk kolom secara dinamis dan aman)
-export const getColumns = (tTable: typeof tableTranslations.English): ColumnDef<User>[] => [
+// Mengubah fungsi getColumns agar menerima fungsi translasi `t` sebagai argumen
+export const getColumns = (t: any): ColumnDef<User>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -195,7 +97,7 @@ export const getColumns = (tTable: typeof tableTranslations.English): ColumnDef<
   },
   {
     accessorKey: "name",
-    header: tTable.headers.name,
+    header: t("headers.name"),
     cell: ({ row }) => (
       <div className="flex items-center gap-4">
         <Avatar>
@@ -214,7 +116,7 @@ export const getColumns = (tTable: typeof tableTranslations.English): ColumnDef<
           className="-ml-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {tTable.headers.role}
+          {t("headers.role")}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -230,7 +132,7 @@ export const getColumns = (tTable: typeof tableTranslations.English): ColumnDef<
           className="-ml-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {tTable.headers.plan}
+          {t("headers.plan")}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -250,7 +152,7 @@ export const getColumns = (tTable: typeof tableTranslations.English): ColumnDef<
           className="-ml-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {tTable.headers.email}
+          {t("headers.email")}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -267,7 +169,7 @@ export const getColumns = (tTable: typeof tableTranslations.English): ColumnDef<
           className="-ml-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {tTable.headers.country}
+          {t("headers.country")}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -282,7 +184,7 @@ export const getColumns = (tTable: typeof tableTranslations.English): ColumnDef<
           className="-ml-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {tTable.headers.status}
+          {t("headers.status")}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );
@@ -317,11 +219,11 @@ export const getColumns = (tTable: typeof tableTranslations.English): ColumnDef<
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem className="cursor-pointer">{tTable.actions.view}</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer">{t("actions.view")}</DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => meta?.onDeleteRow(row.original.dbId)}
               className="text-destructive focus:text-destructive cursor-pointer">
-              {tTable.actions.delete}
+              {t("actions.delete")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -331,8 +233,8 @@ export const getColumns = (tTable: typeof tableTranslations.English): ColumnDef<
 ];
 
 export default function UsersDataTable({ data: initialData }: { data?: User[] }) {
-  const { language } = useLanguage();
-  const tTable = tableTranslations[language] || tableTranslations["English"];
+  // Inisialisasi useTranslations di dalam fungsi komponen utama
+  const t = useTranslations("superadmin.users.data-table");
 
   const [users, setUsers] = useState<User[]>(initialData || []);
   const [isLoading, setIsLoading] = useState(!initialData);
@@ -342,7 +244,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
-  // State untuk menyimpan daftar checkbox filter terpilih
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
@@ -353,7 +254,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   }, [initialData]);
 
-  // Memuat data secara dinamis dari database Supabase Anda
   const loadUsersFromSupabase = async () => {
     setIsLoading(true);
     try {
@@ -410,9 +310,8 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   };
 
-  // Handler fungsi hapus baris langsung di database Supabase
   const handleDeleteRow = async (userId: string) => {
-    if (!confirm(tTable.confirmDelete)) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await supabase.from("memberships").delete().eq("user_id", userId);
       const { error } = await supabase.from("profiles").delete().eq("id", userId);
@@ -424,8 +323,8 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   };
 
-  // Mengompilasi kolom secara reaktif dan hemat render menggunakan useMemo
-  const memoizedColumns = useMemo(() => getColumns(tTable), [language]);
+  // Memoized columns menggunakan referensi fungsi translasi `t`
+  const memoizedColumns = useMemo(() => getColumns(t), [t]);
 
   const table = useReactTable({
     data: users,
@@ -449,7 +348,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   });
 
-  // Handler Toggle Filter Status
   const handleStatusToggle = (value: string) => {
     const updated = selectedStatuses.includes(value)
       ? selectedStatuses.filter((v) => v !== value)
@@ -458,7 +356,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     table.getColumn("status")?.setFilterValue(updated.length > 0 ? updated : undefined);
   };
 
-  // Handler Toggle Filter Plan
   const handlePlanToggle = (value: string) => {
     const updated = selectedPlans.includes(value)
       ? selectedPlans.filter((v) => v !== value)
@@ -467,7 +364,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     table.getColumn("plan_name")?.setFilterValue(updated.length > 0 ? updated : undefined);
   };
 
-  // Handler Toggle Filter Role
   const handleRoleToggle = (value: string) => {
     const updated = selectedRoles.includes(value)
       ? selectedRoles.filter((v) => v !== value)
@@ -476,7 +372,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     table.getColumn("role")?.setFilterValue(updated.length > 0 ? updated : undefined);
   };
 
-  // Data rujukan filter diselaraskan dengan database terdaftar Anda
   const statuses = [
     { value: "active", label: "Active" },
     { value: "inactive", label: "Inactive" },
@@ -509,24 +404,25 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
       <div className="flex items-center gap-4 py-4">
         <div className="flex gap-2">
           <Input
-            placeholder={tTable.filters.search}
+            placeholder={t("filters.search")}
             value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
             onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
             className="border-border/80 h-10 max-w-sm rounded-xl"
           />
+
           {/* POPOVER STATUS FILTER */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="border-border/80 h-10 rounded-xl">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                {tTable.filters.status}
+                {t("filters.status")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="border-border/80 w-52 rounded-xl border p-0">
               <Command>
-                <CommandInput placeholder={tTable.filters.status} className="h-9" />
+                <CommandInput placeholder={t("filters.status")} className="h-9" />
                 <CommandList>
-                  <CommandEmpty>{tTable.filters.noStatus}</CommandEmpty>
+                  <CommandEmpty>{t("filters.noStatus")}</CommandEmpty>
                   <CommandGroup>
                     {statuses.map((status) => (
                       <CommandItem
@@ -557,14 +453,14 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             <PopoverTrigger asChild>
               <Button variant="outline" className="border-border/80 h-10 rounded-xl">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                {tTable.filters.plan}
+                {t("filters.plan")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="border-border/80 w-52 rounded-xl border p-0">
               <Command>
-                <CommandInput placeholder={tTable.filters.plan} className="h-9" />
+                <CommandInput placeholder={t("filters.plan")} className="h-9" />
                 <CommandList>
-                  <CommandEmpty>{tTable.filters.noPlan}</CommandEmpty>
+                  <CommandEmpty>{t("filters.noPlan")}</CommandEmpty>
                   <CommandGroup>
                     {plans.map((plan) => (
                       <CommandItem
@@ -592,14 +488,14 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             <PopoverTrigger asChild>
               <Button variant="outline" className="border-border/80 h-10 rounded-xl">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                {tTable.filters.role}
+                {t("filters.role")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="border-border/80 w-52 rounded-xl border p-0">
               <Command>
-                <CommandInput placeholder={tTable.filters.role} className="h-9" />
+                <CommandInput placeholder={t("filters.role")} className="h-9" />
                 <CommandList>
-                  <CommandEmpty>{tTable.filters.noRole}</CommandEmpty>
+                  <CommandEmpty>{t("filters.noRole")}</CommandEmpty>
                   <CommandGroup>
                     {roles.map((role) => (
                       <CommandItem
@@ -626,7 +522,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="border-border/80 ml-auto h-10 rounded-xl">
               <Columns className="mr-2 h-4 w-4" />{" "}
-              <span className="hidden md:inline">{tTable.filters.columns}</span>
+              <span className="hidden md:inline">{t("filters.columns")}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -683,7 +579,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                 <TableCell
                   colSpan={memoizedColumns.length}
                   className="text-muted-foreground h-24 text-center">
-                  {tTable.footer.noResults}
+                  {t("footer.noResults")}
                 </TableCell>
               </TableRow>
             )}
@@ -692,9 +588,11 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
       </div>
       <div className="flex items-center justify-end space-x-2 pt-4">
         <div className="text-muted-foreground flex-1 text-xs">
-          {tTable.footer.selected
-            .replace("{selected}", table.getFilteredSelectedRowModel().rows.length.toString())
-            .replace("{total}", table.getFilteredRowModel().rows.length.toString())}
+          {/* Menggunakan fitur passing variables bawaan next-intl */}
+          {t("footer.selected", {
+            selected: table.getFilteredSelectedRowModel().rows.length,
+            total: table.getFilteredRowModel().rows.length
+          })}
         </div>
         <div className="space-x-2">
           <Button
@@ -703,7 +601,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
             className="border-border/80 rounded-xl">
-            {tTable.footer.previous}
+            {t("footer.previous")}
           </Button>
           <Button
             variant="outline"
@@ -711,7 +609,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
             className="border-border/80 rounded-xl">
-            {tTable.footer.next}
+            {t("footer.next")}
           </Button>
         </div>
       </div>

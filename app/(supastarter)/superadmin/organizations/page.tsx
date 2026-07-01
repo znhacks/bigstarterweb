@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 
 // Impor komponen klien dan tipe data yang sesuai
 import { OrganizationsList, SuperadminOrganization } from "./organizations-list";
+import { getTranslations } from "next-intl/server";
 
 export async function generateMetadata() {
   return generateMeta({
@@ -14,27 +15,9 @@ export async function generateMetadata() {
   });
 }
 
-// Menyelaraskan penamaan kunci Bahasa Indonesia dengan kamus global
-const organizationAdmin = {
-  English: {
-    title: "Superadmin Organizations",
-    detail:
-      "Manage and oversee all registered organizations, active plans, member counts, and metadata."
-  },
-  "Bahasa Indonesia": {
-    title: "Organisasi Superadmin",
-    detail:
-      "Kelola dan awasi semua organisasi yang terdaftar, paket yang aktif, jumlah anggota, serta metadata."
-  },
-  Español: {
-    title: "Organizaciones del Superadministrador",
-    detail:
-      "Administra y supervisa todas las organizaciones registradas, los planes activos, la cantidad de miembros y los metadatos."
-  }
-};
-
 export default async function SuperadminOrganizationsPage() {
   const cookieStore = await cookies();
+  const t = await getTranslations();
 
   // Inisialisasi klien Supabase khusus Server
   const supabase = createServerClient(
@@ -53,13 +36,6 @@ export default async function SuperadminOrganizationsPage() {
   const {
     data: { user }
   } = await supabase.auth.getUser();
-  const userLanguage = user?.user_metadata?.language || "English";
-
-  // Normalisasi jika ada perbedaan penamaan kunci bahasa
-  const activeLanguage = userLanguage === "Indonesia" ? "Bahasa Indonesia" : userLanguage;
-  const t =
-    organizationAdmin[activeLanguage as keyof typeof organizationAdmin] ||
-    organizationAdmin["English"];
 
   // 2. Ambil data gabungan komprehensif dari Supabase (Server-side)
   const { data: tenants, error } = await supabase
@@ -109,8 +85,8 @@ export default async function SuperadminOrganizationsPage() {
     <div className="mx-auto w-full space-y-8 px-4 py-10">
       {/* Header Halaman menggunakan teks bahasa yang diterjemahkan di server */}
       <div className="space-y-1">
-        <h1 className="text-foreground text-3xl font-bold tracking-tight">{t.title}</h1>
-        <p className="text-muted-foreground text-sm">{t.detail}</p>
+        <h1 className="text-foreground text-3xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("detail")}</p>
       </div>
 
       {/* Kirim data ke Komponen Klien */}

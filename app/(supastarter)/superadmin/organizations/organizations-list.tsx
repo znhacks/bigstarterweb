@@ -35,6 +35,7 @@ import {
 // Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/providers/language-provider";
+import { useLocale, useTranslations } from "next-intl";
 
 export interface SuperadminOrganization {
   id: string;
@@ -53,106 +54,10 @@ interface AlertState {
   variant?: "default" | "destructive";
 }
 
-// 1. KAMUS TERJEMAHAN KHUSUS DAFTAR ORGANISASI (Mendukung 3 Bahasa)
-const orgListTranslations = {
-  English: {
-    kpis: {
-      total: "Total Organizations",
-      premium: "Premium Subscriptions",
-      members: "Total Combined Members"
-    },
-    searchPlaceholder: "Search organizations by name...",
-    placeholders: {
-      noOrgs: "No organizations found.",
-      members: "members",
-      createdOn: "Created on",
-      freeAccess: "Free Access",
-      plan: "PLAN"
-    },
-    buttons: {
-      cancel: "Cancel",
-      delete: "Delete Organization"
-    },
-    dialogDelete: {
-      title: "Are you absolutely sure?",
-      desc: "This action will permanently delete the organization {orgName} along with all subscription records, transactions, and its members' memberships from the database. This action cannot be undone."
-    },
-    alerts: {
-      deletedTitle: "Organization Deleted",
-      deletedDesc:
-        "Organization '{orgName}' and all of its associated data have been successfully deleted.",
-      failedTitle: "Delete Failed",
-      failedDesc: "Failed to delete organization."
-    }
-  },
-  "Bahasa Indonesia": {
-    kpis: {
-      total: "Total Organisasi",
-      premium: "Langganan Premium",
-      members: "Total Seluruh Anggota"
-    },
-    searchPlaceholder: "Cari organisasi berdasarkan nama...",
-    placeholders: {
-      noOrgs: "Organisasi tidak ditemukan.",
-      members: "anggota",
-      createdOn: "Dibuat pada tanggal",
-      freeAccess: "Akses Gratis",
-      plan: "PAKET"
-    },
-    buttons: {
-      cancel: "Batal",
-      delete: "Hapus Organisasi"
-    },
-    dialogDelete: {
-      title: "Apakah Anda benar-benar yakin?",
-      desc: "Tindakan ini akan menghapus organisasi {orgName} beserta seluruh data relasi langganan, transaksi, dan keanggotaan anggotanya secara permanen dari database. Tindakan ini tidak dapat dibatalkan."
-    },
-    alerts: {
-      deletedTitle: "Organisasi Dihapus",
-      deletedDesc:
-        "Organisasi '{orgName}' beserta seluruh data relasi dan keanggotaannya berhasil dihapus dari database.",
-      failedTitle: "Penghapusan Gagal",
-      failedDesc: "Gagal menghapus organisasi."
-    }
-  },
-  Español: {
-    kpis: {
-      total: "Organizaciones Totales",
-      premium: "Suscripciones Premium",
-      members: "Total de Miembros Combinados"
-    },
-    searchPlaceholder: "Buscar organizaciones por nombre...",
-    placeholders: {
-      noOrgs: "No se encontraron organizaciones.",
-      members: "miembros",
-      createdOn: "Creado el",
-      freeAccess: "Acceso Gratuito",
-      plan: "PLAN"
-    },
-    buttons: {
-      cancel: "Cancelar",
-      delete: "Eliminar Organización"
-    },
-    dialogDelete: {
-      title: "¿Estás absolutamente seguro?",
-      desc: "Esta acción eliminará permanentemente la organización {orgName} junto con todos los registros de suscripción, transacciones y membresías de sus miembros de la base de datos. Esta acción no se puede deshacer."
-    },
-    alerts: {
-      deletedTitle: "Organización Eliminada",
-      deletedDesc:
-        "La organización '{orgName}' y todos sus datos asociados han sido eliminados con éxito de la base de datos.",
-      failedTitle: "Error al Eliminar",
-      failedDesc: "No se pudo eliminar la organización."
-    }
-  }
-};
-
 export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) {
   const router = useRouter();
-  const { language, formatPrice } = useLanguage();
-
-  // Membaca kamus terjemahan aktif
-  const tOrgList = orgListTranslations[language] || orgListTranslations["English"];
+  const { formatPrice } = useLanguage();
+  const t = useTranslations("superadmin.organizations.list");
 
   const [orgs, setOrgs] = useState<SuperadminOrganization[]>(data);
   const [searchQuery, setSearchQuery] = useState("");
@@ -198,8 +103,8 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
       if (error) throw error;
 
       setAlertMessage({
-        title: tOrgList.alerts.deletedTitle,
-        description: tOrgList.alerts.deletedDesc.replace("{orgName}", orgToDelete.name),
+        title: t("alerts.deletedTitle"),
+        description: t("alerts.deletedDesc").replace("{orgName}", orgToDelete.name),
         variant: "default"
       });
 
@@ -214,8 +119,8 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
       router.refresh();
     } catch (e: any) {
       setAlertMessage({
-        title: tOrgList.alerts.failedTitle,
-        description: e.message || tOrgList.alerts.failedDesc,
+        title: t("alerts.failedTitle"),
+        description: e.message || t("alerts.failedDesc"),
         variant: "destructive"
       });
     } finally {
@@ -233,7 +138,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
         <Search className="text-muted-foreground/60 absolute left-3.5 h-4 w-4" />
         <Input
           type="text"
-          placeholder={tOrgList.searchPlaceholder}
+          placeholder={t("searchPlaceholder")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="border-border/80 h-10 rounded-xl pl-10"
@@ -277,7 +182,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
           <div className="divide-border/60 divide-y">
             {filteredOrgs.length === 0 ? (
               <div className="text-muted-foreground py-12 text-center text-sm">
-                {tOrgList.placeholders.noOrgs}
+                {t("placeholders.noOrgs")}
               </div>
             ) : (
               filteredOrgs.map((org) => (
@@ -296,10 +201,10 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
                       <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                         <span className="inline-flex items-center gap-1">
                           <Users className="h-3.5 w-3.5" /> {org.memberCount}{" "}
-                          {tOrgList.placeholders.members}
+                          {t("placeholders.members")}
                         </span>
                         <span className="inline-flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5" /> {tOrgList.placeholders.createdOn}{" "}
+                          <Calendar className="h-3.5 w-3.5" /> {t("placeholders.createdOn")}{" "}
                           {new Date(org.created_at).toLocaleDateString("id-ID")}
                         </span>
                       </div>
@@ -315,12 +220,12 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
                             ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
                             : "bg-muted text-muted-foreground border-border/60"
                         }`}>
-                        {org.planName.toUpperCase()} {tOrgList.placeholders.plan}
+                        {org.planName.toUpperCase()} {t("placeholders.plan")}
                       </Badge>
                       <span className="text-muted-foreground text-[10px]">
                         {org.planStatus === "active" && org.planName !== "Free"
                           ? `${formatPrice(org.price)}/mo`
-                          : tOrgList.placeholders.freeAccess}
+                          : t("placeholders.freeAccess")}
                       </span>
                     </div>
                   </div>
@@ -333,7 +238,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
                       variant="ghost"
                       size="icon"
                       className="text-muted-foreground hover:text-destructive h-9 w-9 rounded-lg"
-                      title={tOrgList.buttons.delete}>
+                      title={t("buttons.delete")}>
                       {isDeletingId === org.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
@@ -352,21 +257,21 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
       <AlertDialog open={!!orgToDelete} onOpenChange={(open) => !open && setOrgToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{tOrgList.dialogDelete.title}</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialogDelete.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {tOrgList.dialogDelete.desc.replace("{orgName}", orgToDelete?.name || "")}
+              {t("dialogDelete.desc").replace("{orgName}", orgToDelete?.name || "")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeletingId !== null}>
-              {tOrgList.buttons.cancel}
+              {t("buttons.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDeleteOrg}
               disabled={isDeletingId !== null}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground inline-flex items-center gap-2">
               {isDeletingId !== null && <Loader2 className="h-4 w-4 animate-spin" />}
-              {tOrgList.buttons.delete}
+              {t("buttons.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
