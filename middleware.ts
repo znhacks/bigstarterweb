@@ -1,3 +1,4 @@
+// middleware.ts
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -31,11 +32,15 @@ export async function middleware(request: NextRequest) {
             response.cookies.set(name, value, options)
           );
         }
+      },
+      auth: {
+        experimental: {
+          passkey: true
+        }
       }
     }
   );
 
-  // Ambil data user aktif secara aman melalui cookies
   const {
     data: { user }
   } = await supabase.auth.getUser();
@@ -43,12 +48,16 @@ export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const path = url.pathname;
 
-  // Definisikan rute autentikasi publik (Ditambahkan dukungan rute forgot-password)
   const isAuthPage =
-    path.startsWith("/login") || path.startsWith("/register") || path.startsWith("/forgot-password"); // <-- Diizinkan diakses sebelum login
+    path.startsWith("/login") ||
+    path.startsWith("/register") ||
+    path.startsWith("/forgot-password");
 
   const isJoinPage = path.startsWith("/join");
   const isAuthCallback = path.startsWith("/auth/callback");
+
+  // Rute default tujuan setelah login (bisa disesuaikan dengan kebutuhan Anda)
+  const DEFAULT_REDIRECT_ROUTE = "/dashboard";
 
   // ALUR 1: JIKA USER BELUM LOGIN
   if (!user) {
@@ -60,7 +69,10 @@ export async function middleware(request: NextRequest) {
     }
 
     if (!isAuthPage && !isAuthCallback) {
+      // Peningkatan UX: Simpan halaman asal agar bisa kembali setelah login berhasil
+      const nextTarget = encodeURIComponent(`${url.pathname}${url.search}`);
       url.pathname = "/login";
+      url.search = `?next=${nextTarget}`;
       return NextResponse.redirect(url);
     }
   }
@@ -68,7 +80,8 @@ export async function middleware(request: NextRequest) {
   // ALUR 2: JIKA USER SUDAH LOGIN
   if (user) {
     if (isAuthPage) {
-      url.pathname = "/default";
+      // Konsisten menggunakan DEFAULT_REDIRECT_ROUTE dibanding hardcoded "/default"
+      url.pathname = DEFAULT_REDIRECT_ROUTE;
       url.search = "";
       return NextResponse.redirect(url);
     }
@@ -77,7 +90,6 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-// Konfigurasi pencocokan rute yang diproses oleh middleware
 export const config = {
   matcher: [
     "/((?!api|api-docs|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"

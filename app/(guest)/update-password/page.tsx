@@ -15,13 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, EyeOff, Eye } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -65,7 +66,7 @@ export default function UpdatePasswordPage() {
 
   return (
     <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
-      <Card className="border-border/80 w-full max-w-md overflow-hidden rounded-2xl border shadow-lg">
+      <Card className="w-full max-w-md overflow-hidden">
         {isSuccess ? (
           <CardContent className="flex flex-col items-center justify-center space-y-4 py-12 text-center">
             <CheckCircle2 className="h-16 w-16 animate-bounce text-emerald-600" />
@@ -95,35 +96,51 @@ export default function UpdatePasswordPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="password">Kata Sandi Baru</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  placeholder="Min. 8 karakter"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    placeholder="Min. 8 karakter"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="confirm-password">Konfirmasi Kata Sandi</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  required
-                  placeholder="Ketik ulang kata sandi"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    placeholder="Ketik ulang kata sandi"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             </CardContent>
             <CardFooter className="pt-2">
               <Button
                 type="submit"
                 disabled={isLoading || !password || !confirmPassword}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl font-medium">
+                className="inline-flex h-10 w-full items-center justify-center gap-2 font-medium">
                 {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isLoading ? "Saving..." : "Simpan Sandi Baru"}
               </Button>

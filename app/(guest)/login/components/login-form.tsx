@@ -10,9 +10,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle2, Loader2, KeyIcon, ShieldAlert } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  KeyIcon,
+  ShieldAlert,
+  Eye,
+  EyeOff
+} from "lucide-react";
 
-// Impor klien Supabase Anda
+// Gunakan client Supabase yang mendukung SSR/Cookies (lihat Bagian 2)
 import { supabase } from "@/lib/supabase";
 
 export function LoginForm() {
@@ -28,13 +36,15 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Fungsi pembantu untuk mengarahkan pengguna berdasarkan role
+  // Fungsi pengarah halaman berdasarkan metadata pengguna
   const handleRedirect = (user: any) => {
+    // Memeriksa role dari user_metadata atau app_metadata
     const isSuperAdmin =
       user?.app_metadata?.role === "superadmin" ||
       user?.user_metadata?.role === "superadmin" ||
-      user?.email === "superadmin@example.com"; // Fallback deteksi email dummy
+      user?.email === "superadmin@example.com";
 
     if (isSuperAdmin) {
       router.push("/superadmin/dashboard");
@@ -44,7 +54,7 @@ export function LoginForm() {
     router.refresh();
   };
 
-  // 1. Handler Login dengan Password Tradisional
+  // 1. Login Password Tradisional
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -63,7 +73,7 @@ export function LoginForm() {
         setSuccessMsg("Login berhasil! Mengalihkan halaman...");
         setTimeout(() => {
           handleRedirect(data.user);
-        }, 1500);
+        }, 1000);
       }
     } catch (err: any) {
       setErrorMsg(err.message || "Email atau password salah.");
@@ -72,44 +82,7 @@ export function LoginForm() {
     }
   };
 
-  // 2. Handler Quick Login untuk Akun Dummy Superadmin
-  const handleQuickSuperadminLogin = async () => {
-    setIsLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    const dummyEmail = "superadmin@example.com";
-    const dummyPassword = "superadmin123";
-
-    setEmail(dummyEmail);
-    setPassword(dummyPassword);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: dummyEmail,
-        password: dummyPassword
-      });
-
-      if (error) {
-        throw new Error(
-          "Akun dummy belum terdaftar di database Supabase Anda. Pastikan untuk membuat user 'superadmin@example.com' dengan password 'superadmin123' terlebih dahulu."
-        );
-      }
-
-      if (data.user) {
-        setSuccessMsg("Login Superadmin berhasil! Mengalihkan halaman...");
-        setTimeout(() => {
-          handleRedirect(data.user);
-        }, 1500);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 3. Handler Login dengan Magic Link (OTP Email)
+  // 3. Login dengan Magic Link
   const handleMagicLinkLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -132,18 +105,16 @@ export function LoginForm() {
 
       if (error) throw error;
 
-      setSuccessMsg(
-        "Tautan akses (Magic Link) berhasil dikirim! Silakan periksa inbox email Anda."
-      );
+      setSuccessMsg("Tautan akses telah dikirim ke email Anda.");
       setEmail("");
     } catch (err: any) {
-      setErrorMsg(err.message || "Gagal mengirimkan Magic Link. Coba kembali.");
+      setErrorMsg(err.message || "Gagal mengirimkan Magic Link.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 4. Handler OAuth Google
+  // 4. Login OAuth Google
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setErrorMsg(null);
@@ -151,12 +122,74 @@ export function LoginForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}/auth/callback${nextTarget ? `?next=${encodeURIComponent(nextTarget)}` : ""}`
         }
       });
       if (error) throw error;
     } catch (err: any) {
       setErrorMsg(err.message || "Gagal masuk menggunakan Google.");
+      setIsLoading(false);
+    }
+  };
+
+  // 5. Login OAuth GitHub
+  const handleGitHubSignIn = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback${nextTarget ? `?next=${encodeURIComponent(nextTarget)}` : ""}`
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setErrorMsg(err.message || "Gagal masuk menggunakan GitHub.");
+      setIsLoading(false);
+    }
+  };
+
+  // 6. Login Menggunakan Passkey (WebAuthn)
+  // Cari fungsi ini di LoginForm.tsx Anda
+  const handlePasskeyLogin = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPasskey({
+        email: email.trim() || undefined
+      });
+
+      if (error) throw error;
+
+      if (data?.user) {
+        setSuccessMsg("Autentikasi Passkey berhasil!");
+        setTimeout(() => {
+          handleRedirect(data.user);
+        }, 1000);
+      }
+    } catch (err: any) {
+      const rawMessage = err.message || "";
+
+      // Memeriksa apakah error disebabkan karena pengguna menekan tombol 'Cancel' atau waktu habis
+      if (
+        rawMessage.includes("timed out") ||
+        rawMessage.includes("not allowed") ||
+        rawMessage.includes("WebAuthn") ||
+        rawMessage.includes("privacy-considerations")
+      ) {
+        // Opsi A: Tampilkan pesan ramah pengguna
+        setErrorMsg(null);
+
+        // Opsi B (Jika tidak ingin memunculkan kotak merah error sama sekali ketika user membatalkan):
+        // setErrorMsg(null);
+      } else {
+        // Jika error disebabkan hal lain (masalah jaringan, dsb.)
+        setErrorMsg(rawMessage || "Autentikasi Passkey gagal.");
+      }
+    } finally {
       setIsLoading(false);
     }
   };
@@ -180,37 +213,17 @@ export function LoginForm() {
         </Alert>
       )}
 
-      {/* QUICK LOGIN DEMO SUPERADMIN */}
-      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
-        <div className="mb-2 flex items-center gap-2 text-amber-700 dark:text-amber-500">
-          <ShieldAlert className="h-4 w-4" />
-          <span className="text-xs font-semibold">Demo Sandbox Mode</span>
-        </div>
-        <p className="text-muted-foreground mb-3 text-[11px] leading-relaxed">
-          Gunakan tombol di bawah untuk masuk otomatis menggunakan akun demonstrasi superadmin.
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleQuickSuperadminLogin}
-          disabled={isLoading}
-          className="h-8 w-full border-amber-500/30 text-xs font-medium text-amber-700 hover:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/10">
-          {isLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-          Quick Login: Superadmin (Demo)
-        </Button>
-      </div>
-
       {/* TABS CONTROLLER */}
       <Tabs defaultValue="password" className="w-full">
-        <TabsList className="border-border/60 mb-4 h-auto w-full justify-start space-x-6 rounded-none border-b bg-transparent p-0">
+        <TabsList className="mb-4 h-auto w-full justify-start rounded-none border-b bg-transparent p-0">
           <TabsTrigger
             value="password"
-            className="data-[state=active]:border-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
+            className="data-[state=active]:border-b-foreground rounded-none border-b-2 border-b-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:shadow-none">
             Password
           </TabsTrigger>
           <TabsTrigger
             value="magic"
-            className="data-[state=active]:border-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
+            className="data-[state=active]:border-b-foreground rounded-none border-b-2 border-b-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:shadow-none">
             Magic link
           </TabsTrigger>
         </TabsList>
@@ -240,15 +253,23 @@ export function LoginForm() {
                   Forgot your password?
                 </Link>
               </div>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-                className="border-border/80 h-10"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                  className="border-border/80 h-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <Button
               type="submit"
@@ -297,7 +318,7 @@ export function LoginForm() {
       </div>
 
       {/* OAUTH BUTTONS */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Button
           variant="outline"
           type="button"
@@ -324,24 +345,21 @@ export function LoginForm() {
           </svg>
           Google
         </Button>
-        <Button
-          variant="outline"
-          type="button"
-          className="h-10 w-full text-xs font-semibold"
-          disabled={isLoading}>
-          <GitHubLogoIcon className="mr-2 h-4 w-4" />
-          GitHub
-        </Button>
       </div>
 
-      {/* PASSKEY MOCKUP */}
+      {/* FUNGSI UTAMA PASSKEY */}
       <Button
         variant="secondary"
         type="button"
         className="bg-secondary/80 text-foreground h-10 w-full text-xs font-semibold"
+        onClick={handlePasskeyLogin}
         disabled={isLoading}>
-        <KeyIcon className="mr-2 h-4 w-4" />
-        Log in with passkey
+        {isLoading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <KeyIcon className="mr-2 h-4 w-4" />
+        )}
+        Log in with Passkey
       </Button>
     </div>
   );

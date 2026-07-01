@@ -2,15 +2,15 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateMeta } from "@/lib/utils";
 import { LoginForm } from "./components/login-form";
+import { Loader2, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DemoSandbox } from "./components/demosanbox";
+import { constructMetadata } from "@/lib/metadata";
 
-export function generateMetadata() {
-  return generateMeta({
-    title: "Login Page v2",
-    description:
-      "A login form with email and password. There's an option to login with Google and a link to sign up if you don't have an account.",
-    canonical: "/login/v2"
-  });
-}
+export const metadata = constructMetadata({
+  title: "Login",
+  description: "Halaman ini menjelaskan tentang profil perusahaan kami."
+});
 
 export default function Page() {
   return (
@@ -32,6 +32,9 @@ export default function Page() {
           </div>
         </CardContent>
       </Card>
+      <div className="fixed right-6 bottom-6 z-50">
+        <DemoSandbox />
+      </div>
     </div>
   );
 }

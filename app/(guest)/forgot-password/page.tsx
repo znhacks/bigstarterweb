@@ -65,7 +65,7 @@ export default function Page() {
 
   return (
     <div className="flex items-center justify-center py-4 lg:h-screen">
-      <Card className="border-border/80 mx-auto w-96 rounded-2xl border shadow-lg">
+      <Card className="mx-auto w-96">
         <CardHeader>
           <CardTitle className="text-2xl">Forgot Password</CardTitle>
           <CardDescription>
@@ -125,7 +125,7 @@ export default function Page() {
                       Please wait
                     </>
                   ) : (
-                    "Send Reset Instructions"
+                    "Send Reset Link"
                   )}
                 </Button>
               </form>
