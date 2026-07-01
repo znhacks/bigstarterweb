@@ -1,3 +1,4 @@
+// app/auth/callback/route.ts
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -5,9 +6,12 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  let next = searchParams.get("next") ?? "/dashboard";
 
-  // Tangkap parameter 'next' dari URL, jika kosong arahkan ke dashboard default
-  const next = searchParams.get("next") ?? "/dashboard";
+  // Keamanan: Pastikan 'next' hanya berupa path relatif untuk mencegah open redirect
+  if (next.startsWith("http://") || next.startsWith("https://") || next.startsWith("//")) {
+    next = "/dashboard";
+  }
 
   if (code) {
     const cookieStore = await cookies();
@@ -28,19 +32,21 @@ export async function GET(request: Request) {
               // Diabaikan jika dipanggil dari Server Component
             }
           }
+        },
+        auth: {
+          experimental: {
+            passkey: true
+          }
         }
       }
     );
 
-    // Tukar kode verifikasi dari email menjadi session login yang sah di Cookies
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Alihkan pengguna secara aman ke rute tujuan awal (contoh: /join?token=xxx)
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
 
-  // Jika terjadi kesalahan kode, alihkan ke halaman error
   return NextResponse.redirect(`${origin}/login?error=auth-code-error`);
 }
