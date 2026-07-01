@@ -256,6 +256,59 @@
           "failedDesc": "No se pudo eliminar la organización."
         }
       }
+    },
+    "billing": {
+      "title": "Facturación de Superadmin",
+      "subTitle": "Descripción global de transacciones, suscripciones activas y solicitudes de reembolso.",
+      "kpis": {
+        "revenue": "Ingresos Totales",
+        "active": "Suscripciones Activas",
+        "refunds": "Reembolsos Pendientes"
+      },
+      "tabs": {
+        "refunds": "Solicitudes de Reembolso",
+        "active": "Suscripciones Activas",
+        "history": "Historial de Transacciones",
+        "plans": "Gestionar Planes"
+      },
+      "placeholders": {
+        "noRefunds": "No se encontraron solicitudes de reembolso pendientes.",
+        "noActive": "No se encontraron suscripciones activas.",
+        "noTransactions": "No se encontraron transacciones.",
+        "noPlans": "Aún no se telah mendaftarkan planes de suscripción en la base de datos.",
+        "refundAmount": "Monto de reembolso",
+        "expiry": "Fecha de caducidad",
+        "renewOff": "(Renovación automática desactivada)",
+        "unlimited": "Ilimitado",
+        "purchasedOn": "Compró el plan {planName} el {date}",
+        "maxUsers": "Límite de Usuarios",
+        "features": "Características (separadas por comas)",
+        "featuresPlaceholder": "ej. 5.000 capturas, Caching, S3 upload"
+      },
+      "buttons": {
+        "reject": "Rechazar Reembolso",
+        "approve": "Aprobar y Terminar",
+        "createPlan": "Crear Nuevo Plan",
+        "savePlan": "Guardar Plan",
+        "cancel": "Cancelar"
+      },
+      "dialogPlan": {
+        "titleCreate": "Crear Plan de Suscripción",
+        "titleEdit": "Actualizar Plan de Suscripción",
+        "desc": "Configure los parámetros, el precio y la lista de funciones clave para este paquete de suscripción.",
+        "labelName": "Nombre del Plan",
+        "labelPrice": "Precio (USD)",
+        "labelMaxUsers": "Máximo de Miembros",
+        "labelType": "Ciclo de Facturación"
+      },
+      "alerts": {
+        "approveTitle": "Reembolso Aprobado",
+        "approveDesc": "Solicitud de reembolso aprobada. La cuenta de la organización asociada se ha degradado automáticamente al Plan Gratis.",
+        "rejectTitle": "Reembolso Rechazado",
+        "rejectDesc": "Solicitud de reembolso rechazada. Se ha reactivado el acceso premium de la organización.",
+        "failed": "Acción Fallida",
+        "successPlan": "La configuración del plan se sincronizó correctamente con la base de datos."
+      }
     }
   }
 }

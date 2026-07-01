@@ -268,6 +268,59 @@
           "failedDesc": "Failed to delete organization."
         }
       }
+    },
+    "billing": {
+      "title": "Superadmin Billing",
+      "subTitle": "Global overview of transactions, active subscriptions, and refund requests.",
+      "kpis": {
+        "revenue": "Total Revenue",
+        "active": "Active Subscriptions",
+        "refunds": "Pending Refunds"
+      },
+      "tabs": {
+        "refunds": "Refund Requests",
+        "active": "Active Subscriptions",
+        "history": "Transaction History",
+        "plans": "Manage Plans"
+      },
+      "placeholders": {
+        "noRefunds": "No pending refund requests found.",
+        "noActive": "No active subscriptions found.",
+        "noTransactions": "No transactions found.",
+        "noPlans": "No subscription plans configured in the database yet.",
+        "refundAmount": "Refund amount",
+        "expiry": "Expiry date",
+        "renewOff": "(Auto-renew off)",
+        "unlimited": "Unlimited",
+        "purchasedOn": "Purchased {planName} on {date}",
+        "maxUsers": "Max Users",
+        "features": "Features (comma-separated)",
+        "featuresPlaceholder": "e.g. 5.000 screenshots, Caching, S3 upload"
+      },
+      "buttons": {
+        "reject": "Reject Refund",
+        "approve": "Approve & Terminate",
+        "createPlan": "Create New Plan",
+        "savePlan": "Save Plan",
+        "cancel": "Cancel"
+      },
+      "dialogPlan": {
+        "titleCreate": "Create Subscription Plan",
+        "titleEdit": "Update Subscription Plan",
+        "desc": "Configure the parameters, pricing, and feature list for this subscription package.",
+        "labelName": "Plan Name",
+        "labelPrice": "Price (USD)",
+        "labelMaxUsers": "Maximum Users",
+        "labelType": "Billing Cycle"
+      },
+      "alerts": {
+        "approveTitle": "Refund Approved",
+        "approveDesc": "Refund claim approved. The associated organization account has been automatically downgraded to the Free Plan.",
+        "rejectTitle": "Refund Rejected",
+        "rejectDesc": "Refund request rejected. The organization's premium access has been reactivated.",
+        "failed": "Action Failed",
+        "successPlan": "Plan configurations successfully synchronized with database."
+      }
     }
   }
 }
