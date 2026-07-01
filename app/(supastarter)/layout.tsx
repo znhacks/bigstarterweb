@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import { SiteHeader } from "@/components/layout/header";
+import { constructMetadata } from "@/lib/metadata";
+export const metadata = constructMetadata();
 
 export default async function AuthLayout({
   children

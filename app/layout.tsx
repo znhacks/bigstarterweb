@@ -6,15 +6,16 @@ import GoogleAnalyticsInit from "@/lib/ga";
 import { fontVariables } from "@/lib/fonts";
 import NextTopLoader from "nextjs-toploader";
 import Script from "next/script";
-
 import "./globals.css";
-
 import { ActiveThemeProvider } from "@/components/active-theme";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/components/providers/language-provider";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
+import { constructMetadata } from "@/lib/metadata";
+
+export const metadata = constructMetadata();
 
 export default async function RootLayout({
   children
