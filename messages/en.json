@@ -1,4 +1,70 @@
 {
+  "metadata": {
+    "register": {
+      "title": "Register",
+      "description": "Create a new account"
+    },
+    "login": {
+      "title": "Login",
+      "description": "Login to your account"
+    },
+    "forgot-password": {
+      "title": "Forgot Password",
+      "description": "Reset your password"
+    },
+    "update-password": {
+      "title": "Update Password",
+      "description": "Update your password"
+    },
+    "users": {
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "View your user profile and settings"
+      },
+      "organization": {
+        "general": {
+          "title": "Organization General Settings",
+          "description": "Manage the settings of the organization."
+        },
+        "member": {
+          "title": "Organization Member Settings",
+          "description": "View and manage members, roles, and pending invitations."
+        },
+        "billing": {
+          "title": "Organization Billing Settings",
+          "description": "View your plan details and manage billing."
+        },
+        "settings": {
+          "general": {
+            "title": "Account General Settings",
+            "description": "Manage your general account settings."
+          },
+          "security": {
+            "title": "Account Security Settings",
+            "description": "Manage your account security, passwords, and active sessions."
+          }
+        }
+      }
+    },
+    "superadmin": {
+      "dashboard": {
+        "title": "Superadmin Dashboard",
+        "description": "View your superadmin dashboard and settings"
+      },
+      "users": {
+        "title": "Users",
+        "description": "Manage, view, and oversee all registered user profiles and organization memberships."
+      },
+      "organizations": {
+        "title": "Organizations",
+        "description": "Manage and oversee all registered organizations, active plans, member counts, and metadata."
+      },
+      "billing": {
+        "title": "Billings",
+        "description": "Global overview of transactions, active subscriptions, and refund requests."
+      }
+    }
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",

@@ -1,4 +1,70 @@
 {
+  "metadata": {
+    "register": {
+      "title": "Register",
+      "description": "Buat akun baru"
+    },
+    "login": {
+      "title": "Login",
+      "description": "Login ke akun Anda"
+    },
+    "forgot-password": {
+      "title": "Lupa Kata Sandi",
+      "description": "Atur ulang kata sandi Anda"
+    },
+    "update-password": {
+      "title": "Perbarui Kata Sandi",
+      "description": "Perbarui kata sandi Anda"
+    },
+    "users": {
+      "dashboard": {
+        "title": "Dasbor",
+        "description": "Lacak pendapatan, langganan, dan aktivitas tim dengan antarmuka modern."
+      },
+      "organization": {
+        "general": {
+          "title": "Pengaturan Umum Organisasi",
+          "description": "Kelola pengaturan umum organisasi Anda."
+        },
+        "member": {
+          "title": "Kelola Anggota Organisasi",
+          "description": "Lihat dan kelola anggota, peran, serta undangan tertunda."
+        },
+        "billing": {
+          "title": "Kelola Paket Organisasi",
+          "description": "Lihat detail paket Anda dan kelola penagihan."
+        },
+        "settings": {
+          "general": {
+            "title": "Pengaturan Umum Akun",
+            "description": "Kelola pengaturan umum akun Anda."
+          },
+          "security": {
+            "title": "Pengaturan Keamanan Akun",
+            "description": "Kelola keamanan akun, kata sandi, dan sesi aktif Anda."
+          }
+        }
+      }
+    },
+    "superadmin": {
+      "dashboard": {
+        "title": "Dasbor Superadmin",
+        "description": "Lacak pendapatan, langganan, dan aktivitas tim dengan antarmuka modern."
+      },
+      "users": {
+        "title": "Pengguna Superadmin",
+        "description": "Kelola, lihat, dan awasi semua profil pengguna terdaftar dan keanggotaan organisasi."
+      },
+      "organizations": {
+        "title": "Organisasi Superadmin",
+        "description": "Kelola dan awasi semua organisasi yang terdaftar, paket yang aktif, jumlah anggota, serta metadata."
+      },
+      "billing": {
+        "title": "Keuangan Superadmin",
+        "description": "Ikhtisar global transaksi, langganan aktif, dan permintaan pengembalian dana."
+      }
+    }
+  },
   "common": {
     "save": "Simpan",
     "cancel": "Batal",

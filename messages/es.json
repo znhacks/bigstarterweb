@@ -1,4 +1,70 @@
 {
+  "metadata": {
+    "register": {
+      "title": "Registro",
+      "description": "Crea una nueva cuenta"
+    },
+    "login": {
+      "title": "Acceso",
+      "description": "Inicia sesión en tu cuenta"
+    },
+    "forgot-password": {
+      "title": "Olvidé mi contraseña",
+      "description": "Restablece tu contraseña"
+    },
+    "update-password": {
+      "title": "Actualizar contraseña",
+      "description": "Actualiza tu contraseña"
+    },
+    "users": {
+      "dashboard": {
+        "title": "panel",
+        "description": "Administra y supervisa todos los perfiles de usuario registrados y membresías de organizaciones."
+      },
+      "organization": {
+        "general": {
+          "title": "Configuración general de la organización",
+          "description": "Gestionar la configuración de la organización."
+        },
+        "member": {
+          "title": "Administrar miembros de la organización",
+          "description": "Ver y administrar miembros, roles e invitaciones pendientes."
+        },
+        "billing": {
+          "title": "Facturación de la organización",
+          "description": "Ver y administrar la facturación, los planes y las suscripciones de la organización."
+        },
+        "settings": {
+          "general": {
+            "title": "Configuración de la cuenta",
+            "description": "Administra la configuración general de tu cuenta."
+          },
+          "security": {
+            "title": "Configuración de seguridad",
+            "description": "Administra la seguridad de tu cuenta, las contraseñas y las sesiones activas."
+          }
+        }
+      }
+    },
+    "superadmin": {
+      "dashboard": {
+        "title": "Panel de Superadministrador",
+        "description": "Administra y supervisa todos los perfiles de usuario registrados, las organizaciones y la facturación."
+      },
+      "users": {
+        "title": "Usuarios Superadmin",
+        "description": "Administra, ve y controla todos los perfiles de usuario registrados y membresías de organizaciones."
+      },
+      "organizations": {
+        "title": "Organizaciones del Superadministrador",
+        "description": "Administra y supervisa todas las organizaciones registradas, los planes activos, la cantidad de miembros y los metadatos."
+      },
+      "billing": {
+        "title": "Facturación de Superadmin",
+        "description": "Descripción global de transacciones, suscripciones activas y solicitudes de reembolso."
+      }
+    }
+  },
   "common": {
     "save": "Guardar",
     "cancel": "Cancelar",
