@@ -18,7 +18,7 @@ import { LOCALE_COOKIE } from "@/i18n/routing";
 const supportedLocales = [
   { code: "en", label: "English" },
   { code: "id", label: "Bahasa Indonesia" },
-  { code: "es", label: "Español" }
+  { code: "ar", label: "العربية" }
 ] as const;
 
 export function LanguageSwitcher() {

@@ -45,7 +45,7 @@ interface AlertState {
 const supportedLocales = [
   { code: "en", label: "English" },
   { code: "id", label: "Bahasa Indonesia" },
-  { code: "es", label: "Español" }
+  { code: "ar", label: "العربية" }
 ] as const;
 
 export function AccountGeneralSettings() {
@@ -91,7 +91,7 @@ export function AccountGeneralSettings() {
           error: userError
         } = await supabase.auth.getUser();
         if (userError || !user) {
-          router.push("/dashboard/login/v2");
+          router.push("/login");
           return;
         }
 

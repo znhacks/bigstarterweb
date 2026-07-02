@@ -37,6 +37,7 @@ import {
 
 // Impor klien Supabase
 import { supabase } from "@/lib/supabase";
+import { useLocale } from "next-intl";
 
 type NavGroup = {
   title: string;
@@ -136,9 +137,13 @@ export const navItems: NavGroup[] = [
 ];
 
 export function NavMain() {
+  const locale = useLocale();
+
+  // Tentukan arah dropdown melayang secara dinamis berdasarkan bahasa
+
   const pathname = usePathname();
   const { isMobile } = useSidebar();
-
+  const dropdownSide = isMobile ? "bottom" : locale === "ar" ? "left" : "right";
   // State untuk melacak grup user (users / superadmin) dan role organisasi internal
   const [userGroup, setUserGroup] = useState<"users" | "superadmin" | null>(null);
   const [userRole, setUserRole] = useState<"Owner" | "Admin" | "Member" | null>(null);
@@ -267,11 +272,16 @@ export function NavMain() {
     }))
     .filter((group) => group.items.length > 0);
 
+  // Ganti/tambahkan import useLocale di bagian atas file Anda:
+
+  // Di dalam komponen rendering Anda:
+
   return (
     <>
       {filteredNavItems.map((nav) => (
         <SidebarGroup key={nav.title}>
-          <SidebarGroupLabel>{nav.title}</SidebarGroupLabel>
+          {/* 1. Tambahkan text-start di Group Label */}
+          <SidebarGroupLabel className="text-start">{nav.title}</SidebarGroupLabel>
           <SidebarGroupContent className="flex flex-col gap-2">
             <SidebarMenu>
               {nav.items.map((item) => (
@@ -281,14 +291,15 @@ export function NavMain() {
                       <div className="hidden group-data-[collapsible=icon]:block">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <SidebarMenuButton tooltip={item.title}>
+                            {/* 2. Tambahkan text-start di tombol pemicu dropdown */}
+                            <SidebarMenuButton className="text-start" tooltip={item.title}>
                               {item.icon && <item.icon />}
                               <span>{item.title}</span>
-                              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                              <ChevronRight className="ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:-scale-x-100" />
                             </SidebarMenuButton>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
-                            side={isMobile ? "bottom" : "right"}
+                            side={dropdownSide}
                             align={isMobile ? "end" : "start"}
                             className="min-w-48 rounded-lg">
                             <DropdownMenuLabel>{item.title}</DropdownMenuLabel>
@@ -307,20 +318,24 @@ export function NavMain() {
                         className="group/collapsible block group-data-[collapsible=icon]:hidden"
                         defaultOpen={!!item.items.find((s) => s.href === pathname)}>
                         <CollapsibleTrigger asChild>
+                          {/* 3. Tambahkan text-start di tombol pemicu collapsible */}
                           <SidebarMenuButton
-                            className="hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                            className="hover:text-foreground active:text-foreground text-start hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
                             tooltip={item.title}>
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
-                            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                            <ChevronRight className="ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:-scale-x-100" />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                          <SidebarMenuSub>
+                          <SidebarMenuSub className="border-s ps-2">
+                            {" "}
+                            {/* Menggunakan border logis */}
                             {item?.items?.map((subItem, key) => (
                               <SidebarMenuSubItem key={key}>
+                                {/* 4. Tambahkan text-start di sub-tombol */}
                                 <SidebarMenuSubButton
-                                  className="hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                                  className="hover:text-foreground active:text-foreground text-start hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
                                   isActive={pathname === subItem.href}
                                   asChild>
                                   <Link href={subItem.href} target={subItem.newTab ? "_blank" : ""}>
@@ -334,8 +349,9 @@ export function NavMain() {
                       </Collapsible>
                     </>
                   ) : (
+                    /* 5. Tambahkan text-start di tombol menu biasa */
                     <SidebarMenuButton
-                      className="hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                      className="hover:text-foreground active:text-foreground text-start hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
                       isActive={pathname === item.href}
                       tooltip={item.title}
                       asChild>
@@ -345,21 +361,7 @@ export function NavMain() {
                       </Link>
                     </SidebarMenuButton>
                   )}
-                  {!!item.isComing && (
-                    <SidebarMenuBadge className="peer-hover/menu-button:text-foreground opacity-50">
-                      Coming
-                    </SidebarMenuBadge>
-                  )}
-                  {!!item.isNew && (
-                    <SidebarMenuBadge className="border border-green-400 text-green-600 peer-hover/menu-button:text-green-600">
-                      New
-                    </SidebarMenuBadge>
-                  )}
-                  {!!item.isDataBadge && (
-                    <SidebarMenuBadge className="peer-hover/menu-button:text-foreground">
-                      {item.isDataBadge}
-                    </SidebarMenuBadge>
-                  )}
+                  {/* ... badge lainnya ... */}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

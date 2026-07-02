@@ -5,6 +5,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import { SiteHeader } from "@/components/layout/header";
 import { constructMetadata } from "@/lib/metadata";
+import { getLocale } from "next-intl/server";
 export const metadata = constructMetadata();
 
 export default async function AuthLayout({
@@ -16,9 +17,13 @@ export default async function AuthLayout({
   const defaultOpen =
     cookieStore.get("sidebar_state")?.value === "true" ||
     cookieStore.get("sidebar_state") === undefined;
+  const locale = await getLocale();
+  const dir = locale === "ar" ? "rtl" : "ltr";
+  const sidebarSide = locale === "ar" ? "right" : "left";
 
   return (
     <SidebarProvider
+      dir={dir}
       defaultOpen={defaultOpen}
       style={
         {
@@ -30,7 +35,7 @@ export default async function AuthLayout({
             "calc(100vh - var(--header-height) - (var(--content-padding) * 2) - (var(--content-margin) * 2))"
         } as React.CSSProperties
       }>
-      <AppSidebar variant="inset" />
+      <AppSidebar variant="inset" side={sidebarSide} />
       <SidebarInset>
         <SiteHeader />
         <div className="bg-muted/40 flex flex-1 flex-col">

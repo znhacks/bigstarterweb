@@ -2,7 +2,7 @@
 import { defineRouting } from "next-intl/routing";
 
 export const routing = defineRouting({
-  locales: ["en", "id", "es"], // Daftar bahasa yang didukung
+  locales: ["en", "id", "ar"], // Daftar bahasa yang didukung
   defaultLocale: "en",
   // Karena TIDAK ada segment [locale] di App Router, prefix tidak pernah
   // dimasukkan ke URL. Lokal ditentukan via cookie (lihat i18n/request.ts).

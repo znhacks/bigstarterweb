@@ -24,6 +24,7 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const locale = await getLocale();
+  const dir = locale === "ar" ? "rtl" : "ltr";
   const themeSettings = {
     preset: (cookieStore.get("theme_preset")?.value ?? DEFAULT_THEME.preset) as any,
     scale: (cookieStore.get("theme_scale")?.value ?? DEFAULT_THEME.scale) as any,
@@ -39,7 +40,7 @@ export default async function RootLayout({
   );
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning dir={dir}>
       <head>
         <Script
           src="https://dashboard.shadcnuikit.com/iframe-listener.js"
