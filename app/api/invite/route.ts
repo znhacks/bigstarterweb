@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import { createClient } from "@supabase/supabase-js";
 import { checkSeatLimit } from "@/lib/billing/enforcer"; // Import Seat-Based Enforcer
+import { getUser } from "@/lib/auth";
 
 // Inisialisasi klien Supabase admin/server untuk mencatat undangan
 const supabase = createClient(
@@ -14,11 +15,17 @@ const mailersend = new MailerSend({
 });
 
 export async function POST(req: Request) {
+  const user = await getUser();
+
   try {
     const { email, role, orgName } = await BalancedBody(req);
 
     async function BalancedBody(request: Request) {
       return await request.json();
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (!email || !role) {

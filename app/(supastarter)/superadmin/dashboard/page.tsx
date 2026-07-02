@@ -14,6 +14,7 @@ import { TotalRevenueCard } from "./components/total-revenue";
 import { Download } from "lucide-react";
 import { constructMetadata } from "@/lib/metadata";
 import { getTranslations } from "next-intl/server";
+import { requireRole } from "@/lib/auth";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.superadmin.dashboard");
@@ -25,6 +26,8 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
+  const admin = requireRole(["superadmin"], "/dashboard");
+
   return (
     <div className="space-y-4">
       <div className="flex flex-row items-center justify-between">

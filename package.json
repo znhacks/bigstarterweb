@@ -140,6 +140,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@types/react-world-flags": "^1.6.0",
+    "baseline-browser-mapping": "^2.10.40",
     "eslint": "^9.39.2",
     "eslint-config-next": "^15.5.9",
     "eslint-plugin-better-tailwindcss": "^3.8.0",
