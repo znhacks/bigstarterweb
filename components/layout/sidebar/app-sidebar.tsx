@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { supabase } from "@/lib/supabase";
-import { CreateTenantForm } from "./create-tenant-form";
+import { CreateTenantForm } from "../../create-tenant-form";
 
 // Helper client-side untuk Cookie
 const getCookie = (name: string) => {
