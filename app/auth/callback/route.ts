@@ -6,11 +6,11 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  let next = searchParams.get("next") ?? "/dashboard";
+  let next = searchParams.get("next") ?? "/";
 
   // Keamanan: Pastikan 'next' hanya berupa path relatif untuk mencegah open redirect
   if (next.startsWith("http://") || next.startsWith("https://") || next.startsWith("//")) {
-    next = "/dashboard";
+    next = "/";
   }
 
   if (code) {

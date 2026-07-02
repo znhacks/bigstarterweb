@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { supabase } from "@/lib/supabase";
+import { CreateTenantForm } from "./create-tenant-form";
 
 // Helper client-side untuk Cookie
 const getCookie = (name: string) => {
@@ -353,36 +354,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <DialogHeader>
             <DialogTitle>Add New Organization</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreateOrg} className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="org-name" className="text-sm leading-none font-medium">
-                Organization Name
-              </label>
-              <input
-                id="org-name"
-                type="text"
-                required
-                disabled={isSubmitting}
-                value={newOrgName}
-                onChange={(e) => setNewOrgName(e.target.value)}
-                placeholder="e.g. My Awesome Corp"
-                className="border-input placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isSubmitting}
-                onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save
-              </Button>
-            </DialogFooter>
-          </form>
+          <div className="space-y-4 py-4">
+            <CreateTenantForm />
+          </div>
         </DialogContent>
       </Dialog>
     </>

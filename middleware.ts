@@ -57,7 +57,7 @@ export async function middleware(request: NextRequest) {
   const isAuthCallback = path.startsWith("/auth/callback");
 
   // Rute default tujuan setelah login (bisa disesuaikan dengan kebutuhan Anda)
-  const DEFAULT_REDIRECT_ROUTE = "/dashboard";
+  const DEFAULT_REDIRECT_ROUTE = "/";
 
   // ALUR 1: JIKA USER BELUM LOGIN
   if (!user) {
