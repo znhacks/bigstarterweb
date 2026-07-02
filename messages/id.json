@@ -33,16 +33,16 @@
         "billing": {
           "title": "Kelola Paket Organisasi",
           "description": "Lihat detail paket Anda dan kelola penagihan."
+        }
+      },
+      "settings": {
+        "general": {
+          "title": "Pengaturan Umum Akun",
+          "description": "Kelola pengaturan umum akun Anda."
         },
-        "settings": {
-          "general": {
-            "title": "Pengaturan Umum Akun",
-            "description": "Kelola pengaturan umum akun Anda."
-          },
-          "security": {
-            "title": "Pengaturan Keamanan Akun",
-            "description": "Kelola keamanan akun, kata sandi, dan sesi aktif Anda."
-          }
+        "security": {
+          "title": "Pengaturan Keamanan Akun",
+          "description": "Kelola keamanan akun, kata sandi, dan sesi aktif Anda."
         }
       }
     },

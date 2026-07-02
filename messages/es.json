@@ -33,16 +33,16 @@
         "billing": {
           "title": "Facturación de la organización",
           "description": "Ver y administrar la facturación, los planes y las suscripciones de la organización."
+        }
+      },
+      "settings": {
+        "general": {
+          "title": "Configuración de la cuenta",
+          "description": "Administra la configuración general de tu cuenta."
         },
-        "settings": {
-          "general": {
-            "title": "Configuración de la cuenta",
-            "description": "Administra la configuración general de tu cuenta."
-          },
-          "security": {
-            "title": "Configuración de seguridad",
-            "description": "Administra la seguridad de tu cuenta, las contraseñas y las sesiones activas."
-          }
+        "security": {
+          "title": "Configuración de seguridad",
+          "description": "Administra la seguridad de tu cuenta, las contraseñas y las sesiones activas."
         }
       }
     },

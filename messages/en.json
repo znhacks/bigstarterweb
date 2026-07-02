@@ -33,16 +33,16 @@
         "billing": {
           "title": "Organization Billing Settings",
           "description": "View your plan details and manage billing."
+        }
+      },
+      "settings": {
+        "general": {
+          "title": "Account General Settings",
+          "description": "Manage your general account settings."
         },
-        "settings": {
-          "general": {
-            "title": "Account General Settings",
-            "description": "Manage your general account settings."
-          },
-          "security": {
-            "title": "Account Security Settings",
-            "description": "Manage your account security, passwords, and active sessions."
-          }
+        "security": {
+          "title": "Account Security Settings",
+          "description": "Manage your account security, passwords, and active sessions."
         }
       }
     },
