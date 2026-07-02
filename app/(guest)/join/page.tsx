@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle2, Loader2, AlertCircle, ArrowRight, Ban, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, ArrowRight, Ban, XCircle, X } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 
@@ -258,7 +258,7 @@ export default function JoinOrganization() {
 
   return (
     <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
-      <Card className="border-border/80 w-full max-w-md overflow-hidden rounded-2xl border shadow-lg">
+      <Card className="w-full max-w-md overflow-hidden">
         {isSuccess ? (
           <CardContent className="flex flex-col items-center justify-center space-y-4 py-12 text-center">
             <CheckCircle2 className="h-16 w-16 animate-bounce text-emerald-600" />
@@ -310,13 +310,13 @@ export default function JoinOrganization() {
             </CardContent>
 
             {/* CARD FOOTER DENGAN DUA TOMBOL: GABUNG DAN TOLAK */}
-            <CardFooter className="flex flex-col gap-2 pt-2">
+            <CardFooter className="flex flex-wrap items-center gap-2 pt-2">
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl font-medium">
+                className="inline-flex h-11 w-full items-center justify-center gap-2 font-medium">
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isSubmitting ? "Sedang Bergabung..." : "Terima Undangan & Gabung"}
+                {isSubmitting ? "Sedang Bergabung..." : "Terima"}
                 {!isSubmitting && <ArrowRight className="h-4 w-4" />}
               </Button>
 
@@ -325,8 +325,9 @@ export default function JoinOrganization() {
                 variant="outline"
                 onClick={handleDeclineInvite}
                 disabled={isSubmitting}
-                className="hover:bg-destructive/10 hover:text-destructive h-11 w-full rounded-xl border font-medium">
-                Tolak Undangan
+                className="hover:bg-destructive/10 hover:text-destructive h-11 w-full font-medium">
+                <X className="h-4 w-4" />
+                Tolak
               </Button>
             </CardFooter>
           </form>

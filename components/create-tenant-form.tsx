@@ -38,7 +38,7 @@ export function CreateTenantForm() {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="name">Nama Organisasi / Perusahaan</Label>
+        <Label htmlFor="name">Nama Organisasi</Label>
         <Input
           id="name"
           name="name"
