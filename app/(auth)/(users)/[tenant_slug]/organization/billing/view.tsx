@@ -35,6 +35,7 @@ import { plans, Plan } from "@/config/billing"; // Import berkas konfigurasi sta
 import { useLocale, useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
+import { requireRole } from "@/lib/auth";
 
 interface AlertState {
   title: string;
@@ -68,6 +69,8 @@ export function OrganizationBilling() {
   const locale = useLocale();
 
   const t = useTranslations("organization-billing");
+
+  
 
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
