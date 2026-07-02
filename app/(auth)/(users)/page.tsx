@@ -16,7 +16,7 @@ export default async function LandingOrRedirectPage() {
 
     if (tenants.length > 0) {
       console.log(`Mengalihkan ke tenant pertama: /${tenants[0].slug}`);
-      redirect(`/${tenants[0].slug}`);
+      redirect(`/${tenants[0].slug}/dashboard`);
     } else {
       console.log("User tidak punya tenant. Mengalihkan ke /create-tenant");
       redirect("/create-tenant");

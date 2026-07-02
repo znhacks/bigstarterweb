@@ -49,7 +49,7 @@ export function LoginForm() {
     if (isSuperAdmin) {
       router.push("/superadmin/dashboard");
     } else {
-      router.push(nextTarget || "/dashboard");
+      router.push(nextTarget || "/");
     }
     router.refresh();
   };

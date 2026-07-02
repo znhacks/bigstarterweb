@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { ChevronsUpDown, Building2, Check, Plus, Loader2 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useParams, useRouter } from "next/navigation"; // Tambahkan useParams & useRouter
 import { useIsTablet } from "@/hooks/use-mobile";
 import Link from "next/link";
 
@@ -41,19 +41,40 @@ import {
 
 import { supabase } from "@/lib/supabase";
 
+// Helper client-side untuk Cookie
+const getCookie = (name: string) => {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift();
+  return null;
+};
+
+const setCookie = (name: string, value: string) => {
+  if (typeof document === "undefined") return;
+  const maxAge = 60 * 60 * 24 * 30; // 30 hari
+  const secure = window.location.protocol === "https:" ? "Secure;" : "";
+  document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Lax; ${secure}`;
+};
+
+// Tambahkan 'slug' ke dalam interface Organization
 interface Organization {
   id: string;
   name: string;
+  slug: string;
   logo?: string | null;
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const params = useParams(); // Membaca parameter URL dinamis
+  const router = useRouter();
+  const tenantSlug = params?.tenant_slug as string | undefined; // Ambil [tenant_slug] dari URL
+
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
   const isTablet = useIsTablet();
 
   const [user, setUser] = useState<any>(null);
-
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
 
@@ -63,6 +84,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
 
+  // 1. Memuat Pengguna & Daftar Organisasi dari Database
+  // 1. Memuat Pengguna & Daftar Organisasi dari Database (Sudah diperbaiki)
   const loadUserAndOrganizations = async () => {
     setIsLoading(true);
     try {
@@ -84,6 +107,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           tenants (
             id,
             name,
+            slug,
             logo
           )
         `
@@ -94,22 +118,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       const orgs: Organization[] = (data || [])
         .map((item: any) => item.tenants)
-        .filter((tenant): tenant is Organization => tenant !== null)
+        .filter((tenant): tenant is any => tenant !== null)
         .map((t: any) => ({
           id: t.id,
           name: t.name,
+          slug: t.slug,
           logo: t.logo || null
         }));
 
       setOrganizations(orgs);
-
-      if (orgs.length > 0) {
-        const savedOrgId = localStorage.getItem("active_org_id");
-        const matchedOrg = orgs.find((o) => o.id === savedOrgId);
-        setActiveOrg(matchedOrg || orgs[0]);
-      } else {
-        setActiveOrg(null);
-      }
     } catch (error: any) {
       console.error("Gagal memuat data organisasi:", error?.message || error);
     } finally {
@@ -121,6 +138,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     loadUserAndOrganizations();
   }, []);
 
+  // 2. REAKTIF: Menentukan & Mensinkronkan Organisasi Aktif jika URL / Cookie Berubah
+  useEffect(() => {
+    if (organizations.length === 0) return;
+
+    let targetOrg: Organization | null = null;
+
+    if (tenantSlug) {
+      // Prioritas 1: Jika ada slug di URL, cari organisasi yang slug-nya cocok
+      targetOrg = organizations.find((o) => o.slug === tenantSlug) || null;
+    } else {
+      // Prioritas 2: Jika flat URL, baca dari Cookie/LocalStorage
+      const savedOrgId = getCookie("active_tenant_id") || localStorage.getItem("active_org_id");
+      targetOrg = organizations.find((o) => o.id === savedOrgId) || null;
+    }
+
+    // Fallback: Jika tidak ada yang cocok, gunakan organisasi pertama
+    const finalActiveOrg = targetOrg || organizations[0];
+    setActiveOrg(finalActiveOrg);
+
+    // Otomatis sinkronkan Cookie dan LocalStorage agar selaras dengan server
+    if (finalActiveOrg) {
+      localStorage.setItem("active_org_id", finalActiveOrg.id);
+      setCookie("active_tenant_id", finalActiveOrg.id);
+    }
+  }, [tenantSlug, organizations]); // Berjalan otomatis jika URL (tenantSlug) atau daftar orgs berubah
+
   useEffect(() => {
     if (isMobile) setOpenMobile(false);
   }, [pathname]);
@@ -129,24 +172,43 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setOpen(!isTablet);
   }, [isTablet]);
 
+  // 3. Handler saat memilih Organisasi dari Dropdown
   const handleSelectOrg = (org: Organization) => {
     setActiveOrg(org);
     localStorage.setItem("active_org_id", org.id);
+    setCookie("active_tenant_id", org.id);
 
     window.dispatchEvent(new Event("storage"));
 
-    window.location.reload();
+    if (tenantSlug) {
+      // Jika menggunakan URL Slug, arahkan URL ke slug baru (contoh dari /stm ke /studiotengahmalam)
+      router.push(`/${org.slug}/dashboard`);
+    } else {
+      // Jika flat route, cukup reload halaman untuk memuat state baru
+      window.location.reload();
+    }
   };
 
+  // 4. Handler saat membuat Organisasi baru
   const handleCreateOrg = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newOrgName.trim() || !user) return;
 
     setIsSubmitting(true);
     try {
+      // Membuat slug otomatis sederhana dari nama organisasi baru
+      const generatedSlug = newOrgName
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+
       const { data: tenantData, error: tenantError } = await supabase
         .from("tenants")
-        .insert({ name: newOrgName.trim() })
+        .insert({
+          name: newOrgName.trim(),
+          slug: generatedSlug
+        })
         .select()
         .single();
 
@@ -163,6 +225,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       const newOrg: Organization = {
         id: tenantData.id,
         name: tenantData.name,
+        slug: tenantData.slug,
         logo: null
       };
 

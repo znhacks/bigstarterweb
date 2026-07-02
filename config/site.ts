@@ -1,6 +1,6 @@
 // config/site.ts
 export const siteConfig = {
-  name: "SupastarxShadcnkit",
+  name: "BigStarter",
   description: "Website Sass dengan fitur yang super lengkap.",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   ogImage: "/logo.png",
