@@ -1,21 +1,20 @@
 import { NextResponse } from "next/server";
 import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
-import { createClient } from "@supabase/supabase-js";
 import { checkSeatLimit } from "@/lib/billing/enforcer"; // Import Seat-Based Enforcer
 import { getUser } from "@/lib/auth";
-
-// Inisialisasi klien Supabase admin/server untuk mencatat undangan
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-);
+import { createClient } from "@/lib/supabase/server"; // UBAH: Gunakan helper server SSR kita
 
 const mailersend = new MailerSend({
   apiKey: process.env.MAILERSEND_API_KEY || ""
 });
 
 export async function POST(req: Request) {
+  // 1. Ambil user aktif dari sesi cookie aman
   const user = await getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const { email, role, orgName } = await BalancedBody(req);
@@ -24,15 +23,14 @@ export async function POST(req: Request) {
       return await request.json();
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!email || !role || !orgName) {
+      return NextResponse.json({ error: "Missing email, role, or orgName" }, { status: 400 });
     }
 
-    if (!email || !role) {
-      return NextResponse.json({ error: "Missing email or role" }, { status: 400 });
-    }
+    // UBAH: Inisialisasi klien Supabase Server yang membawa sesi cookie aktif
+    const supabase = await createClient();
 
-    // 1. Dapatkan ID organisasi (tenant_id) berdasarkan nama organisasi
+    // 2. Dapatkan ID organisasi (tenant_id) berdasarkan nama organisasi
     const { data: tenantData, error: tenantError } = await supabase
       .from("tenants")
       .select("id")
@@ -47,7 +45,6 @@ export async function POST(req: Request) {
     }
 
     // --- INTEGRASI SEAT-BASED LIMIT CHECK (TAHAP 7) ---
-    // Sebelum mencatat undangan baru dan mengirimkan email, kita periksa kuota anggota organisasi saat ini.
     const seatCheck = await checkSeatLimit(tenantData.id);
 
     if (!seatCheck.allowed) {
@@ -60,7 +57,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Kelola penyimpanan data undangan ke tabel 'invitations' secara manual
+    // 3. Kelola penyimpanan data undangan ke tabel 'invitations' secara manual
     const { data: existingInvite } = await supabase
       .from("invitations")
       .select("id")
@@ -78,15 +75,15 @@ export async function POST(req: Request) {
     } else {
       const { error: insertError } = await supabase.from("invitations").insert({
         tenant_id: tenantData.id,
-        email,
+        email: email.trim().toLowerCase(),
         role
       });
 
       if (insertError) throw insertError;
     }
 
-    // 3. Meng-encode data parameter ke Base64 untuk URL Join
-    const tokenData = JSON.stringify({ email, role, orgName });
+    // 4. Meng-encode data parameter ke Base64 untuk URL Join
+    const tokenData = JSON.stringify({ email: email.trim().toLowerCase(), role, orgName });
     const token = Buffer.from(tokenData).toString("base64");
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const joinLink = `${appUrl}/join?token=${token}`;
@@ -105,7 +102,7 @@ export async function POST(req: Request) {
       </div>
     `;
 
-    // 4. Konfigurasi Pengirim dengan fallback
+    // 5. Konfigurasi Pengirim MailerSend
     const senderEmail = process.env.MAILERSEND_SENDER_EMAIL || "MS_test@trial-xxxxx.mlsender.net";
     const sentFrom = new Sender(senderEmail, "Acme Support");
 
@@ -124,7 +121,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
-    // MENAMPILKAN ERROR ASLI DI TERMINAL VS CODE ANDA
     console.error("CRITICAL_INVITE_API_ERROR:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

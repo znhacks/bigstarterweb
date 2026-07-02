@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle2, Loader2, AlertCircle, ArrowRight, Ban } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, ArrowRight, Ban, XCircle } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
 
@@ -37,6 +37,7 @@ export default function JoinOrganization() {
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isDeclined, setIsDeclined] = useState(false); // State baru untuk penolakan
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -79,7 +80,6 @@ export default function JoinOrganization() {
             .eq("email", decodedData.email)
             .maybeSingle();
 
-          // Jika baris undangan tidak ditemukan (berarti sudah di-cancel oleh admin)
           if (!inviteRow) {
             setIsInviteValid(false);
           } else {
@@ -98,6 +98,7 @@ export default function JoinOrganization() {
     checkActiveUserAndInvitation();
   }, [token]);
 
+  // AKSI 1: MENERIMA UNDANGAN (JOIN)
   const handleJoinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeUser || !decoded) return;
@@ -108,7 +109,7 @@ export default function JoinOrganization() {
     try {
       const { data: tenantData, error: tenantError } = await supabase
         .from("tenants")
-        .select("id")
+        .select("id, slug") // Ambil slug juga
         .eq("name", decoded.orgName)
         .single();
 
@@ -131,7 +132,7 @@ export default function JoinOrganization() {
       const { error: membershipError } = await supabase.from("memberships").insert({
         user_id: activeUser.id,
         tenant_id: tenantData.id,
-        role: decoded.role.toLowerCase()
+        role: decoded.role // Simpan peran asli (Owner/Admin/Member)
       });
 
       if (membershipError) throw membershipError;
@@ -143,11 +144,18 @@ export default function JoinOrganization() {
         .eq("tenant_id", tenantData.id)
         .eq("email", decoded.email);
 
-      setIsSuccess(true);
+      // 3. SINKRONISASI STATE KLIEN DAN SERVER COOKIE
       localStorage.setItem("active_org_id", tenantData.id);
 
+      // Pasang cookie active_tenant_id agar Server Components langsung sinkron
+      const maxAge = 60 * 60 * 24 * 30; // 30 hari
+      document.cookie = `active_tenant_id=${tenantData.id}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
+
+      setIsSuccess(true);
+
       setTimeout(() => {
-        router.push("/dashboard/default");
+        // Redirect ke dashboard dinamis berbasis slug tenant baru Anda
+        router.push(`/${tenantData.slug}`);
         router.refresh();
       }, 2000);
     } catch (error: any) {
@@ -157,10 +165,70 @@ export default function JoinOrganization() {
     }
   };
 
+  // AKSI 2: MENOLAK UNDANGAN (DECLINE)
+  const handleDeclineInvite = async () => {
+    if (!activeUser || !decoded) return;
+
+    setIsSubmitting(true);
+    setErrorMsg(null);
+
+    try {
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("name", decoded.orgName)
+        .single();
+
+      if (!tenantData) {
+        throw new Error("Organisasi tidak ditemukan.");
+      }
+
+      // Hapus data undangan langsung dari tabel 'invitations'
+      const { error } = await supabase
+        .from("invitations")
+        .delete()
+        .eq("tenant_id", tenantData.id)
+        .eq("email", decoded.email);
+
+      if (error) throw error;
+
+      setIsDeclined(true);
+    } catch (error: any) {
+      setErrorMsg(error.message || "Gagal menolak undangan.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (isLoadingUser) {
     return (
       <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
         <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // TAMPILAN JIKA UNDANGAN SUDAH DITOLAK
+  if (isDeclined) {
+    return (
+      <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
+        <Card className="border-border/85 w-full max-w-md rounded-2xl border py-8 text-center shadow-lg">
+          <CardContent className="flex flex-col items-center justify-center space-y-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+              <XCircle className="h-6 w-6 text-amber-600" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-foreground text-xl font-bold">Undangan Ditolak</h2>
+              <p className="text-muted-foreground mx-auto max-w-xs text-sm">
+                Anda telah menolak undangan untuk bergabung dengan{" "}
+                <strong>{decoded?.orgName}</strong>.
+              </p>
+            </div>
+            <Button variant="outline" className="mt-2" onClick={() => router.push("/")}>
+              Kembali ke Beranda
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -175,9 +243,9 @@ export default function JoinOrganization() {
               <Ban className="h-6 w-6 text-red-600" />
             </div>
             <div className="space-y-1">
-              <h2 className="text-foreground text-xl font-bold">Undangan Dibatalkan</h2>
+              <h2 className="text-foreground text-xl font-bold">Undangan Tidak Aktif</h2>
               <p className="text-muted-foreground mx-auto max-w-xs text-sm">
-                Tautan undangan ini telah dibatalkan oleh admin organisasi atau tidak lagi valid.
+                Tautan undangan ini telah dibatalkan oleh admin, kedaluwarsa, atau tidak lagi valid.
               </p>
             </div>
           </CardContent>
@@ -240,14 +308,25 @@ export default function JoinOrganization() {
                 )}
               </div>
             </CardContent>
-            <CardFooter className="pt-2">
+
+            {/* CARD FOOTER DENGAN DUA TOMBOL: GABUNG DAN TOLAK */}
+            <CardFooter className="flex flex-col gap-2 pt-2">
               <Button
                 type="submit"
                 disabled={isSubmitting}
                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl font-medium">
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isSubmitting ? "Joining..." : "Terima Undangan & Gabung"}
+                {isSubmitting ? "Sedang Bergabung..." : "Terima Undangan & Gabung"}
                 {!isSubmitting && <ArrowRight className="h-4 w-4" />}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDeclineInvite}
+                disabled={isSubmitting}
+                className="hover:bg-destructive/10 hover:text-destructive h-11 w-full rounded-xl border font-medium">
+                Tolak Undangan
               </Button>
             </CardFooter>
           </form>
