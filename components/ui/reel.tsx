@@ -490,7 +490,7 @@ export const ReelPreviousButton = ({ className, children, ...props }: ReelPrevio
       type="button"
       variant="ghost"
       {...props}>
-      {children || <ChevronLeft className="size-4" />}
+      {children || <ChevronLeft className="size-4 rtl:-scale-x-100" />}
     </Button>
   );
 };
@@ -520,7 +520,7 @@ export const ReelNextButton = ({ className, children, ...props }: ReelNextButton
       type="button"
       variant="ghost"
       {...props}>
-      {children || <ChevronRight className="size-4" />}
+      {children || <ChevronRight className="size-4 rtl:-scale-x-100" />}
     </Button>
   );
 };

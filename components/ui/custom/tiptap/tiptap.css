@@ -215,23 +215,26 @@
 .ProseMirror blockquote {
   margin: var(--editor-spacing-6) 0;
   padding: var(--editor-spacing-4) var(--editor-spacing-6);
-  border-left: 4px solid var(--editor-border-strong);
+  border-inline-start: 4px solid var(--editor-border-strong);
   font-style: italic;
   color: var(--editor-text-gray);
   background-color: var(--editor-bg-subtle);
-  border-radius: 0 8px 8px 0;
+  border-start-start-radius: 0;
+  border-start-end-radius: 8px;
+  border-end-start-radius: 0;
+  border-end-end-radius: 8px;
 }
 
 /* Lists */
 .ProseMirror ul,
 .ProseMirror ol {
   margin: var(--editor-spacing-4) 0;
-  padding-left: var(--editor-spacing-6);
+  padding-inline-start: var(--editor-spacing-6);
 }
 
 .ProseMirror li {
   margin: var(--editor-spacing-2) 0;
-  padding-left: var(--editor-spacing-2);
+  padding-inline-start: var(--editor-spacing-2);
 }
 
 .ProseMirror ul {
@@ -424,7 +427,7 @@
 .is-editor-empty::before {
   color: var(--editor-text-gray);
   content: attr(data-placeholder);
-  float: left;
+  float: inline-start;
   height: 0;
   pointer-events: none;
 }

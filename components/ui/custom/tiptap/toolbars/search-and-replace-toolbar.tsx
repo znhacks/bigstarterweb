@@ -67,7 +67,7 @@ export function SearchAndReplaceToolbar() {
                 setOpen(!open);
               }}
               className={cn("h-8 w-max px-3 font-normal")}>
-              <Repeat className="mr-2 h-4 w-4" />
+              <Repeat className="me-2 h-4 w-4" />
               <p>Search & Replace</p>
             </Button>
           </PopoverTrigger>
@@ -100,10 +100,10 @@ export function SearchAndReplaceToolbar() {
               {results?.length === 0 ? selectedResult : selectedResult + 1}/{results?.length}
             </span>
             <Button onClick={selectPrevious} size="icon" variant="ghost" className="size-7">
-              <ArrowLeftIcon className="size-4" />
+              <ArrowLeftIcon className="size-4 rtl:-scale-x-100" />
             </Button>
             <Button onClick={selectNext} size="icon" className="size-7" variant="ghost">
-              <ArrowRightIcon className="h-4 w-4" />
+              <ArrowRightIcon className="h-4 w-4 rtl:-scale-x-100" />
             </Button>
             <Separator orientation="vertical" className="mx-0.5 h-7" />
             <Button
@@ -131,7 +131,7 @@ export function SearchAndReplaceToolbar() {
               onClick={() => {
                 setOpen(false);
               }}
-              className="absolute top-3 right-3 h-4 w-4 cursor-pointer"
+              className="absolute top-3 end-3 h-4 w-4 cursor-pointer"
             />
             <div className="flex w-full items-center gap-3">
               <Button
@@ -141,7 +141,7 @@ export function SearchAndReplaceToolbar() {
                 onClick={() => {
                   setReplacing(false);
                 }}>
-                <ArrowLeftIcon className="h-4 w-4" />
+                <ArrowLeftIcon className="h-4 w-4 rtl:-scale-x-100" />
               </Button>
               <h2 className="text-sm font-medium">Search and replace</h2>
             </div>
@@ -169,7 +169,7 @@ export function SearchAndReplaceToolbar() {
                   placeholder="Replace..."
                 />
               </div>
-              <div className="mt-3 flex items-center space-x-2">
+              <div className="mt-3 flex items-center gap-2">
                 <Checkbox
                   checked={checked}
                   onCheckedChange={(checked: boolean) => {
@@ -192,10 +192,10 @@ export function SearchAndReplaceToolbar() {
                   size="icon"
                   className="h-7 w-7"
                   variant="secondary">
-                  <ArrowLeftIcon className="h-4 w-4" />
+                  <ArrowLeftIcon className="h-4 w-4 rtl:-scale-x-100" />
                 </Button>
                 <Button onClick={selectNext} size="icon" className="h-7 w-7" variant="secondary">
-                  <ArrowRightIcon className="h-4 w-4" />
+                  <ArrowRightIcon className="h-4 w-4 rtl:-scale-x-100" />
                 </Button>
               </div>
 

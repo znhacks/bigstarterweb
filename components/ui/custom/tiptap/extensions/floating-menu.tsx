@@ -365,7 +365,7 @@ export function TipTapFloatingMenu({ editor }: { editor: Editor }) {
                         <span className="text-sm font-medium">{item.title}</span>
                         <span className="text-muted-foreground text-xs">{item.description}</span>
                       </div>
-                      <kbd className="bg-muted text-muted-foreground ml-auto flex h-5 items-center rounded px-1.5 text-xs">
+                      <kbd className="bg-muted text-muted-foreground ms-auto flex h-5 items-center rounded px-1.5 text-xs">
                         ↵
                       </kbd>
                     </CommandItem>

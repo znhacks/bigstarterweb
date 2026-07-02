@@ -47,7 +47,7 @@ const LinkToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 )}
                 ref={ref}
                 {...props}>
-                <p className="mr-2 text-base">↗</p>
+                <p className="me-2 text-base">↗</p>
                 <p className={"decoration-gray-7 underline underline-offset-4"}>Link</p>
               </Button>
             </PopoverTrigger>
@@ -64,7 +64,7 @@ const LinkToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
           asChild
           className="relative px-3 py-2.5">
           <div className="relative">
-            <PopoverClose className="absolute top-3 right-3">
+            <PopoverClose className="absolute top-3 end-3">
               <X className="h-4 w-4" />
             </PopoverClose>
             <form onSubmit={handleSubmit}>
@@ -90,7 +90,7 @@ const LinkToolbar = React.forwardRef<HTMLButtonElement, ButtonProps>(
                         (editor?.chain().focus() as any).unsetLink().run();
                         setLink("");
                       }}>
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="me-2 h-4 w-4" />
                       Remove
                     </Button>
                   )}

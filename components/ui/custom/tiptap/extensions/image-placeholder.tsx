@@ -179,11 +179,11 @@ function ImagePlaceholderComponent(props: NodeViewProps) {
             <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="upload">
-                  <Upload className="mr-2 h-4 w-4" />
+                  <Upload className="me-2 h-4 w-4" />
                   Upload
                 </TabsTrigger>
                 <TabsTrigger value="url">
-                  <Link className="mr-2 h-4 w-4" />
+                  <Link className="me-2 h-4 w-4" />
                   URL
                 </TabsTrigger>
               </TabsList>
@@ -217,7 +217,7 @@ function ImagePlaceholderComponent(props: NodeViewProps) {
                             Remove
                           </Button>
                           <Button disabled={uploading}>
-                            {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {uploading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                             Upload
                           </Button>
                         </div>

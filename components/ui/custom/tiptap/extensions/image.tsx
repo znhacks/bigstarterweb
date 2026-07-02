@@ -282,7 +282,7 @@ function TiptapImage(props: NodeViewProps) {
         {editor?.isEditable && (
           <div
             className={cn(
-              "bg-background/80 absolute top-4 right-4 flex items-center gap-1 rounded-md border p-1 opacity-0 backdrop-blur transition-opacity",
+              "bg-background/80 absolute top-4 end-4 flex items-center gap-1 rounded-md border p-1 opacity-0 backdrop-blur transition-opacity",
               !resizing && "group-hover:opacity-100",
               openedMore && "opacity-100"
             )}>
@@ -316,11 +316,11 @@ function TiptapImage(props: NodeViewProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" alignOffset={-90} className="mt-1 text-sm">
                 <DropdownMenuItem onClick={() => setEditingCaption(true)}>
-                  <Edit className="mr-2 size-4" /> Edit Caption
+                  <Edit className="me-2 size-4" /> Edit Caption
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
-                    <ImageIcon className="mr-2 size-4" /> Replace Image
+                    <ImageIcon className="me-2 size-4" /> Replace Image
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="w-fit min-w-52 p-2">
                     <div className="space-y-4">
@@ -394,13 +394,13 @@ function TiptapImage(props: NodeViewProps) {
                       });
                     }
                   }}>
-                  <Maximize className="mr-2 size-4" /> Full Width
+                  <Maximize className="me-2 size-4" /> Full Width
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={deleteNode}>
-                  <Trash className="mr-2 size-4" /> Delete Image
+                  <Trash className="me-2 size-4" /> Delete Image
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

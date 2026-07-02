@@ -77,7 +77,7 @@ export const AlignmentTooolbar = () => {
             key={index}
             onClick={() => handleAlign(option.value)}
             active={currentTextAlign() === option.value}>
-            <span className="mr-2">{option.icon}</span>
+            <span className="me-2">{option.icon}</span>
             {option.name}
           </MobileToolbarItem>
         ))}
@@ -91,9 +91,9 @@ export const AlignmentTooolbar = () => {
         <TooltipTrigger asChild>
           <DropdownMenuTrigger disabled={isDisabled} asChild>
             <Button variant="ghost" size="sm" className="h-8 w-max font-normal" type="button">
-              <span className="mr-2">{alignmentOptions[findIndex(currentTextAlign())]?.icon}</span>
+              <span className="me-2">{alignmentOptions[findIndex(currentTextAlign())]?.icon}</span>
               {alignmentOptions[findIndex(currentTextAlign())]?.name}
-              <ChevronDown className="ml-2 h-4 w-4" />
+              <ChevronDown className="me-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
@@ -111,10 +111,10 @@ export const AlignmentTooolbar = () => {
                 handleAlign(option.value);
               }}
               key={index}>
-              <span className="mr-2">{option.icon}</span>
+              <span className="me-2">{option.icon}</span>
               {option.name}
 
-              {option.value === currentTextAlign() && <Check className="ml-auto h-4 w-4" />}
+              {option.value === currentTextAlign() && <Check className="ms-auto h-4 w-4" />}
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>

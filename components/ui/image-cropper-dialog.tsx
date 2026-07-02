@@ -245,8 +245,8 @@ export function ImageCropperDialog({
                   variant="ghost"
                   size="icon"
                   onClick={() => setImageSrc(null)}
-                  className="text-muted-foreground hover:text-foreground -ml-1 h-8 w-8 rounded-lg">
-                  <ArrowLeft className="h-4 w-4" />
+                  className="text-muted-foreground hover:text-foreground -ms-1 h-8 w-8 rounded-lg">
+                  <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" />
                 </Button>
               )}
               Update Profile Photo
@@ -264,10 +264,10 @@ export function ImageCropperDialog({
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-5">
             <TabsList className="bg-muted/60 grid h-11 w-full grid-cols-2 rounded-xl p-1">
               <TabsTrigger value="upload" className="rounded-lg py-2 text-xs font-semibold">
-                <Upload className="mr-2 h-3.5 w-3.5" /> Upload File
+                <Upload className="me-2 h-3.5 w-3.5" /> Upload File
               </TabsTrigger>
               <TabsTrigger value="url" className="rounded-lg py-2 text-xs font-semibold">
-                <Link2 className="mr-2 h-3.5 w-3.5" /> From URL
+                <Link2 className="me-2 h-3.5 w-3.5" /> From URL
               </TabsTrigger>
             </TabsList>
 

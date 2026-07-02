@@ -73,7 +73,7 @@ const ColorHighlightButton = ({
 		className="flex w-full items-center justify-between rounded-sm px-2 py-1 text-sm hover:bg-gray-3"
 		type="button"
 	>
-		<div className="flex items-center space-x-2">
+		<div className="flex items-center gap-2">
 			<div
 				className="rounded-sm border px-1 py-px font-medium"
 				style={isHighlight ? { backgroundColor: color } : { color }}
@@ -172,7 +172,7 @@ export const ColorHighlightToolbar = () => {
 								className={cn("h-8 w-14 p-0 font-normal")}
 							>
 								<span className="text-md">A</span>
-								<ChevronDownIcon className="ml-2 h-4 w-4" />
+								<ChevronDownIcon className="me-2 h-4 w-4" />
 							</Button>
 						</PopoverTrigger>
 					</TooltipTrigger>
@@ -180,7 +180,7 @@ export const ColorHighlightToolbar = () => {
 				</Tooltip>
 
 				<PopoverContent align="start" className="w-56 p-1 dark:bg-gray-2">
-					<ScrollArea className="max-h-80 overflow-y-auto pr-2">
+					<ScrollArea className="max-h-80 overflow-y-auto pe-2">
 						<div className="mb-2.5 mt-2 px-2 text-xs text-gray-11">Color</div>
 						{TEXT_COLORS.map(({ name, color }) => (
 							<ColorHighlightButton
@@ -194,7 +194,7 @@ export const ColorHighlightToolbar = () => {
 
 						<Separator className="my-3" />
 
-						<div className="mb-2.5 w-full px-2 pr-3 text-xs text-gray-11">
+						<div className="mb-2.5 w-full px-2 pe-3 text-xs text-gray-11">
 							Background
 						</div>
 						{HIGHLIGHT_COLORS.map(({ name, color }) => (
