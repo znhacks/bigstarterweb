@@ -297,37 +297,23 @@ export default function JoinOrganization() {
                   <span className="text-foreground font-semibold capitalize">{decoded.role}</span>
                 </div>
               </div>
-
-              <div className="text-muted-foreground bg-accent/5 space-y-1 rounded-xl border border-dashed p-3 text-xs">
-                <p>Anda saat ini masuk sebagai:</p>
-                <p className="text-foreground text-sm font-semibold">{activeUser.email}</p>
-                {isDifferentEmail && (
-                  <p className="mt-1 font-medium text-amber-600">
-                    *Catatan: Email ini berbeda dengan email tujuan undangan ({decoded.email}).
-                  </p>
-                )}
-              </div>
             </CardContent>
 
             {/* CARD FOOTER DENGAN DUA TOMBOL: GABUNG DAN TOLAK */}
-            <CardFooter className="flex flex-wrap items-center gap-2 pt-2">
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 font-medium">
-                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isSubmitting ? "Sedang Bergabung..." : "Terima"}
-                {!isSubmitting && <ArrowRight className="h-4 w-4" />}
-              </Button>
-
+            <CardFooter className="flex flex-col gap-2 pt-2 sm:flex-row">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleDeclineInvite}
                 disabled={isSubmitting}
-                className="hover:bg-destructive/10 hover:text-destructive h-11 w-full font-medium">
+                className="h-11 w-full sm:flex-1">
                 <X className="h-4 w-4" />
                 Tolak
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="h-11 w-full sm:flex-1">
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isSubmitting ? "Sedang Bergabung..." : "Terima"}
+                {!isSubmitting && <ArrowRight className="h-4 w-4" />}
               </Button>
             </CardFooter>
           </form>
