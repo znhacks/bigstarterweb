@@ -39,7 +39,7 @@ export async function generateMetadata() {
   });
 }
 
-export default function AccountSecuritySettings() {
+export function AccountSecuritySettings() {
   const router = useRouter();
   const locale = useLocale();
 
