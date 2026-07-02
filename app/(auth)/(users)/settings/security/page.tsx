@@ -1,10 +1,9 @@
-import { generateMeta } from "@/lib/utils";
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
 import { AccountSecuritySettings } from "./view";
 
 export async function generateMetadata() {
-  const t = await getTranslations("metadata.users.dashboard");
+  const t = await getTranslations("metadata.users.settings.security");
 
   return constructMetadata({
     title: t("title"),
