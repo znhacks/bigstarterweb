@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { usePathname } from "next/navigation";
+import { usePathname, useParams } from "next/navigation"; // Tambahkan useParams
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,9 +35,17 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
-// Impor klien Supabase
 import { supabase } from "@/lib/supabase";
 import { useLocale } from "next-intl";
+
+// Helper client-side untuk membaca Cookie
+const getCookie = (name: string) => {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift();
+  return null;
+};
 
 type NavGroup = {
   title: string;
@@ -53,11 +61,10 @@ type NavItem = {
   isDataBadge?: string;
   isNew?: boolean;
   newTab?: boolean;
-  roles?: ("Owner" | "Admin" | "Member")[]; // Mendefinisikan role yang diizinkan melihat menu ini
+  roles?: ("Owner" | "Admin" | "Member")[];
   items?: NavItem[];
 };
 
-// Konfigurasi Navigasi Menu berdasarkan Hak Akses Role
 export const navItems: NavGroup[] = [
   {
     title: "Menu",
@@ -138,18 +145,26 @@ export const navItems: NavGroup[] = [
 
 export function NavMain() {
   const locale = useLocale();
-
-  // Tentukan arah dropdown melayang secara dinamis berdasarkan bahasa
-
   const pathname = usePathname();
+  const params = useParams(); // Membaca param URL dinamis
+  const tenantSlug = params?.tenant_slug as string | undefined; // Ambil slug organisasi aktif dari URL
+
   const { isMobile } = useSidebar();
   const dropdownSide = isMobile ? "bottom" : locale === "ar" ? "left" : "right";
-  // State untuk melacak grup user (users / superadmin) dan role organisasi internal
+
   const [userGroup, setUserGroup] = useState<"users" | "superadmin" | null>(null);
   const [userRole, setUserRole] = useState<"Owner" | "Admin" | "Member" | null>(null);
   const [isLoadingRole, setIsLoadingRole] = useState(true);
 
-  // Ambil data role aktif dari Supabase
+  // Helper untuk melokalisasi link berdasarkan tenant slug aktif saat ini
+  // (Mengubah /dashboard menjadi /studiotengahmalam/dashboard secara otomatis)
+  const getLocalizedHref = (href: string) => {
+    if (tenantSlug && !href.startsWith("/superadmin") && href.startsWith("/")) {
+      return `/${tenantSlug}${href}`;
+    }
+    return href;
+  };
+
   const fetchUserRole = async () => {
     try {
       const {
@@ -163,36 +178,48 @@ export function NavMain() {
         return;
       }
 
-      // PERBAIKAN: Menambahkan pengecekan email fallback superadmin@example.com
       const isSuperAdmin =
         user.app_metadata?.role === "superadmin" ||
         user.user_metadata?.role === "superadmin" ||
-        user.email === "superadmin@example.com"; // Fallback untuk mempermudah development
+        user.email === "superadmin@example.com";
 
       if (isSuperAdmin) {
         setUserGroup("superadmin");
-        setUserRole(null); // Superadmin tidak memerlukan role organisasi spesifik
-        setIsLoadingRole(false);
-        return;
-      }
-
-      // 2. Jika bukan superadmin, kategorikan sebagai grup "users"
-      setUserGroup("users");
-
-      const orgId = localStorage.getItem("active_org_id");
-      if (!orgId) {
         setUserRole(null);
         setIsLoadingRole(false);
         return;
       }
 
-      // Query ke tabel memberships untuk pengguna biasa
-      const { data, error } = await supabase
-        .from("memberships")
-        .select("role")
-        .eq("tenant_id", orgId)
-        .eq("user_id", user.id)
-        .maybeSingle();
+      setUserGroup("users");
+
+      let data: any = null;
+      let error: any = null;
+
+      if (tenantSlug) {
+        // OPSI A: Jika ada slug di URL, langsung query berdasarkan slug (Tanpa balapan state)
+        const { data: resData, error: resError } = await supabase
+          .from("memberships")
+          .select("role, tenants!inner(slug)")
+          .eq("tenants.slug", tenantSlug)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        data = resData;
+        error = resError;
+      } else {
+        // OPSI B: Jika flat URL, gunakan Cookie active_tenant_id
+        const activeTenantId =
+          getCookie("active_tenant_id") || localStorage.getItem("active_org_id");
+        if (activeTenantId) {
+          const { data: resData, error: resError } = await supabase
+            .from("memberships")
+            .select("role")
+            .eq("tenant_id", activeTenantId)
+            .eq("user_id", user.id)
+            .maybeSingle();
+          data = resData;
+          error = resError;
+        }
+      }
 
       if (error) throw error;
 
@@ -211,7 +238,6 @@ export function NavMain() {
   useEffect(() => {
     fetchUserRole();
 
-    // Dengarkan event perubahan organisasi aktif di sidebar
     const handleOrgChange = () => {
       fetchUserRole();
     };
@@ -219,17 +245,14 @@ export function NavMain() {
     return () => {
       window.removeEventListener("storage", handleOrgChange);
     };
-  }, []);
+  }, [tenantSlug]); // Efek reaktif memantau perubahan URL slug
 
-  // Fungsi rekursif untuk memfilter daftar menu berdasarkan role saat ini
+  // Fungsi penyaringan menu berdasarkan role
   const filterMenuByRole = (items: NavItem[]): NavItem[] => {
     return items
       .filter((item) => {
-        // Jika tidak dibatasi role, lolos filter (publik)
         if (!item.roles) return true;
-        // Jika dibatasi tetapi user belum termuat role-nya, blokir sementara
         if (!userRole) return false;
-        // Cek kecocokan role aktif
         return item.roles.includes(userRole);
       })
       .map((item) => {
@@ -242,7 +265,6 @@ export function NavMain() {
         return item;
       })
       .filter((item) => {
-        // Sembunyikan kategori utama jika sub-itemnya kosong setelah di-filter
         if (item.items && item.items.length === 0) {
           return false;
         }
@@ -258,12 +280,9 @@ export function NavMain() {
     );
   }
 
-  // Filter seluruh grup menu utama berdasarkan userGroup ("users" atau "superadmin")
   const filteredNavItems = navItems
     .filter((group) => {
-      // Jika grup menu tidak membatasi roles, tampilkan untuk semua
       if (!group.roles) return true;
-      // Jika membatasi, pastikan grup sesuai dengan userGroup saat ini
       return userGroup ? group.roles.includes(userGroup) : false;
     })
     .map((group) => ({
@@ -272,15 +291,10 @@ export function NavMain() {
     }))
     .filter((group) => group.items.length > 0);
 
-  // Ganti/tambahkan import useLocale di bagian atas file Anda:
-
-  // Di dalam komponen rendering Anda:
-
   return (
     <>
       {filteredNavItems.map((nav) => (
         <SidebarGroup key={nav.title}>
-          {/* 1. Tambahkan text-start di Group Label */}
           <SidebarGroupLabel className="text-start">{nav.title}</SidebarGroupLabel>
           <SidebarGroupContent className="flex flex-col gap-2">
             <SidebarMenu>
@@ -291,7 +305,6 @@ export function NavMain() {
                       <div className="hidden group-data-[collapsible=icon]:block">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            {/* 2. Tambahkan text-start di tombol pemicu dropdown */}
                             <SidebarMenuButton className="text-start" tooltip={item.title}>
                               {item.icon && <item.icon />}
                               <span>{item.title}</span>
@@ -308,7 +321,8 @@ export function NavMain() {
                                 className="hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10! active:bg-[var(--primary)]/10!"
                                 asChild
                                 key={subItem.title}>
-                                <a href={subItem.href}>{subItem.title}</a>
+                                {/* Gunakan getLocalizedHref */}
+                                <a href={getLocalizedHref(subItem.href)}>{subItem.title}</a>
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuContent>
@@ -316,9 +330,10 @@ export function NavMain() {
                       </div>
                       <Collapsible
                         className="group/collapsible block group-data-[collapsible=icon]:hidden"
-                        defaultOpen={!!item.items.find((s) => s.href === pathname)}>
+                        defaultOpen={
+                          !!item.items.find((s) => getLocalizedHref(s.href) === pathname)
+                        }>
                         <CollapsibleTrigger asChild>
-                          {/* 3. Tambahkan text-start di tombol pemicu collapsible */}
                           <SidebarMenuButton
                             className="hover:text-foreground active:text-foreground text-start hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
                             tooltip={item.title}>
@@ -329,16 +344,16 @@ export function NavMain() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub className="border-s ps-2">
-                            {" "}
-                            {/* Menggunakan border logis */}
                             {item?.items?.map((subItem, key) => (
                               <SidebarMenuSubItem key={key}>
-                                {/* 4. Tambahkan text-start di sub-tombol */}
                                 <SidebarMenuSubButton
                                   className="hover:text-foreground active:text-foreground text-start hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
-                                  isActive={pathname === subItem.href}
+                                  isActive={pathname === getLocalizedHref(subItem.href)}
                                   asChild>
-                                  <Link href={subItem.href} target={subItem.newTab ? "_blank" : ""}>
+                                  {/* Gunakan getLocalizedHref */}
+                                  <Link
+                                    href={getLocalizedHref(subItem.href)}
+                                    target={subItem.newTab ? "_blank" : ""}>
                                     <span>{subItem.title}</span>
                                   </Link>
                                 </SidebarMenuSubButton>
@@ -349,19 +364,18 @@ export function NavMain() {
                       </Collapsible>
                     </>
                   ) : (
-                    /* 5. Tambahkan text-start di tombol menu biasa */
                     <SidebarMenuButton
                       className="hover:text-foreground active:text-foreground text-start hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
-                      isActive={pathname === item.href}
+                      isActive={pathname === getLocalizedHref(item.href)}
                       tooltip={item.title}
                       asChild>
-                      <Link href={item.href} target={item.newTab ? "_blank" : ""}>
+                      {/* Gunakan getLocalizedHref */}
+                      <Link href={getLocalizedHref(item.href)} target={item.newTab ? "_blank" : ""}>
                         {item.icon && <item.icon />}
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   )}
-                  {/* ... badge lainnya ... */}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
