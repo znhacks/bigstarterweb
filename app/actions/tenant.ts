@@ -11,7 +11,7 @@ const systemSupabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
-    db: { schema: "system" },
+    db: { schema: "public" },
     auth: { persistSession: false }
   }
 );
@@ -97,7 +97,7 @@ export async function createTenant(formData: FormData) {
     .from("tenants")
     .insert({
       name: name.trim(),
-      subdomain: slug, // slug digunakan sebagai subdomain pemisah
+      slug: slug, // slug digunakan sebagai subdomain pemisah
       db_model: finalModel
     })
     .select()

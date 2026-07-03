@@ -9,7 +9,7 @@ export const systemClient: SupabaseClient<any, any> = createClient(
   supabaseUrl,
   supabaseServiceKey,
   {
-    db: { schema: "system" },
+    db: { schema: "public" },
     auth: { persistSession: false }
   }
 );
