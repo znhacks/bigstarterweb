@@ -3,7 +3,16 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, AlertCircle, X, Loader2, Upload, User as UserIcon } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Loader2,
+  Upload,
+  User as UserIcon,
+  Check,
+  ChevronsUpDown
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,6 +35,19 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "@/components/ui/command";
+
+// Impor utilitas eksternal (mengatasi error 'cn' dan 'supportedTimezones')
+import { cn } from "@/lib/utils";
+import { getAllTimezones } from "@/lib/timezones";
 
 // Impor klien Supabase dan REUSABLE IMAGE CROPPER
 import { supabase } from "@/lib/supabase";
@@ -45,6 +67,9 @@ const supportedLocales = [
   { code: "ar", label: "العربية" }
 ] as const;
 
+// Memuat daftar seluruh zona waktu dunia secara otomatis
+const supportedTimezones = getAllTimezones();
+
 export function AccountGeneralSettings() {
   const router = useRouter();
 
@@ -55,6 +80,10 @@ export function AccountGeneralSettings() {
   // State Bahasa Komunikasi (Diambil dari Supabase Profiles)
   const [localLanguage, setLocalLanguage] = useState<string>("en");
   const [isSavingLang, setIsSavingLang] = useState(false);
+
+  // State Zona Waktu (Diambil dari Supabase Profiles)
+  const [timezone, setTimezone] = useState<string>("UTC");
+  const [isSavingTz, setIsSavingTz] = useState(false);
 
   // State Data User & Profil
   const [userId, setUserId] = useState<string | null>(null);
@@ -91,10 +120,10 @@ export function AccountGeneralSettings() {
         setUserId(user.id);
         setEmail(user.email || "");
 
-        // MENGAMBIL DATA PROFIL TERMASUK PREFERRED_LANGUAGE DARI DATABASE
+        // MENGAMBIL DATA PROFIL TERMASUK PREFERRED_LANGUAGE & TIMEZONE DARI DATABASE
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, avatar, preferred_language") // Ambil kolom bahasa di sini
+          .select("full_name, avatar, preferred_language, timezone") // Ambil kolom timezone di sini
           .eq("id", user.id)
           .maybeSingle();
 
@@ -103,8 +132,8 @@ export function AccountGeneralSettings() {
         if (profileData) {
           setFullName(profileData.full_name || "");
           setAvatarUrl(profileData.avatar || null);
-          // Set state bahasa komunikasi berdasarkan data dari database
           setLocalLanguage(profileData.preferred_language || "en");
+          setTimezone(profileData.timezone || "UTC"); // Set state timezone
         }
       } catch (error: any) {
         console.error("Gagal memuat data akun:", error);
@@ -187,7 +216,6 @@ export function AccountGeneralSettings() {
     setAlertMessage(null);
 
     try {
-      // Perbarui kolom preferred_language di database Supabase
       const { error } = await supabase
         .from("profiles")
         .update({ preferred_language: localLanguage })
@@ -208,6 +236,36 @@ export function AccountGeneralSettings() {
       });
     } finally {
       setIsSavingLang(false);
+    }
+  };
+
+  // MENYIMPAN ZONA WAKTU PILIHAN KE SUPABASE (DATABASE)
+  const handleSaveTimezone = async () => {
+    if (!userId) return;
+    setIsSavingTz(true);
+    setAlertMessage(null);
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ timezone: timezone })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      setAlertMessage({
+        title: tCommon("success"),
+        description: "Preferensi zona waktu berhasil diperbarui.",
+        variant: "default"
+      });
+    } catch (error: any) {
+      setAlertMessage({
+        title: tCommon("error"),
+        description: error.message || tCommon("error"),
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingTz(false);
     }
   };
 
@@ -406,7 +464,74 @@ export function AccountGeneralSettings() {
           </CardContent>
         </Card>
 
-        {/* CARD 3: YOUR NAME */}
+        {/* CARD 3: TIMEZONE SETTINGS (Penanganan Zona Waktu Global) */}
+        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
+          <CardContent className="flex flex-col gap-6 p-8">
+            <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
+              <div className="space-y-1 md:max-w-md">
+                <h2 className="text-foreground text-base font-semibold">Timezone Settings</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Choose your local timezone. This ensures tasks, scheduling, and notifications
+                  match your actual local hours.
+                </p>
+              </div>
+              <div className="w-full md:max-w-xl">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                      disabled={isSavingTz}>
+                      {timezone
+                        ? supportedTimezones.find((tz) => tz.value === timezone)?.label
+                        : "Select timezone..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search timezone..." />
+                      <CommandList>
+                        <CommandEmpty>No timezone found.</CommandEmpty>
+                        <CommandGroup>
+                          {supportedTimezones.map((tz) => (
+                            <CommandItem
+                              key={tz.value} // Diperbaiki dari tz.code -> tz.value
+                              value={tz.value} // Diperbaiki dari tz.code -> tz.value
+                              onSelect={(currentValue) => {
+                                setTimezone(currentValue);
+                              }}>
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  timezone === tz.value ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {tz.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSaveTimezone}
+                disabled={isSavingTz}
+                variant="secondary"
+                size="sm"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
+                {isSavingTz && <Loader2 className="h-3 w-3 animate-spin" />}
+                {tCommon("save")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* CARD 4: YOUR NAME */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col gap-6 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
@@ -438,7 +563,7 @@ export function AccountGeneralSettings() {
           </CardContent>
         </Card>
 
-        {/* CARD 4: YOUR EMAIL */}
+        {/* CARD 5: YOUR EMAIL */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col gap-6 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
@@ -471,7 +596,7 @@ export function AccountGeneralSettings() {
           </CardContent>
         </Card>
 
-        {/* CARD 5: DELETE ACCOUNT */}
+        {/* CARD 6: DELETE ACCOUNT */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1.5 md:max-w-xl">

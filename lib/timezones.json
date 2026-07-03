@@ -1,0 +1,13 @@
+[
+  { "value": "UTC", "label": "UTC (GMT+00:00)" },
+  { "value": "Africa/Cairo", "label": "Africa - Cairo (GMT+03:00)" },
+  { "value": "America/New_York", "label": "America - New York (GMT-05:00)" },
+  { "value": "America/Los_Angeles", "label": "America - Los Angeles (GMT-08:00)" },
+  { "value": "Asia/Jakarta", "label": "Asia - Jakarta / WIB (GMT+07:00)" },
+  { "value": "Asia/Makassar", "label": "Asia - Makassar / WITA (GMT+08:00)" },
+  { "value": "Asia/Jayapura", "label": "Asia - Jayapura / WIT (GMT+09:00)" },
+  { "value": "Asia/Singapore", "label": "Asia - Singapore (GMT+08:00)" },
+  { "value": "Asia/Riyadh", "label": "Asia - Riyadh (GMT+03:00)" },
+  { "value": "Europe/London", "label": "Europe - London (GMT+00:00)" },
+  { "value": "Europe/Paris", "label": "Europe - Paris (GMT+01:00)" }
+]
