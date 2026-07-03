@@ -152,15 +152,15 @@ export function LoginForm() {
 
   // 6. Login Menggunakan Passkey (WebAuthn)
   // Cari fungsi ini di LoginForm.tsx Anda
+  // 6. Login Menggunakan Passkey (WebAuthn)
   const handlePasskeyLogin = async () => {
     setIsLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPasskey({
-        email: email.trim() || undefined
-      });
+      // Panggil fungsi tanpa menyertakan properti email
+      const { data, error } = await supabase.auth.signInWithPasskey();
 
       if (error) throw error;
 
@@ -180,13 +180,8 @@ export function LoginForm() {
         rawMessage.includes("WebAuthn") ||
         rawMessage.includes("privacy-considerations")
       ) {
-        // Opsi A: Tampilkan pesan ramah pengguna
         setErrorMsg(null);
-
-        // Opsi B (Jika tidak ingin memunculkan kotak merah error sama sekali ketika user membatalkan):
-        // setErrorMsg(null);
       } else {
-        // Jika error disebabkan hal lain (masalah jaringan, dsb.)
         setErrorMsg(rawMessage || "Autentikasi Passkey gagal.");
       }
     } finally {
