@@ -48,9 +48,12 @@ import { Badge } from "@/components/ui/badge";
 import { generateAvatarFallback } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Impor fungsi utilitas tanggal
+import { formatToUserTimezone, formatRelativeTime } from "@/lib/date";
+
 // Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 export type User = {
   id: number;
@@ -64,6 +67,9 @@ export type User = {
   country: string;
   status: "active" | "inactive" | "pending";
   plan_name: string;
+  lastSignIn?: string | null; // Diubah menjadi opsional
+  created_at?: string; // Diubah menjadi opsional
+  updated_at?: string; // Diubah menjadi opsional
 };
 
 const multiSelectFilterFn: FilterFn<any> = (row, columnId, filterValue: string[]) => {
@@ -72,8 +78,8 @@ const multiSelectFilterFn: FilterFn<any> = (row, columnId, filterValue: string[]
   return filterValue.map((v) => v.toLowerCase()).includes(rowValue);
 };
 
-// Mengubah fungsi getColumns agar menerima fungsi translasi `t` sebagai argumen
-export const getColumns = (t: any): ColumnDef<User>[] => [
+// Mengubah fungsi getColumns agar menerima fungsi translasi `t`, `locale`, dan `timeZone`
+export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<User>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -206,6 +212,78 @@ export const getColumns = (t: any): ColumnDef<User>[] => [
     filterFn: multiSelectFilterFn
   },
   {
+    accessorKey: "lastSignIn",
+    header: ({ column }) => {
+      return (
+        <Button
+          className="-ml-3"
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          {t("headers.lastSignIn")}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const value = row.getValue("lastSignIn") as string | null;
+      if (!value) return <span className="text-muted-foreground text-xs">-</span>;
+      return (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium">{formatRelativeTime(value, locale)}</span>
+          <span className="text-muted-foreground text-[10px]">
+            {formatToUserTimezone(value, timeZone, locale)}
+          </span>
+        </div>
+      );
+    }
+  },
+  {
+    accessorKey: "created_at",
+    header: ({ column }) => {
+      return (
+        <Button
+          className="-ml-3"
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          {t("headers.createdAt")}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const value = row.getValue("created_at") as string;
+      if (!value) return <span className="text-muted-foreground text-xs">-</span>;
+      return (
+        <span className="text-muted-foreground text-xs">
+          {formatToUserTimezone(value, timeZone, locale)}
+        </span>
+      );
+    }
+  },
+  {
+    accessorKey: "updated_at",
+    header: ({ column }) => {
+      return (
+        <Button
+          className="-ml-3"
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          {t("headers.updatedAt")}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const value = row.getValue("updated_at") as string;
+      if (!value) return <span className="text-muted-foreground text-xs">-</span>;
+      return (
+        <span className="text-muted-foreground text-xs">
+          {formatToUserTimezone(value, timeZone, locale)}
+        </span>
+      );
+    }
+  },
+  {
     id: "actions",
     enableHiding: false,
     cell: ({ row, table }) => {
@@ -233,11 +311,12 @@ export const getColumns = (t: any): ColumnDef<User>[] => [
 ];
 
 export default function UsersDataTable({ data: initialData }: { data?: User[] }) {
-  // Inisialisasi useTranslations di dalam fungsi komponen utama
   const t = useTranslations("superadmin.users.data-table");
+  const locale = useLocale();
 
   const [users, setUsers] = useState<User[]>(initialData || []);
   const [isLoading, setIsLoading] = useState(!initialData);
+  const [timeZone, setTimeZone] = useState("UTC");
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -247,6 +326,20 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+
+  // Mendapatkan zona waktu lokal pengguna di sisi klien
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const resolvedZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (resolvedZone) {
+          setTimeZone(resolvedZone);
+        }
+      } catch (e) {
+        console.warn("Gagal mendapatkan zona waktu sistem, menggunakan UTC sebagai fallback.", e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!initialData) {
@@ -261,6 +354,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           id,
           full_name,
           avatar,
+          created_at,
+          updated_at,
+          last_sign_in,
           memberships (
             role,
             tenants (
@@ -298,7 +394,10 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
           country: "United States",
           status: statusVal as "active" | "inactive" | "pending",
-          image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`
+          image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`,
+          created_at: prof.created_at,
+          updated_at: prof.updated_at,
+          lastSignIn: prof.last_sign_in || null
         };
       });
 
@@ -323,8 +422,8 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   };
 
-  // Memoized columns menggunakan referensi fungsi translasi `t`
-  const memoizedColumns = useMemo(() => getColumns(t), [t]);
+  // Memasukkan `locale` dan `timeZone` ke dalam dependency array useMemo
+  const memoizedColumns = useMemo(() => getColumns(t, locale, timeZone), [t, locale, timeZone]);
 
   const table = useReactTable({
     data: users,
@@ -588,7 +687,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
       </div>
       <div className="flex items-center justify-end space-x-2 pt-4">
         <div className="text-muted-foreground flex-1 text-xs">
-          {/* Menggunakan fitur passing variables bawaan next-intl */}
           {t("footer.selected", {
             selected: table.getFilteredSelectedRowModel().rows.length,
             total: table.getFilteredRowModel().rows.length

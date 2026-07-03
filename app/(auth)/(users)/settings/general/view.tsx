@@ -240,18 +240,24 @@ export function AccountGeneralSettings() {
   };
 
   // MENYIMPAN ZONA WAKTU PILIHAN KE SUPABASE (DATABASE)
+  // Di dalam komponen AccountGeneralSettings Anda, perbarui fungsi handleSaveTimezone:
+
   const handleSaveTimezone = async () => {
     if (!userId) return;
     setIsSavingTz(true);
     setAlertMessage(null);
 
     try {
+      // A. Simpan ke Supabase untuk database jangka panjang
       const { error } = await supabase
         .from("profiles")
         .update({ timezone: timezone })
         .eq("id", userId);
 
       if (error) throw error;
+
+      // B. Tulis ke Cookie agar bisa diakses instan oleh seluruh halaman web
+      document.cookie = `user-timezone=${timezone};path=/;max-age=31536000;SameSite=Lax`;
 
       setAlertMessage({
         title: tCommon("success"),
