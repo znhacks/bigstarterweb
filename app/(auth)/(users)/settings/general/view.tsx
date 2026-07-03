@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { LOCALE_COOKIE } from "@/i18n/routing";
 import { CheckCircle2, AlertCircle, X, Loader2, Upload, User as UserIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,12 +27,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-// Impor klien Supabase, REUSABLE IMAGE CROPPER, dan Next-intl Hooks
+// Impor klien Supabase dan REUSABLE IMAGE CROPPER
 import { supabase } from "@/lib/supabase";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
-import { constructMetadata } from "@/lib/metadata";
-import { getTranslations } from "next-intl/server";
 
 interface AlertState {
   title: string;
@@ -41,7 +38,7 @@ interface AlertState {
   variant?: "default" | "destructive";
 }
 
-// Definisikan daftar bahasa yang didukung secara statis
+// Daftar bahasa komunikasi yang didukung sistem (untuk Email, Invoice, dll)
 const supportedLocales = [
   { code: "en", label: "English" },
   { code: "id", label: "Bahasa Indonesia" },
@@ -51,14 +48,13 @@ const supportedLocales = [
 export function AccountGeneralSettings() {
   const router = useRouter();
 
-  // Integrasi next-intl
-  const locale = useLocale();
+  // Integrasi next-intl untuk UI umum
   const t = useTranslations("account-general");
   const tCommon = useTranslations("common");
 
-  // State Bahasa Lokal
-  const [localLanguage, setLocalLanguage] = useState<string>(locale);
-  const [isSavingLang, startTransition] = useTransition();
+  // State Bahasa Komunikasi (Diambil dari Supabase Profiles)
+  const [localLanguage, setLocalLanguage] = useState<string>("en");
+  const [isSavingLang, setIsSavingLang] = useState(false);
 
   // State Data User & Profil
   const [userId, setUserId] = useState<string | null>(null);
@@ -78,10 +74,7 @@ export function AccountGeneralSettings() {
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  useEffect(() => {
-    setLocalLanguage(locale);
-  }, [locale]);
-
+  // Mengambil data pengguna & profil saat halaman dimuat
   useEffect(() => {
     const loadAccountData = async () => {
       setIsLoading(true);
@@ -98,10 +91,10 @@ export function AccountGeneralSettings() {
         setUserId(user.id);
         setEmail(user.email || "");
 
-        // MENGAMBIL AVATAR & NAMA LENGKAP DARI TABEL PROFILES
+        // MENGAMBIL DATA PROFIL TERMASUK PREFERRED_LANGUAGE DARI DATABASE
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, avatar")
+          .select("full_name, avatar, preferred_language") // Ambil kolom bahasa di sini
           .eq("id", user.id)
           .maybeSingle();
 
@@ -110,6 +103,8 @@ export function AccountGeneralSettings() {
         if (profileData) {
           setFullName(profileData.full_name || "");
           setAvatarUrl(profileData.avatar || null);
+          // Set state bahasa komunikasi berdasarkan data dari database
+          setLocalLanguage(profileData.preferred_language || "en");
         }
       } catch (error: any) {
         console.error("Gagal memuat data akun:", error);
@@ -146,7 +141,6 @@ export function AccountGeneralSettings() {
     try {
       const filePath = `users/${userId}/${Date.now()}.webp`;
 
-      // A. Unggah ke Supabase Storage (Bucket 'avatars')
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, croppedBlob, {
@@ -157,12 +151,10 @@ export function AccountGeneralSettings() {
 
       if (uploadError) throw uploadError;
 
-      // B. Dapatkan Public URL
       const {
         data: { publicUrl }
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      // C. Simpan ke database
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ avatar: publicUrl })
@@ -188,20 +180,35 @@ export function AccountGeneralSettings() {
     }
   };
 
-  // Menyimpan perubahan bahasa: tulis cookie NEXT_LOCALE lalu refresh.
-  // Tidak ada perubahan URL karena localePrefix = "never" (tanpa segment [locale]).
-  const handleSaveLanguage = () => {
-    if (localLanguage === locale) return;
+  // MENYIMPAN BAHASA KOMUNIKASI/EMAIL KE SUPABASE (DATABASE)
+  const handleSaveLanguage = async () => {
+    if (!userId) return;
+    setIsSavingLang(true);
     setAlertMessage(null);
-    document.cookie = `${LOCALE_COOKIE}=${localLanguage};path=/;max-age=31536000;SameSite=Lax`;
-    startTransition(() => {
-      router.refresh();
+
+    try {
+      // Perbarui kolom preferred_language di database Supabase
+      const { error } = await supabase
+        .from("profiles")
+        .update({ preferred_language: localLanguage })
+        .eq("id", userId);
+
+      if (error) throw error;
+
       setAlertMessage({
-        title: localLanguage === "en" ? "Language Updated" : "Bahasa Diperbarui",
-        description: tCommon("success"),
+        title: tCommon("success"),
+        description: "Preferensi bahasa komunikasi berhasil diperbarui.",
         variant: "default"
       });
-    });
+    } catch (error: any) {
+      setAlertMessage({
+        title: tCommon("error"),
+        description: error.message || tCommon("error"),
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingLang(false);
+    }
   };
 
   // Menyimpan nama lengkap ke tabel 'profiles'
@@ -355,13 +362,17 @@ export function AccountGeneralSettings() {
           </CardContent>
         </Card>
 
-        {/* CARD 2: YOUR LANGUAGE */}
+        {/* CARD 2: COMMUNICATION LANGUAGE */}
         <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
           <CardContent className="flex flex-col gap-6 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="space-y-1 md:max-w-md">
-                <h2 className="text-foreground text-base font-semibold">{t("language")}</h2>
-                <p className="text-muted-foreground text-sm leading-relaxed">{t("languageDesc")}</p>
+                <h2 className="text-foreground text-base font-semibold">
+                  {t("language")} (Email & Notifications)
+                </h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {t("languageDesc")} (Used for official emails, OTP, invoices, and system updates)
+                </p>
               </div>
               <div className="w-full md:max-w-xl">
                 <Select

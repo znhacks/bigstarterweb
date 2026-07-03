@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { usePathname, useParams } from "next/navigation"; // Tambahkan useParams
+import { usePathname, useParams } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +63,7 @@ type NavItem = {
   newTab?: boolean;
   roles?: ("Owner" | "Admin" | "Member")[];
   items?: NavItem[];
+  tenantScoped?: boolean; // Menandakan apakah halaman ini membutuhkan tenant slug
 };
 
 export const navItems: NavGroup[] = [
@@ -72,35 +73,40 @@ export const navItems: NavGroup[] = [
     items: [
       {
         title: "Classic Dashboard",
-        href: "/dashboard",
+        href: `/dashboard`,
+        tenantScoped: true, // Butuh tenant slug
         icon: ChartPieIcon
       },
       {
         title: "Organization",
-        href: "/organization",
+        href: `/organization`,
+        tenantScoped: true, // Butuh tenant slug
         icon: CreditCardIcon,
         roles: ["Owner", "Admin", "Member"],
         items: [
           {
             title: "General",
-            href: "/organization/general",
+            href: `/organization/general`,
+            tenantScoped: true,
             roles: ["Owner", "Admin", "Member"]
           },
           {
             title: "Member",
-            href: "/organization/member",
+            href: `/organization/member`,
+            tenantScoped: true,
             roles: ["Owner", "Admin"]
           },
           {
             title: "Billing",
-            href: "/organization/billing",
+            href: `/organization/billing`,
+            tenantScoped: true,
             roles: ["Owner"]
           }
         ]
       },
       {
         title: "Settings",
-        href: "/settings",
+        href: "/settings", // Global (tidak menggunakan tenantScoped)
         icon: Settings,
         items: [
           {
@@ -154,13 +160,20 @@ export function NavMain() {
 
   const [userGroup, setUserGroup] = useState<"users" | "superadmin" | null>(null);
   const [userRole, setUserRole] = useState<"Owner" | "Admin" | "Member" | null>(null);
+  const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [isLoadingRole, setIsLoadingRole] = useState(true);
 
-  // Helper untuk melokalisasi link berdasarkan tenant slug aktif saat ini
-  // (Mengubah /dashboard menjadi /studiotengahmalam/dashboard secara otomatis)
-  const getLocalizedHref = (href: string) => {
-    if (tenantSlug && !href.startsWith("/superadmin") && href.startsWith("/")) {
-      return `/${tenantSlug}${href}`;
+  // Helper untuk melokalisasi link berdasarkan tenant slug aktif
+  const getLocalizedHref = (href: string, tenantScoped?: boolean) => {
+    if (!tenantScoped) {
+      return href;
+    }
+    const slug = tenantSlug || activeSlug;
+    if (slug && href.startsWith("/")) {
+      if (href.startsWith(`/${slug}`)) {
+        return href;
+      }
+      return `/${slug}${href}`;
     }
     return href;
   };
@@ -176,6 +189,28 @@ export function NavMain() {
         setUserRole(null);
         setIsLoadingRole(false);
         return;
+      }
+
+      // Mengambil daftar tenant secara asinkron dari client-side untuk menentukan fallback slug
+      try {
+        const { data: membershipData, error: membershipError } = await supabase
+          .from("memberships")
+          .select("tenants!inner(slug)")
+          .eq("user_id", user.id);
+
+        if (membershipError) throw membershipError;
+
+        if (membershipData && membershipData.length > 0) {
+          const tenantList = membershipData
+            .map((m: any) => m.tenants)
+            .filter((t): t is { slug: string } => !!t && typeof t.slug === "string");
+
+          if (tenantList.length > 0) {
+            setActiveSlug(tenantList[0].slug);
+          }
+        }
+      } catch (err) {
+        console.error("Gagal mendapatkan daftar tenant (client-side):", err);
       }
 
       const isSuperAdmin =
@@ -196,7 +231,7 @@ export function NavMain() {
       let error: any = null;
 
       if (tenantSlug) {
-        // OPSI A: Jika ada slug di URL, langsung query berdasarkan slug (Tanpa balapan state)
+        // OPSI A: Jika ada slug di URL, langsung query berdasarkan slug
         const { data: resData, error: resError } = await supabase
           .from("memberships")
           .select("role, tenants!inner(slug)")
@@ -245,9 +280,8 @@ export function NavMain() {
     return () => {
       window.removeEventListener("storage", handleOrgChange);
     };
-  }, [tenantSlug]); // Efek reaktif memantau perubahan URL slug
+  }, [tenantSlug]);
 
-  // Fungsi penyaringan menu berdasarkan role
   const filterMenuByRole = (items: NavItem[]): NavItem[] => {
     return items
       .filter((item) => {
@@ -318,11 +352,12 @@ export function NavMain() {
                             <DropdownMenuLabel>{item.title}</DropdownMenuLabel>
                             {item.items?.map((subItem) => (
                               <DropdownMenuItem
-                                className="hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10! active:bg-[var(--primary)]/10!"
+                                className="hover:text-foreground active:text-foreground hover:bg-(--primary)/10! active:bg-(--primary)/10!"
                                 asChild
                                 key={subItem.title}>
-                                {/* Gunakan getLocalizedHref */}
-                                <a href={getLocalizedHref(subItem.href)}>{subItem.title}</a>
+                                <a href={getLocalizedHref(subItem.href, subItem.tenantScoped)}>
+                                  {subItem.title}
+                                </a>
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuContent>
@@ -331,11 +366,13 @@ export function NavMain() {
                       <Collapsible
                         className="group/collapsible block group-data-[collapsible=icon]:hidden"
                         defaultOpen={
-                          !!item.items.find((s) => getLocalizedHref(s.href) === pathname)
+                          !!item.items.find(
+                            (s) => getLocalizedHref(s.href, s.tenantScoped) === pathname
+                          )
                         }>
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton
-                            className="hover:text-foreground active:text-foreground text-start hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                            className="hover:text-foreground active:text-foreground text-start hover:bg-(--primary)/10 active:bg-(--primary)/10"
                             tooltip={item.title}>
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
@@ -347,12 +384,14 @@ export function NavMain() {
                             {item?.items?.map((subItem, key) => (
                               <SidebarMenuSubItem key={key}>
                                 <SidebarMenuSubButton
-                                  className="hover:text-foreground active:text-foreground text-start hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
-                                  isActive={pathname === getLocalizedHref(subItem.href)}
+                                  className="hover:text-foreground active:text-foreground text-start hover:bg-(--primary)/10 active:bg-(--primary)/10"
+                                  isActive={
+                                    pathname ===
+                                    getLocalizedHref(subItem.href, subItem.tenantScoped)
+                                  }
                                   asChild>
-                                  {/* Gunakan getLocalizedHref */}
                                   <Link
-                                    href={getLocalizedHref(subItem.href)}
+                                    href={getLocalizedHref(subItem.href, subItem.tenantScoped)}
                                     target={subItem.newTab ? "_blank" : ""}>
                                     <span>{subItem.title}</span>
                                   </Link>
@@ -365,12 +404,13 @@ export function NavMain() {
                     </>
                   ) : (
                     <SidebarMenuButton
-                      className="hover:text-foreground active:text-foreground text-start hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
-                      isActive={pathname === getLocalizedHref(item.href)}
+                      className="hover:text-foreground active:text-foreground text-start hover:bg-(--primary)/10 active:bg-(--primary)/10"
+                      isActive={pathname === getLocalizedHref(item.href, item.tenantScoped)}
                       tooltip={item.title}
                       asChild>
-                      {/* Gunakan getLocalizedHref */}
-                      <Link href={getLocalizedHref(item.href)} target={item.newTab ? "_blank" : ""}>
+                      <Link
+                        href={getLocalizedHref(item.href, item.tenantScoped)}
+                        target={item.newTab ? "_blank" : ""}>
                         {item.icon && <item.icon />}
                         <span>{item.title}</span>
                       </Link>
