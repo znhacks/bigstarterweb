@@ -25,8 +25,6 @@ import { supabase } from "@/lib/supabase";
 // IMPOR DIALOG PEMOTONG GAMBAR YANG REUSABLE
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 import { useLocale, useTranslations } from "next-intl";
-import { getTranslations } from "next-intl/server";
-import { constructMetadata } from "@/lib/metadata";
 
 interface AlertState {
   title: string;
@@ -39,8 +37,6 @@ export function OrganizationGeneralSettings() {
   const t = useTranslations("organization-general");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-
-  // Membaca kamus bahasa aktif untuk halaman organisasi
 
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
@@ -75,7 +71,6 @@ export function OrganizationGeneralSettings() {
   const fetchOrgAndRoleDetails = async (orgId: string) => {
     setIsLoading(true);
     try {
-      // 1. Ambil data user aktif saat ini
       const {
         data: { user }
       } = await supabase.auth.getUser();
@@ -84,7 +79,6 @@ export function OrganizationGeneralSettings() {
         return;
       }
 
-      // 2. Ambil rincian nama tenant & data role keanggotaan secara paralel
       const [tenantRes, membershipRes] = await Promise.all([
         supabase.from("tenants").select("name, logo").eq("id", orgId).single(),
         supabase
@@ -126,7 +120,6 @@ export function OrganizationGeneralSettings() {
     }
   }, [alertMessage]);
 
-  // PROSES UPLOAD REAL BERKAS WEBP HASIL POTONGAN KE SUPABASE STORAGE
   const handleCropComplete = async (croppedBlob: Blob) => {
     if (!activeOrgId) return;
 
@@ -134,10 +127,8 @@ export function OrganizationGeneralSettings() {
     setAlertMessage(null);
 
     try {
-      // Menggunakan ekstensi berkas .webp karena dikonversi secara real oleh canvas
       const filePath = `organizations/${activeOrgId}/${Date.now()}.webp`;
 
-      // A. Unggah berkas webp terkompresi ke Supabase Storage (Bucket 'avatars')
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, croppedBlob, {
@@ -148,12 +139,10 @@ export function OrganizationGeneralSettings() {
 
       if (uploadError) throw uploadError;
 
-      // B. Dapatkan URL Publik
       const {
         data: { publicUrl }
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      // C. Update kolom logo di tabel tenants
       const { error: tenantError } = await supabase
         .from("tenants")
         .update({ logo: publicUrl })
@@ -161,7 +150,6 @@ export function OrganizationGeneralSettings() {
 
       if (tenantError) throw tenantError;
 
-      // Sukses
       setLogoPreview(publicUrl);
       window.dispatchEvent(new Event("storage")); // Refresh Sidebar Icon
 
@@ -182,7 +170,6 @@ export function OrganizationGeneralSettings() {
     }
   };
 
-  // Menyimpan perubahan nama organisasi ke Supabase
   const handleSaveName = async () => {
     if (!activeOrgId) return;
     setIsSaving(true);
@@ -214,7 +201,6 @@ export function OrganizationGeneralSettings() {
     }
   };
 
-  // Menghapus organisasi secara permanen dari Supabase
   const handleDeleteOrganization = async () => {
     if (!activeOrgId) return;
     setIsDeleting(true);
@@ -249,7 +235,6 @@ export function OrganizationGeneralSettings() {
     }
   };
 
-  // Tentukan apakah user hanya memiliki hak akses baca saja (role: Member)
   const isReadOnly = userRole === "Member";
 
   if (isLoading) {
@@ -276,13 +261,7 @@ export function OrganizationGeneralSettings() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-10">
-      {/* Header Halaman */}
-      <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
-      </div>
-
+    <div className="space-y-6">
       {/* SHADCN ALERT NOTIFICATION */}
       {alertMessage && (
         <Alert
@@ -316,23 +295,22 @@ export function OrganizationGeneralSettings() {
         </Alert>
       )}
 
-      <div className="space-y-6">
-        {/* Card 1: Organization Logo */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
+      {/* KONSOLIDASI: SATU CARD UNTUK SELURUH PENGATURAN ORGANISASI */}
+      <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
+        <CardContent className="divide-border/60 divide-y p-0">
+          {/* Section 1: Organization Logo */}
+          <div className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1 md:max-w-md">
               <h2 className="text-foreground text-base font-semibold">{t("logo.title")}</h2>
               <p className="text-muted-foreground text-sm leading-relaxed">{t("logo.desc")}</p>
             </div>
 
-            <div className="flex items-center gap-4">
-              {/* INPUT FILE SUDAH DIHAPUS DARI SINI (KARENA SUDAH DIKELOLA INTERNALLY DI DALAM DIALOG DIBAWAH) */}
+            <div className="flex shrink-0 items-center gap-4">
               <div
                 onClick={isReadOnly || isUploadingLogo ? undefined : () => setCropperOpen(true)}
-                className={`group bg-muted border-border/60 relative flex h-24 w-24 shrink-0 cursor-pointer items-center justify-center rounded-xl border transition-all ${
+                className={`group bg-muted border-border/60 relative flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border transition-all ${
                   isReadOnly ? "cursor-default" : "hover:bg-muted/80 cursor-pointer"
                 }`}>
-                {/* Visual Loading Spinner saat proses upload gambar ke Supabase Storage */}
                 {isUploadingLogo ? (
                   <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
                 ) : logoPreview ? (
@@ -344,7 +322,6 @@ export function OrganizationGeneralSettings() {
                 ) : (
                   <Users className="text-muted-foreground h-6 w-6 transition-transform group-hover:scale-105" />
                 )}
-                {/* Hanya munculkan ikon hover upload jika bukan Read-Only dan tidak sedang Loading */}
                 {!isReadOnly && !isUploadingLogo && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                     <Upload className="h-5 w-5 text-white" />
@@ -352,12 +329,10 @@ export function OrganizationGeneralSettings() {
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Card 2: Organization Name */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="flex flex-col gap-6 p-8">
+          {/* Section 2: Organization Name */}
+          <div className="space-y-4 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="md:max-w-md">
                 <h2 className="text-foreground text-base font-semibold">{t("name.title")}</h2>
@@ -366,7 +341,7 @@ export function OrganizationGeneralSettings() {
                 <Input
                   type="text"
                   required
-                  disabled={isSaving || isReadOnly} // Disable input jika Read-Only (Member)
+                  disabled={isSaving || isReadOnly}
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
                   className="border-border/80 h-10 w-full focus-visible:ring-1"
@@ -374,7 +349,6 @@ export function OrganizationGeneralSettings() {
               </div>
             </div>
 
-            {/* Sembunyikan tombol Save jika memiliki hak akses Member */}
             {!isReadOnly && (
               <div className="flex justify-end">
                 <Button
@@ -388,13 +362,11 @@ export function OrganizationGeneralSettings() {
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Card 3: Delete Organization (HANYA MUNCUL JIKA USER BUKAN MEMBER) */}
-        {!isReadOnly && (
-          <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-            <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
+          {/* Section 3: Delete Organization (Danger Zone) - Hanya muncul jika bukan Member */}
+          {!isReadOnly && (
+            <div className="flex flex-col items-start justify-between gap-6 bg-red-50/10 p-8 md:flex-row md:items-center">
               <div className="space-y-1.5 md:max-w-xl">
                 <h2 className="text-destructive text-base font-semibold">{t("delete.title")}</h2>
                 <p className="text-muted-foreground text-sm leading-relaxed">{t("delete.desc")}</p>
@@ -408,10 +380,10 @@ export function OrganizationGeneralSettings() {
                   {t("delete.btn")}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* SHADCN DIALOG KONFIRMASI PENGHAPUSAN ORGANISASI */}
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
@@ -435,7 +407,7 @@ export function OrganizationGeneralSettings() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* REUSABLE IMAGE CROPPER DIALOG (Bawaan drag and drop & tab input URL) */}
+      {/* REUSABLE IMAGE CROPPER DIALOG */}
       <ImageCropperDialog
         open={cropperOpen}
         onOpenChange={setCropperOpen}
