@@ -18,8 +18,12 @@ export default async function LandingOrRedirectPage() {
       console.log(`Mengalihkan ke tenant pertama: /${tenants[0].slug}`);
       redirect(`/${tenants[0].slug}/dashboard`);
     } else {
-      console.log("User tidak punya tenant. Mengalihkan ke /create-tenant");
-      redirect("/create-tenant");
+      if (!user) {
+        redirect(`/login`);
+      } else {
+        console.log("User tidak punya tenant. Mengalihkan ke /create-tenant");
+        redirect("/create-tenant");
+      }
     }
   }
 

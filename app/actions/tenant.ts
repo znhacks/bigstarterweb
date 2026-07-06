@@ -2,12 +2,13 @@
 "use server";
 
 import { bigstarterConfig } from "@/bigstarter.config";
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createSystemClient } from "@supabase/supabase-js"; // Gunakan nama alias
+import { createClient as createServerClient } from "@/lib/supabase/server"; // UBAH: Import helper SSR kita
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 // Inisialisasi Supabase Client khusus untuk skema 'system' (Bypass RLS dengan Service Role)
-const systemSupabase = createClient(
+const systemSupabase = createSystemClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
@@ -35,18 +36,15 @@ export async function switchTenant(tenantId: string, redirectTo: string = "/") {
  * Server Action Tunggal untuk pendaftaran organisasi baru (Onboarding Multi-Model)
  */
 export async function createTenant(formData: FormData) {
-  // 1. Validasi Autentikasi Pengguna
-  // Karena membutuhkan session user yang aktif, kita gunakan client auth default supabase
-  const defaultSupabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  // 1. UBAH: Validasi Autentikasi Pengguna menggunakan SSR Client agar bisa membaca Cookie Sesi
+  const defaultSupabase = await createServerClient();
 
   const {
     data: { user }
   } = await defaultSupabase.auth.getUser();
+
   if (!user) {
-    return { error: "User tidak terautentikasi. Silakan login kembali." };
+    redirect("/login?next=/create-tenant");
   }
 
   const name = formData.get("name") as string;
@@ -57,8 +55,6 @@ export async function createTenant(formData: FormData) {
   // 2. Tentukan Model Database berdasarkan aturan konfigurasi
   const config = bigstarterConfig.database.multiTenancy;
 
-  // Contoh logika: Default gratis adalah SHARED (Model 1), enterprise adalah ISOLATED (Model 2).
-  // Anda bisa menyesuaikan input dari form jika ingin memberikan opsi paket kepada pengguna.
   const requestedPlan = formData.get("plan") as string; // 'FREE' | 'ENTERPRISE'
   let finalModel: "SHARED" | "ISOLATED" = requestedPlan === "ENTERPRISE" ? "ISOLATED" : "SHARED";
 
@@ -83,8 +79,8 @@ export async function createTenant(formData: FormData) {
   // Validasi keunikan subdomain/slug di skema system
   const { data: existingTenant } = await systemSupabase
     .from("tenants")
-    .select("subdomain")
-    .eq("subdomain", slug)
+    .select("slug") // Sesuaikan dengan kolom slug Anda
+    .eq("slug", slug)
     .maybeSingle();
 
   if (existingTenant) {
@@ -141,6 +137,6 @@ export async function createTenant(formData: FormData) {
     sameSite: "lax"
   });
 
-  // 8. Alihkan pengguna langsung ke dashboard tim barunya
-  redirect(`/${newTenant.subdomain}/dashboard`);
+  // 8. Alihkan pengguna langsung ke dashboard tim barunya (menggunakan slug/subdomain)
+  redirect(`/${newTenant.slug}/dashboard`);
 }
