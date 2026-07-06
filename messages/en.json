@@ -218,52 +218,56 @@
       "errorDb": "Payment validation failed: {error}"
     }
   },
-  "account-general": {
-    "title": "Account settings",
-    "subTitle": "Manage your general account settings.",
-    "avatar": "Your avatar",
-    "avatarDesc": "To change your avatar click the picture in this block and select a file from your computer to upload.",
-    "language": "Your language",
-    "languageDesc": "To change the language of the app for your account, select a language from the list and click save.",
-    "name": "Your name",
-    "email": "Your email",
-    "emailDesc": "To change your email, enter the new email and hit save. You will have to confirm the new email before it will become active.",
-    "delete": "Delete account",
-    "deleteDesc": "Permanently delete your account. Once you delete your account, there is no going back. To confirm, please enter your password below:",
-    "deleteButton": "Delete account",
-    "dialogTitle": "Are you absolutely sure?",
-    "dialogDesc": "This action will permanently delete your account and all associated profiles from our database. This action cannot be undone."
-  },
-  "account-security": {
-    "title": "Security settings",
-    "subTitle": "Manage your account security, passwords, and active sessions.",
-    "password": {
-      "title": "Change password",
-      "desc": "To change your password, click the button below to send an email to reset your password and follow the instructions in the email.",
-      "btn": "Change password"
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your profile, prefered language, and configuration your security",
+    "account-general": {
+      "title": "Account settings",
+      "subTitle": "Manage your general account settings.",
+      "avatar": "Your avatar",
+      "avatarDesc": "To change your avatar click the picture in this block and select a file from your computer to upload.",
+      "language": "Your language",
+      "languageDesc": "To change the language of the app for your account, select a language from the list and click save.",
+      "name": "Your name",
+      "email": "Your email",
+      "emailDesc": "To change your email, enter the new email and hit save. You will have to confirm the new email before it will become active.",
+      "delete": "Delete account",
+      "deleteDesc": "Permanently delete your account. Once you delete your account, there is no going back. To confirm, please enter your password below:",
+      "deleteButton": "Delete account",
+      "dialogTitle": "Are you absolutely sure?",
+      "dialogDesc": "This action will permanently delete your account and all associated profiles from our database. This action cannot be undone."
     },
-    "oauth": {
-      "title": "Connected accounts",
-      "connected": "Connected",
-      "connect": "Connect"
-    },
-    "passkey": {
-      "title": "Passkeys",
-      "desc": "Use passkeys as a secure alternative to passwords.",
-      "btn": "+ Add passkey"
-    },
-    "tfa": {
-      "title": "Two-factor authentication",
-      "desc": "Add an extra layer of security to your account.",
-      "warning": "Password required. Set a password before enabling two-factor authentication. Your password is required to verify changes to this security setting.",
-      "btn": "Enable two-factor authentication",
-      "activeBtn": "Two-Factor Authentication is Enabled"
-    },
-    "sessions": {
-      "title": "Active sessions",
-      "desc": "These are all the active sessions of your account. Click the X to end a specific session.",
-      "current": "Current session",
-      "btnTerm": "Terminate other sessions"
+    "account-security": {
+      "title": "Security settings",
+      "subTitle": "Manage your account security, passwords, and active sessions.",
+      "password": {
+        "title": "Change password",
+        "desc": "To change your password, click the button below to send an email to reset your password and follow the instructions in the email.",
+        "btn": "Change password"
+      },
+      "oauth": {
+        "title": "Connected accounts",
+        "connected": "Connected",
+        "connect": "Connect"
+      },
+      "passkey": {
+        "title": "Passkeys",
+        "desc": "Use passkeys as a secure alternative to passwords.",
+        "btn": "+ Add passkey"
+      },
+      "tfa": {
+        "title": "Two-factor authentication",
+        "desc": "Add an extra layer of security to your account.",
+        "warning": "Password required. Set a password before enabling two-factor authentication. Your password is required to verify changes to this security setting.",
+        "btn": "Enable two-factor authentication",
+        "activeBtn": "Two-Factor Authentication is Enabled"
+      },
+      "sessions": {
+        "title": "Active sessions",
+        "desc": "These are all the active sessions of your account. Click the X to end a specific session.",
+        "current": "Current session",
+        "btnTerm": "Terminate other sessions"
+      }
     }
   },
   "superadmin": {
