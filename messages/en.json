@@ -277,7 +277,10 @@
           "plan": "Plan",
           "email": "Email",
           "country": "Country",
-          "status": "Status"
+          "status": "Status",
+          "lastSignIn": "Last Sign In",
+          "createdAt": "Created At",
+          "updatedAt": "Updated At"
         },
         "actions": {
           "view": "View user",
