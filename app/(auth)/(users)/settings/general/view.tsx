@@ -45,11 +45,8 @@ import {
   CommandList
 } from "@/components/ui/command";
 
-// Impor utilitas eksternal (mengatasi error 'cn' dan 'supportedTimezones')
 import { cn } from "@/lib/utils";
 import { getAllTimezones } from "@/lib/timezones";
-
-// Impor klien Supabase dan REUSABLE IMAGE CROPPER
 import { supabase } from "@/lib/supabase";
 import { useTranslations } from "next-intl";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
@@ -60,50 +57,40 @@ interface AlertState {
   variant?: "default" | "destructive";
 }
 
-// Daftar bahasa komunikasi yang didukung sistem (untuk Email, Invoice, dll)
 const supportedLocales = [
   { code: "en", label: "English" },
   { code: "id", label: "Bahasa Indonesia" },
   { code: "ar", label: "العربية" }
 ] as const;
 
-// Memuat daftar seluruh zona waktu dunia secara otomatis
 const supportedTimezones = getAllTimezones();
 
-export function AccountGeneralSettings() {
+export function GeneralSettingsPage() {
   const router = useRouter();
-
-  // Integrasi next-intl untuk UI umum
-  const t = useTranslations("account-general");
+  const t = useTranslations("settings.account-general");
   const tCommon = useTranslations("common");
 
-  // State Bahasa Komunikasi (Diambil dari Supabase Profiles)
-  const [localLanguage, setLocalLanguage] = useState<string>("en");
-  const [isSavingLang, setIsSavingLang] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
 
-  // State Zona Waktu (Diambil dari Supabase Profiles)
-  const [timezone, setTimezone] = useState<string>("UTC");
-  const [isSavingTz, setIsSavingTz] = useState(false);
-
-  // State Data User & Profil
+  // States
   const [userId, setUserId] = useState<string | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [localLanguage, setLocalLanguage] = useState<string>("en");
+  const [timezone, setTimezone] = useState<string>("UTC");
 
-  // State Manajemen Pemotongan Gambar (Cropping)
-  const [cropperOpen, setCropperOpen] = useState(false);
-
-  // State loading & interaksi
-  const [isLoading, setIsLoading] = useState(true);
+  // Interaksi Loading States
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isSavingLang, setIsSavingLang] = useState(false);
+  const [isSavingTz, setIsSavingTz] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [cropperOpen, setCropperOpen] = useState(false);
 
-  // Mengambil data pengguna & profil saat halaman dimuat
   useEffect(() => {
     const loadAccountData = async () => {
       setIsLoading(true);
@@ -120,10 +107,9 @@ export function AccountGeneralSettings() {
         setUserId(user.id);
         setEmail(user.email || "");
 
-        // MENGAMBIL DATA PROFIL TERMASUK PREFERRED_LANGUAGE & TIMEZONE DARI DATABASE
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, avatar, preferred_language, timezone") // Ambil kolom timezone di sini
+          .select("full_name, avatar, preferred_language, timezone")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -133,7 +119,7 @@ export function AccountGeneralSettings() {
           setFullName(profileData.full_name || "");
           setAvatarUrl(profileData.avatar || null);
           setLocalLanguage(profileData.preferred_language || "en");
-          setTimezone(profileData.timezone || "UTC"); // Set state timezone
+          setTimezone(profileData.timezone || "UTC");
         }
       } catch (error: any) {
         console.error("Gagal memuat data akun:", error);
@@ -150,7 +136,6 @@ export function AccountGeneralSettings() {
     loadAccountData();
   }, [router]);
 
-  // Tutup alert otomatis setelah 5 detik
   useEffect(() => {
     if (alertMessage) {
       const timer = setTimeout(() => {
@@ -160,16 +145,13 @@ export function AccountGeneralSettings() {
     }
   }, [alertMessage]);
 
-  // PROSES UPLOAD FOTO PROFIL KE SUPABASE
   const handleCropComplete = async (croppedBlob: Blob) => {
     if (!userId) return;
-
     setIsUploadingAvatar(true);
     setAlertMessage(null);
 
     try {
       const filePath = `users/${userId}/${Date.now()}.webp`;
-
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, croppedBlob, {
@@ -209,7 +191,6 @@ export function AccountGeneralSettings() {
     }
   };
 
-  // MENYIMPAN BAHASA KOMUNIKASI/EMAIL KE SUPABASE (DATABASE)
   const handleSaveLanguage = async () => {
     if (!userId) return;
     setIsSavingLang(true);
@@ -239,16 +220,12 @@ export function AccountGeneralSettings() {
     }
   };
 
-  // MENYIMPAN ZONA WAKTU PILIHAN KE SUPABASE (DATABASE)
-  // Di dalam komponen AccountGeneralSettings Anda, perbarui fungsi handleSaveTimezone:
-
   const handleSaveTimezone = async () => {
     if (!userId) return;
     setIsSavingTz(true);
     setAlertMessage(null);
 
     try {
-      // A. Simpan ke Supabase untuk database jangka panjang
       const { error } = await supabase
         .from("profiles")
         .update({ timezone: timezone })
@@ -256,7 +233,6 @@ export function AccountGeneralSettings() {
 
       if (error) throw error;
 
-      // B. Tulis ke Cookie agar bisa diakses instan oleh seluruh halaman web
       document.cookie = `user-timezone=${timezone};path=/;max-age=31536000;SameSite=Lax`;
 
       setAlertMessage({
@@ -275,7 +251,6 @@ export function AccountGeneralSettings() {
     }
   };
 
-  // Menyimpan nama lengkap ke tabel 'profiles'
   const handleSaveName = async () => {
     if (!userId) return;
     setIsSavingName(true);
@@ -291,7 +266,7 @@ export function AccountGeneralSettings() {
 
       setAlertMessage({
         title: tCommon("success"),
-        description: tCommon("success"),
+        description: "Nama lengkap berhasil diperbarui.",
         variant: "default"
       });
     } catch (error: any) {
@@ -305,19 +280,17 @@ export function AccountGeneralSettings() {
     }
   };
 
-  // Menyimpan perubahan email
   const handleSaveEmail = async () => {
     setIsSavingEmail(true);
     setAlertMessage(null);
 
     try {
       const { error } = await supabase.auth.updateUser({ email: email.trim() });
-
       if (error) throw error;
 
       setAlertMessage({
         title: tCommon("success"),
-        description: "Email verification request initiated.",
+        description: "Permintaan verifikasi email berhasil dikirim.",
         variant: "default"
       });
     } catch (error: any) {
@@ -331,7 +304,6 @@ export function AccountGeneralSettings() {
     }
   };
 
-  // Menghapus akun permanen
   const handleDeleteAccount = async () => {
     if (!userId) return;
     setIsDeleting(true);
@@ -349,22 +321,23 @@ export function AccountGeneralSettings() {
     } catch (error: any) {
       setAlertMessage({
         title: tCommon("error"),
-        description: error.message || "Failed to delete account.",
+        description: error.message || "Gagal menghapus akun.",
         variant: "destructive"
       });
       setIsDeleting(false);
     }
   };
 
-  return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-10">
-      {/* Header Halaman */}
-      <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[300px] items-center justify-center">
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
+    );
+  }
 
-      {/* SHADCN ALERT NOTIFICATION */}
+  return (
+    <div className="space-y-6">
       {alertMessage && (
         <Alert
           variant={alertMessage.variant === "destructive" ? "destructive" : "default"}
@@ -388,10 +361,11 @@ export function AccountGeneralSettings() {
         </Alert>
       )}
 
-      <div className="space-y-6">
-        {/* CARD 1: YOUR AVATAR */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
+      {/* KONSOLIDASI: SATU CARD TUNGGAL UNTUK SEMUA FORM GENERAL */}
+      <Card className="overflow-hidden">
+        <CardContent className="divide-border/60 divide-y p-0">
+          {/* Section 1: Avatar */}
+          <div className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1 md:max-w-md">
               <h2 className="text-foreground text-base font-semibold">{t("avatar")}</h2>
               <p className="text-muted-foreground text-sm leading-relaxed">{t("avatarDesc")}</p>
@@ -423,20 +397,77 @@ export function AccountGeneralSettings() {
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* CARD 2: COMMUNICATION LANGUAGE */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="flex flex-col gap-6 p-8">
+          {/* Section 2: Full Name */}
+          <div className="space-y-4 p-8">
+            <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
+              <div className="md:max-w-md">
+                <h2 className="text-foreground text-base font-semibold">{t("name")}</h2>
+              </div>
+              <div className="w-full md:max-w-xl">
+                <Input
+                  type="text"
+                  required
+                  disabled={isSavingName}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="border-border/80 h-10 w-full focus-visible:ring-1"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSaveName}
+                disabled={isSavingName || !fullName.trim()}
+                variant="secondary"
+                size="sm"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
+                {isSavingName && <Loader2 className="h-3 w-3 animate-spin" />}
+                {tCommon("save")}
+              </Button>
+            </div>
+          </div>
+
+          {/* Section 3: Email */}
+          <div className="space-y-4 p-8">
+            <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
+              <div className="space-y-1 md:max-w-md">
+                <h2 className="text-foreground text-base font-semibold">{t("email")}</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">{t("emailDesc")}</p>
+              </div>
+              <div className="w-full md:max-w-xl">
+                <Input
+                  type="email"
+                  required
+                  disabled={isSavingEmail}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="border-border/80 h-10 w-full focus-visible:ring-1"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSaveEmail}
+                disabled={isSavingEmail || !email.trim()}
+                variant="secondary"
+                size="sm"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
+                {isSavingEmail && <Loader2 className="h-3 w-3 animate-spin" />}
+                {tCommon("save")}
+              </Button>
+            </div>
+          </div>
+
+          {/* Section 4: Communication Language */}
+          <div className="space-y-4 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="space-y-1 md:max-w-md">
                 <h2 className="text-foreground text-base font-semibold">
                   {t("language")} (Email & Notifications)
                 </h2>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  {t("languageDesc")} (Used for official emails, OTP, invoices, and system updates)
-                </p>
+                <p className="text-muted-foreground text-sm leading-relaxed">{t("languageDesc")}</p>
               </div>
               <div className="w-full md:max-w-xl">
                 <Select
@@ -467,18 +498,15 @@ export function AccountGeneralSettings() {
                 {tCommon("save")}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* CARD 3: TIMEZONE SETTINGS (Penanganan Zona Waktu Global) */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="flex flex-col gap-6 p-8">
+          {/* Section 5: Timezone Settings */}
+          <div className="space-y-4 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="space-y-1 md:max-w-md">
                 <h2 className="text-foreground text-base font-semibold">Timezone Settings</h2>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  Choose your local timezone. This ensures tasks, scheduling, and notifications
-                  match your actual local hours.
+                  Choose your local timezone to sync tasks, scheduling, and updates.
                 </p>
               </div>
               <div className="w-full md:max-w-xl">
@@ -502,11 +530,9 @@ export function AccountGeneralSettings() {
                         <CommandGroup>
                           {supportedTimezones.map((tz) => (
                             <CommandItem
-                              key={tz.value} // Diperbaiki dari tz.code -> tz.value
-                              value={tz.value} // Diperbaiki dari tz.code -> tz.value
-                              onSelect={(currentValue) => {
-                                setTimezone(currentValue);
-                              }}>
+                              key={tz.value}
+                              value={tz.value}
+                              onSelect={(currentValue) => setTimezone(currentValue)}>
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
@@ -534,82 +560,14 @@ export function AccountGeneralSettings() {
                 {tCommon("save")}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* CARD 4: YOUR NAME */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="flex flex-col gap-6 p-8">
-            <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
-              <div className="md:max-w-md">
-                <h2 className="text-foreground text-base font-semibold">{t("name")}</h2>
-              </div>
-              <div className="w-full md:max-w-xl">
-                <Input
-                  type="text"
-                  required
-                  disabled={isSavingName}
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="border-border/80 h-10 w-full focus-visible:ring-1"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                onClick={handleSaveName}
-                disabled={isSavingName || !fullName.trim()}
-                variant="secondary"
-                size="sm"
-                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
-                {isSavingName && <Loader2 className="h-3 w-3 animate-spin" />}
-                {tCommon("save")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* CARD 5: YOUR EMAIL */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="flex flex-col gap-6 p-8">
-            <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
-              <div className="space-y-1 md:max-w-md">
-                <h2 className="text-foreground text-base font-semibold">{t("email")}</h2>
-                <p className="text-muted-foreground text-sm leading-relaxed">{t("emailDesc")}</p>
-              </div>
-              <div className="w-full md:max-w-xl">
-                <Input
-                  type="email"
-                  required
-                  disabled={isSavingEmail}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="border-border/80 h-10 w-full focus-visible:ring-1"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                onClick={handleSaveEmail}
-                disabled={isSavingEmail || !email.trim()}
-                variant="secondary"
-                size="sm"
-                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
-                {isSavingEmail && <Loader2 className="h-3 w-3 animate-spin" />}
-                {tCommon("save")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* CARD 6: DELETE ACCOUNT */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
+          {/* Section 6: Delete Account (Danger Zone) */}
+          <div className="flex flex-col items-start justify-between gap-6 bg-red-50/10 p-8 md:flex-row md:items-center">
             <div className="space-y-1.5 md:max-w-xl">
               <h2 className="text-destructive text-base font-semibold">{t("delete")}</h2>
               <p className="text-muted-foreground text-sm leading-relaxed">{t("deleteDesc")}</p>
             </div>
-
             <div className="flex shrink-0">
               <Button
                 onClick={() => setIsConfirmOpen(true)}
@@ -618,11 +576,10 @@ export function AccountGeneralSettings() {
                 {t("deleteButton")}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* SHADCN DIALOG KONFIRMASI PENGHAPUSAN AKUN */}
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -642,7 +599,6 @@ export function AccountGeneralSettings() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* REUSABLE IMAGE CROPPER DIALOG */}
       <ImageCropperDialog
         open={cropperOpen}
         onOpenChange={setCropperOpen}

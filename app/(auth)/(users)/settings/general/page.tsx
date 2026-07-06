@@ -1,4 +1,4 @@
-import { AccountGeneralSettings } from "./view";
+import { GeneralSettingsPage } from "./view";
 import { constructMetadata } from "@/lib/metadata";
 import { getTranslations } from "next-intl/server";
 
@@ -12,5 +12,5 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
-  return <AccountGeneralSettings />;
+  return <GeneralSettingsPage />;
 }
