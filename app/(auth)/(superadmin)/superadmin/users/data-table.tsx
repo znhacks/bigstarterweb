@@ -55,6 +55,9 @@ import { formatToUserTimezone, formatRelativeTime } from "@/lib/date";
 import { supabase } from "@/lib/supabase";
 import { useTranslations, useLocale } from "next-intl";
 
+// Impor konfigurasi plans lokal (Full Supabase Code-defined Plans)
+import { plans } from "@/config/billing";
+
 export type User = {
   id: number;
   dbId: string;
@@ -67,9 +70,9 @@ export type User = {
   country: string;
   status: "active" | "inactive" | "pending";
   plan_name: string;
-  lastSignIn?: string | null; // Diubah menjadi opsional
-  created_at?: string; // Diubah menjadi opsional
-  updated_at?: string; // Diubah menjadi opsional
+  lastSignIn?: string | null;
+  created_at?: string;
+  updated_at?: string;
 };
 
 const multiSelectFilterFn: FilterFn<any> = (row, columnId, filterValue: string[]) => {
@@ -78,7 +81,7 @@ const multiSelectFilterFn: FilterFn<any> = (row, columnId, filterValue: string[]
   return filterValue.map((v) => v.toLowerCase()).includes(rowValue);
 };
 
-// Mengubah fungsi getColumns agar menerima fungsi translasi `t`, `locale`, dan `timeZone`
+// Fungsi getColumns menerima fungsi translasi `t`, `locale`, dan `timeZone`
 export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<User>[] => [
   {
     id: "select",
@@ -350,6 +353,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   const loadUsersFromSupabase = async () => {
     setIsLoading(true);
     try {
+      // PERBAIKAN: Hanya mengambil plan_id dari tabel subscriptions, tidak memanggil tabel plans yang tidak ada
       const { data, error } = await supabase.from("profiles").select(`
           id,
           full_name,
@@ -364,9 +368,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
               name,
               subscriptions (
                 status,
-                plans (
-                  name
-                )
+                plan_id
               )
             )
           )
@@ -380,7 +382,10 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
         const tenant = firstMembership?.tenants;
         const firstSub = tenant?.subscriptions?.[0];
 
-        const planName = firstSub?.plans?.name || "Free";
+        // PERBAIKAN: Cari nama paket dari file config/billing.ts lokal berdasarkan plan_id
+        const localPlan = plans.find((p) => p.id === firstSub?.plan_id);
+        const planName = localPlan ? localPlan.name : "Free";
+
         const statusVal = firstSub?.status === "active" ? "active" : "inactive";
 
         return {
@@ -390,9 +395,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           lastName: fullName.split(" ").slice(1).join(" ") || "",
           name: fullName,
           role: firstMembership?.role || "Member",
-          plan_name: planName,
           email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
           country: "United States",
+          plan_name: planName,
           status: statusVal as "active" | "inactive" | "pending",
           image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`,
           created_at: prof.created_at,
@@ -477,7 +482,8 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     { value: "pending", label: "Pending" }
   ];
 
-  const plans = [
+  // List filter plan menyesuaikan dengan array plans Anda
+  const plansList = [
     { value: "Free", label: "Free" },
     { value: "Starter", label: "Starter" },
     { value: "Pro", label: "Pro" },
@@ -561,7 +567,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                 <CommandList>
                   <CommandEmpty>{t("filters.noPlan")}</CommandEmpty>
                   <CommandGroup>
-                    {plans.map((plan) => (
+                    {plansList.map((plan) => (
                       <CommandItem
                         key={plan.value}
                         value={plan.value}

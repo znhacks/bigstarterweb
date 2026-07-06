@@ -7,6 +7,9 @@ import UsersDataTable, { User } from "./data-table";
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
 
+// PERBAIKAN 1: Impor konfigurasi plans dari billing.ts lokal Anda
+import { plans } from "@/config/billing";
+
 export async function generateMetadata() {
   const t = await getTranslations("metadata.superadmin.users");
 
@@ -45,7 +48,8 @@ export default async function Page() {
     data: { user }
   } = await supabase.auth.getUser();
 
-  // 2. Ambil data gabungan dari Supabase secara Server-Side
+  // 2. Ambil data gabungan dari Supabase secara Server-Side (PERBAIKAN 2: Hanya ambil plan_id)
+  // 2. Ambil data gabungan dari Supabase secara Server-Side (BERSIH DARI KOMENTAR)
   const { data: profiles, error } = await supabase
     .from("profiles")
     .select(
@@ -61,9 +65,7 @@ export default async function Page() {
           name,
           subscriptions (
             status,
-            plans (
-              name
-            )
+            plan_id
           )
         )
       )
@@ -75,14 +77,17 @@ export default async function Page() {
     console.error("Gagal memuat data pengguna server-side:", error.message);
   }
 
-  // 3. Petakan hasil kueri ke tipe data User[]
+  // 3. Petakan hasil kueri ke tipe data User[] (PERBAIKAN 3: Memetakan menggunakan plans lokal)
   const formattedUsers: User[] = (profiles || []).map((prof: any, index: number) => {
     const fullName = prof.full_name || "Unknown User";
     const firstMembership = prof.memberships?.[0];
     const tenant = firstMembership?.tenants;
     const firstSub = tenant?.subscriptions?.[0];
 
-    const planName = firstSub?.plans?.name || "Free";
+    // Temukan nama plan dari config/billing.ts lokal berdasarkan plan_id
+    const localPlan = plans.find((p) => p.id === firstSub?.plan_id);
+    const planName = localPlan ? localPlan.name : "Free";
+
     const statusVal = firstSub?.status === "active" ? "active" : "inactive";
 
     return {
@@ -92,7 +97,7 @@ export default async function Page() {
       lastName: fullName.split(" ").slice(1).join(" ") || "",
       name: fullName,
       role: firstMembership?.role || "Member",
-      plan_name: planName,
+      plan_name: planName, // <-- Menggunakan hasil pemetaan lokal
       email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
       country: "United States",
       status: statusVal as "active" | "inactive" | "pending",

@@ -5,6 +5,7 @@ import { SupabaseDatabaseService } from "@/services/databases/supabase";
 // lib/providers.ts
 import { bigstarterConfig } from "@/bigstarter.config";
 import { IDatabaseService } from "@/interfaces/database";
+import { ITaskRepository } from "@/interfaces/task";
 
 // import { S3StorageService } from "@/services/storage/s3Storage";
 
@@ -32,4 +33,11 @@ export function getStorageService(): IStorageService {
 
   //   if (active === "s3") return new S3StorageService();
   return new SupabaseStorageService(); // default 'supabase'
+}
+
+export function getTaskRepository(): ITaskRepository {
+  const provider = process.env.DATABASE_PROVIDER;
+  if (provider === "supabase") return new SupabaseTask();
+  // ... opsi prisma ...
+  throw new Error("Provider tidak didukung");
 }
