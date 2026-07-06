@@ -3,7 +3,14 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, ChevronRightIcon, LogOut, Sparkles, Loader2 } from "lucide-react";
+import {
+  BadgeCheck,
+  ChevronRightIcon,
+  LogOut,
+  Sparkles,
+  Loader2,
+  UserCircle2Icon
+} from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -144,9 +151,11 @@ export default function UserMenu() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuGroup>
-          <DropdownMenuItem className="cursor-pointer">
-            <BadgeCheck className="mr-2 h-4 w-4" />
-            Account
+          <DropdownMenuItem asChild>
+            <Link href="/settings/general" className="cursor-pointer">
+              <UserCircle2Icon className="mr-2 h-4 w-4" />
+              Account
+            </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

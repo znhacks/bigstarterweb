@@ -24,6 +24,7 @@ import { DotsVerticalIcon } from "@radix-ui/react-icons";
 
 // Impor klien Supabase Anda
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -162,9 +163,11 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="cursor-pointer">
-                <UserCircle2Icon className="mr-2 h-4 w-4" />
-                Account
+              <DropdownMenuItem asChild>
+                <Link href="/settings/general" className="cursor-pointer">
+                  <UserCircle2Icon className="mr-2 h-4 w-4" />
+                  Account
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

@@ -78,44 +78,18 @@ export const navItems: NavGroup[] = [
         icon: ChartPieIcon
       },
       {
-        title: "Organization",
-        href: `/organization`,
-        tenantScoped: true, // Butuh tenant slug
-        icon: CreditCardIcon,
-        roles: ["Owner", "Admin", "Member"],
-        items: [
-          {
-            title: "General",
-            href: `/organization/general`,
-            tenantScoped: true,
-            roles: ["Owner", "Admin", "Member"]
-          },
-          {
-            title: "Member",
-            href: `/organization/member`,
-            tenantScoped: true,
-            roles: ["Owner", "Admin"]
-          },
-          {
-            title: "Billing",
-            href: `/organization/billing`,
-            tenantScoped: true,
-            roles: ["Owner"]
-          }
-        ]
-      },
-      {
         title: "Settings",
-        href: "/settings", // Global (tidak menggunakan tenantScoped)
+        href: "/settings/general", // Global (tidak menggunakan tenantScoped)
         icon: Settings,
         items: [
           {
-            title: "General",
+            title: "Account",
             href: "/settings/general"
           },
           {
-            title: "Security",
-            href: "/settings/security"
+            title: "Organization",
+            href: "/organization/general",
+            tenantScoped: true
           }
         ]
       }
