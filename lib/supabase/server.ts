@@ -22,7 +22,7 @@ export async function createClient() {
             // Diabaikan jika dipanggil dari Server Component
           }
         }
-      },
+      },  
       auth: {
         experimental: {
           passkey: true
