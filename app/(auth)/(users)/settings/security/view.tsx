@@ -3,17 +3,7 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  KeyRound,
-  CheckCircle2,
-  AlertCircle,
-  X,
-  Loader2,
-  ShieldCheck,
-  Laptop,
-  Check,
-  Fingerprint
-} from "lucide-react";
+import { KeyRound, CheckCircle2, AlertCircle, X, Loader2, Check } from "lucide-react";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,8 +11,6 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
-import { getTranslations } from "next-intl/server";
-import { constructMetadata } from "@/lib/metadata";
 
 interface AlertState {
   title: string;
@@ -30,38 +18,18 @@ interface AlertState {
   variant?: "default" | "destructive";
 }
 
-export async function generateMetadata() {
-  const t = await getTranslations("metadata.users.settings.security");
-
-  return constructMetadata({
-    title: t("title"),
-    description: t("description")
-  });
-}
-
-export function AccountSecuritySettings() {
+export function SecuritySettingsPage() {
   const router = useRouter();
   const locale = useLocale();
+  const t = useTranslations("settings.account-security");
 
-  const t = useTranslations("account-security");
-
-  // State data dari Supabase
+  const [isLoading, setIsLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [providers, setProviders] = useState<string[]>([]);
-  const [userAgent, setUserAgent] = useState("");
-  const [isMfaEnabled, setIsMfaEnabled] = useState(false);
-
-  // State loading & interaksi
-  const [isLoading, setIsLoading] = useState(true);
   const [isSendingReset, setIsSendingReset] = useState(false);
-  const [isTerminating, setIsTerminating] = useState(false);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setUserAgent(window.navigator.userAgent);
-    }
-
     const loadSecurityData = async () => {
       setIsLoading(true);
       try {
@@ -76,15 +44,6 @@ export function AccountSecuritySettings() {
 
         setEmail(user.email || "");
         setProviders(user.app_metadata?.providers || []);
-
-        // Memeriksa keaktifan autentikasi dua faktor (MFA/2FA) secara nyata dari Supabase
-        const { data: mfaData, error: mfaError } = await supabase.auth.mfa.listFactors();
-        if (!mfaError && mfaData && mfaData.all.length > 0) {
-          const verifiedFactors = mfaData.all.filter((factor) => factor.status === "verified");
-          if (verifiedFactors.length > 0) {
-            setIsMfaEnabled(true);
-          }
-        }
       } catch (err) {
         console.error("Gagal memuat data keamanan:", err);
       } finally {
@@ -95,7 +54,6 @@ export function AccountSecuritySettings() {
     loadSecurityData();
   }, [router]);
 
-  // Efek auto-dismiss alert
   useEffect(() => {
     if (alertMessage) {
       const timer = setTimeout(() => {
@@ -105,16 +63,13 @@ export function AccountSecuritySettings() {
     }
   }, [alertMessage]);
 
-  // Handler Kirim Email Ganti Password Nyata via Supabase Auth
   const handleSetPassword = async () => {
     if (!email) return;
     setIsSendingReset(true);
     setAlertMessage(null);
 
     try {
-      // Mengarahkan tautan klik email verifikasi ke form pengetikan sandi baru secara terintegrasi
       const redirectToUrl = `${window.location.origin}/auth/callback?next=/dashboard/update-password`;
-
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectToUrl
       });
@@ -122,14 +77,11 @@ export function AccountSecuritySettings() {
       if (error) throw error;
 
       setAlertMessage({
-        title:
-          locale === "en" ? "Email Sent" : locale === "es" ? "Correo Enviado" : "Email Terkirim",
+        title: locale === "en" ? "Email Sent" : "Email Terkirim",
         description:
           locale === "en"
             ? "We have sent a password reset link to your email."
-            : locale === "es"
-              ? "Hemos enviado un enlace de restablecimiento de contraseña a tu correo electrónico."
-              : "Kami telah sukses mengirimkan tautan penyetelan kata sandi baru ke inbox email Anda.",
+            : "Tautan penyetelan ulang kata sandi telah sukses dikirim ke inbox email Anda.",
         variant: "default"
       });
     } catch (e: any) {
@@ -143,13 +95,12 @@ export function AccountSecuritySettings() {
     }
   };
 
-  // Handler Hubungkan Provider Sosial (Google/GitHub) Tambahan ke Sesi Akun Aktif
   const handleConnectProvider = async (provider: "google" | "github") => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard/settings/security` // redirect kembali ke halaman ini setelah sukses menghubungkan
+          redirectTo: `${window.location.origin}/dashboard/settings/security`
         }
       });
       if (error) throw error;
@@ -162,52 +113,16 @@ export function AccountSecuritySettings() {
     }
   };
 
-  // Handler Hentikan Sesi di Perangkat Lain via Supabase
-  const handleTerminateOtherSessions = async () => {
-    setIsTerminating(true);
-    setAlertMessage(null);
-
-    try {
-      // Mengeluarkan semua sesi di perangkat lain kecuali perangkat saat ini secara aman
-      const { error } = await supabase.auth.signOut({ scope: "others" });
-      if (error) throw error;
-
-      setAlertMessage({
-        title: locale === "en" ? "Sessions Terminated" : "Sesi Diakhiri",
-        description:
-          locale === "en"
-            ? "Successfully signed out of all other devices."
-            : "Sesi aktif di perangkat lain berhasil dihentikan secara aman.",
-        variant: "default"
-      });
-    } catch (e: any) {
-      setAlertMessage({
-        title: "Error",
-        description: e.message || "Gagal mengakhiri sesi lain.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsTerminating(false);
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-[300px] items-center justify-center">
         <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-10">
-      {/* Header Halaman */}
-      <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
-      </div>
-
-      {/* SHADCN ALERT NOTIFICATION */}
+    <div className="space-y-6">
       {alertMessage && (
         <Alert
           variant={alertMessage.variant === "destructive" ? "destructive" : "default"}
@@ -231,10 +146,11 @@ export function AccountSecuritySettings() {
         </Alert>
       )}
 
-      <div className="space-y-6">
-        {/* CARD 1: YOUR PASSWORD (GANTI PASSWORD) */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
+      {/* KONSOLIDASI: SATU CARD TUNGGAL UNTUK SEMUA FORM SECURITY */}
+      <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
+        <CardContent className="divide-border/60 divide-y p-0">
+          {/* Section 1: Set/Change Password */}
+          <div className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
             <div className="space-y-1 md:max-w-xl">
               <h2 className="text-foreground text-base font-semibold">{t("password.title")}</h2>
               <p className="text-muted-foreground text-sm leading-relaxed">{t("password.desc")}</p>
@@ -254,16 +170,19 @@ export function AccountSecuritySettings() {
                 {t("password.btn")}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* CARD 2: CONNECTED ACCOUNTS */}
-        <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
-          <CardContent className="space-y-6 p-8">
-            <h2 className="text-foreground text-base font-semibold">{t("oauth.title")}</h2>
+          {/* Section 2: OAuth / Connected Accounts */}
+          <div className="space-y-6 p-8">
+            <div className="space-y-1">
+              <h2 className="text-foreground text-base font-semibold">{t("oauth.title")}</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Hubungkan akun Google atau GitHub Anda untuk otentikasi login yang lebih praktis.
+              </p>
+            </div>
 
             <div className="max-w-2xl space-y-4">
-              {/* OAUTH 1: GOOGLE */}
+              {/* Google Connection Row */}
               <div className="border-border/60 flex items-center justify-between rounded-xl border p-4">
                 <div className="flex items-center gap-3">
                   <svg viewBox="0 0 24 24" className="h-5 w-5">
@@ -301,7 +220,7 @@ export function AccountSecuritySettings() {
                 )}
               </div>
 
-              {/* OAUTH 2: GITHUB */}
+              {/* GitHub Connection Row */}
               <div className="border-border/60 flex items-center justify-between rounded-xl border p-4">
                 <div className="flex items-center gap-3">
                   <GitHubLogoIcon className="h-5 w-5" />
@@ -322,9 +241,9 @@ export function AccountSecuritySettings() {
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

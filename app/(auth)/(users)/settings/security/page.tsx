@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
-import { AccountSecuritySettings } from "./view";
+import { SecuritySettingsPage } from "./view";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.users.settings.security");
@@ -12,5 +12,5 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
-  return <AccountSecuritySettings />;
+  return <SecuritySettingsPage />;
 }
