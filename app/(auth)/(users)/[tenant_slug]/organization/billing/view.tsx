@@ -28,7 +28,7 @@ import {
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { plans } from "@/config/billing";
 import { useOrganizationBilling } from "./logic";
-// Sesuaikan path-nya
+
 export function OrganizationBilling() {
   const {
     locale,
@@ -92,7 +92,7 @@ export function OrganizationBilling() {
   return (
     <PayPalScriptProvider
       options={{
-        "client-id": process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "test",
+        clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "test", // Menggunakan camelCase clientId
         currency: "USD"
       }}>
       <div className="mx-auto w-full max-w-5xl space-y-10 px-4">
@@ -108,7 +108,7 @@ export function OrganizationBilling() {
         {alertMessage && (
           <Alert
             variant={alertMessage.variant === "destructive" ? "destructive" : "default"}
-            className="border-border/80 relative flex items-start gap-3 rounded-xl border pe-10">
+            className="border-border/80 relative flex items-start gap-3 rounded-xl border pr-10">
             {alertMessage.variant === "destructive" ? (
               <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
             ) : (
@@ -122,20 +122,25 @@ export function OrganizationBilling() {
             </div>
             <button
               onClick={() => setAlertMessage(null)}
-              className="text-muted-foreground hover:text-foreground absolute end-4 top-4 transition-colors">
+              className="text-muted-foreground hover:text-foreground absolute top-4 right-4 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </Alert>
         )}
 
         <div className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-foreground text-xl font-semibold tracking-tight">{t("title")}</h2>
+            <p className="text-muted-foreground text-sm">{t("desc")}</p>
+          </div>
+
           <Card className="overflow-hidden">
-            <CardContent className="">
+            <CardContent className="space-y-6 p-8">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2.5">
                     <h3 className="text-2xl font-bold tracking-tight">
-                      {isSubActive ? activeSub.planName : "Free"}
+                      {isSubActive && activeSub ? activeSub.planName : "Free"}
                     </h3>
 
                     {activeSub?.status === "refund_requested" ? (
@@ -158,8 +163,8 @@ export function OrganizationBilling() {
                   </div>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     {activeSub?.status === "refund_requested"
-                      ? t("subDetails.activeDesc", { price: formatPrice(activeSub.price) })
-                      : isSubActive
+                      ? t("subDetails.activeDesc", { price: formatPrice(activeSub?.price ?? 0) })
+                      : isSubActive && activeSub
                         ? `${t("subDetails.activeDesc", { price: formatPrice(activeSub.price) })} ${
                             activeSub.endsAt
                               ? `${
@@ -173,7 +178,7 @@ export function OrganizationBilling() {
                   </p>
                 </div>
 
-                {isSubActive && (
+                {isSubActive && activeSub && (
                   <div className="flex shrink-0 flex-wrap gap-3">
                     {activeSub.cancelAtPeriodEnd ? (
                       <Button
@@ -235,7 +240,7 @@ export function OrganizationBilling() {
               value={billingCycle}
               onValueChange={(val) => setBillingCycle(val as "monthly" | "yearly")}
               className="w-auto">
-              <TabsList className="border-border/60 h-auto w-full justify-center gap-6 rounded-none border-b bg-transparent p-0">
+              <TabsList className="border-border/60 h-auto w-full justify-center space-x-6 rounded-none border-b bg-transparent p-0">
                 <TabsTrigger
                   value="monthly"
                   className="data-[state=active]:border-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
@@ -292,7 +297,7 @@ export function OrganizationBilling() {
                         onClick={() => handleChoosePlan(plan)}
                         disabled={isDisabled}
                         className="bg-foreground text-background hover:bg-foreground/90 inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-5 font-semibold">
-                        <ArrowUpRight className="h-4 w-4 rtl:-scale-x-100" />
+                        <ArrowUpRight className="h-4 w-4" />
                         {t("buttons.upgrade")}
                       </Button>
                     ) : actionType === "downgrade" && isSubActive ? (
@@ -351,7 +356,7 @@ export function OrganizationBilling() {
 
             <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-start text-sm">
+                <table className="w-full border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-border/60 bg-muted/40 text-muted-foreground border-b text-xs font-semibold tracking-wider uppercase">
                       <th className="px-6 py-4">Date</th>
@@ -359,7 +364,7 @@ export function OrganizationBilling() {
                       <th className="px-6 py-4">Plan Name</th>
                       <th className="px-6 py-4">Amount</th>
                       <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4 text-end">Action</th>
+                      <th className="px-6 py-4 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-border/40 text-foreground/90 divide-y">
@@ -398,7 +403,7 @@ export function OrganizationBilling() {
                               {tx.status.toUpperCase()}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 text-end">
+                          <td className="px-6 py-4 text-right">
                             <Button
                               variant="outline"
                               size="sm"
@@ -421,7 +426,7 @@ export function OrganizationBilling() {
         </div>
 
         {/* SPANDUK PERINGATAN MASA AKTIF HAMPIR HABIS */}
-        {showWarningBanner && (
+        {showWarningBanner && activeSub && (
           <Alert className="flex items-start gap-3 rounded-2xl border-amber-500/30 bg-amber-500/10 p-4 text-amber-800">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <div className="space-y-1">
@@ -452,7 +457,7 @@ export function OrganizationBilling() {
                         ID: #{selectedInvoice.id.slice(0, 8).toUpperCase()}
                       </p>
                     </div>
-                    <div className="text-end">
+                    <div className="text-right">
                       <h3 className="text-sm font-bold">PREPAID SERVICE</h3>
                       <p className="text-muted-foreground mt-0.5 text-xs">
                         Date: {new Date(selectedInvoice.created_at).toLocaleDateString()}
@@ -470,7 +475,7 @@ export function OrganizationBilling() {
                         {selectedInvoice.tenant_id}
                       </p>
                     </div>
-                    <div className="text-end">
+                    <div className="text-right">
                       <p className="text-muted-foreground font-semibold tracking-wider uppercase">
                         Payment Method:
                       </p>
@@ -482,11 +487,11 @@ export function OrganizationBilling() {
                   </div>
 
                   <div className="border-border/60 mt-4 overflow-hidden rounded-xl border">
-                    <table className="w-full border-collapse text-start text-xs">
+                    <table className="w-full border-collapse text-left text-xs">
                       <thead>
                         <tr className="bg-muted/40 border-border/60 text-muted-foreground border-b font-semibold uppercase">
                           <th className="px-4 py-3">Description</th>
-                          <th className="px-4 py-3 text-end">Total</th>
+                          <th className="px-4 py-3 text-right">Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-border/40 text-foreground/90 divide-y">
@@ -499,7 +504,7 @@ export function OrganizationBilling() {
                               Prepaid SaaS premium feature access.
                             </p>
                           </td>
-                          <td className="px-4 py-4 text-end text-sm font-bold">
+                          <td className="px-4 py-4 text-right text-sm font-bold">
                             {formatPrice(selectedInvoice.amount)}
                           </td>
                         </tr>
@@ -580,7 +585,7 @@ export function OrganizationBilling() {
                       </div>
 
                       {billingCycle === "yearly" && (
-                        <div className="text-muted-foreground text-end text-[10px] italic">
+                        <div className="text-muted-foreground text-right text-[10px] italic">
                           Billed annually
                         </div>
                       )}

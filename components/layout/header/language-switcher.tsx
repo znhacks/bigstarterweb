@@ -37,6 +37,16 @@ export function LanguageSwitcher() {
     // bug "mengarah ke /[locale]" sebelumnya.
     document.cookie = `${LOCALE_COOKIE}=${newLocale};path=/;max-age=31536000;SameSite=Lax`;
 
+    // Perbarui <html lang> & <html dir> LANGSUNG di sisi klien.
+    // router.refresh() di App Router sering tidak memutakhirkan atribut
+    // tag <html> root, sehingga arah layout (termasuk sidebar & flex
+    // item yang mengandalkan inheritance `dir`) tidak ikut membalik saat
+    // ganti bahasa. Set eksplisit di sini menjamin `dir=rtl` langsung
+    // diterapkan tanpa menunggu navigasi penuh.
+    const html = document.documentElement;
+    html.lang = newLocale;
+    html.dir = newLocale === "ar" ? "rtl" : "ltr";
+
     startTransition(() => {
       router.refresh();
     });
