@@ -114,7 +114,7 @@ export function RoleEditor({ role, permissions, grantedIds }: RoleEditorProps) {
         </Card>
         <div className="flex justify-end">
           <Button type="submit" disabled={savingRole}>
-            {savingRole && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {savingRole && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             {t("detail.save")}
           </Button>
         </div>
@@ -159,7 +159,7 @@ export function RoleEditor({ role, permissions, grantedIds }: RoleEditorProps) {
           })}
           <div className="flex justify-end pt-2">
             <Button type="button" onClick={onSavePerms} disabled={savingPerms}>
-              {savingPerms && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {savingPerms && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t("detail.savePermissions")}
             </Button>
           </div>
@@ -175,9 +175,9 @@ export function RoleEditor({ role, permissions, grantedIds }: RoleEditorProps) {
           <p className="text-muted-foreground text-sm">{t("detail.dangerDesc")}</p>
           <Button type="button" variant="destructive" onClick={onDelete} disabled={deleting}>
             {deleting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="me-2 h-4 w-4" />
             )}
             {t("messages.delete")}
           </Button>

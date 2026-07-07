@@ -49,7 +49,7 @@ export default async function RolesPage() {
         </div>
         <Button asChild>
           <Link href="/superadmin/roles/new">
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             {t("new.title")}
           </Link>
         </Button>

@@ -71,7 +71,7 @@ export function NewRoleForm() {
           <Link href="/superadmin/roles">{t("messages.cancel")}</Link>
         </Button>
         <Button type="submit" disabled={pending}>
-          {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {pending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
           {t("new.submit")}
         </Button>
       </div>

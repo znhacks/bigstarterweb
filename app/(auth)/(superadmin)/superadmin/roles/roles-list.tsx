@@ -55,7 +55,7 @@ export function RolesList({ rows }: { rows: RoleRow[] }) {
               <TableHead>{t("list.hierarchy")}</TableHead>
               <TableHead>{t("list.members")}</TableHead>
               <TableHead>{t("list.permissions")}</TableHead>
-              <TableHead className="text-right">{t("list.actions")}</TableHead>
+              <TableHead className="text-end">{t("list.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -78,7 +78,7 @@ export function RolesList({ rows }: { rows: RoleRow[] }) {
                   </TableCell>
                   <TableCell>{r.members_count}</TableCell>
                   <TableCell>{r.permissions_count}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-end">
                     <div className="flex justify-end gap-1">
                       <Button asChild size="icon" variant="ghost">
                         <Link href={`/superadmin/roles/${r.id}`} title={t("detail.edit")}>

@@ -276,7 +276,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         "No organization"
                       )}
                     </span>
-                    <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
+                    <ChevronsUpDown className="ms-auto group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -323,7 +323,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           </span>
                         </div>
                         {activeOrg?.id === org.id && (
-                          <Check className="ml-auto size-4 text-green-700" />
+                          <Check className="ms-auto size-4 text-green-700" />
                         )}
                       </DropdownMenuItem>
                     ))

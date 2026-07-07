@@ -341,7 +341,7 @@ export function GeneralSettingsPage() {
       {alertMessage && (
         <Alert
           variant={alertMessage.variant === "destructive" ? "destructive" : "default"}
-          className="border-border/80 relative flex items-start gap-3 rounded-xl border pr-10">
+          className="border-border/80 relative flex items-start gap-3 rounded-xl border pe-10">
           {alertMessage.variant === "destructive" ? (
             <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
           ) : (
@@ -355,7 +355,7 @@ export function GeneralSettingsPage() {
           </div>
           <button
             onClick={() => setAlertMessage(null)}
-            className="text-muted-foreground hover:text-foreground absolute top-4 right-4 transition-colors">
+            className="text-muted-foreground hover:text-foreground absolute top-4 end-4 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </Alert>
@@ -519,7 +519,7 @@ export function GeneralSettingsPage() {
                       {timezone
                         ? supportedTimezones.find((tz) => tz.value === timezone)?.label
                         : "Select timezone..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-full p-0">
@@ -535,7 +535,7 @@ export function GeneralSettingsPage() {
                               onSelect={(currentValue) => setTimezone(currentValue)}>
                               <Check
                                 className={cn(
-                                  "mr-2 h-4 w-4",
+                                  "me-2 h-4 w-4",
                                   timezone === tz.value ? "opacity-100" : "opacity-0"
                                 )}
                               />

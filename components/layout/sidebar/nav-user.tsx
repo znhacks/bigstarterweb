@@ -131,11 +131,11 @@ export function NavUser() {
                   </AvatarFallback>
                 )}
               </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className="grid flex-1 text-start text-sm leading-tight">
                 <span className="truncate font-medium">{fullName}</span>
                 <span className="text-muted-foreground truncate text-xs">{email}</span>
               </div>
-              <DotsVerticalIcon className="ml-auto size-4" />
+              <DotsVerticalIcon className="ms-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -144,7 +144,7 @@ export function NavUser() {
             align="end"
             sideOffset={4}>
             <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+              <div className="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
                 <Avatar className="cursor-pointer border">
                   {/* RENDER AVATAR USER DARI SUPABASE JIKA ADA */}
                   {avatar ? (
@@ -155,7 +155,7 @@ export function NavUser() {
                     </AvatarFallback>
                   )}
                 </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 text-start text-sm leading-tight">
                   <span className="truncate font-medium">{fullName}</span>
                   <span className="text-muted-foreground truncate text-xs">{email}</span>
                 </div>
@@ -165,7 +165,7 @@ export function NavUser() {
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
                 <Link href="/settings/general" className="cursor-pointer">
-                  <UserCircle2Icon className="mr-2 h-4 w-4" />
+                  <UserCircle2Icon className="me-2 h-4 w-4" />
                   Account
                 </Link>
               </DropdownMenuItem>
@@ -174,7 +174,7 @@ export function NavUser() {
             <DropdownMenuItem
               onClick={handleLogOut}
               className="text-destructive focus:text-destructive cursor-pointer">
-              <LogOutIcon className="mr-2 h-4 w-4" />
+              <LogOutIcon className="me-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

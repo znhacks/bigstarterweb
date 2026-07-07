@@ -182,15 +182,15 @@ export default function Search() {
   return (
     <div className="lg:flex-1">
       <div className="relative hidden max-w-sm flex-1 lg:block">
-        <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <SearchIcon className="text-muted-foreground absolute top-1/2 start-3 h-4 w-4 -translate-y-1/2" />
         <Input
-          className="h-9 w-full cursor-pointer rounded-md border pr-4 pl-10 text-sm shadow-xs"
+          className="h-9 w-full cursor-pointer rounded-md border pe-4 ps-10 text-sm shadow-xs"
           placeholder="Search..."
           type="search"
           onFocus={() => setOpen(true)}
           disabled={isLoading}
         />
-        <div className="absolute top-1/2 right-2 hidden -translate-y-1/2 items-center gap-0.5 rounded-sm bg-zinc-200 p-1 font-mono text-xs font-medium sm:flex dark:bg-neutral-700">
+        <div className="absolute top-1/2 end-2 hidden -translate-y-1/2 items-center gap-0.5 rounded-sm bg-zinc-200 p-1 font-mono text-xs font-medium sm:flex dark:bg-neutral-700">
           <CommandIcon className="size-3" />
           <span>k</span>
         </div>
@@ -230,7 +230,7 @@ export default function Search() {
                             setOpen(false);
                             router.push(item.href);
                           }}>
-                          {item.icon && <item.icon className="mr-2 h-4 w-4" />}
+                          {item.icon && <item.icon className="me-2 h-4 w-4" />}
                           {/* Menggunakan displayTitle agar menampilkan nama induk */}
                           <span>{item.displayTitle || item.title}</span>
                         </CommandItem>

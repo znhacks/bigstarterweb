@@ -113,7 +113,7 @@ export function UpdatePasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
+                    className="absolute top-1/2 end-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
@@ -134,7 +134,7 @@ export function UpdatePasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
+                    className="absolute top-1/2 end-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>

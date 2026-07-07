@@ -409,7 +409,7 @@ export function SuperadminBillingDashboard() {
       {alertMessage && (
         <Alert
           variant={alertMessage.variant === "destructive" ? "destructive" : "default"}
-          className="border-border/80 relative flex items-start gap-3 rounded-xl border pr-10">
+          className="border-border/80 relative flex items-start gap-3 rounded-xl border pe-10">
           {alertMessage.variant === "destructive" ? (
             <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
           ) : (
@@ -423,7 +423,7 @@ export function SuperadminBillingDashboard() {
           </div>
           <button
             onClick={() => setAlertMessage(null)}
-            className="text-muted-foreground hover:text-foreground absolute top-4 right-4 transition-colors">
+            className="text-muted-foreground hover:text-foreground absolute top-4 end-4 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </Alert>
@@ -488,7 +488,7 @@ export function SuperadminBillingDashboard() {
       <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
         <CardContent className="space-y-6 p-8">
           <Tabs defaultValue="refunds" className="w-full space-y-6">
-            <TabsList className="border-border/60 h-auto w-full justify-start space-x-6 rounded-none border-b bg-transparent p-0">
+            <TabsList className="border-border/60 h-auto w-full justify-start gap-6 rounded-none border-b bg-transparent p-0">
               <TabsTrigger
                 value="refunds"
                 className="data-[state=active]:border-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-semibold shadow-none transition-all data-[state=active]:bg-transparent">
@@ -622,7 +622,7 @@ export function SuperadminBillingDashboard() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <span className="text-foreground text-lg font-bold">
                         {formatPrice(sub.plans?.price || 0)}
                       </span>
@@ -669,7 +669,7 @@ export function SuperadminBillingDashboard() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1 text-right">
+                    <div className="flex flex-col items-end gap-1 text-end">
                       <span
                         className={`text-lg font-bold ${tx.status === "refunded" ? "text-red-600" : "text-foreground"}`}>
                         {tx.status === "refunded" ? "-" : ""}
@@ -740,7 +740,7 @@ export function SuperadminBillingDashboard() {
 
                     {/* Harga, Kapasitas User, & Tombol Edit/Hapus */}
                     <div className="flex shrink-0 items-center justify-between gap-6 border-t pt-3 md:justify-end md:border-t-0 md:pt-0">
-                      <div className="text-left md:text-right">
+                      <div className="text-start md:text-end">
                         <span className="text-foreground text-lg font-extrabold">
                           {formatPrice(plan.price)}
                         </span>
@@ -903,7 +903,7 @@ export function SuperadminBillingDashboard() {
                 disabled={isProcessingAction !== null}
                 className="h-10 rounded-xl px-6 text-xs font-semibold">
                 {isProcessingAction === "saving-plan" && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 )}
                 {t("buttons.savePlan")}
               </Button>

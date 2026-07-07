@@ -126,7 +126,7 @@ export default function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-60" align="end">
         <DropdownMenuLabel className="p-0">
-          <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+          <div className="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
             <Avatar className="border">
               {avatar ? (
                 <AvatarImage src={avatar} alt={fullName} className="object-cover" />
@@ -136,7 +136,7 @@ export default function UserMenu() {
                 </AvatarFallback>
               )}
             </Avatar>
-            <div className="grid flex-1 text-left text-sm leading-tight">
+            <div className="grid flex-1 text-start text-sm leading-tight">
               <span className="text-foreground truncate font-semibold">{fullName}</span>
               <span className="text-muted-foreground truncate text-xs">{email}</span>
             </div>
@@ -146,14 +146,14 @@ export default function UserMenu() {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild className="cursor-pointer">
             <Link href="https://shadcnuikit.com/pricing" target="_blank">
-              <Sparkles className="mr-2 h-4 w-4 text-amber-500" /> Upgrade to Pro
+              <Sparkles className="me-2 h-4 w-4 text-amber-500" /> Upgrade to Pro
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link href="/settings/general" className="cursor-pointer">
-              <UserCircle2Icon className="mr-2 h-4 w-4" />
+              <UserCircle2Icon className="me-2 h-4 w-4" />
               Account
             </Link>
           </DropdownMenuItem>
@@ -162,7 +162,7 @@ export default function UserMenu() {
         <DropdownMenuItem
           onClick={handleLogOut}
           className="text-destructive focus:text-destructive cursor-pointer">
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="me-2 h-4 w-4" />
           Log out
         </DropdownMenuItem>
         <div className="bg-muted mt-1.5 rounded-md border">
@@ -171,7 +171,7 @@ export default function UserMenu() {
               <h4 className="text-sm font-medium">Credits</h4>
               <div className="text-muted-foreground flex cursor-pointer items-center text-sm">
                 <span>5 left</span>
-                <ChevronRightIcon className="ml-1 h-4 w-4" />
+                <ChevronRightIcon className="ms-1 h-4 w-4 rtl:-scale-x-100" />
               </div>
             </div>
             <Progress value={40} indicatorColor="bg-primary" />

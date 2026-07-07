@@ -135,18 +135,18 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
     <div className="space-y-8">
       {/* SEARCH BAR */}
       <div className="relative flex w-full max-w-md items-center">
-        <Search className="text-muted-foreground/60 absolute left-3.5 h-4 w-4" />
+        <Search className="text-muted-foreground/60 absolute start-3.5 h-4 w-4" />
         <Input
           type="text"
           placeholder={t("searchPlaceholder")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="border-border/80 h-10 rounded-xl pl-10"
+          className="border-border/80 h-10 rounded-xl ps-10"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery("")}
-            className="text-muted-foreground hover:text-foreground absolute right-3.5">
+            className="text-muted-foreground hover:text-foreground absolute end-3.5">
             <X className="h-4 w-4" />
           </button>
         )}
@@ -156,7 +156,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
       {alertMessage && (
         <Alert
           variant={alertMessage.variant === "destructive" ? "destructive" : "default"}
-          className="border-border/80 relative flex items-start gap-3 rounded-xl border pr-10">
+          className="border-border/80 relative flex items-start gap-3 rounded-xl border pe-10">
           {alertMessage.variant === "destructive" ? (
             <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
           ) : (
@@ -170,7 +170,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
           </div>
           <button
             onClick={() => setAlertMessage(null)}
-            className="text-muted-foreground hover:text-foreground absolute top-4 right-4 transition-colors">
+            className="text-muted-foreground hover:text-foreground absolute top-4 end-4 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </Alert>

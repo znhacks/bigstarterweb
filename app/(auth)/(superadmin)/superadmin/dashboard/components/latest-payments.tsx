@@ -413,20 +413,20 @@ export function LatestPayments() {
           <p className="text-muted-foreground text-sm">
             {selectedRowsCount} of {data.length} row(s) selected.
           </p>
-          <div className="space-x-2">
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}>
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4 rtl:-scale-x-100" />
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}>
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4 rtl:-scale-x-100" />
             </Button>
           </div>
         </div>

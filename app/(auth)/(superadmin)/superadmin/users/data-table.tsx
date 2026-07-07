@@ -122,11 +122,11 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
     header: ({ column }) => {
       return (
         <Button
-          className="-ml-3"
+          className="-ms-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           {t("headers.role")}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="me-2 h-4 w-4" />
         </Button>
       );
     },
@@ -138,11 +138,11 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
     header: ({ column }) => {
       return (
         <Button
-          className="-ml-3"
+          className="-ms-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           {t("headers.plan")}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="me-2 h-4 w-4" />
         </Button>
       );
     },
@@ -158,11 +158,11 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
     header: ({ column }) => {
       return (
         <Button
-          className="-ml-3"
+          className="-ms-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           {t("headers.email")}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="me-2 h-4 w-4" />
         </Button>
       );
     },
@@ -175,11 +175,11 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
     header: ({ column }) => {
       return (
         <Button
-          className="-ml-3"
+          className="-ms-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           {t("headers.country")}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="me-2 h-4 w-4" />
         </Button>
       );
     },
@@ -190,11 +190,11 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
     header: ({ column }) => {
       return (
         <Button
-          className="-ml-3"
+          className="-ms-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           {t("headers.status")}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="me-2 h-4 w-4" />
         </Button>
       );
     },
@@ -219,11 +219,11 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
     header: ({ column }) => {
       return (
         <Button
-          className="-ml-3"
+          className="-ms-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           {t("headers.lastSignIn")}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="me-2 h-4 w-4" />
         </Button>
       );
     },
@@ -245,11 +245,11 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
     header: ({ column }) => {
       return (
         <Button
-          className="-ml-3"
+          className="-ms-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           {t("headers.createdAt")}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="me-2 h-4 w-4" />
         </Button>
       );
     },
@@ -268,11 +268,11 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
     header: ({ column }) => {
       return (
         <Button
-          className="-ml-3"
+          className="-ms-3"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           {t("headers.updatedAt")}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="me-2 h-4 w-4" />
         </Button>
       );
     },
@@ -531,7 +531,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="border-border/80 h-10 rounded-xl">
-                <PlusCircle className="mr-2 h-4 w-4" />
+                <PlusCircle className="me-2 h-4 w-4" />
                 {t("filters.status")}
               </Button>
             </PopoverTrigger>
@@ -546,7 +546,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                         key={status.value}
                         value={status.value}
                         onSelect={() => handleStatusToggle(status.value)}>
-                        <div className="flex w-full cursor-pointer items-center space-x-3 py-1">
+                        <div className="flex w-full cursor-pointer items-center gap-3 py-1">
                           <Checkbox
                             id={status.value}
                             checked={selectedStatuses.includes(status.value)}
@@ -569,7 +569,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="border-border/80 h-10 rounded-xl">
-                <PlusCircle className="mr-2 h-4 w-4" />
+                <PlusCircle className="me-2 h-4 w-4" />
                 {t("filters.plan")}
               </Button>
             </PopoverTrigger>
@@ -584,7 +584,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                         key={plan.value}
                         value={plan.value}
                         onSelect={() => handlePlanToggle(plan.value)}>
-                        <div className="flex w-full cursor-pointer items-center space-x-3 py-1">
+                        <div className="flex w-full cursor-pointer items-center gap-3 py-1">
                           <Checkbox id={plan.value} checked={selectedPlans.includes(plan.value)} />
                           <label
                             htmlFor={plan.value}
@@ -604,7 +604,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="border-border/80 h-10 rounded-xl">
-                <PlusCircle className="mr-2 h-4 w-4" />
+                <PlusCircle className="me-2 h-4 w-4" />
                 {t("filters.role")}
               </Button>
             </PopoverTrigger>
@@ -619,7 +619,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                         key={role.value}
                         value={role.value}
                         onSelect={() => handleRoleToggle(role.value)}>
-                        <div className="flex w-full cursor-pointer items-center space-x-3 py-1">
+                        <div className="flex w-full cursor-pointer items-center gap-3 py-1">
                           <Checkbox id={role.value} checked={selectedRoles.includes(role.value)} />
                           <label
                             htmlFor={role.value}
@@ -637,8 +637,8 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="border-border/80 ml-auto h-10 rounded-xl">
-              <Columns className="mr-2 h-4 w-4" />{" "}
+            <Button variant="outline" className="border-border/80 ms-auto h-10 rounded-xl">
+              <Columns className="me-2 h-4 w-4" />{" "}
               <span className="hidden md:inline">{t("filters.columns")}</span>
             </Button>
           </DropdownMenuTrigger>
@@ -703,14 +703,14 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 pt-4">
+      <div className="flex items-center justify-end gap-2 pt-4">
         <div className="text-muted-foreground flex-1 text-xs">
           {t("footer.selected", {
             selected: table.getFilteredSelectedRowModel().rows.length,
             total: table.getFilteredRowModel().rows.length
           })}
         </div>
-        <div className="space-x-2">
+        <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"

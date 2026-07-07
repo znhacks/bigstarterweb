@@ -158,7 +158,7 @@ export function DotsLoader({
   };
 
   return (
-    <div className={cn("flex items-center space-x-1", containerSizes[size], className)}>
+    <div className={cn("flex items-center gap-1", containerSizes[size], className)}>
       {[...Array(3)].map((_, i) => (
         <div
           key={i}
@@ -196,7 +196,7 @@ export function TypingLoader({
   };
 
   return (
-    <div className={cn("flex items-center space-x-1", containerSizes[size], className)}>
+    <div className={cn("flex items-center gap-1", containerSizes[size], className)}>
       {[...Array(3)].map((_, i) => (
         <div
           key={i}
@@ -320,7 +320,7 @@ export function TerminalLoader({
   };
 
   return (
-    <div className={cn("flex items-center space-x-1", containerSizes[size], className)}>
+    <div className={cn("flex items-center gap-1", containerSizes[size], className)}>
       <span className={cn("text-primary font-mono", textSizes[size])}>{">"}</span>
       <div className={cn("bg-primary animate-[blink_1s_step-end_infinite]", cursorSizes[size])} />
       <span className="sr-only">Loading</span>

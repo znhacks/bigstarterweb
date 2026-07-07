@@ -102,14 +102,14 @@ export default function Page() {
                       </Label>
                       <FormControl>
                         <div className="relative">
-                          <MailIcon className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform opacity-30" />
+                          <MailIcon className="absolute top-1/2 start-3 h-4 w-4 -translate-y-1/2 transform opacity-30" />
                           <Input
                             {...field}
                             id="email"
                             type="email"
                             autoComplete="email"
                             disabled={isSubmitting}
-                            className="h-10 w-full pl-10"
+                            className="h-10 w-full ps-10"
                             placeholder="Enter your email address"
                           />
                         </div>
@@ -121,7 +121,7 @@ export default function Page() {
                 <Button type="submit" className="h-10 w-full" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
-                      <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2Icon className="me-2 h-4 w-4 animate-spin" />
                       Please wait
                     </>
                   ) : (
@@ -138,7 +138,7 @@ export default function Page() {
             <Link
               href="/login"
               className="text-foreground inline-flex items-center gap-0.5 font-semibold hover:underline">
-              Log in <ArrowLeft className="h-3 w-3 rotate-180" />
+              Log in <ArrowLeft className="h-3 w-3 rotate-180 rtl:rotate-0" />
             </Link>
           </p>
         </CardFooter>

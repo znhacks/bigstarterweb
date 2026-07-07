@@ -93,7 +93,7 @@ export function TeamMembersCard() {
               <PopoverTrigger asChild>
                 <Button variant="outline" className="shrink-0">
                   {roles.find((role) => role.id === member.role_id)?.name}{" "}
-                  <ChevronsDownIcon className="text-muted-foreground ml-2 h-4 w-4" />
+                  <ChevronsDownIcon className="text-muted-foreground ms-2 h-4 w-4" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="p-0" align="end">
@@ -119,7 +119,7 @@ export function TeamMembersCard() {
                             <p className="text-muted-foreground text-sm">{role.description}</p>
                           </div>
                           {member.role_id === role.id ? (
-                            <Check className="text-primary ml-auto flex size-4" />
+                            <Check className="text-primary ms-auto flex size-4" />
                           ) : null}
                         </CommandItem>
                       ))}

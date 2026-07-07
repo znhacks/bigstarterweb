@@ -261,7 +261,7 @@ export function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
+                  className="absolute top-1/2 end-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
@@ -270,7 +270,7 @@ export function LoginForm() {
               type="submit"
               className="bg-foreground text-background hover:bg-foreground/90 mt-1 h-10 w-full font-medium"
               disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Login
             </Button>
           </form>
@@ -296,7 +296,7 @@ export function LoginForm() {
               type="submit"
               className="bg-foreground text-background hover:bg-foreground/90 mt-1 h-10 w-full font-medium"
               disabled={isLoading || !email.trim()}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               Send magic link
             </Button>
           </form>
@@ -320,7 +320,7 @@ export function LoginForm() {
           className="h-10 w-full text-xs font-semibold"
           onClick={handleGoogleSignIn}
           disabled={isLoading}>
-          <svg viewBox="0 0 24 24" className="mr-2 h-4 w-4">
+          <svg viewBox="0 0 24 24" className="me-2 h-4 w-4">
             <path
               fill="currentColor"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -350,9 +350,9 @@ export function LoginForm() {
         onClick={handlePasskeyLogin}
         disabled={isLoading}>
         {isLoading ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className="me-2 h-4 w-4 animate-spin" />
         ) : (
-          <KeyIcon className="mr-2 h-4 w-4" />
+          <KeyIcon className="me-2 h-4 w-4" />
         )}
         Log in with Passkey
       </Button>

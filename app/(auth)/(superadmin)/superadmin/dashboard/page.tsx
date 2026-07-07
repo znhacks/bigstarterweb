@@ -31,7 +31,7 @@ export default function Page() {
     <div className="space-y-4">
       <div className="flex flex-row items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Dashboard</h1>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <CustomDateRangePicker />
           <Button>
             <Download />

@@ -43,7 +43,7 @@ export default function Page() {
           <Button asChild variant="outline" size="lg" className="group">
             <Link href="/">
               Back to Home
-              <ArrowRight />
+              <ArrowRight className="rtl:-scale-x-100" />
             </Link>
           </Button>
         </div>

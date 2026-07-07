@@ -78,7 +78,7 @@ export function DemoSandbox() {
         onClick={handleQuickSuperadminLogin}
         disabled={isLoading}
         className="h-8 w-full">
-        {isLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+        {isLoading && <Loader2 className="me-2 h-3.5 w-3.5 animate-spin" />}
         Quick Login: Superadmin
       </Button>
     </div>

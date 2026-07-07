@@ -37,7 +37,7 @@ export default function Page() {
           </div>
         </CardContent>
       </Card>
-      <div className="fixed right-6 bottom-6 z-50">
+      <div className="fixed end-6 bottom-6 z-50">
         <DemoSandbox />
       </div>
     </div>
