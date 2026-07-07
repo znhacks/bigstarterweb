@@ -108,7 +108,8 @@ export async function requireAnyPermission(
 /**
  * Gate untuk area Superadmin. Jalur ini SENDIRI terpisah dari sistem
  * role/permission membership — superadmin dideteksi lewat auth metadata
- * (`app_metadata.role === "superadmin"`), bukan lewat tabel roles.
+ * ATAU kolom `profiles.is_superadmin` (sumber kebenaran yang dipakai
+ * fungsi RLS `is_superadmin()`).
  *
  * Catatan keamanan: sebelum helper ini ditambahkan, TIDAK ada gate server
  * untuk `/superadmin/*` — siapa pun bisa me-render halaman superadmin.
@@ -116,16 +117,24 @@ export async function requireAnyPermission(
 export async function requireSuperadmin(redirectTo: string = "/dashboard") {
   const user = await requireAuth();
 
-  const isSuperadmin =
+  // Cek cepat via auth metadata / email legacy.
+  const quick =
     (user.app_metadata as Record<string, unknown> | undefined)?.role ===
       "superadmin" ||
     (user.user_metadata as Record<string, unknown> | undefined)?.role ===
       "superadmin" ||
-    user.email === "superadmin@example.com"; // legacy demo escape hatch
+    user.email === "superadmin@example.com";
+  if (quick) return user;
 
-  if (!isSuperadmin) {
-    redirect(redirectTo);
-  }
+  // Cek otoritatif via profiles.is_superadmin (service role, bypass RLS).
+  const { supabaseAdmin } = await import("@/lib/api/supabase-server");
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("is_superadmin")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  return user;
+  if (profile?.is_superadmin === true) return user;
+
+  redirect(redirectTo);
 }

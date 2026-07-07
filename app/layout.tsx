@@ -14,6 +14,7 @@ import { LanguageProvider } from "@/components/providers/language-provider";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
+import { DirectionProvider } from "@/components/ui/direction";
 
 export const metadata = constructMetadata();
 
@@ -57,7 +58,9 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange>
           <ActiveThemeProvider initialTheme={themeSettings}>
-            <NextIntlClientProvider locale={locale}>{children}</NextIntlClientProvider>
+            <NextIntlClientProvider locale={locale}>
+              <DirectionProvider dir={dir}>{children}</DirectionProvider>
+            </NextIntlClientProvider>
             <Toaster position="top-center" richColors />
             <NextTopLoader color="var(--primary)" showSpinner={false} height={2} shadow-sm="none" />
             {process.env.NODE_ENV === "production" ? <GoogleAnalyticsInit /> : null}
