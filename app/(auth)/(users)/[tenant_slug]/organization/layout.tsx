@@ -43,7 +43,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}>
                 <Settings className="h-4 w-4 shrink-0" />
-                <span>General</span>
+                <span>{t("menu.general")}</span>
               </Link>
 
               {/* Menu Members */}
@@ -56,7 +56,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}>
                 <Users className="h-4 w-4 shrink-0" />
-                <span>Members</span>
+                <span>{t("menu.member")}</span>
               </Link>
 
               {/* Menu Billing */}
@@ -69,7 +69,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}>
                 <CreditCard className="h-4 w-4 shrink-0" />
-                <span>Billing</span>
+                <span>{t("menu.billing")}</span>
               </Link>
             </nav>
           </Card>

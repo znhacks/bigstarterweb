@@ -43,7 +43,7 @@ export default function SettingsLayout({
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}>
                 <Settings className="h-4 w-4 shrink-0" />
-                <span>General Settings</span>
+                <span>{t("menu.general")}</span>
               </Link>
 
               <Link
@@ -55,7 +55,7 @@ export default function SettingsLayout({
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}>
                 <Shield className="h-4 w-4 shrink-0" />
-                <span>Security Settings</span>
+                <span>{t("menu.security")}</span>
               </Link>
             </nav>
           </Card>

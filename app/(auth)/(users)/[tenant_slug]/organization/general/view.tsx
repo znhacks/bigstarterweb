@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Users, Upload, CheckCircle2, AlertCircle, X, Loader2, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,231 +17,32 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-// Impor klien Supabase & Global Language Hook
-import { supabase } from "@/lib/supabase";
-import { PERMISSIONS, hasPermission, type PermissionName } from "@/lib/rbac";
-
-// IMPOR DIALOG PEMOTONG GAMBAR YANG REUSABLE
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
-import { useLocale, useTranslations } from "next-intl";
-
-interface AlertState {
-  title: string;
-  description: string;
-  variant?: "default" | "destructive";
-}
+import { useOrganizationGeneral } from "./logic"; // Sesuaikan path-nya
 
 export function OrganizationGeneralSettings() {
-  const router = useRouter();
-  const t = useTranslations("organization.organization-general");
-  const tCommon = useTranslations("common");
-  const locale = useLocale();
-
-  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
-  const [orgName, setOrgName] = useState("");
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-
-  // State permission pengguna aktif (RBAC)
-  const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
-
-  // State untuk manajemen pemotongan gambar (Cropping)
-  const [cropperOpen, setCropperOpen] = useState(false);
-
-  // State loading & interaksi
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-
-  // Ambil ID organisasi aktif dari localStorage saat halaman dimuat
-  useEffect(() => {
-    const orgId = localStorage.getItem("active_org_id");
-    if (orgId) {
-      setActiveOrgId(orgId);
-      fetchOrgAndRoleDetails(orgId);
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Ambil data detail organisasi & Hak Akses Role dari Supabase secara Paralel
-  const fetchOrgAndRoleDetails = async (orgId: string) => {
-    setIsLoading(true);
-    try {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/dashboard/login/v2");
-        return;
-      }
-
-      const [tenantRes, membershipRes] = await Promise.all([
-        supabase.from("tenants").select("name, logo").eq("id", orgId).single(),
-        supabase
-          .from("memberships")
-          .select("roles(role_permissions(permissions(name)))")
-          .eq("tenant_id", orgId)
-          .eq("user_id", user.id)
-          .maybeSingle()
-      ]);
-
-      if (tenantRes.error) throw tenantRes.error;
-      if (tenantRes.data) {
-        setOrgName(tenantRes.data.name);
-        setLogoPreview((tenantRes.data as any).logo || null);
-      }
-
-      const mData = membershipRes.data as any;
-      if (mData?.roles) {
-        const perms = (mData.roles.role_permissions ?? [])
-          .map((rp: any) => rp.permissions?.name)
-          .filter((n: any): n is string => typeof n === "string") as PermissionName[];
-        setUserPermissions(perms);
-      } else {
-        setUserPermissions(null);
-      }
-    } catch (error: any) {
-      console.error("Error fetching org details & role:", error);
-      setAlertMessage({
-        title: "Error",
-        description: t("alerts.errorLoad"),
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Tutup alert otomatis setelah 5 detik
-  useEffect(() => {
-    if (alertMessage) {
-      const timer = setTimeout(() => {
-        setAlertMessage(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [alertMessage]);
-
-  const handleCropComplete = async (croppedBlob: Blob) => {
-    if (!activeOrgId) return;
-
-    setIsUploadingLogo(true);
-    setAlertMessage(null);
-
-    try {
-      const filePath = `organizations/${activeOrgId}/${Date.now()}.webp`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, croppedBlob, {
-          contentType: "image/webp",
-          cacheControl: "3600",
-          upsert: true
-        });
-
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl }
-      } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-      const { error: tenantError } = await supabase
-        .from("tenants")
-        .update({ logo: publicUrl })
-        .eq("id", activeOrgId);
-
-      if (tenantError) throw tenantError;
-
-      setLogoPreview(publicUrl);
-      window.dispatchEvent(new Event("storage")); // Refresh Sidebar Icon
-
-      setAlertMessage({
-        title: locale === "en" ? "Success" : "Sukses",
-        description: t("alerts.successLogo"),
-        variant: "default"
-      });
-    } catch (error: any) {
-      console.error("Gagal mengunggah logo:", error);
-      setAlertMessage({
-        title: "Upload Failed",
-        description: error.message || "Gagal mengunggah logo organisasi.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploadingLogo(false);
-    }
-  };
-
-  const handleSaveName = async () => {
-    if (!activeOrgId) return;
-    setIsSaving(true);
-    setAlertMessage(null);
-
-    try {
-      const { error } = await supabase
-        .from("tenants")
-        .update({ name: orgName.trim() })
-        .eq("id", activeOrgId);
-
-      if (error) throw error;
-
-      setAlertMessage({
-        title: locale === "en" ? "Success" : "Sukses",
-        description: t("alerts.successName"),
-        variant: "default"
-      });
-
-      window.dispatchEvent(new Event("storage"));
-    } catch (error: any) {
-      setAlertMessage({
-        title: "Error",
-        description: error.message || "Gagal memperbarui nama organisasi.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDeleteOrganization = async () => {
-    if (!activeOrgId) return;
-    setIsDeleting(true);
-    setAlertMessage(null);
-
-    try {
-      await supabase.from("subscriptions").delete().eq("tenant_id", activeOrgId);
-      await supabase.from("memberships").delete().eq("tenant_id", activeOrgId);
-
-      const { error } = await supabase.from("tenants").delete().eq("id", activeOrgId);
-
-      if (error) throw error;
-
-      localStorage.removeItem("active_org_id");
-
-      setAlertMessage({
-        title: locale === "en" ? "Success" : "Sukses",
-        description: t("alerts.successDelete"),
-        variant: "default"
-      });
-
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (error: any) {
-      setAlertMessage({
-        title: "Error",
-        description: error.message || "Gagal menghapus organisasi.",
-        variant: "destructive"
-      });
-      setIsDeleting(false);
-    }
-  };
-
-  // Read-only jika pengguna tidak punya permission organization.update
-  const isReadOnly = !hasPermission(userPermissions, PERMISSIONS.organizationUpdate);
+  const {
+    t,
+    tCommon,
+    activeOrgId,
+    orgName,
+    setOrgName,
+    logoPreview,
+    cropperOpen,
+    setCropperOpen,
+    isLoading,
+    isUploadingLogo,
+    isSaving,
+    isDeleting,
+    alertMessage,
+    setAlertMessage,
+    isConfirmOpen,
+    setIsConfirmOpen,
+    handleCropComplete,
+    handleSaveName,
+    handleDeleteOrganization,
+    isReadOnly
+  } = useOrganizationGeneral();
 
   if (isLoading) {
     return (
@@ -288,7 +87,7 @@ export function OrganizationGeneralSettings() {
           </div>
           <button
             onClick={() => setAlertMessage(null)}
-            className="text-muted-foreground hover:text-foreground absolute top-4 end-4 transition-colors">
+            className="text-muted-foreground hover:text-foreground absolute end-4 top-4 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </Alert>

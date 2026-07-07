@@ -129,11 +129,6 @@ export function OrganizationBilling() {
         )}
 
         <div className="space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-foreground text-xl font-semibold tracking-tight">{t("title")}</h2>
-            <p className="text-muted-foreground text-sm">{t("desc")}</p>
-          </div>
-
           <Card className="overflow-hidden">
             <CardContent className="space-y-6 p-8">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
