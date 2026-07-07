@@ -108,6 +108,11 @@
   "organization": {
     "title": "Pengaturan Organisasi",
     "subtitle": "Kelola organisasi, Anggota dan berlangganan untuk organisasi anda",
+    "menu": {
+      "general": "Umum",
+      "member": "Anggota",
+      "billing": "Tagihan"
+    },
     "organization-general": {
       "readOnlyTitle": "Mode Baca Saja",
       "readOnlyDesc": "Anda masuk sebagai anggota (**Member**). Anda hanya diizinkan untuk melihat pengaturan organisasi dan tidak memiliki hak akses untuk memodifikasinya.",
@@ -226,6 +231,10 @@
   "settings": {
     "title": "Pengaturan",
     "subtitle": "Kelola profilmu, preferensi bahasa, dan konfigurasi keamanan akun mu",
+    "menu": {
+      "general": "Umum",
+      "security": "Keamanan"
+    },
     "account-general": {
       "title": "Pengaturan Akun",
       "subTitle": "Kelola pengaturan umum akun Anda.",

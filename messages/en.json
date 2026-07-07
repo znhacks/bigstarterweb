@@ -107,6 +107,11 @@
   "organization": {
     "title": "Organization Settings",
     "subtitle": "Manage organization, members, and subscription for your organization",
+    "menu": {
+      "general": "General",
+      "member": "Members",
+      "billing": "Billing"
+    },
     "organization-general": {
       "readOnlyTitle": "Read-Only Mode",
       "readOnlyDesc": "You are logged in as a **Member**. You are only allowed to view organization settings and do not have access to modify them.",
@@ -225,6 +230,10 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Manage your profile, prefered language, and configuration your security",
+    "menu": {
+      "general": "General",
+      "security": "Security"
+    },
     "account-general": {
       "title": "Account settings",
       "subTitle": "Manage your general account settings.",
