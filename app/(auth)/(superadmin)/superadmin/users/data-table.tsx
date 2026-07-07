@@ -329,6 +329,8 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  // Daftar role global (RBAC) untuk filter dropdown — DB-driven.
+  const [roles, setRoles] = useState<{ value: string; label: string }[]>([]);
 
   // Mendapatkan zona waktu lokal pengguna di sisi klien
   useEffect(() => {
@@ -350,6 +352,19 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   }, [initialData]);
 
+  // Ambil daftar role global untuk dropdown filter (menghormati role kustom baru).
+  useEffect(() => {
+    supabase
+      .from("roles")
+      .select("name")
+      .order("hierarchy_level", { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          setRoles(data.map((r: any) => ({ value: r.name, label: r.name })));
+        }
+      });
+  }, []);
+
   const loadUsersFromSupabase = async () => {
     setIsLoading(true);
     try {
@@ -362,7 +377,10 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           updated_at,
           last_sign_in,
           memberships (
-            role,
+            role_id,
+            roles (
+              name
+            ),
             tenants (
               id,
               name,
@@ -394,7 +412,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           firstName: fullName.split(" ")[0] || "",
           lastName: fullName.split(" ").slice(1).join(" ") || "",
           name: fullName,
-          role: firstMembership?.role || "Member",
+          role: firstMembership?.roles?.name || "Member",
           email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
           country: "United States",
           plan_name: planName,
@@ -488,12 +506,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     { value: "Starter", label: "Starter" },
     { value: "Pro", label: "Pro" },
     { value: "Enterprise", label: "Enterprise" }
-  ];
-
-  const roles = [
-    { value: "Owner", label: "Owner" },
-    { value: "Admin", label: "Admin" },
-    { value: "Member", label: "Member" }
   ];
 
   if (isLoading) {

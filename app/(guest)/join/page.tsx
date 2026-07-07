@@ -19,7 +19,8 @@ import { supabase } from "@/lib/supabase";
 
 interface DecodedToken {
   email: string;
-  role: string;
+  roleId: string;
+  roleName: string;
   orgName: string;
 }
 
@@ -128,11 +129,25 @@ export default function JoinOrganization() {
         throw new Error(`Anda sudah terdaftar sebagai anggota di organisasi '${decoded.orgName}'.`);
       }
 
+      // Ambil role_id dari BARIS INVITATION (sumber kebenaran), bukan dari token,
+      // agar token yang dimanipulasi tidak bisa meningkatkan hak akses.
+      const { data: inviteRow } = await supabase
+        .from("invitations")
+        .select("role_id, roles(name)")
+        .eq("tenant_id", tenantData.id)
+        .eq("email", decoded.email)
+        .maybeSingle();
+
+      const inv = inviteRow as any;
+      if (!inv || !inv.role_id) {
+        throw new Error("Undangan tidak valid atau role belum ditetapkan.");
+      }
+
       // 1. Daftarkan user ke tabel memberships
       const { error: membershipError } = await supabase.from("memberships").insert({
         user_id: activeUser.id,
         tenant_id: tenantData.id,
-        role: decoded.role // Simpan peran asli (Owner/Admin/Member)
+        role_id: inv.role_id
       });
 
       if (membershipError) throw membershipError;
@@ -294,7 +309,7 @@ export default function JoinOrganization() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Peran Anda</span>
-                  <span className="text-foreground font-semibold capitalize">{decoded.role}</span>
+                  <span className="text-foreground font-semibold capitalize">{decoded.roleName}</span>
                 </div>
               </div>
             </CardContent>

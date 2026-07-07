@@ -1,0 +1,405 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { plans, Plan } from "@/config/billing";
+import { useLocale, useTranslations } from "next-intl";
+
+export interface AlertState {
+  title: string;
+  description: string;
+  variant?: "default" | "destructive";
+}
+
+export interface Transaction {
+  id: string;
+  tenant_id: string;
+  amount: number;
+  plan_name: string;
+  order_id: string;
+  status: string;
+  created_at: string;
+}
+
+export interface ActiveSubscription {
+  id: string;
+  planId: string;
+  planName: string;
+  price: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  status: string;
+  cancelAtPeriodEnd: boolean;
+}
+
+export function useOrganizationBilling() {
+  const locale = useLocale();
+  const t = useTranslations("organization.organization-billing");
+
+  const formatPrice = (price: number) => {
+    const isEn = locale.toLowerCase().startsWith("en") || locale === "English";
+    return new Intl.NumberFormat(isEn ? "en-US" : "id-ID", {
+      style: "currency",
+      currency: "USD"
+    }).format(price);
+  };
+
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
+  const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdatingSub, setIsUpdatingSub] = useState(false);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [selectedInvoice, setSelectedInvoice] = useState<Transaction | null>(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+
+  const loadBillingData = async (orgId: string) => {
+    setIsLoading(true);
+    try {
+      await Promise.all([fetchActiveSubscription(orgId), fetchTransactionHistory(orgId)]);
+    } catch (e: any) {
+      console.error("Gagal memuat data billing:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchTransactionHistory = async (orgId: string) => {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("tenant_id", orgId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    setTransactions(data || []);
+  };
+
+  const fetchActiveSubscription = async (orgId: string) => {
+    const { data, error } = await supabase
+      .from("subscriptions")
+      .select("id, status, starts_at, ends_at, cancel_at_period_end, plan_id")
+      .eq("tenant_id", orgId)
+      .in("status", ["active", "refund_requested", "expired"])
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (data) {
+      const endsAt = data.ends_at ? new Date(data.ends_at) : null;
+      const isExpired = endsAt ? new Date() > endsAt : false;
+
+      if (isExpired && data.status === "active") {
+        await supabase.from("subscriptions").update({ status: "expired" }).eq("id", data.id);
+        setActiveSub(null);
+        return;
+      }
+
+      if (data.status === "expired") {
+        setActiveSub(null);
+        return;
+      }
+
+      const staticPlan = plans.find((p) => p.id === data.plan_id);
+
+      if (staticPlan) {
+        setActiveSub({
+          id: data.id,
+          planId: data.plan_id,
+          planName: staticPlan.name,
+          price: 0,
+          startsAt: data.starts_at,
+          endsAt: data.ends_at,
+          status: data.status,
+          cancelAtPeriodEnd: !!data.cancel_at_period_end
+        });
+        return;
+      }
+    }
+    setActiveSub(null);
+  };
+
+  useEffect(() => {
+    const orgId = localStorage.getItem("active_org_id");
+    if (orgId) {
+      setActiveOrgId(orgId);
+      loadBillingData(orgId);
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (alertMessage) {
+      const timer = setTimeout(() => {
+        setAlertMessage(null);
+      }, 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [alertMessage]);
+
+  const handleChoosePlan = (plan: Plan) => {
+    setSelectedPlan(plan);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!activeSub || !activeOrgId) return;
+    setIsUpdatingSub(true);
+    try {
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ cancel_at_period_end: true })
+        .eq("id", activeSub.id);
+
+      if (error) throw error;
+
+      setAlertMessage({
+        title: locale === "English" ? "Auto-Renewal Disabled" : "Perpanjangan Dinonaktifkan",
+        description: t("alerts.successCancel", {
+          date: activeSub.endsAt ? new Date(activeSub.endsAt).toLocaleDateString("id-ID") : ""
+        }),
+        variant: "default"
+      });
+
+      await fetchActiveSubscription(activeOrgId);
+    } catch (e: any) {
+      setAlertMessage({
+        title: "Failed to Cancel",
+        description: e.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdatingSub(false);
+    }
+  };
+
+  const handleResumeSubscription = async () => {
+    if (!activeSub || !activeOrgId) return;
+    setIsUpdatingSub(true);
+    try {
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ cancel_at_period_end: false })
+        .eq("id", activeSub.id);
+
+      if (error) throw error;
+
+      setAlertMessage({
+        title: locale === "English" ? "Subscription Resumed" : "Langganan Diaktifkan Kembali",
+        description: t("alerts.successResume"),
+        variant: "default"
+      });
+
+      await fetchActiveSubscription(activeOrgId);
+    } catch (e: any) {
+      setAlertMessage({
+        title: "Failed to Resume",
+        description: e.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdatingSub(false);
+    }
+  };
+
+  const handleClaimRefund = async () => {
+    if (!activeSub || !activeOrgId) return;
+    setIsUpdatingSub(true);
+    try {
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ status: "refund_requested" })
+        .eq("id", activeSub.id);
+
+      if (error) throw error;
+
+      setAlertMessage({
+        title: locale === "English" ? "Refund Claimed" : "Refund Diajukan",
+        description: t("alerts.successRefund"),
+        variant: "default"
+      });
+
+      setIsRefundDialogOpen(false);
+      await fetchActiveSubscription(activeOrgId);
+    } catch (e: any) {
+      setAlertMessage({ title: "Refund Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsUpdatingSub(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (details: any) => {
+    if (!activeOrgId || !selectedPlan) return;
+    setIsVerifyingPayment(true);
+
+    try {
+      const response = await fetch("/api/billing/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: details.id,
+          tenantId: activeOrgId,
+          planId: selectedPlan.id,
+          billingCycle: billingCycle
+        })
+      });
+
+      const verificationResult = await response.json();
+
+      if (!response.ok || verificationResult.error) {
+        throw new Error(verificationResult.error || "Gagal memverifikasi transaksi.");
+      }
+
+      const finalPrice =
+        billingCycle === "yearly"
+          ? selectedPlan.prices.yearly.amount
+          : selectedPlan.prices.monthly.amount;
+
+      setAlertMessage({
+        title: locale === "English" ? "Payment Successful" : "Pembayaran Berhasil",
+        description: t("alerts.successPay", {
+          planName: selectedPlan.name,
+          price: formatPrice(finalPrice),
+          orderId: details.id
+        }),
+        variant: "default"
+      });
+
+      await fetchActiveSubscription(activeOrgId);
+    } catch (error: any) {
+      console.error("Verification failed:", error);
+      setAlertMessage({
+        title: "Verification Failed",
+        description: t("alerts.errorDb", { error: error?.message || error }),
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifyingPayment(false);
+    }
+  };
+
+  const getRemainingCredit = (): number => {
+    if (!activeSub || !activeSub.startsAt || !activeSub.endsAt) return 0;
+
+    const now = new Date().getTime();
+    const start = new Date(activeSub.startsAt).getTime();
+    const end = new Date(activeSub.endsAt).getTime();
+
+    if (now >= end) return 0;
+
+    const totalDuration = end - start;
+    const remainingTime = end - now;
+
+    const activePlanConfig = plans.find((p) => p.id === activeSub.planId);
+    if (!activePlanConfig) return 0;
+
+    const originalPrice =
+      billingCycle === "yearly"
+        ? activePlanConfig.prices.yearly.amount
+        : activePlanConfig.prices.monthly.amount;
+
+    const remainingRatio = remainingTime / totalDuration;
+    const credit = remainingRatio * originalPrice;
+
+    return Math.max(0, parseFloat(credit.toFixed(2)));
+  };
+
+  const getUpgradePrice = (targetPlan: Plan) => {
+    const targetPrice =
+      billingCycle === "yearly"
+        ? targetPlan.prices.yearly.amount
+        : targetPlan.prices.monthly.amount;
+    const credit = getRemainingCredit();
+
+    const isUpgrade = getPlanActionType(targetPlan.id) === "upgrade";
+    if (!isUpgrade) {
+      return { finalPrice: targetPrice, creditUsed: 0 };
+    }
+
+    const finalPrice = targetPrice - credit;
+
+    return {
+      finalPrice: Math.max(1, parseFloat(finalPrice.toFixed(2))),
+      creditUsed: credit
+    };
+  };
+
+  const getPlanActionType = (planId: string) => {
+    if (!activeSub || activeSub.status === "refund_requested") return "choose";
+    if (activeSub.planId === planId) return "active";
+
+    const planWeights: Record<string, number> = { free: 1, starter: 2, pro: 3 };
+    const currentWeight = planWeights[activeSub.planId] || 1;
+    const targetWeight = planWeights[planId] || 1;
+
+    return targetWeight > currentWeight ? "upgrade" : "downgrade";
+  };
+
+  const isSubActive =
+    activeSub &&
+    activeSub.status === "active" &&
+    (activeSub.endsAt === null || new Date() < new Date(activeSub.endsAt));
+
+  const getDaysLeft = (): number => {
+    if (!activeSub || !activeSub.endsAt) return 0;
+    const now = new Date().getTime();
+    const end = new Date(activeSub.endsAt).getTime();
+    const diffTime = end - now;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const daysLeft = getDaysLeft();
+  const showWarningBanner = isSubActive && daysLeft <= 3 && daysLeft > 0;
+
+  const activePlanConfig = activeSub ? plans.find((p) => p.id === activeSub.planId) : null;
+  const currentActivePrice = activePlanConfig
+    ? billingCycle === "yearly"
+      ? activePlanConfig.prices.yearly.amount
+      : activePlanConfig.prices.monthly.amount
+    : 0;
+
+  return {
+    locale,
+    t,
+    formatPrice,
+    activeOrgId,
+    billingCycle,
+    setBillingCycle,
+    alertMessage,
+    setAlertMessage,
+    activeSub,
+    isLoading,
+    isUpdatingSub,
+    isVerifyingPayment,
+    selectedPlan,
+    isCheckoutOpen,
+    setIsCheckoutOpen,
+    isRefundDialogOpen,
+    setIsRefundDialogOpen,
+    transactions,
+    selectedInvoice,
+    setSelectedInvoice,
+    isInvoiceOpen,
+    setIsInvoiceOpen,
+    handleChoosePlan,
+    handleCancelSubscription,
+    handleResumeSubscription,
+    handleClaimRefund,
+    handlePaymentSuccess,
+    getUpgradePrice,
+    getPlanActionType,
+    isSubActive,
+    daysLeft,
+    showWarningBanner,
+    currentActivePrice
+  };
+}

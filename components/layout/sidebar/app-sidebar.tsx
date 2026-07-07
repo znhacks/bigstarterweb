@@ -215,10 +215,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       if (tenantError) throw tenantError;
 
+      // Ambil id role "Owner" dari tabel roles (RBAC ternormalisasi).
+      const { data: ownerRole } = await supabase
+        .from("roles")
+        .select("id")
+        .eq("name", "Owner")
+        .maybeSingle();
+
       const { error: membershipError } = await supabase.from("memberships").insert({
         user_id: user.id,
         tenant_id: tenantData.id,
-        role: "Owner"
+        role_id: ownerRole?.id ?? null
       });
 
       if (membershipError) throw membershipError;

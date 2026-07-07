@@ -1,16 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect } from "react";
 import {
   Check,
   X,
-  Star,
   CheckCircle2,
   AlertCircle,
   Loader2,
   ArrowUpRight,
-  ArrowDown,
   RefreshCw,
   Undo2
 } from "lucide-react";
@@ -29,381 +26,45 @@ import {
 } from "@/components/ui/dialog";
 
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-import { supabase } from "@/lib/supabase";
-import { useLanguage } from "@/components/providers/language-provider";
-import { plans, Plan } from "@/config/billing"; // Import berkas konfigurasi statis
-import { useLocale, useTranslations } from "next-intl";
-import { getTranslations } from "next-intl/server";
-import { constructMetadata } from "@/lib/metadata";
-import { requireRole } from "@/lib/auth";
-
-interface AlertState {
-  title: string;
-  description: string;
-  variant?: "default" | "destructive";
-}
-
-interface Transaction {
-  id: string;
-  tenant_id: string;
-  amount: number;
-  plan_name: string;
-  order_id: string;
-  status: string;
-  created_at: string;
-}
-
-interface ActiveSubscription {
-  id: string;
-  planId: string;
-  planName: string;
-  price: number;
-  startsAt: string | null;
-  endsAt: string | null;
-  status: string;
-  cancelAtPeriodEnd: boolean;
-}
-
+import { plans } from "@/config/billing";
+import { useOrganizationBilling } from "./logic";
+// Sesuaikan path-nya
 export function OrganizationBilling() {
-  const { formatPrice } = useLanguage();
-  const locale = useLocale();
-
-  const t = useTranslations("organization-billing");
-
-  
-
-  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-  const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
-
-  const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUpdatingSub, setIsUpdatingSub] = useState(false);
-  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
-
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
-
-  // State baru untuk transaksi & modal struk
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [selectedInvoice, setSelectedInvoice] = useState<Transaction | null>(null);
-  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
-
-  // Perbarui pemanggilan loadBillingData agar memuat riwayat transaksi
-  const loadBillingData = async (orgId: string) => {
-    setIsLoading(true);
-    try {
-      await Promise.all([
-        fetchActiveSubscription(orgId),
-        fetchTransactionHistory(orgId) // Ambil riwayat pembayaran
-      ]);
-    } catch (e: any) {
-      console.error("Gagal memuat data billing:", e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fungsi baru untuk mengambil data transaksi dari tabel 'transactions'
-  const fetchTransactionHistory = async (orgId: string) => {
-    const { data, error } = await supabase
-      .from("transactions")
-      .select("*")
-      .eq("tenant_id", orgId)
-      .order("created_at", { ascending: false }); // Transaksi terbaru di atas
-
-    if (error) throw error;
-    setTransactions(data || []);
-  };
-
-  useEffect(() => {
-    const orgId = localStorage.getItem("active_org_id");
-    if (orgId) {
-      setActiveOrgId(orgId);
-      loadBillingData(orgId);
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const fetchActiveSubscription = async (orgId: string) => {
-    const { data, error } = await supabase
-      .from("subscriptions")
-      .select("id, status, starts_at, ends_at, cancel_at_period_end, plan_id")
-      .eq("tenant_id", orgId)
-      // Kita juga mencari status 'expired' untuk memastikan riwayat lama terdeteksi
-      .in("status", ["active", "refund_requested", "expired"])
-      .maybeSingle();
-
-    if (error) throw error;
-
-    if (data) {
-      const endsAt = data.ends_at ? new Date(data.ends_at) : null;
-      const isExpired = endsAt ? new Date() > endsAt : false;
-
-      // --- LAZY EXPIRATION CLEANUP ---
-      if (isExpired && data.status === "active") {
-        await supabase.from("subscriptions").update({ status: "expired" }).eq("id", data.id);
-
-        setActiveSub(null);
-        return;
-      }
-
-      // Jika status memang sudah expired di DB, set activeSub menjadi null
-      if (data.status === "expired") {
-        setActiveSub(null);
-        return;
-      }
-
-      const staticPlan = plans.find((p) => p.id === data.plan_id);
-
-      if (staticPlan) {
-        setActiveSub({
-          id: data.id,
-          planId: data.plan_id,
-          planName: staticPlan.name,
-          price: 0,
-          startsAt: data.starts_at,
-          endsAt: data.ends_at,
-          status: data.status,
-          cancelAtPeriodEnd: !!data.cancel_at_period_end
-        });
-        return;
-      }
-    }
-    setActiveSub(null);
-  };
-
-  useEffect(() => {
-    if (alertMessage) {
-      const timer = setTimeout(() => {
-        setAlertMessage(null);
-      }, 7000);
-      return () => clearTimeout(timer);
-    }
-  }, [alertMessage]);
-
-  const handleChoosePlan = (plan: Plan) => {
-    setSelectedPlan(plan);
-    setIsCheckoutOpen(true);
-  };
-
-  const handleCancelSubscription = async () => {
-    if (!activeSub || !activeOrgId) return;
-    setIsUpdatingSub(true);
-    try {
-      const { error } = await supabase
-        .from("subscriptions")
-        .update({ cancel_at_period_end: true })
-        .eq("id", activeSub.id);
-
-      if (error) throw error;
-
-      setAlertMessage({
-        title: locale === "English" ? "Auto-Renewal Disabled" : "Perpanjangan Dinonaktifkan",
-        description: t("alerts.successCancel").replace(
-          "{date}",
-          activeSub.endsAt ? new Date(activeSub.endsAt).toLocaleDateString("id-ID") : ""
-        ),
-        variant: "default"
-      });
-
-      await fetchActiveSubscription(activeOrgId);
-    } catch (e: any) {
-      setAlertMessage({
-        title: "Failed to Cancel",
-        description: e.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsUpdatingSub(false);
-    }
-  };
-
-  const handleResumeSubscription = async () => {
-    if (!activeSub || !activeOrgId) return;
-    setIsUpdatingSub(true);
-    try {
-      const { error } = await supabase
-        .from("subscriptions")
-        .update({ cancel_at_period_end: false })
-        .eq("id", activeSub.id);
-
-      if (error) throw error;
-
-      setAlertMessage({
-        title: locale === "English" ? "Subscription Resumed" : "Langganan Diaktifkan Kembali",
-        description: t("alerts.successResume"),
-        variant: "default"
-      });
-
-      await fetchActiveSubscription(activeOrgId);
-    } catch (e: any) {
-      setAlertMessage({
-        title: "Failed to Resume",
-        description: e.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsUpdatingSub(false);
-    }
-  };
-
-  const handleClaimRefund = async () => {
-    if (!activeSub || !activeOrgId) return;
-    setIsUpdatingSub(true);
-    try {
-      const { error } = await supabase
-        .from("subscriptions")
-        .update({ status: "refund_requested" })
-        .eq("id", activeSub.id);
-
-      if (error) throw error;
-
-      setAlertMessage({
-        title: locale === "English" ? "Refund Claimed" : "Refund Diajukan",
-        description: t("alerts.successRefund"),
-        variant: "default"
-      });
-
-      setIsRefundDialogOpen(false);
-      await fetchActiveSubscription(activeOrgId);
-    } catch (e: any) {
-      setAlertMessage({ title: "Refund Failed", description: e.message, variant: "destructive" });
-    } finally {
-      setIsUpdatingSub(false);
-    }
-  };
-
-  const handlePaymentSuccess = async (details: any) => {
-    if (!activeOrgId || !selectedPlan) return;
-    setIsVerifyingPayment(true);
-
-    try {
-      const response = await fetch("/api/billing/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: details.id,
-          tenantId: activeOrgId,
-          planId: selectedPlan.id,
-          billingCycle: billingCycle
-        })
-      });
-
-      const verificationResult = await response.json();
-
-      if (!response.ok || verificationResult.error) {
-        throw new Error(verificationResult.error || "Gagal memverifikasi transaksi.");
-      }
-
-      const finalPrice =
-        billingCycle === "yearly"
-          ? selectedPlan.prices.yearly.amount
-          : selectedPlan.prices.monthly.amount;
-
-      setAlertMessage({
-        title: locale === "English" ? "Payment Successful" : "Pembayaran Berhasil",
-        description: t("alerts.successPay")
-          .replace("{planName}", selectedPlan.name)
-          .replace("{price}", formatPrice(finalPrice))
-          .replace("{orderId}", details.id),
-        variant: "default"
-      });
-
-      await fetchActiveSubscription(activeOrgId);
-    } catch (error: any) {
-      console.error("Verification failed:", error);
-      setAlertMessage({
-        title: "Verification Failed",
-        description: t("alerts.errorDb").replace("{error}", error?.message || error),
-        variant: "destructive"
-      });
-    } finally {
-      setIsVerifyingPayment(false);
-    }
-  };
-
-  // Fungsi untuk menghitung sisa nilai uang dari plan aktif saat ini (Prepaid Credit)
-  const getRemainingCredit = (): number => {
-    if (!activeSub || !activeSub.startsAt || !activeSub.endsAt) return 0;
-
-    const now = new Date().getTime();
-    const start = new Date(activeSub.startsAt).getTime();
-    const end = new Date(activeSub.endsAt).getTime();
-
-    if (now >= end) return 0; // Sudah kedaluwarsa
-
-    const totalDuration = end - start;
-    const remainingTime = end - now;
-
-    // Cari konfigurasi harga asli plan aktif
-    const activePlanConfig = plans.find((p) => p.id === activeSub.planId);
-    if (!activePlanConfig) return 0;
-
-    const originalPrice =
-      billingCycle === "yearly"
-        ? activePlanConfig.prices.yearly.amount
-        : activePlanConfig.prices.monthly.amount;
-
-    const remainingRatio = remainingTime / totalDuration;
-    const credit = remainingRatio * originalPrice;
-
-    return Math.max(0, parseFloat(credit.toFixed(2))); // Bulatkan 2 angka di belakang koma
-  };
-
-  // Fungsi untuk menghitung harga final yang harus dibayar saat upgrade
-  const getUpgradePrice = (targetPlan: Plan): { finalPrice: number; creditUsed: number } => {
-    const targetPrice =
-      billingCycle === "yearly"
-        ? targetPlan.prices.yearly.amount
-        : targetPlan.prices.monthly.amount;
-    const credit = getRemainingCredit();
-
-    // Jika harga target lebih murah (bukan upgrade), jangan beri potongan kredit
-    const isUpgrade = getPlanActionType(targetPlan.id) === "upgrade";
-    if (!isUpgrade) {
-      return { finalPrice: targetPrice, creditUsed: 0 };
-    }
-
-    const finalPrice = targetPrice - credit;
-
-    // Set minimal charge $1.00 jika potongan kredit melebihi harga plan target (mencegah eror payment gateway)
-    return {
-      finalPrice: Math.max(1, parseFloat(finalPrice.toFixed(2))),
-      creditUsed: credit
-    };
-  };
-
-  const getPlanActionType = (planId: string) => {
-    if (!activeSub || activeSub.status === "refund_requested") return "choose";
-    if (activeSub.planId === planId) return "active";
-
-    const planWeights: Record<string, number> = { free: 1, starter: 2, pro: 3 };
-    const currentWeight = planWeights[activeSub.planId] || 1;
-    const targetWeight = planWeights[planId] || 1;
-
-    return targetWeight > currentWeight ? "upgrade" : "downgrade";
-  };
-
-  const isSubActive =
-    activeSub &&
-    activeSub.status === "active" &&
-    (activeSub.endsAt === null || new Date() < new Date(activeSub.endsAt));
-
-  // Hitung sisa hari aktif paket prabayar
-  const getDaysLeft = (): number => {
-    if (!activeSub || !activeSub.endsAt) return 0;
-    const now = new Date().getTime();
-    const end = new Date(activeSub.endsAt).getTime();
-    const diffTime = end - now;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Konversi milidetik ke Hari
-  };
-
-  const daysLeft = getDaysLeft();
-  const showWarningBanner = isSubActive && daysLeft <= 3 && daysLeft > 0;
+  const {
+    locale,
+    t,
+    formatPrice,
+    activeOrgId,
+    billingCycle,
+    setBillingCycle,
+    alertMessage,
+    setAlertMessage,
+    activeSub,
+    isLoading,
+    isUpdatingSub,
+    isVerifyingPayment,
+    selectedPlan,
+    isCheckoutOpen,
+    setIsCheckoutOpen,
+    isRefundDialogOpen,
+    setIsRefundDialogOpen,
+    transactions,
+    selectedInvoice,
+    setSelectedInvoice,
+    isInvoiceOpen,
+    setIsInvoiceOpen,
+    handleChoosePlan,
+    handleCancelSubscription,
+    handleResumeSubscription,
+    handleClaimRefund,
+    handlePaymentSuccess,
+    getUpgradePrice,
+    getPlanActionType,
+    isSubActive,
+    daysLeft,
+    showWarningBanner,
+    currentActivePrice
+  } = useOrganizationBilling();
 
   if (isLoading) {
     return (
@@ -427,15 +88,6 @@ export function OrganizationBilling() {
       </div>
     );
   }
-
-  // Letakkan baris ini di bagian atas sebelum perintah return JSX Anda:
-  const activePlanConfig = activeSub ? plans.find((p) => p.id === activeSub.planId) : null;
-
-  const currentActivePrice = activePlanConfig
-    ? billingCycle === "yearly"
-      ? activePlanConfig.prices.yearly.amount
-      : activePlanConfig.prices.monthly.amount
-    : 0;
 
   return (
     <PayPalScriptProvider
@@ -482,7 +134,7 @@ export function OrganizationBilling() {
             <p className="text-muted-foreground text-sm">{t("desc")}</p>
           </div>
 
-          <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
+          <Card className="overflow-hidden">
             <CardContent className="space-y-6 p-8">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
                 <div className="space-y-1.5">
@@ -511,9 +163,9 @@ export function OrganizationBilling() {
                   </div>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     {activeSub?.status === "refund_requested"
-                      ? t("subDetails.activeDesc")
+                      ? t("subDetails.activeDesc", { price: formatPrice(activeSub.price) })
                       : isSubActive
-                        ? `${t("subDetails.activeDesc").replace("{price}", formatPrice(activeSub.price))} ${
+                        ? `${t("subDetails.activeDesc", { price: formatPrice(activeSub.price) })} ${
                             activeSub.endsAt
                               ? `${
                                   activeSub.cancelAtPeriodEnd
@@ -610,12 +262,12 @@ export function OrganizationBilling() {
               const planPrice =
                 billingCycle === "yearly" ? plan.prices.yearly.amount : plan.prices.monthly.amount;
 
-              if (plan.id === "free") return null; // Tidak perlu render checkout untuk paket gratis di area pembelian
+              if (plan.id === "free") return null;
 
               return (
                 <Card
                   key={plan.id}
-                  className={`border-border/80 flex h-full flex-col justify-between overflow-visible rounded-2xl border shadow-sm transition-all`}>
+                  className="border-border/80 flex h-full flex-col justify-between overflow-visible rounded-2xl border shadow-sm transition-all">
                   <CardContent className="flex flex-col gap-6 p-8">
                     <div className="space-y-4">
                       <div className="space-y-1.5">
@@ -773,7 +425,7 @@ export function OrganizationBilling() {
           </div>
         </div>
 
-        {/* SPANDUK PERINGATAN MASA AKTIF HAMPIR HABIS (GRACEFUL WARNING BANNER) */}
+        {/* SPANDUK PERINGATAN MASA AKTIF HAMPIR HABIS */}
         {showWarningBanner && (
           <Alert className="flex items-start gap-3 rounded-2xl border-amber-500/30 bg-amber-500/10 p-4 text-amber-800">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
@@ -792,12 +444,11 @@ export function OrganizationBilling() {
           </Alert>
         )}
 
-        {/* DIALOG MODAL DETAIL INVOICE (PRINT-FRIENDLY RECPT) */}
+        {/* DIALOG MODAL DETAIL INVOICE */}
         <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
           <DialogContent className="border-border/80 max-h-[90vh] overflow-y-auto rounded-2xl border p-8 sm:max-w-[550px]">
             {selectedInvoice && (
               <div className="space-y-6">
-                {/* Konten yang akan dicetak */}
                 <div id="printable-invoice" className="space-y-6 print:p-0">
                   <div className="border-border/80 flex items-start justify-between border-b pb-6">
                     <div>
@@ -872,7 +523,6 @@ export function OrganizationBilling() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
                 <DialogFooter className="border-border/60 gap-2 border-t pt-4 sm:gap-0 print:hidden">
                   <Button
                     variant="outline"
@@ -882,7 +532,7 @@ export function OrganizationBilling() {
                   </Button>
                   <Button
                     onClick={() => {
-                      window.print(); // Membuka sistem cetak printer/save PDF bawaan browser
+                      window.print();
                     }}
                     className="bg-foreground text-background hover:bg-foreground/90 inline-flex items-center gap-1.5 rounded-xl">
                     Print / Save PDF
@@ -893,6 +543,7 @@ export function OrganizationBilling() {
           </DialogContent>
         </Dialog>
 
+        {/* DIALOG MODAL CHECKOUT */}
         <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
           <DialogContent className="border-border/80 rounded-2xl border sm:max-w-[450px]">
             <DialogHeader>
@@ -907,7 +558,6 @@ export function OrganizationBilling() {
 
                 return (
                   <div className="space-y-6 py-4">
-                    {/* Rincian Transaksi dengan Prorasi */}
                     <div className="bg-muted/50 border-border/60 space-y-2 rounded-xl border p-4 text-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-foreground font-medium">
@@ -922,10 +572,9 @@ export function OrganizationBilling() {
                         </span>
                       </div>
 
-                      {/* Informasikan Kredit Sisa Jika Ini Proses Upgrade */}
                       {isUpgrade && creditUsed > 0 && (
                         <div className="flex items-center justify-between text-xs font-medium text-emerald-600">
-                          <span>Prepaid Credit Applied (Sisa Sisa Paket)</span>
+                          <span>Prepaid Credit Applied</span>
                           <span>-{formatPrice(creditUsed)}</span>
                         </div>
                       )}
@@ -942,7 +591,6 @@ export function OrganizationBilling() {
                       )}
                     </div>
 
-                    {/* Tombol Pembayaran PayPal dengan nominal yang sudah dipotong (finalPrice) */}
                     <div className="min-h-[150px] space-y-3">
                       <PayPalButtons
                         style={{ layout: "vertical", shape: "rect", label: "subscribe" }}
@@ -959,17 +607,16 @@ export function OrganizationBilling() {
 
                           return actions.subscription.create({
                             plan_id: activePlanId,
-                            custom_id: activeOrgId || undefined // Kirim ID organisasi di custom_id
+                            custom_id: activeOrgId || undefined
                           });
                         }}
                         onApprove={async (data, actions) => {
                           if (data.subscriptionID) {
-                            // Verifikasi sinkronus tetap berjalan dengan mengirimkan ID Langganan
                             await handlePaymentSuccess({ id: data.subscriptionID });
                             setIsCheckoutOpen(false);
                           }
                         }}
-                        onError={(err) => {
+                        onError={() => {
                           setAlertMessage({
                             title: "Payment Failed",
                             description:
@@ -986,12 +633,13 @@ export function OrganizationBilling() {
           </DialogContent>
         </Dialog>
 
+        {/* DIALOG MODAL REFUND */}
         <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
           <DialogContent className="border-border/80 rounded-2xl border sm:max-w-[450px]">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold">{t("dialogRefund.title")}</DialogTitle>
               <DialogDescription>
-                {t("dialogRefund.desc").replace("{planName}", activeSub?.planName || "")}
+                {t("dialogRefund.desc", { planName: activeSub?.planName || "" })}
               </DialogDescription>
             </DialogHeader>
 

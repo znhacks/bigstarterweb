@@ -22,7 +22,8 @@ import {
   Loader2,
   Settings,
   Users,
-  Building2
+  Building2,
+  ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -37,6 +38,7 @@ import {
 
 import { supabase } from "@/lib/supabase";
 import { useLocale } from "next-intl";
+import { PERMISSIONS, type PermissionName } from "@/lib/rbac";
 
 // Helper client-side untuk membaca Cookie
 const getCookie = (name: string) => {
@@ -61,7 +63,8 @@ type NavItem = {
   isDataBadge?: string;
   isNew?: boolean;
   newTab?: boolean;
-  roles?: ("Owner" | "Admin" | "Member")[];
+  // Gate berbasis permission (RBAC). Jika kosong, item tampil untuk semua.
+  permissions?: PermissionName[];
   items?: NavItem[];
   tenantScoped?: boolean; // Menandakan apakah halaman ini membutuhkan tenant slug
 };
@@ -75,7 +78,8 @@ export const navItems: NavGroup[] = [
         title: "Classic Dashboard",
         href: `/dashboard`,
         tenantScoped: true, // Butuh tenant slug
-        icon: ChartPieIcon
+        icon: ChartPieIcon,
+        permissions: [PERMISSIONS.dashboardView]
       },
       {
         title: "Settings",
@@ -84,12 +88,14 @@ export const navItems: NavGroup[] = [
         items: [
           {
             title: "Account",
-            href: "/settings/general"
+            href: "/settings/general",
+            permissions: [PERMISSIONS.settingsView]
           },
           {
             title: "Organization",
             href: "/organization/general",
-            tenantScoped: true
+            tenantScoped: true,
+            permissions: [PERMISSIONS.organizationRead]
           }
         ]
       }
@@ -108,6 +114,11 @@ export const navItems: NavGroup[] = [
         title: "Users",
         href: "/superadmin/users",
         icon: Users
+      },
+      {
+        title: "Roles",
+        href: "/superadmin/roles",
+        icon: ShieldCheck
       },
       {
         title: "Organization",
@@ -133,7 +144,7 @@ export function NavMain() {
   const dropdownSide = isMobile ? "bottom" : locale === "ar" ? "left" : "right";
 
   const [userGroup, setUserGroup] = useState<"users" | "superadmin" | null>(null);
-  const [userRole, setUserRole] = useState<"Owner" | "Admin" | "Member" | null>(null);
+  const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [isLoadingRole, setIsLoadingRole] = useState(true);
 
@@ -152,7 +163,7 @@ export function NavMain() {
     return href;
   };
 
-  const fetchUserRole = async () => {
+  const fetchUserAuthority = async () => {
     try {
       const {
         data: { user }
@@ -160,7 +171,7 @@ export function NavMain() {
 
       if (!user) {
         setUserGroup(null);
-        setUserRole(null);
+        setUserPermissions(null);
         setIsLoadingRole(false);
         return;
       }
@@ -194,12 +205,16 @@ export function NavMain() {
 
       if (isSuperAdmin) {
         setUserGroup("superadmin");
-        setUserRole(null);
+        setUserPermissions(null);
         setIsLoadingRole(false);
         return;
       }
 
       setUserGroup("users");
+
+      // Resolve otoritas: memberships.role_id → roles → role_permissions → permissions
+      const AUTHORITY_SELECT =
+        "roles(name, hierarchy_level, role_permissions(permissions(name)))";
 
       let data: any = null;
       let error: any = null;
@@ -208,7 +223,7 @@ export function NavMain() {
         // OPSI A: Jika ada slug di URL, langsung query berdasarkan slug
         const { data: resData, error: resError } = await supabase
           .from("memberships")
-          .select("role, tenants!inner(slug)")
+          .select(`${AUTHORITY_SELECT}, tenants!inner(slug)`)
           .eq("tenants.slug", tenantSlug)
           .eq("user_id", user.id)
           .maybeSingle();
@@ -221,7 +236,7 @@ export function NavMain() {
         if (activeTenantId) {
           const { data: resData, error: resError } = await supabase
             .from("memberships")
-            .select("role")
+            .select(AUTHORITY_SELECT)
             .eq("tenant_id", activeTenantId)
             .eq("user_id", user.id)
             .maybeSingle();
@@ -232,23 +247,26 @@ export function NavMain() {
 
       if (error) throw error;
 
-      if (data) {
-        setUserRole(data.role as "Owner" | "Admin" | "Member");
+      if (data?.roles) {
+        const perms = (data.roles.role_permissions ?? [])
+          .map((rp: any) => rp.permissions?.name)
+          .filter((n: any): n is string => typeof n === "string") as PermissionName[];
+        setUserPermissions(perms);
       } else {
-        setUserRole(null);
+        setUserPermissions(null);
       }
     } catch (error) {
-      console.error("Gagal mendapatkan role navigasi:", error);
+      console.error("Gagal mendapatkan otoritas navigasi:", error);
     } finally {
       setIsLoadingRole(false);
     }
   };
 
   useEffect(() => {
-    fetchUserRole();
+    fetchUserAuthority();
 
     const handleOrgChange = () => {
-      fetchUserRole();
+      fetchUserAuthority();
     };
     window.addEventListener("storage", handleOrgChange);
     return () => {
@@ -256,18 +274,18 @@ export function NavMain() {
     };
   }, [tenantSlug]);
 
-  const filterMenuByRole = (items: NavItem[]): NavItem[] => {
+  const filterMenuByPermissions = (items: NavItem[]): NavItem[] => {
     return items
       .filter((item) => {
-        if (!item.roles) return true;
-        if (!userRole) return false;
-        return item.roles.includes(userRole);
+        if (!item.permissions) return true;
+        if (!userPermissions) return false;
+        return item.permissions.some((p) => userPermissions.includes(p));
       })
       .map((item) => {
         if (item.items) {
           return {
             ...item,
-            items: filterMenuByRole(item.items)
+            items: filterMenuByPermissions(item.items)
           };
         }
         return item;
@@ -295,7 +313,7 @@ export function NavMain() {
     })
     .map((group) => ({
       ...group,
-      items: filterMenuByRole(group.items)
+      items: filterMenuByPermissions(group.items)
     }))
     .filter((group) => group.items.length > 0);
 

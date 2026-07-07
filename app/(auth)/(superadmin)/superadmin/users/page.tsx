@@ -59,7 +59,10 @@ export default async function Page() {
       created_at,
       avatar,
       memberships (
-        role,
+        role_id,
+        roles (
+          name
+        ),
         tenants (
           id,
           name,
@@ -96,7 +99,7 @@ export default async function Page() {
       firstName: fullName.split(" ")[0] || "",
       lastName: fullName.split(" ").slice(1).join(" ") || "",
       name: fullName,
-      role: firstMembership?.role || "Member",
+      role: firstMembership?.roles?.name || "Member",
       plan_name: planName, // <-- Menggunakan hasil pemetaan lokal
       email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
       country: "United States",

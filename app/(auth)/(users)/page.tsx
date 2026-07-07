@@ -15,14 +15,11 @@ export default async function LandingOrRedirectPage() {
     console.log("User Tenants di Database:", tenants);
 
     if (tenants.length > 0) {
-      console.log(`Mengalihkan ke tenant pertama: /${tenants[0].slug}`);
-      redirect(`/${tenants[0].slug}/dashboard`);
+      console.log(`Mengalihkan ke tenant pertama: /${tenants[0].tenant.slug}`);
+      redirect(`/${tenants[0].tenant.slug}/dashboard`);
     } else {
       if (!user) {
         redirect(`/login`);
-      } else {
-        console.log("User tidak punya tenant. Mengalihkan ke /create-tenant");
-        redirect("/create-tenant");
       }
     }
   }

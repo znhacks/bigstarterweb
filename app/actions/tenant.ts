@@ -104,10 +104,17 @@ export async function createTenant(formData: FormData) {
   }
 
   // 5. Hubungkan user dengan tenant baru di tabel system.memberships sebagai OWNER
+  //    Ambil id role "Owner" dari tabel roles (RBAC ternormalisasi).
+  const { data: ownerRole } = await systemSupabase
+    .from("roles")
+    .select("id")
+    .eq("name", "Owner")
+    .maybeSingle();
+
   const { error: membershipError } = await systemSupabase.from("memberships").insert({
     user_id: user.id,
     tenant_id: newTenant.id,
-    role: "Owner"
+    role_id: ownerRole?.id ?? null
   });
 
   if (membershipError) {

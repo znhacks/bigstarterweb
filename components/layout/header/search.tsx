@@ -21,12 +21,13 @@ import { navItems } from "@/components/layout/sidebar/nav-main";
 
 // Impor klien Supabase
 import { supabase } from "@/lib/supabase";
+import { type PermissionName } from "@/lib/rbac";
 
 type NavItem = {
   title: string;
   href: string;
   icon?: any;
-  roles?: string[];
+  permissions?: string[];
   items?: NavItem[];
   displayTitle?: string; // Menyimpan nama gabungan (Induk › Sub-menu)
 };
@@ -35,13 +36,13 @@ export default function Search() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  // State untuk melacak grup user dan role organisasi internal
+  // State untuk melacak grup user dan permission organisasi internal
   const [userGroup, setUserGroup] = useState<"users" | "superadmin" | null>(null);
-  const [userRole, setUserRole] = useState<"Owner" | "Admin" | "Member" | null>(null);
+  const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Ambil data role aktif dari Supabase
-  const fetchUserRole = async () => {
+  // Ambil otoritas (permission) aktif dari Supabase
+  const fetchUserAuthority = async () => {
     try {
       const {
         data: { user }
@@ -49,7 +50,7 @@ export default function Search() {
 
       if (!user) {
         setUserGroup(null);
-        setUserRole(null);
+        setUserPermissions(null);
         return;
       }
 
@@ -60,7 +61,7 @@ export default function Search() {
 
       if (isSuperAdmin) {
         setUserGroup("superadmin");
-        setUserRole(null);
+        setUserPermissions(null);
         return;
       }
 
@@ -68,37 +69,42 @@ export default function Search() {
 
       const orgId = localStorage.getItem("active_org_id");
       if (!orgId) {
-        setUserRole(null);
+        setUserPermissions(null);
         return;
       }
 
+      // Resolve: memberships.role_id → roles → role_permissions → permissions
       const { data, error } = await supabase
         .from("memberships")
-        .select("role")
+        .select("roles(role_permissions(permissions(name)))")
         .eq("tenant_id", orgId)
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (error) throw error;
 
-      if (data) {
-        setUserRole(data.role as "Owner" | "Admin" | "Member");
+      const d = data as any;
+      if (d?.roles) {
+        const perms = (d.roles.role_permissions ?? [])
+          .map((rp: any) => rp.permissions?.name)
+          .filter((n: any): n is string => typeof n === "string") as PermissionName[];
+        setUserPermissions(perms);
       } else {
-        setUserRole(null);
+        setUserPermissions(null);
       }
     } catch (error) {
-      console.error("Gagal mendapatkan role pencarian:", error);
+      console.error("Gagal mendapatkan otoritas pencarian:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUserRole();
+    fetchUserAuthority();
 
     // Dengarkan event perubahan organisasi aktif
     const handleOrgChange = () => {
-      fetchUserRole();
+      fetchUserAuthority();
     };
     window.addEventListener("storage", handleOrgChange);
     return () => {
@@ -117,19 +123,19 @@ export default function Search() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Fungsi rekursif memfilter item menu berdasarkan role saat ini
-  const filterMenuByRole = (items: NavItem[]): NavItem[] => {
+  // Fungsi rekursif memfilter item menu berdasarkan permission saat ini
+  const filterMenuByPermissions = (items: NavItem[]): NavItem[] => {
     return items
       .filter((item) => {
-        if (!item.roles) return true;
-        if (!userRole) return false;
-        return item.roles.includes(userRole);
+        if (!item.permissions) return true;
+        if (!userPermissions) return false;
+        return item.permissions.some((p) => userPermissions.includes(p as PermissionName));
       })
       .map((item) => {
         if (item.items) {
           return {
             ...item,
-            items: filterMenuByRole(item.items)
+            items: filterMenuByPermissions(item.items)
           };
         }
         return item;
@@ -150,7 +156,7 @@ export default function Search() {
     })
     .map((group) => ({
       ...group,
-      items: filterMenuByRole(group.items as NavItem[])
+      items: filterMenuByPermissions(group.items as NavItem[])
     }))
     .filter((group) => group.items.length > 0);
 

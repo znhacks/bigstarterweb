@@ -37,10 +37,27 @@ export const organizationSchema = z.object({
   created_at: z.string().nullable()
 });
 
+export const roleSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  hierarchy_level: z.number().int(),
+  description: z.string().nullable(),
+  permissions_count: z.number().int().nonnegative().default(0),
+  members_count: z.number().int().nonnegative().default(0)
+});
+
+export const permissionSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  description: z.string().nullable()
+});
+
 export const memberSchema = z.object({
   id: z.string().uuid(),
   tenant_id: z.string().uuid(),
-  role: z.string(),
+  role_id: z.string().uuid().nullable(),
+  role_name: z.string().nullable(),
+  permissions: z.array(z.string()).default([]),
   email: z.string().nullable(),
   full_name: z.string().nullable(),
   avatar: z.string().nullable()

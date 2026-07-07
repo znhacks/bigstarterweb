@@ -21,6 +21,7 @@ import {
 
 // Impor klien Supabase & Global Language Hook
 import { supabase } from "@/lib/supabase";
+import { PERMISSIONS, hasPermission, type PermissionName } from "@/lib/rbac";
 
 // IMPOR DIALOG PEMOTONG GAMBAR YANG REUSABLE
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
@@ -34,7 +35,7 @@ interface AlertState {
 
 export function OrganizationGeneralSettings() {
   const router = useRouter();
-  const t = useTranslations("organization-general");
+  const t = useTranslations("organization.organization-general");
   const tCommon = useTranslations("common");
   const locale = useLocale();
 
@@ -42,8 +43,8 @@ export function OrganizationGeneralSettings() {
   const [orgName, setOrgName] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  // State Hak Akses Role
-  const [userRole, setUserRole] = useState<"Owner" | "Admin" | "Member" | null>(null);
+  // State permission pengguna aktif (RBAC)
+  const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
 
   // State untuk manajemen pemotongan gambar (Cropping)
   const [cropperOpen, setCropperOpen] = useState(false);
@@ -83,7 +84,7 @@ export function OrganizationGeneralSettings() {
         supabase.from("tenants").select("name, logo").eq("id", orgId).single(),
         supabase
           .from("memberships")
-          .select("role")
+          .select("roles(role_permissions(permissions(name)))")
           .eq("tenant_id", orgId)
           .eq("user_id", user.id)
           .maybeSingle()
@@ -95,8 +96,14 @@ export function OrganizationGeneralSettings() {
         setLogoPreview((tenantRes.data as any).logo || null);
       }
 
-      if (membershipRes.data) {
-        setUserRole(membershipRes.data.role as "Owner" | "Admin" | "Member");
+      const mData = membershipRes.data as any;
+      if (mData?.roles) {
+        const perms = (mData.roles.role_permissions ?? [])
+          .map((rp: any) => rp.permissions?.name)
+          .filter((n: any): n is string => typeof n === "string") as PermissionName[];
+        setUserPermissions(perms);
+      } else {
+        setUserPermissions(null);
       }
     } catch (error: any) {
       console.error("Error fetching org details & role:", error);
@@ -235,7 +242,8 @@ export function OrganizationGeneralSettings() {
     }
   };
 
-  const isReadOnly = userRole === "Member";
+  // Read-only jika pengguna tidak punya permission organization.update
+  const isReadOnly = !hasPermission(userPermissions, PERMISSIONS.organizationUpdate);
 
   if (isLoading) {
     return (
@@ -296,7 +304,7 @@ export function OrganizationGeneralSettings() {
       )}
 
       {/* KONSOLIDASI: SATU CARD UNTUK SELURUH PENGATURAN ORGANISASI */}
-      <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
+      <Card className="overflow-hidden">
         <CardContent className="divide-border/60 divide-y p-0">
           {/* Section 1: Organization Logo */}
           <div className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">
@@ -390,9 +398,7 @@ export function OrganizationGeneralSettings() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("delete.dialogTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("delete.dialogDesc").replace("{ orgName }", orgName)}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t("delete.dialogDesc", { orgName })}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>{tCommon("cancel")}</AlertDialogCancel>

@@ -2,7 +2,7 @@ import * as z from "zod";
 import { o, getTenantId } from "../context";
 import { supabaseAdmin } from "../supabase-server";
 import { memberSchema } from "../schemas";
-import { dbError, forbidden } from "../errors";
+import { dbError, forbidden, badRequest } from "../errors";
 import { checkSeatLimit } from "@/lib/billing/enforcer";
 
 export const listMembers = o
@@ -18,30 +18,40 @@ export const listMembers = o
     const tenantId = getTenantId(context);
     const { data, error } = await supabaseAdmin
       .from("memberships")
-      .select("id, tenant_id, role, app_users(email, full_name, avatar)")
+      .select(
+        "id, tenant_id, role_id, roles(name, role_permissions(permissions(name))), app_users(email, full_name, avatar)"
+      )
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: true });
     if (error) throw dbError(error);
-    return (data ?? []).map((m: any) => ({
-      id: m.id,
-      tenant_id: m.tenant_id,
-      role: m.role,
-      email: m.app_users?.email ?? null,
-      full_name: m.app_users?.full_name ?? null,
-      avatar: m.app_users?.avatar ?? null
-    }));
+    return (data ?? []).map((m: any) => {
+      const perms = (m.roles?.role_permissions ?? [])
+        .map((rp: any) => rp.permissions?.name)
+        .filter((n: any): n is string => typeof n === "string");
+      return {
+        id: m.id,
+        tenant_id: m.tenant_id,
+        role_id: m.role_id ?? null,
+        role_name: m.roles?.name ?? null,
+        permissions: perms,
+        email: m.app_users?.email ?? null,
+        full_name: m.app_users?.full_name ?? null,
+        avatar: m.app_users?.avatar ?? null
+      };
+    });
   });
 
 const inviteInput = z.object({
   email: z.string().email(),
-  role: z.enum(["member", "admin", "owner"]).default("member")
+  roleId: z.string().uuid()
 });
 
 const invitationOutput = z.object({
   id: z.string().uuid(),
   tenant_id: z.string().uuid(),
   email: z.string(),
-  role: z.string(),
+  role_id: z.string().uuid().nullable(),
+  role_name: z.string().nullable(),
   created_at: z.string().nullable()
 });
 
@@ -67,14 +77,33 @@ export const inviteMember = o
       );
     }
 
+    // Validasi roleId ada di tabel roles sebelum membuat undangan.
+    const { data: roleRow, error: roleError } = await supabaseAdmin
+      .from("roles")
+      .select("id, name")
+      .eq("id", input.roleId)
+      .maybeSingle();
+    if (roleError) throw dbError(roleError);
+    if (!roleRow) throw badRequest("Role tidak valid.");
+
     const { data, error } = await supabaseAdmin
       .from("invitations")
-      .upsert({ tenant_id: tenantId, email: input.email, role: input.role }, { onConflict: "tenant_id,email" })
-      .select("id, tenant_id, email, role, created_at")
+      .upsert(
+        { tenant_id: tenantId, email: input.email, role_id: input.roleId },
+        { onConflict: "tenant_id,email" }
+      )
+      .select("id, tenant_id, email, role_id, roles(name), created_at")
       .maybeSingle();
     if (error) throw dbError(error);
     if (!data) throw dbError({ message: "Invitation could not be created." });
-    return data;
+    return {
+      id: data.id,
+      tenant_id: data.tenant_id,
+      email: data.email,
+      role_id: data.role_id ?? null,
+      role_name: (data as any).roles?.name ?? null,
+      created_at: data.created_at
+    };
   });
 
 export const membersRouter = { list: listMembers, invite: inviteMember };

@@ -17,18 +17,31 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { email, role, orgName } = await BalancedBody(req);
+    const { email, roleId, orgName } = await BalancedBody(req);
 
     async function BalancedBody(request: Request) {
       return await request.json();
     }
 
-    if (!email || !role || !orgName) {
-      return NextResponse.json({ error: "Missing email, role, or orgName" }, { status: 400 });
+    if (!email || !roleId || !orgName) {
+      return NextResponse.json({ error: "Missing email, roleId, or orgName" }, { status: 400 });
     }
 
     // UBAH: Inisialisasi klien Supabase Server yang membawa sesi cookie aktif
     const supabase = await createClient();
+
+    // Validasi roleId benar-benar ada di tabel roles, sekaligus ambil nama role
+    // untuk ditampilkan di email & disematkan ke token.
+    const { data: roleData, error: roleError } = await supabase
+      .from("roles")
+      .select("name")
+      .eq("id", roleId)
+      .maybeSingle();
+
+    if (roleError || !roleData) {
+      return NextResponse.json({ error: "Role tidak valid." }, { status: 400 });
+    }
+    const role = roleData.name;
 
     // 2. Dapatkan ID organisasi (tenant_id) berdasarkan nama organisasi
     const { data: tenantData, error: tenantError } = await supabase
@@ -68,7 +81,8 @@ export async function POST(req: Request) {
     if (existingInvite) {
       const { error: updateError } = await supabase
         .from("invitations")
-        .update({ role })
+        // role_id adalah sumber kebenaran (kolom role string sudah tidak ada).
+        .update({ role_id: roleId })
         .eq("id", existingInvite.id);
 
       if (updateError) throw updateError;
@@ -76,14 +90,22 @@ export async function POST(req: Request) {
       const { error: insertError } = await supabase.from("invitations").insert({
         tenant_id: tenantData.id,
         email: email.trim().toLowerCase(),
-        role
+        role_id: roleId
       });
 
       if (insertError) throw insertError;
     }
 
-    // 4. Meng-encode data parameter ke Base64 untuk URL Join
-    const tokenData = JSON.stringify({ email: email.trim().toLowerCase(), role, orgName });
+    // 4. Meng-encode data parameter ke Base64 untuk URL Join.
+    //    roleId di sini HANYA untuk tampilan — saat join, role_id diambil dari
+    //    baris invitation (lihat app/(guest)/join/page.tsx) agar tidak bisa
+    //    dimanipulasi lewat token.
+    const tokenData = JSON.stringify({
+      email: email.trim().toLowerCase(),
+      roleId,
+      roleName: role,
+      orgName
+    });
     const token = Buffer.from(tokenData).toString("base64");
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const joinLink = `${appUrl}/join?token=${token}`;

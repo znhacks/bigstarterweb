@@ -2,6 +2,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/services/tenant";
 import { redirect } from "next/navigation";
+import type { PermissionName } from "@/lib/rbac/permissions";
+import { hasAnyPermission } from "@/lib/rbac";
+import type { ActiveTenantContext } from "@/lib/rbac/types";
 
 /**
  * Mengambil data pengguna aktif secara aman di sisi server.
@@ -58,47 +61,71 @@ export async function requireAuth(redirectTo: string = "/login") {
 }
 
 /**
- * Fungsi opsional untuk memeriksa peran pengguna (RBAC).
+ * Memastikan pengguna memiliki permission tertentu di organisasi aktif
+ * (RBAC berbasis permission). Otoritas di-resolve dari membership aktif:
+ * memberships.role_id → roles → role_permissions → permissions.
  *
- * @param allowedRoles Daftar peran yang diizinkan (contoh: ['superadmin', 'admin'])
+ * @param required Permission yang wajib dimiliki.
+ * @param tenantSlug Slug organisasi dari URL (untuk pengalihan jika ditolak).
+ * @returns Konteks otoritas + tenant aktif.
  */
-// export async function requireRole(allowedRoles: string[], redirectTo: string = "/") {
-//   const user = await requireAuth();
-
-//   const userRole = user.app_metadata?.role || user.user_metadata?.role;
-//   const isAllowed = allowedRoles.includes(userRole);
-
-//   if (!isAllowed) {
-//     redirect(redirectTo);
-//   }
-
-//   return user;
-// }
-export async function requireRole(
-  allowedRoles: ("Owner" | "Admin" | "Member")[],
+export async function requirePermission(
+  required: PermissionName,
   tenantSlug: string
-) {
-  // 1. Pastikan pengguna sudah login terlebih dahulu
+): Promise<ActiveTenantContext> {
   await requireAuth();
 
-  // 2. Ambil data organisasi aktif berdasarkan slug URL
-  const activeTenantData = await getActiveTenant(tenantSlug);
+  const ctx = await getActiveTenant(tenantSlug);
+  if (!ctx) redirect("/");
 
-  // Jika organisasi tidak valid atau user bukan bagian dari organisasi ini, tendang ke halaman root
-  if (!activeTenantData) {
-    redirect("/");
-  }
-
-  const { role, tenant } = activeTenantData;
-
-  // 3. Periksa apakah peran pengguna diizinkan mengakses halaman ini
-  const isAllowed = allowedRoles.includes(role as any);
-
-  if (!isAllowed) {
-    // Jika tidak diizinkan, kembalikan secara aman ke beranda organisasi mereka
+  if (!ctx.permissions.includes(required)) {
     redirect(`/${tenantSlug}`);
   }
 
-  // Jika lolos verifikasi, kembalikan data untuk dapat digunakan di halaman web
-  return { role, tenant };
+  return ctx;
+}
+
+/**
+ * Sama seperti `requirePermission` tapi menerima banyak permission dengan
+ * semantik any-of (cukup punya salah satunya).
+ */
+export async function requireAnyPermission(
+  required: PermissionName[],
+  tenantSlug: string
+): Promise<ActiveTenantContext> {
+  await requireAuth();
+
+  const ctx = await getActiveTenant(tenantSlug);
+  if (!ctx) redirect("/");
+
+  if (!hasAnyPermission(ctx.permissions, required)) {
+    redirect(`/${tenantSlug}`);
+  }
+
+  return ctx;
+}
+
+/**
+ * Gate untuk area Superadmin. Jalur ini SENDIRI terpisah dari sistem
+ * role/permission membership — superadmin dideteksi lewat auth metadata
+ * (`app_metadata.role === "superadmin"`), bukan lewat tabel roles.
+ *
+ * Catatan keamanan: sebelum helper ini ditambahkan, TIDAK ada gate server
+ * untuk `/superadmin/*` — siapa pun bisa me-render halaman superadmin.
+ */
+export async function requireSuperadmin(redirectTo: string = "/dashboard") {
+  const user = await requireAuth();
+
+  const isSuperadmin =
+    (user.app_metadata as Record<string, unknown> | undefined)?.role ===
+      "superadmin" ||
+    (user.user_metadata as Record<string, unknown> | undefined)?.role ===
+      "superadmin" ||
+    user.email === "superadmin@example.com"; // legacy demo escape hatch
+
+  if (!isSuperadmin) {
+    redirect(redirectTo);
+  }
+
+  return user;
 }
