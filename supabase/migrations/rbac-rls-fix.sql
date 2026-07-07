@@ -14,6 +14,26 @@
 -- role (case-insensitive). Jalankan di Supabase SQL Editor.
 -- ===============================================================
 
+-- ---------------------------------------------------------------
+-- 0. Fungsi is_superadmin() — sumber kebenaran superadmin.
+--    Banyak policy memanggil is_superadmin() tetapi fungsinya
+--    belum tentu terdefinisi. Ini mengecek kolom profiles.is_superadmin.
+--    Tanpa fungsi ini, semua policy yg memakainya akan error.
+-- ---------------------------------------------------------------
+create or replace function public.is_superadmin()
+returns boolean
+security definer
+set search_path = public
+language sql
+stable
+as $$
+  select coalesce(
+    (select is_superadmin from public.profiles where id = auth.uid()),
+    false
+  );
+$$;
+
+
 -- Owner: role bernama 'owner' (case-insensitive)
 create or replace function public.is_tenant_owner(_tenant_id uuid)
 returns boolean

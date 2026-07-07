@@ -1,6 +1,7 @@
 import { generateMeta } from "@/lib/utils";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 
 // Impor komponen Data Table dan tipe data User
 import UsersDataTable, { User } from "./data-table";
@@ -50,7 +51,9 @@ export default async function Page() {
 
   // 2. Ambil data gabungan dari Supabase secara Server-Side (PERBAIKAN 2: Hanya ambil plan_id)
   // 2. Ambil data gabungan dari Supabase secara Server-Side (BERSIH DARI KOMENTAR)
-  const { data: profiles, error } = await supabase
+  //    Pakai service role (supabaseAdmin) agar bypass RLS — superadmin melihat
+  //    SEMUA profile. Aman karena halaman sudah di-gate requireSuperadmin().
+  const { data: profiles, error } = await supabaseAdmin
     .from("profiles")
     .select(
       `

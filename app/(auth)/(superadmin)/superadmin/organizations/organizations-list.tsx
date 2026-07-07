@@ -32,9 +32,8 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-// Impor klien Supabase & Global Language Hook
+// Impor klien Supabase
 import { supabase } from "@/lib/supabase";
-import { useLanguage } from "@/components/providers/language-provider";
 import { useLocale, useTranslations } from "next-intl";
 
 export interface SuperadminOrganization {
@@ -56,7 +55,14 @@ interface AlertState {
 
 export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) {
   const router = useRouter();
-  const { formatPrice } = useLanguage();
+  // Formatter harga lokal (sebelumnya dari useLanguage, tetapi
+  // LanguageProvider tidak lagi membungkus tree setelah migrasi next-intl).
+  const formatPrice = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0
+    }).format(amount);
   const t = useTranslations("superadmin.organizations.list");
 
   const [orgs, setOrgs] = useState<SuperadminOrganization[]>(data);
@@ -170,7 +176,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
           </div>
           <button
             onClick={() => setAlertMessage(null)}
-            className="text-muted-foreground hover:text-foreground absolute top-4 end-4 transition-colors">
+            className="text-muted-foreground hover:text-foreground absolute end-4 top-4 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </Alert>

@@ -13,40 +13,19 @@ import {
   Building2,
   Check,
   Ban,
-  Plus,
-  Pencil,
-  Trash2,
-  Package
+  Package,
+  FileCode
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog";
 
-// Impor klien Supabase & Global Language Hook
+// Impor klien Supabase, Global Language Hook, dan Config Statis
 import { supabase } from "@/lib/supabase";
-import { useLanguage } from "@/components/providers/language-provider";
+import { plans as billingPlans } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
-import { getTranslations } from "next-intl/server";
-import { constructMetadata } from "@/lib/metadata";
 
 interface SuperadminTransaction {
   id: string;
@@ -75,15 +54,6 @@ interface SuperadminSubscription {
   } | null;
 }
 
-interface DBPlan {
-  id: string;
-  name: string;
-  price: number;
-  max_users: number;
-  type: string;
-  description: string[] | null;
-}
-
 interface AlertState {
   title: string;
   description: string;
@@ -91,7 +61,13 @@ interface AlertState {
 }
 
 export function SuperadminBillingDashboard() {
-  const { formatPrice } = useLanguage();
+  // Formatter harga lokal (LanguageProvider tidak lagi membungkus tree).
+  const formatPrice = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0
+    }).format(amount);
   const locale = useLocale();
   const t = useTranslations("superadmin.billing");
 
@@ -99,16 +75,6 @@ export function SuperadminBillingDashboard() {
   const [transactions, setTransactions] = useState<SuperadminTransaction[]>([]);
   const [subscriptions, setSubscriptions] = useState<SuperadminSubscription[]>([]);
   const [refundRequests, setRefundRequests] = useState<SuperadminSubscription[]>([]);
-  const [allDbPlans, setAllDbPlans] = useState<DBPlan[]>([]);
-
-  // State Form CRUD Plans
-  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<DBPlan | null>(null); // Null berarti membuat paket baru
-  const [formPlanName, setFormPlanName] = useState("");
-  const [formPlanPrice, setFormPlanPrice] = useState(0);
-  const [formPlanMaxUsers, setFormPlanMaxUsers] = useState(5);
-  const [formPlanType, setFormPlanType] = useState("monthly");
-  const [formPlanFeatures, setFormPlanFeatures] = useState("");
 
   // State KPI Metrics
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -123,11 +89,10 @@ export function SuperadminBillingDashboard() {
     loadSuperadminData();
   }, []);
 
-  // Memuat seluruh data transaksi, langganan, dan daftar paket langsung dari database
   const loadSuperadminData = async () => {
     setIsLoading(true);
     try {
-      await Promise.all([fetchTransactions(), fetchSubscriptionsAndRefunds(), fetchAllPlans()]);
+      await Promise.all([fetchTransactions(), fetchSubscriptionsAndRefunds()]);
     } catch (e: any) {
       console.error("Gagal memuat data superadmin:", e);
     } finally {
@@ -167,7 +132,7 @@ export function SuperadminBillingDashboard() {
     }
   };
 
-  // 2. Ambil seluruh data langganan & filter pengajuan refund
+  // 2. Ambil seluruh data langganan & filter pengajuan refund dengan mencocokkan config statis
   const fetchSubscriptionsAndRefunds = async () => {
     const { data, error } = await supabase.from("subscriptions").select(`
         id,
@@ -175,38 +140,41 @@ export function SuperadminBillingDashboard() {
         status,
         ends_at,
         cancel_at_period_end,
+        plan_id,
         tenants (
           name
-        ),
-        plans (
-          name,
-          price
         )
       `);
 
     if (error) throw error;
 
     if (data) {
-      const subs = data as unknown as SuperadminSubscription[];
+      const mappedSubs: SuperadminSubscription[] = (data as any[]).map((sub) => {
+        const planConfig = billingPlans.find((p) => p.id === sub.plan_id);
+        // Tampilkan harga bulanan (plan disimpan di config/billing.ts, bukan DB)
+        const price = planConfig ? planConfig.prices.monthly.amount : 0;
 
-      const activeSubs = subs.filter((sub) => sub.status === "active");
+        return {
+          id: sub.id,
+          tenant_id: sub.tenant_id,
+          status: sub.status,
+          ends_at: sub.ends_at,
+          cancel_at_period_end: sub.cancel_at_period_end,
+          tenants: sub.tenants,
+          plans: {
+            name: planConfig ? planConfig.name : sub.plan_id || "Free",
+            price: price
+          }
+        };
+      });
+
+      const activeSubs = mappedSubs.filter((sub) => sub.status === "active");
       setSubscriptions(activeSubs);
       setActiveSubsCount(activeSubs.length);
 
-      const refunds = subs.filter((sub) => sub.status === "refund_requested");
+      const refunds = mappedSubs.filter((sub) => sub.status === "refund_requested");
       setRefundRequests(refunds);
     }
-  };
-
-  // 3. Ambil daftar paket secara dinamis dari tabel public.plans
-  const fetchAllPlans = async () => {
-    const { data, error } = await supabase
-      .from("plans")
-      .select("*")
-      .order("price", { ascending: true });
-
-    if (error) throw error;
-    setAllDbPlans(data || []);
   };
 
   // Handler: Setujui Klaim Refund
@@ -236,15 +204,15 @@ export function SuperadminBillingDashboard() {
       if (txError) throw txError;
 
       setAlertMessage({
-        title: t("alerts.approveTitle"),
-        description: t("alerts.approveDesc"),
+        title: t("alerts.approveTitle") || "Refund Approved",
+        description: t("alerts.approveDesc") || "The refund request was successfully approved.",
         variant: "default"
       });
 
       await loadSuperadminData();
     } catch (e: any) {
       setAlertMessage({
-        title: t("alerts.failed"),
+        title: t("alerts.failed") || "Action Failed",
         description: e.message,
         variant: "destructive"
       });
@@ -265,123 +233,16 @@ export function SuperadminBillingDashboard() {
       if (error) throw error;
 
       setAlertMessage({
-        title: t("alerts.rejectTitle"),
-        description: t("alerts.rejectDesc"),
+        title: t("alerts.rejectTitle") || "Refund Rejected",
+        description: t("alerts.rejectDesc") || "The refund request has been declined.",
         variant: "default"
       });
 
       await loadSuperadminData();
     } catch (e: any) {
       setAlertMessage({
-        title: t("alerts.failed"),
+        title: t("alerts.failed") || "Action Failed",
         description: e.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessingAction(null);
-    }
-  };
-
-  // Openers untuk Modal Form CRUD Plans
-  const openCreatePlanModal = () => {
-    setEditingPlan(null);
-    setFormPlanName("");
-    setFormPlanPrice(0);
-    setFormPlanMaxUsers(5);
-    setFormPlanType("monthly");
-    setFormPlanFeatures("");
-    setIsPlanModalOpen(true);
-  };
-
-  const openEditPlanModal = (plan: DBPlan) => {
-    setEditingPlan(plan);
-    setFormPlanName(plan.name);
-    setFormPlanPrice(plan.price);
-    setFormPlanMaxUsers(plan.max_users);
-    setFormPlanType(plan.type);
-    setFormPlanFeatures(plan.description ? plan.description.join(", ") : "");
-    setIsPlanModalOpen(true);
-  };
-
-  // Handler CRUD: Simpan / Perbarui Paket di Database Supabase
-  const handleSavePlanSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsProcessingAction("saving-plan");
-
-    // Mengurai teks koma menjadi bentuk array text[] bersih untuk database
-    const featuresArray = formPlanFeatures
-      .split(",")
-      .map((f) => f.trim())
-      .filter((f) => f.length > 0);
-
-    try {
-      const payload = {
-        name: formPlanName.trim(),
-        price: Number(formPlanPrice),
-        max_users: Number(formPlanMaxUsers),
-        type: formPlanType,
-        description: featuresArray
-      };
-
-      if (editingPlan) {
-        // Aksi UPDATE
-        const { error } = await supabase.from("plans").update(payload).eq("id", editingPlan.id);
-
-        if (error) throw error;
-      } else {
-        // Aksi INSERT (CREATE NEW)
-        const { error } = await supabase.from("plans").insert(payload);
-
-        if (error) throw error;
-      }
-
-      setAlertMessage({
-        title: locale === "en" ? "Success" : "Sukses",
-        description: t("alerts.successPlan"),
-        variant: "default"
-      });
-
-      setIsPlanModalOpen(false);
-      await fetchAllPlans();
-    } catch (error: any) {
-      setAlertMessage({
-        title: t("alerts.failed"),
-        description: error.message || "Gagal menyelaraskan perubahan paket ke database.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessingAction(null);
-    }
-  };
-
-  // Handler CRUD: Hapus Paket dari Database
-  const handleDeletePlan = async (planId: string, planName: string) => {
-    if (
-      !confirm(
-        `Apakah Anda yakin ingin menghapus paket '${planName}' secara permanen dari database?`
-      )
-    )
-      return;
-    setIsProcessingAction(planId);
-
-    try {
-      const { error } = await supabase.from("plans").delete().eq("id", planId);
-
-      if (error) throw error;
-
-      setAlertMessage({
-        title: locale === "en" ? "Plan Deleted" : "Paket Dihapus",
-        description: `Paket '${planName}' berhasil dihapus secara aman dari database.`,
-        variant: "default"
-      });
-
-      await fetchAllPlans();
-    } catch (error: any) {
-      setAlertMessage({
-        title: t("alerts.failed"),
-        description:
-          error.message ||
-          "Gagal menghapus paket. Pastikan tidak ada langganan aktif yang terikat dengan paket ini.",
         variant: "destructive"
       });
     } finally {
@@ -405,7 +266,7 @@ export function SuperadminBillingDashboard() {
         <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
       </div>
 
-      {/* SHADCN ALERT NOTIFICATION */}
+      {/* ALERT NOTIFICATION */}
       {alertMessage && (
         <Alert
           variant={alertMessage.variant === "destructive" ? "destructive" : "default"}
@@ -423,7 +284,7 @@ export function SuperadminBillingDashboard() {
           </div>
           <button
             onClick={() => setAlertMessage(null)}
-            className="text-muted-foreground hover:text-foreground absolute top-4 end-4 transition-colors">
+            className="text-muted-foreground hover:text-foreground absolute end-4 top-4 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </Alert>
@@ -504,11 +365,10 @@ export function SuperadminBillingDashboard() {
                 className="data-[state=active]:border-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-semibold shadow-none transition-all data-[state=active]:bg-transparent">
                 {t("tabs.history")} ({transactions.length})
               </TabsTrigger>
-              {/* TAB BARU: KELOLA PAKET (CRUD) */}
               <TabsTrigger
                 value="plans"
                 className="data-[state=active]:border-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-semibold shadow-none transition-all data-[state=active]:bg-transparent">
-                {t("tabs.plans")} ({allDbPlans.length})
+                {t("tabs.plans") || "Plans"} ({billingPlans.length})
               </TabsTrigger>
             </TabsList>
 
@@ -545,7 +405,6 @@ export function SuperadminBillingDashboard() {
                       </div>
                     </div>
 
-                    {/* Action Buttons: Approve / Reject */}
                     <div className="flex shrink-0 gap-3">
                       <Button
                         onClick={() => handleRejectRefund(sub.id)}
@@ -689,228 +548,89 @@ export function SuperadminBillingDashboard() {
               )}
             </TabsContent>
 
-            {/* TAB CONTENT 4: MANAGE PLANS (CRUD) */}
+            {/* TAB CONTENT 4: CONFIG PLANS (READ-ONLY) */}
             <TabsContent value="plans" className="mt-0 space-y-4 focus-visible:outline-none">
-              {/* Header Bar untuk Membuat Paket Baru */}
-              <div className="flex justify-end py-2">
-                <Button
-                  onClick={openCreatePlanModal}
-                  disabled={isProcessingAction !== null}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-xl px-5 text-xs font-semibold">
-                  <Plus className="h-4 w-4" />
-                  {t("buttons.createPlan")}
-                </Button>
+              {/* Banner Informasi Sinkronisasi Konfigurasi */}
+              <div className="bg-muted/40 border-border/80 flex items-center justify-between gap-4 rounded-xl border p-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 flex h-9 w-9 animate-pulse items-center justify-center rounded-lg">
+                    <FileCode className="text-primary h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-foreground text-sm font-semibold">Statically Configured</h4>
+                    <p className="text-muted-foreground text-xs">
+                      Subscription plans are managed inside code configuration file (
+                      <code className="bg-muted rounded px-1 py-0.5 font-mono text-[11px]">
+                        config/billing.ts
+                      </code>
+                      ).
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              {allDbPlans.length === 0 ? (
-                <div className="text-muted-foreground py-10 text-center text-sm">
-                  {t("placeholders.noPlans")}
-                </div>
-              ) : (
-                allDbPlans.map((plan) => (
-                  <div
-                    key={plan.id}
-                    className="border-border/60 bg-card flex flex-col justify-between gap-4 rounded-xl border p-5 md:flex-row md:items-center">
-                    <div className="flex items-start gap-4">
-                      <div className="border-primary/20 bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
-                        <Package className="text-primary h-5 w-5" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-foreground text-sm font-bold">{plan.name}</span>
-                          <Badge className="rounded-full text-[9px] font-bold capitalize">
-                            {plan.type}
-                          </Badge>
-                        </div>
-                        {/* Render Fitur-fitur dari Array text[] di Database */}
-                        {plan.description && plan.description.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-1.5">
-                            {plan.description.map((feat, fIdx) => (
-                              <Badge
-                                key={fIdx}
-                                variant="secondary"
-                                className="rounded-md px-2 py-0.5 text-[9px]">
-                                {feat}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+              {billingPlans.map((plan) => (
+                <div
+                  key={plan.id}
+                  className="border-border/60 bg-card flex flex-col justify-between gap-4 rounded-xl border p-5 md:flex-row md:items-center">
+                  <div className="flex items-start gap-4">
+                    <div className="border-primary/20 bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
+                      <Package className="text-primary h-5 w-5" />
                     </div>
-
-                    {/* Harga, Kapasitas User, & Tombol Edit/Hapus */}
-                    <div className="flex shrink-0 items-center justify-between gap-6 border-t pt-3 md:justify-end md:border-t-0 md:pt-0">
-                      <div className="text-start md:text-end">
-                        <span className="text-foreground text-lg font-extrabold">
-                          {formatPrice(plan.price)}
-                        </span>
-                        <span className="text-muted-foreground text-xs">
-                          /{plan.type === "yearly" ? "yr" : "mo"}
-                        </span>
-                        <p className="text-muted-foreground mt-0.5 text-[10px]">
-                          {t("placeholders.maxUsers")}:{" "}
-                          <strong>
-                            {plan.max_users === 9999 ? t("placeholders.unlimited") : plan.max_users}
-                          </strong>
-                        </p>
-                      </div>
-
-                      {/* Aksi CRUD: Edit & Delete */}
+                    <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditPlanModal(plan)}
-                          disabled={isProcessingAction !== null}
-                          className="text-muted-foreground hover:text-foreground h-9 w-9"
-                          title="Edit Plan">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeletePlan(plan.id, plan.name)}
-                          disabled={isProcessingAction !== null}
-                          className="text-muted-foreground hover:text-destructive h-9 w-9"
-                          title="Delete Plan">
-                          {isProcessingAction === plan.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <span className="text-foreground text-sm font-bold">{plan.name}</span>
+                        <Badge
+                          variant="outline"
+                          className="rounded-full text-[9px] font-bold tracking-wider uppercase">
+                          {plan.id}
+                        </Badge>
                       </div>
+                      <p className="text-muted-foreground text-xs">{plan.description}</p>
+
+                      {/* Render Fitur-fitur */}
+                      {plan.features && plan.features.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1.5">
+                          {plan.features.map((feat, fIdx) => (
+                            <Badge
+                              key={fIdx}
+                              variant="secondary"
+                              className="rounded-md px-2 py-0.5 text-[9px]">
+                              {feat}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))
-              )}
+
+                  {/* Tampilan Harga dan Atribut Pengguna */}
+                  <div className="flex shrink-0 items-center justify-between gap-6 border-t pt-3 md:justify-end md:border-t-0 md:pt-0">
+                    <div className="text-start md:text-end">
+                      <div className="text-foreground text-lg font-extrabold">
+                        {formatPrice(plan.prices.monthly.amount)}
+                        <span className="text-muted-foreground text-xs font-normal">/mo</span>
+                      </div>
+                      <div className="text-muted-foreground text-xs">
+                        {formatPrice(plan.prices.yearly.amount)}
+                        <span className="text-[10px]">/yr</span>
+                      </div>
+                      <p className="text-muted-foreground mt-1 text-[10px]">
+                        {t("placeholders.maxUsers") || "Max Users"}:{" "}
+                        <strong>
+                          {plan.maxUsers === 9999
+                            ? t("placeholders.unlimited") || "Unlimited"
+                            : plan.maxUsers}
+                        </strong>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
-
-      {/* DIALOG MODAL: CREATE / UPDATE SUBSCRIPTION PLAN */}
-      <Dialog open={isPlanModalOpen} onOpenChange={setIsPlanModalOpen}>
-        <DialogContent className="border-border/80 rounded-2xl border sm:max-w-[460px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">
-              {editingPlan ? t("dialogPlan.titleEdit") : t("dialogPlan.titleCreate")}
-            </DialogTitle>
-            <DialogDescription>{t("dialogPlan.desc")}</DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSavePlanSubmit} className="space-y-4 py-3">
-            {/* Field 1: Plan Name */}
-            <div className="space-y-1.5">
-              <Label htmlFor="plan-name" className="text-sm font-semibold">
-                {t("dialogPlan.labelName")}
-              </Label>
-              <Input
-                id="plan-name"
-                type="text"
-                required
-                disabled={isProcessingAction !== null}
-                value={formPlanName}
-                onChange={(e) => setFormPlanName(e.target.value)}
-                placeholder="e.g. Starter, Pro, Enterprise"
-                className="border-border/80 h-10 rounded-xl"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Field 2: Price */}
-              <div className="space-y-1.5">
-                <Label htmlFor="plan-price" className="text-sm font-semibold">
-                  {t("dialogPlan.labelPrice")}
-                </Label>
-                <Input
-                  id="plan-price"
-                  type="number"
-                  required
-                  min={0}
-                  disabled={isProcessingAction !== null}
-                  value={formPlanPrice}
-                  onChange={(e) => setFormPlanPrice(Number(e.target.value))}
-                  className="border-border/80 h-10 rounded-xl"
-                />
-              </div>
-
-              {/* Field 3: Max Users */}
-              <div className="space-y-1.5">
-                <Label htmlFor="plan-max-users" className="text-sm font-semibold">
-                  {t("dialogPlan.labelMaxUsers")}
-                </Label>
-                <Input
-                  id="plan-max-users"
-                  type="number"
-                  required
-                  min={1}
-                  disabled={isProcessingAction !== null}
-                  value={formPlanMaxUsers}
-                  onChange={(e) => setFormPlanMaxUsers(Number(e.target.value))}
-                  className="border-border/80 h-10 rounded-xl"
-                />
-              </div>
-            </div>
-
-            {/* Field 4: Billing Cycle Type */}
-            <div className="space-y-1.5">
-              <Label htmlFor="plan-type" className="text-sm font-semibold">
-                {t("dialogPlan.labelType")}
-              </Label>
-              <Select
-                value={formPlanType}
-                onValueChange={setFormPlanType}
-                disabled={isProcessingAction !== null}>
-                <SelectTrigger id="plan-type" className="border-border/80 h-10 rounded-xl">
-                  <SelectValue placeholder="Select Cycle" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="yearly">Yearly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Field 5: Features List (text[] array input) */}
-            <div className="space-y-1.5">
-              <Label htmlFor="plan-features" className="text-sm font-semibold">
-                {t("dialogPlan.labelFeatures")}
-              </Label>
-              <Input
-                id="plan-features"
-                type="text"
-                disabled={isProcessingAction !== null}
-                value={formPlanFeatures}
-                onChange={(e) => setFormPlanFeatures(e.target.value)}
-                placeholder={t("placeholders.featuresPlaceholder")}
-                className="border-border/80 h-10 rounded-xl text-xs"
-              />
-            </div>
-
-            {/* Footer Buttons */}
-            <DialogFooter className="gap-2 pt-4 sm:gap-0">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isProcessingAction !== null}
-                onClick={() => setIsPlanModalOpen(false)}
-                className="h-10 rounded-xl px-5 text-xs font-semibold">
-                {t("buttons.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                disabled={isProcessingAction !== null}
-                className="h-10 rounded-xl px-6 text-xs font-semibold">
-                {isProcessingAction === "saving-plan" && (
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                )}
-                {t("buttons.savePlan")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

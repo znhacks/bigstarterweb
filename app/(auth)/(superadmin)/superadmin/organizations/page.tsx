@@ -1,24 +1,35 @@
-import { generateMeta } from "@/lib/utils";
+// ==========================================
+// SEPARATOR UNTUK BERKAS BERIKUTNYA:
+// app/(auth)/(superadmin)/superadmin/organizations/page.tsx
+// ==========================================
+
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 
-// Impor komponen klien dan tipe data yang sesuai
+// Impor komponen klien, tipe data, serta config statis
 import { OrganizationsList, SuperadminOrganization } from "./organizations-list";
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
+import { plans as billingPlans } from "@/config/billing";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.superadmin.organizations");
 
+  const titleText = t.has("title") ? t("title") : "Organizations - Superadmin";
+  const descText = t.has("description")
+    ? t("description")
+    : "Manage and view all platform tenants.";
+
   return constructMetadata({
-    title: t("title"),
-    description: t("description")
+    title: titleText,
+    description: descText
   });
 }
 
 export default async function SuperadminOrganizationsPage() {
   const cookieStore = await cookies();
-  const t = await getTranslations();
+  const t = await getTranslations("superadmin.organizations");
 
   // Inisialisasi klien Supabase khusus Server
   const supabase = createServerClient(
@@ -33,13 +44,10 @@ export default async function SuperadminOrganizationsPage() {
     }
   );
 
-  // 1. Ambil data user aktif di server untuk mendeteksi bahasa pengaturannya
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  // 2. Ambil data gabungan komprehensif dari Supabase (Server-side)
-  const { data: tenants, error } = await supabase
+  // Ambil data dari Supabase (Server-side).
+  // Plan tidak ada di DB (didefinisikan di config/billing.ts), jadi hanya
+  // ambil plan_id dari subscriptions lalu cocokkan ke konfigurasi statis.
+  const { data: tenants, error } = await supabaseAdmin
     .from("tenants")
     .select(
       `
@@ -52,10 +60,7 @@ export default async function SuperadminOrganizationsPage() {
       subscriptions (
         status,
         ends_at,
-        plans (
-          name,
-          price
-        )
+        plan_id
       )
     `
     )
@@ -65,32 +70,39 @@ export default async function SuperadminOrganizationsPage() {
     console.error("Gagal mengambil data organisasi di sisi server:", error.message);
   }
 
-  // 3. Petakan hasil kueri mentah Supabase ke dalam format tipe data SuperadminOrganization[]
+  // Petakan hasil kueri mentah dengan mencocokkan konfigurasi paket statis
   const formattedOrgs: SuperadminOrganization[] = (tenants || []).map((tenant: any) => {
     const firstSub = tenant.subscriptions?.[0];
-    const planInfo = firstSub?.plans;
+
+    // Cari detail paket berdasarkan plan_id statis dari billing.ts
+    const planConfig = billingPlans.find((p) => p.id === firstSub?.plan_id);
+    // Tampilkan harga bulanan (UI menampilkan "/mo")
+    const price = planConfig ? planConfig.prices.monthly.amount : 0;
 
     return {
       id: tenant.id,
       name: tenant.name || "Unnamed Organization",
       created_at: tenant.created_at,
       memberCount: tenant.memberships ? tenant.memberships.length : 0,
-      planName: planInfo?.name || "Free",
+      planName: planConfig ? planConfig.name : firstSub?.plan_id || "Free",
       planStatus: firstSub?.status || "inactive",
       endsAt: firstSub?.ends_at || null,
-      price: planInfo?.price || 0
+      price: price
     };
   });
 
+  const titleText = t.has("title") ? t("title") : "Organizations";
+  const detailText = t.has("detail")
+    ? t("detail")
+    : "Manage and view all tenant organizations registered in the system.";
+
   return (
     <div className="mx-auto w-full space-y-8 px-4 py-10">
-      {/* Header Halaman menggunakan teks bahasa yang diterjemahkan di server */}
       <div className="space-y-1">
-        <h1 className="text-foreground text-3xl font-bold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("detail")}</p>
+        <h1 className="text-foreground text-3xl font-bold tracking-tight">{titleText}</h1>
+        <p className="text-muted-foreground text-sm">{detailText}</p>
       </div>
 
-      {/* Kirim data ke Komponen Klien */}
       <OrganizationsList data={formattedOrgs} />
     </div>
   );
