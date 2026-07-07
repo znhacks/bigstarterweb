@@ -62,6 +62,10 @@
       "billing": {
         "title": "Billings",
         "description": "Global overview of transactions, active subscriptions, and refund requests."
+      },
+      "roles": {
+        "title": "Roles & Permissions",
+        "description": "Manage RBAC roles and their granted permissions."
       }
     }
   },
@@ -100,122 +104,120 @@
     "logout": "Log out",
     "credits": "Credits"
   },
-  "organization-general": {
+  "organization": {
     "title": "Organization Settings",
-    "subTitle": "Manage the settings of the organization.",
-    "readOnlyTitle": "Read-Only Mode",
-    "readOnlyDesc": "You are logged in as a **Member**. You are only allowed to view organization settings and do not have access to modify them.",
-    "logo": {
-      "title": "Organization logo",
-      "desc": "Upload a logo for your organization."
+    "subtitle": "Manage organization, members, and subscription for your organization",
+    "organization-general": {
+      "readOnlyTitle": "Read-Only Mode",
+      "readOnlyDesc": "You are logged in as a **Member**. You are only allowed to view organization settings and do not have access to modify them.",
+      "logo": {
+        "title": "Organization logo",
+        "desc": "Upload a logo for your organization."
+      },
+      "name": {
+        "title": "Organization name"
+      },
+      "delete": {
+        "title": "Delete organization",
+        "desc": "Permanently delete your organization. Once you delete your organization, there is no going back. To confirm, please click the button on the right:",
+        "btn": "Delete organization",
+        "dialogTitle": "Are you absolutely sure?",
+        "dialogDesc": "This action will permanently delete the organization {orgName} along with all associated memberships and subscriptions. This action cannot be undone."
+      },
+      "alerts": {
+        "successLogo": "Organization logo successfully updated in database.",
+        "successName": "Organization name successfully updated.",
+        "successDelete": "Organization successfully deleted.",
+        "errorLoad": "Failed to load organization details and permissions."
+      }
     },
-    "name": {
-      "title": "Organization name"
+    "organization-member": {
+      "limit": "Limit: {count} / {max} Members",
+      "tabs": {
+        "active": "Active members",
+        "pending": "Pending invitations"
+      },
+      "placeholders": {
+        "noActive": "No active members found.",
+        "noPending": "No pending invitations found.",
+        "invitedTo": "Invited to be",
+        "statusPending": "Pending"
+      },
+      "inviteCard": {
+        "title": "Invite a member",
+        "desc": "Add someone to your organization by sending them an email invite and assigning their role.",
+        "limitAlertTitle": "Member Limit Reached",
+        "limitAlertDesc": "Your organization has reached the maximum member limit for your current plan of **{max} members**. Please upgrade your plan in the **Billing** menu to add more members.",
+        "email": "Email",
+        "role": "Role",
+        "selectRole": "Select Role",
+        "btnInvite": "Invite",
+        "btnSending": "Sending..."
+      },
+      "dialogDelete": {
+        "title": "Are you absolutely sure?",
+        "desc": "This action will remove {name} ({email}) from the organization. They will no longer have access to this workspace.",
+        "btnCancel": "Cancel",
+        "btnRemove": "Remove"
+      },
+      "alerts": {
+        "roleUpdated": "Role updated successfully.",
+        "memberRemoved": "Member removed from the organization.",
+        "inviteCancelled": "Invitation successfully recalled.",
+        "inviteSent": "Invitation successfully sent to {email}.",
+        "errorInvite": "Failed to send invitation. Please check your MailerSend credentials."
+      }
     },
-    "delete": {
-      "title": "Delete organization",
-      "desc": "Permanently delete your organization. Once you delete your organization, there is no going back. To confirm, please click the button on the right:",
-      "btn": "Delete organization",
-      "dialogTitle": "Are you absolutely sure?",
-      "dialogDesc": "This action will permanently delete the organization {orgName} along with all associated memberships and subscriptions. This action cannot be undone."
-    },
-    "alerts": {
-      "successLogo": "Organization logo successfully updated in database.",
-      "successName": "Organization name successfully updated.",
-      "successDelete": "Organization successfully deleted.",
-      "errorLoad": "Failed to load organization details and permissions."
-    }
-  },
-  "organization-member": {
-    "title": "Manage members",
-    "subTitle": "View and manage members, roles, and pending invitations.",
-    "limit": "Limit: {count} / {max} Members",
-    "tabs": {
-      "active": "Active members",
-      "pending": "Pending invitations"
-    },
-    "placeholders": {
-      "noActive": "No active members found.",
-      "noPending": "No pending invitations found.",
-      "invitedTo": "Invited to be",
-      "statusPending": "Pending"
-    },
-    "inviteCard": {
-      "title": "Invite a member",
-      "desc": "Add someone to your organization by sending them an email invite and assigning their role.",
-      "limitAlertTitle": "Member Limit Reached",
-      "limitAlertDesc": "Your organization has reached the maximum member limit for your current plan of **{max} members**. Please upgrade your plan in the **Billing** menu to add more members.",
-      "email": "Email",
-      "role": "Role",
-      "selectRole": "Select Role",
-      "btnInvite": "Invite",
-      "btnSending": "Sending..."
-    },
-    "dialogDelete": {
-      "title": "Are you absolutely sure?",
-      "desc": "This action will remove {name} ({email}) from the organization. They will no longer have access to this workspace.",
-      "btnCancel": "Cancel",
-      "btnRemove": "Remove"
-    },
-    "alerts": {
-      "roleUpdated": "Role updated successfully.",
-      "memberRemoved": "Member removed from the organization.",
-      "inviteCancelled": "Invitation successfully recalled.",
-      "inviteSent": "Invitation successfully sent to {email}.",
-      "errorInvite": "Failed to send invitation. Please check your MailerSend credentials."
-    }
-  },
-  "organization-billing": {
-    "title": "Your current plan",
-    "desc": "View your plan details and manage billing.",
-    "changeTitle": "Change your plan",
-    "changeDesc": "Compare available plans and switch your subscription.",
-    "cycles": {
-      "monthly": "Monthly",
-      "yearly": "Yearly"
-    },
-    "badges": {
-      "active": "ACTIVE",
-      "refundRequested": "REFUND REQUESTED",
-      "willCancel": "WILL CANCEL",
-      "freeActive": "FREE ACTIVE"
-    },
-    "subDetails": {
-      "activeDesc": "Active subscription valued at {price}/month.",
-      "endsOn": "Premium access ends on",
-      "renewsOn": "Next automatic renewal on",
-      "freeDesc": "For testing and hobby use."
-    },
-    "buttons": {
-      "cancelRenewal": "Cancel Renewal",
-      "activateRenewal": "Reactivate Renewal",
-      "claimRefund": "Claim Refund",
-      "planActive": "Active Plan",
-      "upgrade": "Upgrade Plan",
-      "downgrade": "Downgrade Plan",
-      "choose": "Choose plan",
-      "cancel": "Cancel",
-      "confirmRefund": "Yes, Request Refund"
-    },
-    "dialogPurchase": {
-      "title": "Complete Your Purchase",
-      "desc": "Complete payment to start using your service plan.",
-      "details": "Transaction Details",
-      "currency": "Currency"
-    },
-    "dialogRefund": {
-      "title": "Claim Refund",
-      "desc": "Are you sure you want to request a refund for the {planName} plan?",
-      "warn1": "Once submitted, your organization's premium access will be suspended while the review process is underway.",
-      "warn2": "*This review process takes 1-3 business days. Funds will be returned to the PayPal/Credit Card account used for the transaction."
-    },
-    "alerts": {
-      "successPay": "Thank you! Payment for {planName} plan valued at {price} successfully processed. Order ID: {orderId}",
-      "successCancel": "Automatic renewal disabled. Your premium access remains active until {date}.",
-      "successResume": "Subscription auto-renewal successfully reactivated.",
-      "successRefund": "Refund claim successfully submitted and is under review.",
-      "errorPay": "An error occurred during payment. Please try again.",
-      "errorDb": "Payment validation failed: {error}"
+    "organization-billing": {
+      "changeTitle": "Change your plan",
+      "changeDesc": "Compare available plans and switch your subscription.",
+      "cycles": {
+        "monthly": "Monthly",
+        "yearly": "Yearly"
+      },
+      "badges": {
+        "active": "ACTIVE",
+        "refundRequested": "REFUND REQUESTED",
+        "willCancel": "WILL CANCEL",
+        "freeActive": "FREE ACTIVE"
+      },
+      "subDetails": {
+        "activeDesc": "Active subscription valued at {price}/month.",
+        "endsOn": "Premium access ends on",
+        "renewsOn": "Next automatic renewal on",
+        "freeDesc": "For testing and hobby use."
+      },
+      "buttons": {
+        "cancelRenewal": "Cancel Renewal",
+        "activateRenewal": "Reactivate Renewal",
+        "claimRefund": "Claim Refund",
+        "planActive": "Active Plan",
+        "upgrade": "Upgrade Plan",
+        "downgrade": "Downgrade Plan",
+        "choose": "Choose plan",
+        "cancel": "Cancel",
+        "confirmRefund": "Yes, Request Refund"
+      },
+      "dialogPurchase": {
+        "title": "Complete Your Purchase",
+        "desc": "Complete payment to start using your service plan.",
+        "details": "Transaction Details",
+        "currency": "Currency"
+      },
+      "dialogRefund": {
+        "title": "Claim Refund",
+        "desc": "Are you sure you want to request a refund for the {planName} plan?",
+        "warn1": "Once submitted, your organization's premium access will be suspended while the review process is underway.",
+        "warn2": "*This review process takes 1-3 business days. Funds will be returned to the PayPal/Credit Card account used for the transaction."
+      },
+      "alerts": {
+        "successPay": "Thank you! Payment for {planName} plan valued at {price} successfully processed. Order ID: {orderId}",
+        "successCancel": "Automatic renewal disabled. Your premium access remains active until {date}.",
+        "successResume": "Subscription auto-renewal successfully reactivated.",
+        "successRefund": "Refund claim successfully submitted and is under review.",
+        "errorPay": "An error occurred during payment. Please try again.",
+        "errorDb": "Payment validation failed: {error}"
+      }
     }
   },
   "settings": {
@@ -393,6 +395,41 @@
         "rejectDesc": "Refund request rejected. The organization's premium access has been reactivated.",
         "failed": "Action Failed",
         "successPlan": "Plan configurations successfully synchronized with database."
+      }
+    },
+    "roles": {
+      "title": "Roles & Permissions",
+      "desc": "Define roles and the permissions each role grants across organizations.",
+      "new": {
+        "title": "New Role",
+        "nameLabel": "Role name",
+        "hierarchyLabel": "Hierarchy level",
+        "hierarchyHint": "Higher number = more powerful. Users can only assign roles with a lower level than their own.",
+        "submit": "Create role"
+      },
+      "list": {
+        "name": "Role",
+        "hierarchy": "Hierarchy",
+        "members": "Members",
+        "permissions": "Permissions",
+        "actions": "Actions",
+        "empty": "No roles yet."
+      },
+      "detail": {
+        "edit": "Edit",
+        "editTitle": "Edit role",
+        "save": "Save changes",
+        "permissionsTitle": "Permissions",
+        "permissionsDesc": "Toggle the permissions granted to this role.",
+        "savePermissions": "Save permissions",
+        "dangerTitle": "Delete role",
+        "dangerDesc": "Removing a role is permanent. It is blocked while any member or invitation still uses it."
+      },
+      "messages": {
+        "back": "Back",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "confirmDelete": "Are you sure you want to delete this role?"
       }
     }
   }
