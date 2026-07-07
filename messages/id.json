@@ -133,6 +133,8 @@
       }
     },
     "organization-member": {
+      "title": "Kelola Anggota",
+      "subTitle": "Lihat dan kelola anggota, peran, serta undangan tertunda.",
       "limit": "Limit: {count} / {max} Anggota",
       "tabs": {
         "active": "Anggota aktif",

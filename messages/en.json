@@ -132,6 +132,8 @@
       }
     },
     "organization-member": {
+      "title": "Manage members",
+      "subTitle": "View and manage members, roles, and pending invitations.",
       "limit": "Limit: {count} / {max} Members",
       "tabs": {
         "active": "Active members",

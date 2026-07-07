@@ -95,7 +95,7 @@ export function OrganizationBilling() {
         "client-id": process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "test",
         currency: "USD"
       }}>
-      <div className="mx-auto w-full max-w-5xl space-y-10 px-4 py-10">
+      <div className="mx-auto w-full max-w-5xl space-y-10 px-4">
         {isVerifyingPayment && (
           <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
             <Loader2 className="h-10 w-10 animate-spin text-white" />
@@ -122,20 +122,15 @@ export function OrganizationBilling() {
             </div>
             <button
               onClick={() => setAlertMessage(null)}
-              className="text-muted-foreground hover:text-foreground absolute top-4 end-4 transition-colors">
+              className="text-muted-foreground hover:text-foreground absolute end-4 top-4 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </Alert>
         )}
 
         <div className="space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-foreground text-xl font-semibold tracking-tight">{t("title")}</h2>
-            <p className="text-muted-foreground text-sm">{t("desc")}</p>
-          </div>
-
           <Card className="overflow-hidden">
-            <CardContent className="space-y-6 p-8">
+            <CardContent className="">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2.5">
