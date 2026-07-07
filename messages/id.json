@@ -80,6 +80,22 @@
     "error": "Error",
     "loading": "Memuat..."
   },
+  "menu": {
+    "menu": "Menu",
+    "users": {
+      "dashboard": "Dasbor",
+      "settings": "Pengaturan",
+      "account": "Akun",
+      "organization": "Organisasi"
+    },
+    "superadmin": {
+      "dashboard": "Dasbor",
+      "users": "Pengguna",
+      "roles": "Peran",
+      "organization": "Organisasi",
+      "billing": "Penagihan"
+    }
+  },
   "currency": {
     "code": "IDR",
     "symbol": "Rp",

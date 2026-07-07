@@ -79,6 +79,22 @@
     "error": "Error",
     "loading": "Loading..."
   },
+  "menu": {
+    "menu": "Menu",
+    "users": {
+      "dashboard": "Dashboard",
+      "settings": "Settings",
+      "account": "Account",
+      "organization": "Organizations"
+    },
+    "superadmin": {
+      "dashboard": "Dashboard",
+      "users": "Users",
+      "roles": "Roles",
+      "organization": "Organizations",
+      "billing": "Billing"
+    }
+  },
   "currency": {
     "code": "USD",
     "symbol": "$",

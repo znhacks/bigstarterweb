@@ -79,6 +79,22 @@
     "error": "خطأ",
     "loading": "جاري التحميل..."
   },
+  "menu": {
+    "menu": "قائمة طعام",
+    "users": {
+      "dashboard": "لوحة التحكم",
+      "settings": "الإعدادات",
+      "account": "حساب",
+      "organization": "منظمة"
+    },
+    "superadmin": {
+      "dashboard": "لوحة التحكم",
+      "users": "المستخدمون",
+      "roles": "الأدوار",
+      "organization": "المؤسسات",
+      "billing": "الفواتير"
+    }
+  },
   "currency": {
     "code": "USD",
     "symbol": "$",
