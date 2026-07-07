@@ -15,7 +15,16 @@ import {
   useReactTable,
   FilterFn
 } from "@tanstack/react-table";
-import { ArrowUpDown, Columns, MoreHorizontal, PlusCircle, Loader2 } from "lucide-react";
+import {
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Columns,
+  MoreHorizontal,
+  PlusCircle,
+  Loader2,
+  Search
+} from "lucide-react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -48,6 +57,24 @@ import { Badge } from "@/components/ui/badge";
 import { generateAvatarFallback } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Impor komponen Select & Pagination dari Shadcn
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from "@/components/ui/pagination";
+
 // Impor fungsi utilitas tanggal
 import { formatToUserTimezone, formatRelativeTime } from "@/lib/date";
 
@@ -79,6 +106,26 @@ const multiSelectFilterFn: FilterFn<any> = (row, columnId, filterValue: string[]
   if (!filterValue || filterValue.length === 0) return true;
   const rowValue = String(row.getValue(columnId)).toLowerCase();
   return filterValue.map((v) => v.toLowerCase()).includes(rowValue);
+};
+
+// Komponen Pembantu untuk Header yang dapat diurutkan dengan panah dinamis
+const SortableHeader = ({ column, title }: { column: any; title: string }) => {
+  const isSorted = column.getIsSorted();
+  return (
+    <Button
+      className="-ms-3 text-xs"
+      variant="ghost"
+      onClick={() => column.toggleSorting(isSorted === "asc")}>
+      {title}
+      {isSorted === "asc" ? (
+        <ArrowUp className="ms-2 h-4 w-4" />
+      ) : isSorted === "desc" ? (
+        <ArrowDown className="ms-2 h-4 w-4" />
+      ) : (
+        <ArrowUpDown className="ms-2 h-4 w-4" />
+      )}
+    </Button>
+  );
 };
 
 // Fungsi getColumns menerima fungsi translasi `t`, `locale`, dan `timeZone`
@@ -119,33 +166,13 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
   },
   {
     accessorKey: "role",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ms-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {t("headers.role")}
-          <ArrowUpDown className="me-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} title={t("headers.role")} />,
     cell: ({ row }) => <span className="capitalize">{row.getValue("role")}</span>,
     filterFn: multiSelectFilterFn
   },
   {
     accessorKey: "plan_name",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ms-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {t("headers.plan")}
-          <ArrowUpDown className="me-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} title={t("headers.plan")} />,
     cell: ({ row }) => (
       <Badge variant="outline" className="font-semibold">
         {row.getValue("plan_name")}
@@ -155,49 +182,19 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
   },
   {
     accessorKey: "email",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ms-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {t("headers.email")}
-          <ArrowUpDown className="me-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} title={t("headers.email")} />,
     cell: ({ row }) => (
       <span className="text-muted-foreground text-xs">{row.getValue("email")}</span>
     )
   },
   {
     accessorKey: "country",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ms-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {t("headers.country")}
-          <ArrowUpDown className="me-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} title={t("headers.country")} />,
     cell: ({ row }) => row.getValue("country")
   },
   {
     accessorKey: "status",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ms-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {t("headers.status")}
-          <ArrowUpDown className="me-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} title={t("headers.status")} />,
     cell: ({ row }) => {
       const status = row.original.status;
       const statusMap = {
@@ -216,17 +213,7 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
   },
   {
     accessorKey: "lastSignIn",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ms-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {t("headers.lastSignIn")}
-          <ArrowUpDown className="me-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} title={t("headers.lastSignIn")} />,
     cell: ({ row }) => {
       const value = row.getValue("lastSignIn") as string | null;
       if (!value) return <span className="text-muted-foreground text-xs">-</span>;
@@ -242,17 +229,7 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
   },
   {
     accessorKey: "created_at",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ms-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {t("headers.createdAt")}
-          <ArrowUpDown className="me-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} title={t("headers.createdAt")} />,
     cell: ({ row }) => {
       const value = row.getValue("created_at") as string;
       if (!value) return <span className="text-muted-foreground text-xs">-</span>;
@@ -265,17 +242,7 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
   },
   {
     accessorKey: "updated_at",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ms-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {t("headers.updatedAt")}
-          <ArrowUpDown className="me-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} title={t("headers.updatedAt")} />,
     cell: ({ row }) => {
       const value = row.getValue("updated_at") as string;
       if (!value) return <span className="text-muted-foreground text-xs">-</span>;
@@ -326,9 +293,23 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
+  // State untuk melacak filter yang benar-benar aktif di tabel
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+
+  // State sementara untuk popover agar filter hanya berjalan saat popover ditutup (Apply on Close)
+  const [tempStatuses, setTempStatuses] = useState<string[]>([]);
+  const [tempPlans, setTempPlans] = useState<string[]>([]);
+  const [tempRoles, setTempRoles] = useState<string[]>([]);
+
+  const [statusPopoverOpen, setStatusPopoverOpen] = useState(false);
+  const [planPopoverOpen, setPlanPopoverOpen] = useState(false);
+  const [rolePopoverOpen, setRolePopoverOpen] = useState(false);
+
+  // State pencarian lokal yang memerlukan tombol Enter
+  const [searchVal, setSearchVal] = useState("");
+
   // Daftar role global (RBAC) untuk filter dropdown — DB-driven.
   const [roles, setRoles] = useState<{ value: string; label: string }[]>([]);
 
@@ -352,7 +333,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   }, [initialData]);
 
-  // Ambil daftar role global untuk dropdown filter (menghormati role kustom baru).
+  // Ambil daftar role global untuk dropdown filter
   useEffect(() => {
     supabase
       .from("roles")
@@ -368,7 +349,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   const loadUsersFromSupabase = async () => {
     setIsLoading(true);
     try {
-      // PERBAIKAN: Hanya mengambil plan_id dari tabel subscriptions, tidak memanggil tabel plans yang tidak ada
       const { data, error } = await supabase.from("profiles").select(`
           id,
           full_name,
@@ -400,7 +380,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
         const tenant = firstMembership?.tenants;
         const firstSub = tenant?.subscriptions?.[0];
 
-        // PERBAIKAN: Cari nama paket dari file config/billing.ts lokal berdasarkan plan_id
         const localPlan = plans.find((p) => p.id === firstSub?.plan_id);
         const planName = localPlan ? localPlan.name : "Free";
 
@@ -470,28 +449,75 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   });
 
+  // State untuk indikator loading pencarian
+  const [loading, setLoading] = useState(false);
+
+  // Fungsi untuk memicu pencarian ke dalam filter tabel
+  const handleSearchTrigger = () => {
+    setLoading(true);
+    table.getColumn("name")?.setFilterValue(searchVal);
+    // Memberikan jeda singkat untuk feedback visual loading
+    setTimeout(() => {
+      setLoading(false);
+    }, 300);
+  };
+
+  // Modifikasi handler KeyDown agar memanggil handleSearchTrigger
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearchTrigger();
+    }
+  };
+
+  // Handler Status Popover (Menerapkan filter setelah Popover Ditutup)
+  const handleStatusOpenChange = (open: boolean) => {
+    if (open) {
+      setTempStatuses(selectedStatuses);
+    } else {
+      setSelectedStatuses(tempStatuses);
+      table.getColumn("status")?.setFilterValue(tempStatuses.length > 0 ? tempStatuses : undefined);
+    }
+    setStatusPopoverOpen(open);
+  };
+
   const handleStatusToggle = (value: string) => {
-    const updated = selectedStatuses.includes(value)
-      ? selectedStatuses.filter((v) => v !== value)
-      : [...selectedStatuses, value];
-    setSelectedStatuses(updated);
-    table.getColumn("status")?.setFilterValue(updated.length > 0 ? updated : undefined);
+    setTempStatuses((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+  };
+
+  // Handler Paket Popover (Menerapkan filter setelah Popover Ditutup)
+  const handlePlanOpenChange = (open: boolean) => {
+    if (open) {
+      setTempPlans(selectedPlans);
+    } else {
+      setSelectedPlans(tempPlans);
+      table.getColumn("plan_name")?.setFilterValue(tempPlans.length > 0 ? tempPlans : undefined);
+    }
+    setPlanPopoverOpen(open);
   };
 
   const handlePlanToggle = (value: string) => {
-    const updated = selectedPlans.includes(value)
-      ? selectedPlans.filter((v) => v !== value)
-      : [...selectedPlans, value];
-    setSelectedPlans(updated);
-    table.getColumn("plan_name")?.setFilterValue(updated.length > 0 ? updated : undefined);
+    setTempPlans((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+  };
+
+  // Handler Peran Popover (Menerapkan filter setelah Popover Ditutup)
+  const handleRoleOpenChange = (open: boolean) => {
+    if (open) {
+      setTempRoles(selectedRoles);
+    } else {
+      setSelectedRoles(tempRoles);
+      table.getColumn("role")?.setFilterValue(tempRoles.length > 0 ? tempRoles : undefined);
+    }
+    setRolePopoverOpen(open);
   };
 
   const handleRoleToggle = (value: string) => {
-    const updated = selectedRoles.includes(value)
-      ? selectedRoles.filter((v) => v !== value)
-      : [...selectedRoles, value];
-    setSelectedRoles(updated);
-    table.getColumn("role")?.setFilterValue(updated.length > 0 ? updated : undefined);
+    setTempRoles((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
   };
 
   const statuses = [
@@ -500,13 +526,65 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     { value: "pending", label: "Pending" }
   ];
 
-  // List filter plan menyesuaikan dengan array plans Anda
   const plansList = [
     { value: "Free", label: "Free" },
     { value: "Starter", label: "Starter" },
     { value: "Pro", label: "Pro" },
     { value: "Enterprise", label: "Enterprise" }
   ];
+
+  // Helper untuk merender item halaman Paginasi Shadcn
+  const renderPaginationItems = () => {
+    const totalPages = table.getPageCount();
+    const currentPage = table.getState().pagination.pageIndex;
+    const items = [];
+
+    const createPageItem = (pageIndex: number) => (
+      <PaginationItem key={pageIndex}>
+        <PaginationLink
+          isActive={currentPage === pageIndex}
+          onClick={() => table.setPageIndex(pageIndex)}
+          className="cursor-pointer">
+          {pageIndex + 1}
+        </PaginationLink>
+      </PaginationItem>
+    );
+
+    if (totalPages <= 5) {
+      for (let i = 0; i < totalPages; i++) {
+        items.push(createPageItem(i));
+      }
+    } else {
+      items.push(createPageItem(0));
+
+      if (currentPage > 2) {
+        items.push(
+          <PaginationItem key="ellipsis-start">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+
+      const start = Math.max(1, currentPage - 1);
+      const end = Math.min(totalPages - 2, currentPage + 1);
+
+      for (let i = start; i <= end; i++) {
+        items.push(createPageItem(i));
+      }
+
+      if (currentPage < totalPages - 3) {
+        items.push(
+          <PaginationItem key="ellipsis-end">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+
+      items.push(createPageItem(totalPages - 1));
+    }
+
+    return items;
+  };
 
   if (isLoading) {
     return (
@@ -518,24 +596,45 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
 
   return (
     <div className="w-full">
-      <div className="flex items-center gap-4 py-4">
-        <div className="flex gap-2">
-          <Input
-            placeholder={t("filters.search")}
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-            className="border-border/80 h-10 max-w-sm rounded-xl"
-          />
+      <div className="flex flex-row gap-4 py-4 md:flex-row md:items-center">
+        <div className="flex items-center gap-2">
+          <div className="group relative max-w-sm flex-grow">
+            <Input
+              placeholder={`${t("filters.search")}`}
+              value={searchVal}
+              onChange={(event) => setSearchVal(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              className="h-9 w-full pr-12"
+            />
+            <div className="absolute top-1/2 right-1 -translate-y-1/2">
+              <Button
+                onClick={handleSearchTrigger}
+                disabled={loading}
+                size="sm"
+                className="h-8 w-8 p-0">
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
 
           {/* POPOVER STATUS FILTER */}
-          <Popover>
+          <Popover open={statusPopoverOpen} onOpenChange={handleStatusOpenChange}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="border-border/80 h-10 rounded-xl">
-                <PlusCircle className="me-2 h-4 w-4" />
+              <Button variant="outline" className="h-9 text-xs">
+                <PlusCircle className="mr-2 h-4 w-4" />
                 {t("filters.status")}
+                {selectedStatuses.length > 0 && (
+                  <Badge variant="secondary" className="ms-2 rounded-sm px-1 font-normal lg:hidden">
+                    {selectedStatuses.length}
+                  </Badge>
+                )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="border-border/80 w-52 rounded-xl border p-0">
+            <PopoverContent className="w-52 p-0" align="start">
               <Command>
                 <CommandInput placeholder={t("filters.status")} className="h-9" />
                 <CommandList>
@@ -548,11 +647,12 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                         onSelect={() => handleStatusToggle(status.value)}>
                         <div className="flex w-full cursor-pointer items-center gap-3 py-1">
                           <Checkbox
-                            id={status.value}
-                            checked={selectedStatuses.includes(status.value)}
+                            id={`status-${status.value}`}
+                            checked={tempStatuses.includes(status.value)}
+                            onCheckedChange={() => handleStatusToggle(status.value)}
                           />
                           <label
-                            htmlFor={status.value}
+                            htmlFor={`status-${status.value}`}
                             className="cursor-pointer text-sm leading-none font-medium">
                             {status.label}
                           </label>
@@ -566,14 +666,19 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           </Popover>
 
           {/* POPOVER PLAN FILTER */}
-          <Popover>
+          <Popover open={planPopoverOpen} onOpenChange={handlePlanOpenChange}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="border-border/80 h-10 rounded-xl">
-                <PlusCircle className="me-2 h-4 w-4" />
+              <Button variant="outline" className="h-9 text-xs">
+                <PlusCircle className="mr-2 h-4 w-4" />
                 {t("filters.plan")}
+                {selectedPlans.length > 0 && (
+                  <Badge variant="secondary" className="ms-2 rounded-sm px-1 font-normal lg:hidden">
+                    {selectedPlans.length}
+                  </Badge>
+                )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="border-border/80 w-52 rounded-xl border p-0">
+            <PopoverContent className="border-border/80 w-52 rounded-xl border p-0" align="start">
               <Command>
                 <CommandInput placeholder={t("filters.plan")} className="h-9" />
                 <CommandList>
@@ -585,9 +690,13 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                         value={plan.value}
                         onSelect={() => handlePlanToggle(plan.value)}>
                         <div className="flex w-full cursor-pointer items-center gap-3 py-1">
-                          <Checkbox id={plan.value} checked={selectedPlans.includes(plan.value)} />
+                          <Checkbox
+                            id={`plan-${plan.value}`}
+                            checked={tempPlans.includes(plan.value)}
+                            onCheckedChange={() => handlePlanToggle(plan.value)}
+                          />
                           <label
-                            htmlFor={plan.value}
+                            htmlFor={`plan-${plan.value}`}
                             className="cursor-pointer text-sm leading-none font-medium">
                             {plan.label}
                           </label>
@@ -601,14 +710,19 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           </Popover>
 
           {/* POPOVER ROLE FILTER */}
-          <Popover>
+          <Popover open={rolePopoverOpen} onOpenChange={handleRoleOpenChange}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="border-border/80 h-10 rounded-xl">
-                <PlusCircle className="me-2 h-4 w-4" />
+              <Button variant="outline" className="h-9 text-xs">
+                <PlusCircle className="mr-2 h-4 w-4" />
                 {t("filters.role")}
+                {selectedRoles.length > 0 && (
+                  <Badge variant="secondary" className="ms-2 rounded-sm px-1 font-normal lg:hidden">
+                    {selectedRoles.length}
+                  </Badge>
+                )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="border-border/80 w-52 rounded-xl border p-0">
+            <PopoverContent className="border-border/80 w-52 rounded-xl border p-0" align="start">
               <Command>
                 <CommandInput placeholder={t("filters.role")} className="h-9" />
                 <CommandList>
@@ -620,9 +734,13 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                         value={role.value}
                         onSelect={() => handleRoleToggle(role.value)}>
                         <div className="flex w-full cursor-pointer items-center gap-3 py-1">
-                          <Checkbox id={role.value} checked={selectedRoles.includes(role.value)} />
+                          <Checkbox
+                            id={`role-${role.value}`}
+                            checked={tempRoles.includes(role.value)}
+                            onCheckedChange={() => handleRoleToggle(role.value)}
+                          />
                           <label
-                            htmlFor={role.value}
+                            htmlFor={`role-${role.value}`}
                             className="cursor-pointer text-sm leading-none font-medium">
                             {role.label}
                           </label>
@@ -635,9 +753,10 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             </PopoverContent>
           </Popover>
         </div>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="border-border/80 ms-auto h-10 rounded-xl">
+            <Button variant="outline" className="h-9 text-xs md:ms-auto">
               <Columns className="me-2 h-4 w-4" />{" "}
               <span className="hidden md:inline">{t("filters.columns")}</span>
             </Button>
@@ -660,6 +779,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
       <div className="border-border/80 bg-card overflow-hidden rounded-xl border shadow-sm">
         <Table>
           <TableHeader>
@@ -685,7 +805,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                   data-state={row.getIsSelected() && "selected"}
                   className="hover:bg-accent/5">
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-4">
+                    <TableCell key={cell.id} className="py-4 text-xs">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -703,30 +823,64 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end gap-2 pt-4">
-        <div className="text-muted-foreground flex-1 text-xs">
+
+      {/* FOOTER & PAGINASI SHADCN */}
+      <div className="flex flex-col items-center justify-between gap-4 pt-4 md:flex-row">
+        <div className="text-muted-foreground order-2 text-xs md:order-1">
           {t("footer.selected", {
             selected: table.getFilteredSelectedRowModel().rows.length,
             total: table.getFilteredRowModel().rows.length
           })}
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="border-border/80 rounded-xl">
-            {t("footer.previous")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="border-border/80 rounded-xl">
-            {t("footer.next")}
-          </Button>
+
+        <div className="order-1 flex w-full flex-col items-center justify-end gap-4 sm:flex-row md:order-2 md:w-auto">
+          {/* PEMILIH UKURAN HALAMAN (ROW PER PAGE) */}
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs whitespace-nowrap">Rows per page:</span>
+            <Select
+              value={`${table.getState().pagination.pageSize}`}
+              onValueChange={(val) => {
+                table.setPageSize(Number(val));
+              }}>
+              <SelectTrigger className="border-border/80 h-8 w-[70px] rounded-lg text-xs">
+                <SelectValue placeholder={table.getState().pagination.pageSize} />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 50, 100].map((size) => (
+                  <SelectItem key={size} value={`${size}`} className="text-xs">
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* KONTROL NAVIGASI PAGINASI SHADCN */}
+          {table.getPageCount() > 1 && (
+            <Pagination>
+              <PaginationContent className="flex-wrap gap-1">
+                <PaginationItem>
+                  <PaginationPrevious
+                    className={`cursor-pointer rounded-lg px-2 py-1 text-xs ${
+                      !table.getCanPreviousPage() && "pointer-events-none opacity-50"
+                    }`}
+                    onClick={() => table.previousPage()}
+                  />
+                </PaginationItem>
+
+                {renderPaginationItems()}
+
+                <PaginationItem>
+                  <PaginationNext
+                    className={`cursor-pointer rounded-lg px-2 py-1 text-xs ${
+                      !table.getCanNextPage() && "pointer-events-none opacity-50"
+                    }`}
+                    onClick={() => table.nextPage()}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
       </div>
     </div>

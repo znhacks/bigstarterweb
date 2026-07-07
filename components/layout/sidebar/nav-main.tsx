@@ -37,10 +37,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { supabase } from "@/lib/supabase";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { PERMISSIONS, type PermissionName } from "@/lib/rbac";
 
-// Helper client-side untuk membaca Cookie
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;
   const value = `; ${document.cookie}`;
@@ -50,49 +49,49 @@ const getCookie = (name: string) => {
 };
 
 type NavGroup = {
-  title: string;
+  title: string; // Kunci terjemahan untuk judul grup
   roles?: ("users" | "superadmin")[];
   items: NavItem[];
 };
 
 type NavItem = {
-  title: string;
+  title: string; // Kunci terjemahan untuk judul item
   href: string;
   icon?: LucideIcon;
   isComing?: boolean;
   isDataBadge?: string;
   isNew?: boolean;
   newTab?: boolean;
-  // Gate berbasis permission (RBAC). Jika kosong, item tampil untuk semua.
   permissions?: PermissionName[];
   items?: NavItem[];
-  tenantScoped?: boolean; // Menandakan apakah halaman ini membutuhkan tenant slug
+  tenantScoped?: boolean;
 };
 
+// Nilai 'title' di bawah ini adalah KEY yang akan diterjemahkan oleh next-intl
 export const navItems: NavGroup[] = [
   {
-    title: "Menu",
+    title: "menu",
     roles: ["users"],
     items: [
       {
-        title: "Classic Dashboard",
+        title: "users.dashboard",
         href: `/dashboard`,
-        tenantScoped: true, // Butuh tenant slug
+        tenantScoped: true,
         icon: ChartPieIcon,
         permissions: [PERMISSIONS.dashboardView]
       },
       {
-        title: "Settings",
-        href: "/settings/general", // Global (tidak menggunakan tenantScoped)
+        title: "users.settings",
+        href: "/settings/general",
         icon: Settings,
         items: [
           {
-            title: "Account",
+            title: "users.account",
             href: "/settings/general",
             permissions: [PERMISSIONS.settingsView]
           },
           {
-            title: "Organization",
+            title: "users.organization",
             href: "/organization/general",
             tenantScoped: true,
             permissions: [PERMISSIONS.organizationRead]
@@ -102,31 +101,31 @@ export const navItems: NavGroup[] = [
     ]
   },
   {
-    title: "Menu",
+    title: "menu",
     roles: ["superadmin"],
     items: [
       {
-        title: "Dashboard",
+        title: "superadmin.dashboard",
         href: "/superadmin/dashboard",
         icon: ChartPieIcon
       },
       {
-        title: "Users",
+        title: "superadmin.users",
         href: "/superadmin/users",
         icon: Users
       },
       {
-        title: "Roles",
+        title: "superadmin.roles",
         href: "/superadmin/roles",
         icon: ShieldCheck
       },
       {
-        title: "Organization",
+        title: "superadmin.organizations",
         href: "/superadmin/organizations",
         icon: Building2
       },
       {
-        title: "Billing",
+        title: "superadmin.billing",
         href: "/superadmin/billing",
         icon: CreditCardIcon
       }
@@ -137,8 +136,9 @@ export const navItems: NavGroup[] = [
 export function NavMain() {
   const locale = useLocale();
   const pathname = usePathname();
-  const params = useParams(); // Membaca param URL dinamis
-  const tenantSlug = params?.tenant_slug as string | undefined; // Ambil slug organisasi aktif dari URL
+  const params = useParams();
+  const tenantSlug = params?.tenant_slug as string | undefined;
+  const t = useTranslations("menu"); // Menggunakan namespace "menu"
 
   const { isMobile } = useSidebar();
   const dropdownSide = isMobile ? "bottom" : locale === "ar" ? "left" : "right";
@@ -148,7 +148,6 @@ export function NavMain() {
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [isLoadingRole, setIsLoadingRole] = useState(true);
 
-  // Helper untuk melokalisasi link berdasarkan tenant slug aktif
   const getLocalizedHref = (href: string, tenantScoped?: boolean) => {
     if (!tenantScoped) {
       return href;
@@ -176,7 +175,6 @@ export function NavMain() {
         return;
       }
 
-      // Mengambil daftar tenant secara asinkron dari client-side untuk menentukan fallback slug
       try {
         const { data: membershipData, error: membershipError } = await supabase
           .from("memberships")
@@ -212,15 +210,12 @@ export function NavMain() {
 
       setUserGroup("users");
 
-      // Resolve otoritas: memberships.role_id → roles → role_permissions → permissions
-      const AUTHORITY_SELECT =
-        "roles(name, hierarchy_level, role_permissions(permissions(name)))";
+      const AUTHORITY_SELECT = "roles(name, hierarchy_level, role_permissions(permissions(name)))";
 
       let data: any = null;
       let error: any = null;
 
       if (tenantSlug) {
-        // OPSI A: Jika ada slug di URL, langsung query berdasarkan slug
         const { data: resData, error: resError } = await supabase
           .from("memberships")
           .select(`${AUTHORITY_SELECT}, tenants!inner(slug)`)
@@ -230,7 +225,6 @@ export function NavMain() {
         data = resData;
         error = resError;
       } else {
-        // OPSI B: Jika flat URL, gunakan Cookie active_tenant_id
         const activeTenantId =
           getCookie("active_tenant_id") || localStorage.getItem("active_org_id");
         if (activeTenantId) {
@@ -321,7 +315,8 @@ export function NavMain() {
     <>
       {filteredNavItems.map((nav) => (
         <SidebarGroup key={nav.title}>
-          <SidebarGroupLabel className="text-start">{nav.title}</SidebarGroupLabel>
+          {/* Menerjemahkan nama grup */}
+          <SidebarGroupLabel className="text-start">{t(nav.title)}</SidebarGroupLabel>
           <SidebarGroupContent className="flex flex-col gap-2">
             <SidebarMenu>
               {nav.items.map((item) => (
@@ -331,9 +326,10 @@ export function NavMain() {
                       <div className="hidden group-data-[collapsible=icon]:block">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <SidebarMenuButton className="text-start" tooltip={item.title}>
+                            {/* Menerjemahkan tooltip judul utama */}
+                            <SidebarMenuButton className="text-start" tooltip={t(item.title)}>
                               {item.icon && <item.icon />}
-                              <span>{item.title}</span>
+                              <span>{t(item.title)}</span>
                               <ChevronRight className="ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:-scale-x-100" />
                             </SidebarMenuButton>
                           </DropdownMenuTrigger>
@@ -341,14 +337,15 @@ export function NavMain() {
                             side={dropdownSide}
                             align={isMobile ? "end" : "start"}
                             className="min-w-48 rounded-lg">
-                            <DropdownMenuLabel>{item.title}</DropdownMenuLabel>
+                            <DropdownMenuLabel>{t(item.title)}</DropdownMenuLabel>
                             {item.items?.map((subItem) => (
                               <DropdownMenuItem
                                 className="hover:text-foreground active:text-foreground hover:bg-(--primary)/10! active:bg-(--primary)/10!"
                                 asChild
                                 key={subItem.title}>
                                 <a href={getLocalizedHref(subItem.href, subItem.tenantScoped)}>
-                                  {subItem.title}
+                                  {/* Menerjemahkan sub-item dropdown */}
+                                  {t(subItem.title)}
                                 </a>
                               </DropdownMenuItem>
                             ))}
@@ -365,9 +362,9 @@ export function NavMain() {
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton
                             className="hover:text-foreground active:text-foreground text-start hover:bg-(--primary)/10 active:bg-(--primary)/10"
-                            tooltip={item.title}>
+                            tooltip={t(item.title)}>
                             {item.icon && <item.icon />}
-                            <span>{item.title}</span>
+                            <span>{t(item.title)}</span>
                             <ChevronRight className="ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:-scale-x-100" />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
@@ -385,7 +382,8 @@ export function NavMain() {
                                   <Link
                                     href={getLocalizedHref(subItem.href, subItem.tenantScoped)}
                                     target={subItem.newTab ? "_blank" : ""}>
-                                    <span>{subItem.title}</span>
+                                    {/* Menerjemahkan sub-item collapsible */}
+                                    <span>{t(subItem.title)}</span>
                                   </Link>
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
@@ -398,13 +396,13 @@ export function NavMain() {
                     <SidebarMenuButton
                       className="hover:text-foreground active:text-foreground text-start hover:bg-(--primary)/10 active:bg-(--primary)/10"
                       isActive={pathname === getLocalizedHref(item.href, item.tenantScoped)}
-                      tooltip={item.title}
+                      tooltip={t(item.title)}
                       asChild>
                       <Link
                         href={getLocalizedHref(item.href, item.tenantScoped)}
                         target={item.newTab ? "_blank" : ""}>
                         {item.icon && <item.icon />}
-                        <span>{item.title}</span>
+                        <span>{t(item.title)}</span>
                       </Link>
                     </SidebarMenuButton>
                   )}
