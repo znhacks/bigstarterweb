@@ -6,12 +6,15 @@ import { usePathname } from "next/navigation";
 import { Settings, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useLocale, useTranslations } from "next-intl";
 
 export default function SettingsLayout({
   children
 }: {
   children: React.ReactNode; // Perubahan dari React.Node menjadi React.ReactNode
 }) {
+  const locale = useLocale();
+  const t = useTranslations("settings");
   const pathname = usePathname();
 
   const isGeneralActive = pathname?.includes("/settings/general");
@@ -21,10 +24,8 @@ export default function SettingsLayout({
     <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
       {/* Header Halaman Utama */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">Account Settings</h1>
-        <p className="text-muted-foreground text-sm">
-          Kelola informasi profil, preferensi regional, dan konfigurasi keamanan akun Anda.
-        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
       </div>
 
       {/* Grid Layout: Menu Samping & Slot Konten Anak */}

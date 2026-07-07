@@ -47,19 +47,30 @@ import {
 import { supabase } from "@/lib/supabase";
 import { plans } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
+import { PERMISSIONS, hasPermission, canAssignRole, type PermissionName } from "@/lib/rbac";
+
+/** Definisi role global dari tabel roles. */
+interface Role {
+  id: string;
+  name: string;
+  hierarchy_level: number;
+}
 
 interface Member {
   id: string;
   userId: string;
   name: string;
   email: string;
-  role: "Owner" | "Member" | "Admin";
+  roleId: string | null;
+  roleName: string;
+  roleHierarchy: number;
 }
 
 interface PendingInvite {
   id: string;
   email: string;
-  role: string;
+  roleId: string | null;
+  roleName: string;
   created_at: string;
 }
 
@@ -71,7 +82,7 @@ interface AlertState {
 
 export function OrganizationMembers() {
   const locale = useLocale();
-  const t = useTranslations("organization-member");
+  const t = useTranslations("organization.organization-member");
 
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("Our Organization");
@@ -84,7 +95,12 @@ export function OrganizationMembers() {
   const [maxUsers, setMaxUsers] = useState<number>(2); // Default limit untuk Free Plan = 2
 
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("Member");
+  const [inviteRoleId, setInviteRoleId] = useState<string>("");
+
+  // RBAC: daftar role global + otoritas pengguna saat ini di org ini
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [currentUserHierarchy, setCurrentUserHierarchy] = useState<number | null>(null);
+  const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
@@ -118,8 +134,59 @@ export function OrganizationMembers() {
 
   const loadAllData = async (orgId: string) => {
     setIsLoading(true);
-    await Promise.all([fetchMembers(orgId), fetchPendingInvites(orgId), fetchMaxUsersLimit(orgId)]);
+    await Promise.all([
+      fetchRoles(),
+      fetchCurrentUserAuthority(orgId),
+      fetchMembers(orgId),
+      fetchPendingInvites(orgId),
+      fetchMaxUsersLimit(orgId)
+    ]);
     setIsLoading(false);
+  };
+
+  // Ambil daftar role global (urut hierarchy tertinggi dulu) untuk dropdown assignment.
+  const fetchRoles = async () => {
+    const { data, error } = await supabase
+      .from("roles")
+      .select("id, name, hierarchy_level")
+      .order("hierarchy_level", { ascending: false });
+    if (error) {
+      console.error("Gagal memuat daftar role:", error);
+      return;
+    }
+    setRoles(data || []);
+    // Default role undangan = role dengan hierarchy terendah (biasanya Member).
+    if (data && data.length > 0 && !inviteRoleId) {
+      const lowest = [...data].sort((a, b) => a.hierarchy_level - b.hierarchy_level)[0];
+      setInviteRoleId(lowest.id);
+    }
+  };
+
+  // Ambil otoritas pengguna saat ini (hierarchy + permission) di org aktif.
+  const fetchCurrentUserAuthority = async (orgId: string) => {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("memberships")
+      .select("roles(name, hierarchy_level, role_permissions(permissions(name)))")
+      .eq("tenant_id", orgId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const d = data as any;
+    if (error || !d?.roles) {
+      setCurrentUserHierarchy(null);
+      setUserPermissions(null);
+      return;
+    }
+    setCurrentUserHierarchy(d.roles.hierarchy_level ?? null);
+    const perms = (d.roles.role_permissions ?? [])
+      .map((rp: any) => rp.permissions?.name)
+      .filter((n: any): n is string => typeof n === "string") as PermissionName[];
+    setUserPermissions(perms);
   };
 
   const fetchMembers = async (orgId: string) => {
@@ -129,8 +196,13 @@ export function OrganizationMembers() {
         .select(
           `
           id,
-          role,
           user_id,
+          role_id,
+          roles (
+            id,
+            name,
+            hierarchy_level
+          ),
           profiles (
             id,
             full_name
@@ -148,7 +220,9 @@ export function OrganizationMembers() {
           userId: item.user_id,
           name: fullName,
           email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
-          role: item.role as "Owner" | "Member" | "Admin"
+          roleId: item.role_id ?? null,
+          roleName: item.roles?.name ?? "Member",
+          roleHierarchy: item.roles?.hierarchy_level ?? 0
         };
       });
 
@@ -162,11 +236,18 @@ export function OrganizationMembers() {
     try {
       const { data, error } = await supabase
         .from("invitations")
-        .select("id, email, role, created_at")
+        .select("id, email, role_id, roles(name), created_at")
         .eq("tenant_id", orgId);
 
       if (error) throw error;
-      setPendingInvites(data || []);
+      const formatted: PendingInvite[] = (data || []).map((item: any) => ({
+        id: item.id,
+        email: item.email,
+        roleId: item.role_id ?? null,
+        roleName: item.roles?.name ?? "Member",
+        created_at: item.created_at
+      }));
+      setPendingInvites(formatted);
     } catch (error) {
       console.error("Gagal memuat daftar pending:", error);
     }
@@ -199,16 +280,29 @@ export function OrganizationMembers() {
     }
   };
 
-  const handleRoleChange = async (membershipId: string, newRole: "Owner" | "Member" | "Admin") => {
+  const handleRoleChange = async (membershipId: string, newRoleId: string) => {
+    const newRole = roles.find((r) => r.id === newRoleId);
+    if (!newRole) return;
     try {
       const { error } = await supabase
         .from("memberships")
-        .update({ role: newRole })
+        .update({ role_id: newRoleId })
         .eq("id", membershipId);
 
       if (error) throw error;
 
-      setMembers((prev) => prev.map((m) => (m.id === membershipId ? { ...m, role: newRole } : m)));
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.id === membershipId
+            ? {
+                ...m,
+                roleId: newRoleId,
+                roleName: newRole.name,
+                roleHierarchy: newRole.hierarchy_level
+              }
+            : m
+        )
+      );
 
       setAlertMessage({
         title: locale === "en" ? "Success" : "Sukses",
@@ -277,7 +371,7 @@ export function OrganizationMembers() {
     if (members.length >= maxUsers) {
       setAlertMessage({
         title: locale === "en" ? "Limit Reached" : "Batas Kuota Tercapai",
-        description: t("inviteCard.limitAlertDesc").replace("{max}", maxUsers.toString()),
+        description: t("inviteCard.limitAlertDesc", { max: maxUsers }),
         variant: "destructive"
       });
       return;
@@ -293,7 +387,7 @@ export function OrganizationMembers() {
         },
         body: JSON.stringify({
           email: inviteEmail,
-          role: inviteRole,
+          roleId: inviteRoleId,
           orgName: orgName
         })
       });
@@ -302,7 +396,7 @@ export function OrganizationMembers() {
 
       setAlertMessage({
         title: locale === "en" ? "Invitation Sent" : "Undangan Dikirim",
-        description: t("alerts.inviteSent").replace("{email}", inviteEmail),
+        description: t("alerts.inviteSent", { email: inviteEmail }),
         variant: "default"
       });
 
@@ -320,6 +414,20 @@ export function OrganizationMembers() {
   };
 
   const isLimitReached = members.length >= maxUsers;
+
+  // Derived RBAC: apakah pengguna saat ini boleh mengelola/mengundang/menghapus,
+  // dan role mana saja yang bisa ia tetapkan (hierarchy lebih rendah dari dirinya).
+  const canInvite = hasPermission(userPermissions, PERMISSIONS.membersInvite);
+  const canManage = hasPermission(userPermissions, PERMISSIONS.membersManage);
+  const canRemove = hasPermission(userPermissions, PERMISSIONS.membersRemove);
+  const assignableRoles = roles.filter((r) =>
+    canAssignRole(currentUserHierarchy, r.hierarchy_level)
+  );
+
+  // Pengguna saat ini hanya boleh mengubah role member yang hierarkinya LEBIH RENDAH
+  // dari dirinya (sekaligus harus punya permission members.manage).
+  const canManageMember = (m: Member) =>
+    canManage && canAssignRole(currentUserHierarchy, m.roleHierarchy);
 
   if (isLoading) {
     return (
@@ -370,7 +478,7 @@ export function OrganizationMembers() {
       )}
 
       {/* KONSOLIDASI: SATU CARD TUNGGAL UNTUK MEMBUNGKUS DAFTAR ANGGOTA & UNDANGAN */}
-      <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
+      <Card className="overflow-hidden">
         <CardContent className="divide-border/60 divide-y p-0">
           {/* Section 1: Manage Members List */}
           <div className="space-y-6 p-8">
@@ -382,9 +490,7 @@ export function OrganizationMembers() {
                 <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
               </div>
               <div className="bg-muted text-foreground/80 h-fit shrink-0 rounded-xl border px-4 py-2 text-xs font-medium">
-                {t("limit")
-                  .replace("{count}", members.length.toString())
-                  .replace("{max}", maxUsers.toString())}
+                {t("limit", { count: members.length, max: maxUsers })}
               </div>
             </div>
 
@@ -427,45 +533,48 @@ export function OrganizationMembers() {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        {member.role === "Owner" ? (
-                          <div className="border-border/40 bg-muted/30 text-muted-foreground flex h-9 w-[110px] items-center justify-between rounded-lg border px-3 py-1 text-sm select-none">
-                            <span>Owner</span>
-                          </div>
-                        ) : (
+                        {canManageMember(member) ? (
                           <>
                             <Select
-                              value={member.role}
-                              onValueChange={(val: "Owner" | "Member" | "Admin") =>
-                                handleRoleChange(member.id, val)
-                              }>
+                              value={member.roleId ?? undefined}
+                              onValueChange={(val: string) => handleRoleChange(member.id, val)}>
                               <SelectTrigger className="border-border/80 h-9 w-[110px] text-sm focus:ring-1">
                                 <SelectValue placeholder="Select Role" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Member">Member</SelectItem>
-                                <SelectItem value="Admin">Admin</SelectItem>
+                                {assignableRoles.map((r) => (
+                                  <SelectItem key={r.id} value={r.id}>
+                                    {r.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
 
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-muted-foreground h-9 w-9">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem
-                                  onClick={() => setMemberToDelete(member)}
-                                  className="text-destructive focus:text-destructive flex cursor-pointer items-center gap-2">
-                                  <Trash2 className="h-4 w-4" />
-                                  Remove member
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {canRemove && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-muted-foreground h-9 w-9">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuItem
+                                    onClick={() => setMemberToDelete(member)}
+                                    className="text-destructive focus:text-destructive flex cursor-pointer items-center gap-2">
+                                    <Trash2 className="h-4 w-4" />
+                                    Remove member
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </>
+                        ) : (
+                          <div className="border-border/40 bg-muted/30 text-muted-foreground flex h-9 w-[110px] items-center justify-between rounded-lg border px-3 py-1 text-sm select-none">
+                            <span>{member.roleName}</span>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -492,7 +601,7 @@ export function OrganizationMembers() {
                             {invite.email}
                           </span>
                           <span className="text-muted-foreground truncate text-xs">
-                            {t("placeholders.invitedTo")} {invite.role}
+                            {t("placeholders.invitedTo")} {invite.roleName}
                           </span>
                         </div>
                       </div>
@@ -517,75 +626,80 @@ export function OrganizationMembers() {
             </Tabs>
           </div>
 
-          {/* Section 2: Invite a Member */}
-          <div className="space-y-6 p-8">
-            <div className="space-y-1">
-              <h2 className="text-foreground text-xl font-semibold tracking-tight">
-                {t("inviteCard.title")}
-              </h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {t("inviteCard.desc")}
-              </p>
+          {/* Section 2: Invite a Member — hanya untuk pengguna dengan permission members.invite */}
+          {canInvite && (
+            <div className="space-y-6 p-8">
+              <div className="space-y-1">
+                <h2 className="text-foreground text-xl font-semibold tracking-tight">
+                  {t("inviteCard.title")}
+                </h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {t("inviteCard.desc")}
+                </p>
+              </div>
+
+              {isLimitReached && (
+                <Alert className="rounded-2xl border-amber-500/20 bg-amber-500/10 text-amber-600">
+                  <ShieldAlert className="h-4 w-4 text-amber-600" />
+                  <AlertTitle>{t("inviteCard.limitAlertTitle")}</AlertTitle>
+                  <AlertDescription>
+                    {t("inviteCard.limitAlertDesc", { max: maxUsers })}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <form onSubmit={handleInviteSubmit} className="space-y-4">
+                <div className="flex w-full flex-col items-start gap-4 md:flex-row md:items-end">
+                  <div className="w-full space-y-2 md:flex-1">
+                    <label htmlFor="email" className="text-foreground text-sm font-semibold">
+                      {t("inviteCard.email")}
+                    </label>
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      placeholder="name@example.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      disabled={isInviting || isLimitReached}
+                      className="border-border/80 h-10 focus-visible:ring-1"
+                    />
+                  </div>
+
+                  <div className="w-full space-y-2 md:w-[160px]">
+                    <label htmlFor="role" className="text-foreground text-sm font-semibold">
+                      {t("inviteCard.role")}
+                    </label>
+                    <Select
+                      value={inviteRoleId}
+                      onValueChange={setInviteRoleId}
+                      disabled={isInviting || isLimitReached}>
+                      <SelectTrigger id="role" className="border-border/80 h-10 focus:ring-1">
+                        <SelectValue placeholder={t("inviteCard.selectRole")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {assignableRoles.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    type="submit"
+                    disabled={isInviting || isLimitReached || !inviteEmail.trim() || !inviteRoleId}
+                    className="bg-foreground text-background hover:bg-foreground/90 inline-flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-medium">
+                    {isInviting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {isInviting ? t("inviteCard.btnSending") : t("inviteCard.btnInvite")}
+                  </Button>
+                </div>
+              </form>
             </div>
-
-            {isLimitReached && (
-              <Alert className="rounded-2xl border-amber-500/20 bg-amber-500/10 text-amber-600">
-                <ShieldAlert className="h-4 w-4 text-amber-600" />
-                <AlertTitle>{t("inviteCard.limitAlertTitle")}</AlertTitle>
-                <AlertDescription>
-                  {t("inviteCard.limitAlertDesc").replace("{max}", maxUsers.toString())}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <form onSubmit={handleInviteSubmit} className="space-y-4">
-              <div className="flex w-full flex-col items-start gap-4 md:flex-row md:items-end">
-                <div className="w-full space-y-2 md:flex-1">
-                  <label htmlFor="email" className="text-foreground text-sm font-semibold">
-                    {t("inviteCard.email")}
-                  </label>
-                  <Input
-                    id="email"
-                    type="email"
-                    required
-                    placeholder="name@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    disabled={isInviting || isLimitReached}
-                    className="border-border/80 h-10 focus-visible:ring-1"
-                  />
-                </div>
-
-                <div className="w-full space-y-2 md:w-[160px]">
-                  <label htmlFor="role" className="text-foreground text-sm font-semibold">
-                    {t("inviteCard.role")}
-                  </label>
-                  <Select
-                    value={inviteRole}
-                    onValueChange={setInviteRole}
-                    disabled={isInviting || isLimitReached}>
-                    <SelectTrigger id="role" className="border-border/80 h-10 focus:ring-1">
-                      <SelectValue placeholder={t("inviteCard.selectRole")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Member">Member</SelectItem>
-                      <SelectItem value="Admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <Button
-                  type="submit"
-                  disabled={isInviting || isLimitReached || !inviteEmail.trim()}
-                  className="bg-foreground text-background hover:bg-foreground/90 inline-flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-medium">
-                  {isInviting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {isInviting ? t("inviteCard.btnSending") : t("inviteCard.btnInvite")}
-                </Button>
-              </div>
-            </form>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -597,9 +711,10 @@ export function OrganizationMembers() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("dialogDelete.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("dialogDelete.desc")
-                .replace("{name}", memberToDelete?.name || "")
-                .replace("{email}", memberToDelete?.email || "")}
+              {t("dialogDelete.desc", {
+                name: memberToDelete?.name || "",
+                email: memberToDelete?.email || ""
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
