@@ -139,15 +139,15 @@ export function OrganizationMembers() {
             </div>
 
             <Tabs defaultValue="active" className="w-full space-y-6">
-              <TabsList className="border-border/60 h-auto w-full justify-start gap-6 rounded-none border-b bg-transparent p-0">
+              <TabsList className="h-auto w-full justify-start rounded-none border-b bg-transparent p-0">
                 <TabsTrigger
                   value="active"
-                  className="data-[state=active]:border-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
+                  className="data-[state=active]:border-b-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
                   {t("tabs.active")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="pending"
-                  className="data-[state=active]:border-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
+                  className="data-[state=active]:border-b-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
                   {t("tabs.pending")} ({pendingInvites.length})
                 </TabsTrigger>
               </TabsList>

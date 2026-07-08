@@ -22,6 +22,7 @@ import { navItems } from "@/components/layout/sidebar/nav-main";
 // Impor klien Supabase
 import { supabase } from "@/lib/supabase";
 import { type PermissionName } from "@/lib/rbac";
+import { useTranslations } from "next-intl";
 
 type NavItem = {
   title: string;
@@ -35,6 +36,7 @@ type NavItem = {
 export default function Search() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const t = useTranslations("common");
 
   // State untuk melacak grup user dan permission organisasi internal
   const [userGroup, setUserGroup] = useState<"users" | "superadmin" | null>(null);
@@ -182,15 +184,15 @@ export default function Search() {
   return (
     <div className="lg:flex-1">
       <div className="relative hidden max-w-sm flex-1 lg:block">
-        <SearchIcon className="text-muted-foreground absolute top-1/2 start-3 h-4 w-4 -translate-y-1/2" />
+        <SearchIcon className="text-muted-foreground absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2" />
         <Input
-          className="h-9 w-full cursor-pointer rounded-md border pe-4 ps-10 text-sm shadow-xs"
-          placeholder="Search..."
+          className="h-9 w-full cursor-pointer rounded-md border ps-10 pe-4 text-sm shadow-xs"
+          placeholder={t("search")}
           type="search"
           onFocus={() => setOpen(true)}
           disabled={isLoading}
         />
-        <div className="absolute top-1/2 end-2 hidden -translate-y-1/2 items-center gap-0.5 rounded-sm bg-zinc-200 p-1 font-mono text-xs font-medium sm:flex dark:bg-neutral-700">
+        <div className="absolute end-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-sm bg-zinc-200 p-1 font-mono text-xs font-medium sm:flex dark:bg-neutral-700">
           <CommandIcon className="size-3" />
           <span>k</span>
         </div>

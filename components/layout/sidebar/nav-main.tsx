@@ -23,7 +23,8 @@ import {
   Settings,
   Users,
   Building2,
-  ShieldCheck
+  ShieldCheck,
+  ListTodo
 } from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -81,6 +82,13 @@ export const navItems: NavGroup[] = [
         permissions: [PERMISSIONS.dashboardView]
       },
       {
+        title: "users.tasks",
+        href: "/tasks",
+        tenantScoped: true,
+        icon: ListTodo,
+        permissions: [PERMISSIONS.tasksRead]
+      },
+      {
         title: "users.settings",
         href: "/settings/general",
         icon: Settings,
@@ -120,7 +128,7 @@ export const navItems: NavGroup[] = [
         icon: ShieldCheck
       },
       {
-        title: "superadmin.organizations",
+        title: "superadmin.organization",
         href: "/superadmin/organizations",
         icon: Building2
       },

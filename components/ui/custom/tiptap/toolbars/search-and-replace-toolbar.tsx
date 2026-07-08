@@ -14,9 +14,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useToolbar } from "./toolbar-provider";
 import { type SearchAndReplaceStorage } from "../extensions/search-and-replace";
+import { useTranslations } from "next-intl";
 
 export function SearchAndReplaceToolbar() {
   const { editor } = useToolbar();
+  const t = useTranslations("common");
 
   const [open, setOpen] = useState(false);
   const [replacing, setReplacing] = useState(false);
@@ -94,7 +96,7 @@ export function SearchAndReplaceToolbar() {
               onChange={(e) => {
                 setSearchText(e.target.value);
               }}
-              placeholder="Search..."
+              placeholder={t("search")}
             />
             <span>
               {results?.length === 0 ? selectedResult : selectedResult + 1}/{results?.length}
@@ -131,7 +133,7 @@ export function SearchAndReplaceToolbar() {
               onClick={() => {
                 setOpen(false);
               }}
-              className="absolute top-3 end-3 h-4 w-4 cursor-pointer"
+              className="absolute end-3 top-3 h-4 w-4 cursor-pointer"
             />
             <div className="flex w-full items-center gap-3">
               <Button
@@ -154,7 +156,7 @@ export function SearchAndReplaceToolbar() {
                   onChange={(e) => {
                     setSearchText(e.target.value);
                   }}
-                  placeholder="Search..."
+                  placeholder={t("search")}
                 />
                 {results?.length === 0 ? selectedResult : selectedResult + 1}/{results?.length}
               </div>
