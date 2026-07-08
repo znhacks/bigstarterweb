@@ -87,12 +87,65 @@
     "account": "Akun",
     "noorgfound": "Organisasi tidak ditemukan",
     "neworg": "Organisasi baru",
-    "addneworg": "Buat Organisasi baru"
+    "addneworg": "Buat Organisasi baru",
+    "confirmDelete": {
+      "title": "Apakah Anda benar-benar yakin?",
+      "description": "Tindakan ini tidak dapat dibatalkan. Ini akan menghapus {name} dan semua data terkait secara permanen.",
+      "placeholder": "Ketik \"{phrase}\" untuk mengonfirmasi",
+      "hint": "Silakan ketik \"{phrase}\" untuk mengaktifkan tombol hapus.",
+      "cancel": "Batal",
+      "action": "Hapus"
+    }
+  },
+  "billing": {
+    "plans": {
+      "free": {
+        "name": "Gratis",
+        "description": "Untuk penggunaan hobi dan uji coba.",
+        "features": [
+          "200 tangkapan layar per bulan",
+          "20 permintaan per menit",
+          "Format PNG, JPEG, WebP",
+          "Diperlukan tautan atribusi"
+        ]
+      },
+      "starter": {
+        "name": "Starter",
+        "description": "Untuk proyek yang mulai masuk ke tahap produksi.",
+        "features": [
+          "2.000 tangkapan layar per bulan",
+          "40 permintaan per menit",
+          "Format PNG, JPEG, WebP, PDF",
+          "Tanpa memerlukan tautan atribusi",
+          "Pilih lokasi IP"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "Untuk beban kerja produksi dengan volume lebih tinggi.",
+        "features": [
+          "10.000 tangkapan layar per bulan",
+          "80 permintaan per menit",
+          "Format PNG, JPEG, WebP, PDF",
+          "Tanpa memerlukan tautan atribusi",
+          "Pilih lokasi IP",
+          "Dukungan Prioritas"
+        ]
+      }
+    }
+  },
+  "component": {
+    "paywallgate": {
+      "title": "Fitur Premium Terkunci",
+      "planRequired": "Fitur ini hanya tersedia pada paket {{plans}}. Silakan hubungi Pemilik atau tingkatkan paket Anda.",
+      "upgradenow": "Tingkatkan Sekarang"
+    }
   },
   "menu": {
     "menu": "Menu",
     "upgradetopro": "Tingkatkan Menjadi Pro",
     "logout": "Keluar",
+    "account": "Akun",
     "users": {
       "dashboard": "Dasbor",
       "tasks": "Tugas",
@@ -327,58 +380,93 @@
     },
     "organization-billing": {
       "alert": {
-        "title": "Tidak ada Organisasi Aktif",
-        "desc": "Silakan pilih organisasi terlebih dahulu di sidebar kiri sebelum mengelola billing tagihan"
+        "title": "Tidak Ada Organisasi Aktif",
+        "desc": "Silakan pilih organisasi dari bilah sisi kiri sebelum mengelola tagihan."
       },
-      "downgradeinfo": "Downgrade hanya bisa dilakukan setelah planmu yang sekarang aktif habis masa berlakunya",
-      "loading": "Memverifikasi pembayaran Anda, harap tunggu...",
-      "changeTitle": "Pilih paket Anda",
+      "downgradeinfo": "Penurunan paket hanya dapat dilakukan setelah paket aktif Anda saat ini berakhir.",
+      "loading": "Memverifikasi pembayaran Anda, mohon tunggu...",
+      "changeTitle": "Pilih Paket Anda",
+      "saveDiscount": "Hemat 17%",
       "cycles": {
         "monthly": "Bulanan",
         "yearly": "Tahunan"
       },
       "badges": {
         "active": "AKTIF",
-        "refundRequested": "PENGEMBALIAN DIAJUKAN",
-        "willCancel": "AKAN BATAL",
-        "freeActive": "FREE AKTIF"
-      },
-      "subDetails": {
-        "activeDesc": "Langganan aktif senilai {price}/bulan.",
-        "endsOn": "Masa aktif premium berakhir pada",
-        "renewsOn": "Perpanjangan otomatis berikutnya tanggal",
-        "freeDesc": "Untuk pengujian dan penggunaan hobi."
+        "refundRequested": "REFUND DIAJUKAN",
+        "willCancel": "AKAN DIBATALKAN",
+        "freeActive": "GRATIS AKTIF"
       },
       "buttons": {
-        "cancelRenewal": "Batalkan Perpanjangan",
-        "activateRenewal": "Aktifkan Kembali Perpanjangan",
-        "claimRefund": "Klaim Refund",
-        "planActive": "Plan Aktif",
-        "upgrade": "Upgrade Plan",
-        "downgrade": "Downgrade Plan",
-        "choose": "Pilih paket",
+        "planActive": "Paket Aktif",
+        "upgrade": "Tingkatkan Paket",
+        "downgrade": "Turunkan Paket",
+        "choose": "Pilih {planName}",
         "cancel": "Batal",
-        "confirmRefund": "Ya, Ajukan Refund"
+        "confirmRefund": "Ya, Ajukan Refund",
+        "close": "Tutup",
+        "print": "Cetak / Simpan PDF"
+      },
+      "history": {
+        "title": "Riwayat Pembayaran",
+        "desc": "Lihat transaksi masa lalu Anda dan unduh invoice/kuitansi resmi.",
+        "table": {
+          "date": "Tanggal",
+          "txId": "ID Transaksi",
+          "planName": "Nama Paket",
+          "amount": "Jumlah",
+          "status": "Status",
+          "action": "Tindakan",
+          "empty": "Tidak ada riwayat transaksi.",
+          "viewInvoice": "Lihat Invoice"
+        }
+      },
+      "warning": {
+        "title": "Tindakan Diperlukan: Masa Aktif Paket Hampir Habis!",
+        "desc": "Akses prabayar premium Anda untuk paket {planName} akan berakhir dalam {days} hari. Perbarui atau tingkatkan hari ini untuk menghindari gangguan pada alur kerja Anda."
+      },
+      "invoice": {
+        "title": "KUITANSI INVOICE",
+        "id": "ID",
+        "prepaidService": "LAYANAN PRABAYAR",
+        "date": "Tanggal",
+        "billedTo": "Ditagih Kepada",
+        "orgId": "ID Organisasi",
+        "paymentMethod": "Metode Pembayaran",
+        "paypalCheckout": "Checkout PayPal",
+        "refId": "ID Referensi",
+        "totalPaid": "Total Pembayaran (USD)",
+        "footer": "Terima kasih atas pembelian Anda! Ini adalah tanda terima digital resmi untuk layanan prabayar Anda.",
+        "table": {
+          "desc": "Deskripsi",
+          "total": "Total",
+          "itemTitle": "Akses Paket {planName}",
+          "itemDesc": "Akses fitur premium SaaS prabayar."
+        }
       },
       "dialogPurchase": {
         "title": "Selesaikan Pembelian Anda",
         "desc": "Selesaikan pembayaran untuk mulai menggunakan paket layanan Anda.",
-        "details": "Rincian Transaksi",
-        "currency": "Mata Uang"
+        "details": "Detail Transaksi",
+        "currency": "Mata Uang",
+        "planCycle": "Paket {planName} ({cycle})",
+        "creditApplied": "Kredit Prabayar Diterapkan",
+        "amountToPay": "Jumlah yang Dibayar",
+        "billedAnnually": "Ditagih tahunan"
       },
       "dialogRefund": {
-        "title": "Klaim Pengembalian Dana",
-        "desc": "Apakah Anda yakin ingin mengajukan klaim refund untuk paket {planName}?",
-        "warn1": "Setelah diajukan, akses fitur premium organisasi Anda akan dibekukan sementara sampai proses peninjauan selesai.",
-        "warn2": "*Proses ini membutuhkan waktu peninjauan sekitar 1-3 hari kerja. Dana akan dikirimkan kembali ke akun PayPal/Kartu Kredit Anda."
+        "title": "Ajukan Pengembalian Dana",
+        "desc": "Apakah Anda yakin ingin mengajukan pengembalian dana untuk paket {planName}?",
+        "warn1": "Setelah diajukan, akses premium organisasi Anda akan ditangguhkan sementara proses peninjauan berlangsung.",
+        "warn2": "*Proses peninjauan ini memakan waktu 1-3 hari kerja. Dana akan dikembalikan ke akun PayPal/Kartu Kredit yang digunakan saat transaksi."
       },
       "alerts": {
-        "successPay": "Terima kasih! Pembayaran paket {planName} senilai {price} berhasil diproses. Order ID: {orderId}",
-        "successCancel": "Masa perpanjangan otomatis telah dimatikan. Durasi akses premium Anda tetap berjalan aktif hingga tanggal {date}.",
-        "successResume": "Langganan dan perpanjangan otomatis Anda berhasil diaktifkan kembali.",
-        "successRefund": "Klaim pengembalian dana Anda berhasil diajukan dan sedang dalam peninjauan admin.",
-        "errorPay": "Terjadi kesalahan selama memproses pembayaran. Silakan coba kembali.",
-        "errorDb": "Validasi pembayaran gagal diproses: {error}"
+        "successPay": "Terima kasih! Pembayaran untuk paket {planName} senilai {price} berhasil diproses. ID Pesanan: {orderId}",
+        "successCancel": "Pembaruan otomatis dinonaktifkan. Akses premium Anda tetap aktif hingga {date}.",
+        "successResume": "Pembaruan otomatis langganan berhasil diaktifkan kembali.",
+        "successRefund": "Pengajuan pengembalian dana berhasil dikirim dan sedang ditinjau.",
+        "errorPay": "Terjadi kesalahan saat memproses pembayaran. Silakan coba kembali.",
+        "errorDb": "Verifikasi pembayaran gagal: {error}"
       }
     }
   },
