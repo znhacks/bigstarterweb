@@ -31,6 +31,12 @@ export const PERMISSIONS = {
   // API & integrations
   apiKeysManage: "api_keys.manage",
 
+  // Tasks
+  tasksRead: "tasks.read",
+  tasksCreate: "tasks.create",
+  tasksUpdate: "tasks.update",
+  tasksDelete: "tasks.delete",
+
   // Navigation / general
   dashboardView: "dashboard.view",
   settingsView: "settings.view"
@@ -82,6 +88,16 @@ export const PERMISSION_GROUPS: {
     domain: "api",
     label: "API Keys",
     names: [PERMISSIONS.apiKeysManage]
+  },
+  {
+    domain: "tasks",
+    label: "Tasks",
+    names: [
+      PERMISSIONS.tasksRead,
+      PERMISSIONS.tasksCreate,
+      PERMISSIONS.tasksUpdate,
+      PERMISSIONS.tasksDelete
+    ]
   },
   {
     domain: "general",
