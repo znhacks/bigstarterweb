@@ -41,6 +41,7 @@ import {
 
 import { supabase } from "@/lib/supabase";
 import { CreateTenantForm } from "../../create-tenant-form";
+import { useTranslations } from "next-intl";
 
 // Helper client-side untuk Cookie
 const getCookie = (name: string) => {
@@ -71,6 +72,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const params = useParams(); // Membaca parameter URL dinamis
   const router = useRouter();
   const tenantSlug = params?.tenant_slug as string | undefined; // Ambil [tenant_slug] dari URL
+  const t = useTranslations();
 
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
   const isTablet = useIsTablet();
@@ -269,7 +271,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     )}
                     <span className="text-foreground truncate font-semibold">
                       {isLoading ? (
-                        <span className="text-muted-foreground text-xs">Loading org...</span>
+                        <span className="text-muted-foreground text-xs">{t("common.loading")}</span>
                       ) : activeOrg ? (
                         activeOrg.name
                       ) : (
@@ -284,7 +286,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   side={isMobile ? "bottom" : "right"}
                   align="end"
                   sideOffset={4}>
-                  <DropdownMenuLabel>Organizations</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t("menu.users.organization")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
 
                   {isLoading ? (
@@ -293,7 +295,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </div>
                   ) : organizations.length === 0 ? (
                     <div className="text-muted-foreground px-2 py-3 text-center text-xs">
-                      No organizations found
+                      {t("common.noorgfound")}
                     </div>
                   ) : (
                     organizations.map((org) => (
@@ -339,7 +341,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       setDropdownOpen(false);
                     }}>
                     <Plus className="size-4" />
-                    <span>New Organization</span>
+                    <span>{t("common.neworg")}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -359,7 +361,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Add New Organization</DialogTitle>
+            <DialogTitle>{t("common.addneworg")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <CreateTenantForm />

@@ -23,6 +23,21 @@
 -- ===============================================================
 
 -- ---------------------------------------------------------------
+-- 0. Grant USAGE + DML pada schema tenant_shared ke role anon/authenticated
+--    PENTING: Supabase hanya menambahkan schema ke "Exposed schemas"
+--    PostgREST; ia TIDAK otomatis memberi privilege USAGE/DML ke role
+--    anon/authenticated untuk schema non-public. Tanpa ini:
+--      "permission denied for schema tenant_shared"
+--    RLS tetap membatasi baris yang boleh diakses (lihat bagian 3).
+-- ---------------------------------------------------------------
+grant usage on schema tenant_shared to anon, authenticated;
+grant select, insert, update, delete on tenant_shared.tasks to anon, authenticated;
+
+-- Tabel baru di schema ini otomatis dapat privilege anon/authenticated.
+alter default privileges in schema tenant_shared
+  grant select, insert, update, delete on tables to anon, authenticated;
+
+-- ---------------------------------------------------------------
 -- 1. Expand tenant_shared.tasks
 --    Kolom user_id lama dibiarkan (nullable, tidak dipakai).
 --    Assignee & creator -> profiles(id) di schema public.

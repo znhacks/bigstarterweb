@@ -48,7 +48,7 @@ export async function fetchTasksAction(tenantSlug: string): Promise<ActionResult
     if (!ctx) return { error: "Akses ditolak" };
     if (!ctx.permissions.includes(PERMISSIONS.tasksRead)) return { error: "Akses ditolak" };
 
-    const { client } = await createTenantServerClient(tenantSlug);
+    const { client } = await createTenantServerClient(ctx.tenant.id);
     const { data, error } = await client
       .from("tasks")
       .select("*")
@@ -78,7 +78,7 @@ export async function createTaskAction(
     if (!ctx) return { error: "Akses ditolak" };
     if (!ctx.permissions.includes(PERMISSIONS.tasksCreate)) return { error: "Akses ditolak" };
 
-    const { client } = await createTenantServerClient(tenantSlug);
+    const { client } = await createTenantServerClient(ctx.tenant.id);
     const insert: Record<string, unknown> = {
       tenant_id: ctx.tenant.id,
       title: input.title,
@@ -117,7 +117,7 @@ export async function updateTaskAction(
     const ctx = await getActiveTenant(tenantSlug);
     if (!ctx) return { error: "Akses ditolak" };
 
-    const { client } = await createTenantServerClient(tenantSlug);
+    const { client } = await createTenantServerClient(ctx.tenant.id);
 
     // Cek kepemilikan (RLS select mengizinkan member baca task org).
     const canUpdateAll = ctx.permissions.includes(PERMISSIONS.tasksUpdate);
@@ -167,7 +167,7 @@ export async function deleteTaskAction(
     if (!ctx) return { error: "Akses ditolak" };
     if (!ctx.permissions.includes(PERMISSIONS.tasksDelete)) return { error: "Akses ditolak" };
 
-    const { client } = await createTenantServerClient(tenantSlug);
+    const { client } = await createTenantServerClient(ctx.tenant.id);
     const { error } = await client.from("tasks").delete().eq("id", id);
     if (error) throw error;
 
