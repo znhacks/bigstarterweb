@@ -85,6 +85,26 @@ import { useTranslations, useLocale } from "next-intl";
 // Impor konfigurasi plans lokal (Full Supabase Code-defined Plans)
 import { plans } from "@/config/billing";
 
+// Moderasi akun (soft-delete / ban) + komponen dialog
+import {
+  softDeleteUser,
+  banUser,
+  unbanUser
+} from "@/app/(auth)/(superadmin)/superadmin/actions/account-moderation";
+import { BAN_DURATIONS, DEFAULT_BAN_KEY, computeBannedUntil } from "@/config/moderation";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { RestoreDialog } from "@/components/restore-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Trash2 } from "lucide-react";
+
 export type User = {
   id: number;
   dbId: string;
@@ -100,6 +120,10 @@ export type User = {
   lastSignIn?: string | null;
   created_at?: string;
   updated_at?: string;
+  // Status akun (moderasi): active | banned | deleted
+  accountStatus?: "active" | "banned" | "deleted";
+  bannedUntil?: string | null;
+  bannedReason?: string | null;
 };
 
 const multiSelectFilterFn: FilterFn<any> = (row, columnId, filterValue: string[]) => {
@@ -154,15 +178,27 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
   {
     accessorKey: "name",
     header: t("headers.name"),
-    cell: ({ row }) => (
-      <div className="flex items-center gap-4">
-        <Avatar>
-          <AvatarImage src={row.original.image} alt={row.original.name} />
-          <AvatarFallback>{generateAvatarFallback(row.getValue("name") || "U")}</AvatarFallback>
-        </Avatar>
-        <div className="text-foreground font-semibold capitalize">{row.getValue("name")}</div>
-      </div>
-    )
+    cell: ({ row }) => {
+      const acc = row.original.accountStatus;
+      return (
+        <div className="flex items-center gap-4">
+          <Avatar>
+            <AvatarImage src={row.original.image} alt={row.original.name} />
+            <AvatarFallback>{generateAvatarFallback(row.getValue("name") || "U")}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col gap-1">
+            <div className="text-foreground font-semibold capitalize">{row.getValue("name")}</div>
+            {acc && acc !== "active" && (
+              <Badge
+                variant={acc === "banned" ? "destructive" : "secondary"}
+                className="w-fit text-[10px]">
+                {t(`accountStatus.${acc}`)}
+              </Badge>
+            )}
+          </div>
+        </div>
+      );
+    }
   },
   {
     accessorKey: "role",
@@ -268,8 +304,21 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem className="cursor-pointer">{t("actions.view")}</DropdownMenuItem>
+            {row.original.accountStatus === "banned" ? (
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => meta?.onUnbanRow(row.original.dbId)}>
+                {t("actions.unban")}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => meta?.onBanRow(row.original)}>
+                {t("actions.ban")}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
-              onClick={() => meta?.onDeleteRow(row.original.dbId)}
+              onClick={() => meta?.onDeleteRow(row.original)}
               className="text-destructive focus:text-destructive cursor-pointer">
               {t("actions.delete")}
             </DropdownMenuItem>
@@ -282,6 +331,7 @@ export const getColumns = (t: any, locale: string, timeZone: string): ColumnDef<
 
 export default function UsersDataTable({ data: initialData }: { data?: User[] }) {
   const t = useTranslations("superadmin.users.data-table");
+  const tMod = useTranslations("moderation");
   const locale = useLocale();
 
   const [users, setUsers] = useState<User[]>(initialData || []);
@@ -356,6 +406,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           created_at,
           updated_at,
           last_sign_in,
+          status,
+          banned_until,
+          banned_reason,
           memberships (
             role_id,
             roles (
@@ -399,7 +452,10 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`,
           created_at: prof.created_at,
           updated_at: prof.updated_at,
-          lastSignIn: prof.last_sign_in || null
+          lastSignIn: prof.last_sign_in || null,
+          accountStatus: (prof.status as User["accountStatus"]) || "active",
+          bannedUntil: prof.banned_until || null,
+          bannedReason: prof.banned_reason || null
         };
       });
 
@@ -411,17 +467,78 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   };
 
-  const handleDeleteRow = async (userId: string) => {
-    if (!confirm(t("confirmDelete"))) return;
-    try {
-      await supabase.from("memberships").delete().eq("user_id", userId);
-      const { error } = await supabase.from("profiles").delete().eq("id", userId);
-      if (error) throw error;
+  // ---- Moderation state (soft-delete + ban) ----
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToBan, setUserToBan] = useState<User | null>(null);
+  const [banDuration, setBanDuration] = useState<string>(DEFAULT_BAN_KEY);
+  const [banReason, setBanReason] = useState<string>("");
+  const [banSaving, setBanSaving] = useState(false);
+  const [deleteSaving, setDeleteSaving] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
 
-      setUsers((prev) => prev.filter((u) => u.dbId !== userId));
-    } catch (error) {
-      console.error("Gagal menghapus pengguna:", error);
+  const handleDeleteRow = (user: User) => setUserToDelete(user);
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setDeleteSaving(true);
+    const res = await softDeleteUser(userToDelete.dbId);
+    setDeleteSaving(false);
+    if (res.error) {
+      console.error("Gagal soft-delete user:", res.error);
+      return;
     }
+    setUsers((prev) => prev.filter((u) => u.dbId !== userToDelete.dbId));
+    setUserToDelete(null);
+  };
+
+  const handleBan = (user: User) => {
+    setBanDuration(DEFAULT_BAN_KEY);
+    setBanReason("");
+    setUserToBan(user);
+  };
+
+  const confirmBan = async () => {
+    if (!userToBan) return;
+    setBanSaving(true);
+    const res = await banUser({
+      userId: userToBan.dbId,
+      durationKey: banDuration,
+      reason: banReason
+    });
+    setBanSaving(false);
+    if (res.error) {
+      console.error("Gagal ban user:", res.error);
+      return;
+    }
+    const until = computeBannedUntil(banDuration);
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.dbId === userToBan.dbId
+          ? {
+              ...u,
+              accountStatus: "banned",
+              bannedUntil: until,
+              bannedReason: banReason.trim() || null
+            }
+          : u
+      )
+    );
+    setUserToBan(null);
+  };
+
+  const handleUnban = async (userId: string) => {
+    const res = await unbanUser(userId);
+    if (res.error) {
+      console.error("Gagal unban user:", res.error);
+      return;
+    }
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.dbId === userId
+          ? { ...u, accountStatus: "active", bannedUntil: null, bannedReason: null }
+          : u
+      )
+    );
   };
 
   // Memasukkan `locale` dan `timeZone` ke dalam dependency array useMemo
@@ -445,7 +562,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
       rowSelection
     },
     meta: {
-      onDeleteRow: handleDeleteRow
+      onDeleteRow: handleDeleteRow,
+      onBanRow: handleBan,
+      onUnbanRow: handleUnban
     }
   });
 
@@ -753,6 +872,14 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             </PopoverContent>
           </Popover>
         </div>
+
+        <Button
+          variant="outline"
+          className="h-9 text-xs"
+          onClick={() => setRestoreOpen(true)}>
+          <Trash2 className="me-2 h-4 w-4" />
+          <span className="hidden md:inline">{t("trash")}</span>
+        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

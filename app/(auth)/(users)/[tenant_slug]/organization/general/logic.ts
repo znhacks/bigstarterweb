@@ -193,10 +193,12 @@ export function useOrganizationGeneral() {
     setAlertMessage(null);
 
     try {
-      await supabase.from("subscriptions").delete().eq("tenant_id", activeOrgId);
-      await supabase.from("memberships").delete().eq("tenant_id", activeOrgId);
-
-      const { error } = await supabase.from("tenants").delete().eq("id", activeOrgId);
+      // Soft-delete: tandai tenant deleted. Data anak (memberships,
+      // subscriptions, transactions, tasks) dipertahankan agar bisa direstore.
+      const { error } = await supabase
+        .from("tenants")
+        .update({ status: "deleted", deleted_at: new Date().toISOString() })
+        .eq("id", activeOrgId);
 
       if (error) throw error;
 
@@ -209,8 +211,9 @@ export function useOrganizationGeneral() {
       });
 
       setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+        // Owner kehilangan akses ke org ini -> kembali ke root.
+        window.location.assign("/");
+      }, 1200);
     } catch (error: any) {
       setAlertMessage({
         title: "Error",
@@ -223,6 +226,8 @@ export function useOrganizationGeneral() {
 
   // Read-only jika pengguna tidak punya permission organization.update
   const isReadOnly = !hasPermission(userPermissions, PERMISSIONS.organizationUpdate);
+  // Hapus organisasi hanya utk pemegang organization.delete (Owner).
+  const canDeleteOrg = hasPermission(userPermissions, PERMISSIONS.organizationDelete);
 
   return {
     t,
@@ -244,6 +249,7 @@ export function useOrganizationGeneral() {
     handleCropComplete,
     handleSaveName,
     handleDeleteOrganization,
-    isReadOnly
+    isReadOnly,
+    canDeleteOrg
   };
 }

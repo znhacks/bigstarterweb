@@ -24,16 +24,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -309,15 +300,20 @@ export function GeneralSettingsPage() {
     setIsDeleting(true);
 
     try {
-      await supabase.from("profiles").delete().eq("id", userId);
-      await supabase.auth.signOut();
+      // Soft-delete: tandai deleted_at + status, bukan hard-delete.
+      const { error } = await supabase
+        .from("profiles")
+        .update({ status: "deleted", deleted_at: new Date().toISOString() })
+        .eq("id", userId);
+      if (error) throw error;
 
+      await supabase.auth.signOut();
       localStorage.removeItem("active_org_id");
 
       setTimeout(() => {
-        router.push("/dashboard/login/v2");
+        router.push("/login?reason=deleted");
         router.refresh();
-      }, 1500);
+      }, 600);
     } catch (error: any) {
       setAlertMessage({
         title: tCommon("error"),
@@ -580,24 +576,16 @@ export function GeneralSettingsPage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("dialogTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("dialogDesc")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>{tCommon("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteAccount}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground inline-flex items-center gap-2">
-              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {tCommon("delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={isConfirmOpen}
+        onOpenChange={setIsConfirmOpen}
+        confirmName={fullName || "account"}
+        title={t("dialogTitle")}
+        description={t("dialogDesc")}
+        actionLabel={tCommon("delete")}
+        loading={isDeleting}
+        onConfirm={handleDeleteAccount}
+      />
 
       <ImageCropperDialog
         open={cropperOpen}

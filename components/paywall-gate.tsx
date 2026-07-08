@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { plans } from "@/config/billing"; // Import konfigurasi statis
+import { useTranslations } from "next-intl";
 
 interface PaywallGateProps {
   children: React.ReactNode;
@@ -18,6 +19,7 @@ interface PaywallGateProps {
 export function PaywallGate({ children, allowedPlans, fallback }: PaywallGateProps) {
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const t = useTranslations();
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -100,14 +102,15 @@ export function PaywallGate({ children, allowedPlans, fallback }: PaywallGatePro
       <CardContent className="flex flex-col items-center space-y-3 p-6 text-center">
         <ShieldAlert className="h-8 w-8 animate-pulse text-amber-600" />
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold">Fitur Premium Terkunci</h3>
+          <h3 className="text-sm font-semibold">{t("title")}</h3>
           <p className="text-muted-foreground max-w-xs text-xs leading-relaxed">
-            Fitur ini hanya tersedia pada paket **{allowedPlans.join(" / ")}**. Silakan hubungi
-            Owner atau tingkatkan paket Anda.
+            {t("planRequired", {
+              plans: allowedPlans.join(" / ")
+            })}
           </p>
         </div>
         <Button asChild size="sm" className="h-8 rounded-lg text-xs font-semibold">
-          <Link href="/organization/billing">Upgrade Sekarang</Link>
+          <Link href="/organization/billing">{t("upgradenow")}</Link>
         </Button>
       </CardContent>
     </Card>

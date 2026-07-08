@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  User,
   MoreVertical,
   Trash2,
   CheckCircle2,
@@ -11,13 +10,16 @@ import {
   Loader2,
   Mail,
   Ban,
-  ShieldAlert
+  ShieldAlert,
+  Search
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+// Impor Shadcn Avatar jika tersedia di project Anda
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -42,7 +44,7 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
-import { useOrganizationMembers } from "./logic"; // Sesuaikan path-nya
+import { useOrganizationMembers } from "./logic";
 
 export function OrganizationMembers() {
   const {
@@ -70,8 +72,42 @@ export function OrganizationMembers() {
     canInvite,
     canRemove,
     assignableRoles,
-    canManageMember
+    canManageMember,
+    searchQuery,
+    setSearchQuery,
+    handleSearchSubmit,
+    handleLoadMore,
+    hasMore,
+    isFetchingMore
   } = useOrganizationMembers();
+
+  const loadMoreRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Helper untuk membuat inisial nama (fallback avatar)
+  const getInitials = (name: string) => {
+    if (!name) return "?";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  };
+
+  React.useEffect(() => {
+    if (!loadMoreRef.current || !hasMore || isFetchingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [loadMoreRef, hasMore, isFetchingMore, handleLoadMore]);
 
   if (isLoading) {
     return (
@@ -121,158 +157,12 @@ export function OrganizationMembers() {
         </Alert>
       )}
 
-      {/* KONSOLIDASI: SATU CARD TUNGGAL UNTUK MEMBUNGKUS DAFTAR ANGGOTA & UNDANGAN */}
-      <Card className="overflow-hidden">
+      {/* KONSOLIDASI CARD */}
+      <Card className="overflow-hidden py-0">
         <CardContent className="divide-border/60 divide-y p-0">
-          {/* Section 1: Manage Members List */}
-          <div className="space-y-6 p-8">
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-              <div className="space-y-1">
-                <h2 className="text-foreground text-xl font-semibold tracking-tight">
-                  {t("title")} ({orgName})
-                </h2>
-                <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
-              </div>
-              <div className="bg-muted text-foreground/80 h-fit shrink-0 rounded-xl border px-4 py-2 text-xs font-medium">
-                {t("limit", { count: members.length, max: maxUsers })}
-              </div>
-            </div>
-
-            <Tabs defaultValue="active" className="w-full space-y-6">
-              <TabsList className="h-auto w-full justify-start rounded-none border-b bg-transparent p-0">
-                <TabsTrigger
-                  value="active"
-                  className="data-[state=active]:border-b-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
-                  {t("tabs.active")}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="pending"
-                  className="data-[state=active]:border-b-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
-                  {t("tabs.pending")} ({pendingInvites.length})
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="active" className="mt-0 space-y-3 focus-visible:outline-none">
-                {members.length === 0 ? (
-                  <div className="text-muted-foreground py-6 text-center text-sm">
-                    {t("placeholders.noActive")}
-                  </div>
-                ) : (
-                  members.map((member) => (
-                    <div
-                      key={member.id}
-                      className="border-border/60 bg-card hover:bg-accent/5 flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="bg-muted border-border/60 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
-                          <User className="text-muted-foreground h-5 w-5" />
-                        </div>
-                        <div className="flex min-w-0 flex-col">
-                          <span className="text-foreground truncate text-sm font-semibold">
-                            {member.name}
-                          </span>
-                          <span className="text-muted-foreground truncate text-xs">
-                            {member.email}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        {canManageMember(member) ? (
-                          <>
-                            <Select
-                              value={member.roleId ?? undefined}
-                              onValueChange={(val: string) => handleRoleChange(member.id, val)}>
-                              <SelectTrigger className="border-border/80 h-9 w-[110px] text-sm focus:ring-1">
-                                <SelectValue placeholder="Select Role" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {assignableRoles.map((r) => (
-                                  <SelectItem key={r.id} value={r.id}>
-                                    {r.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            {canRemove && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-muted-foreground h-9 w-9">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem
-                                    onClick={() => setMemberToDelete(member)}
-                                    className="text-destructive focus:text-destructive flex cursor-pointer items-center gap-2">
-                                    <Trash2 className="h-4 w-4" />
-                                    Remove member
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </>
-                        ) : (
-                          <div className="border-border/40 bg-muted/30 text-muted-foreground flex h-9 w-[110px] items-center justify-between rounded-lg border px-3 py-1 text-sm select-none">
-                            <span>{member.roleName}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </TabsContent>
-
-              <TabsContent value="pending" className="mt-0 space-y-3 focus-visible:outline-none">
-                {pendingInvites.length === 0 ? (
-                  <div className="text-muted-foreground py-10 text-center text-sm">
-                    {t("placeholders.noPending")}
-                  </div>
-                ) : (
-                  pendingInvites.map((invite) => (
-                    <div
-                      key={invite.id}
-                      className="border-border/60 bg-card flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="bg-muted border-border/60 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
-                          <Mail className="text-muted-foreground h-5 w-5" />
-                        </div>
-                        <div className="flex min-w-0 flex-col">
-                          <span className="text-foreground truncate text-sm font-semibold">
-                            {invite.email}
-                          </span>
-                          <span className="text-muted-foreground truncate text-xs">
-                            {t("placeholders.invitedTo")} {invite.roleName}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="border-border/40 bg-muted/20 text-muted-foreground flex h-9 items-center justify-between rounded-lg border px-3 py-1 text-xs select-none">
-                          {t("placeholders.statusPending")}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleCancelInvitation(invite.id, invite.email)}
-                          className="text-muted-foreground hover:text-destructive h-9 w-9"
-                          title={t("placeholders.statusPending")}>
-                          <Ban className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Section 2: Invite a Member */}
+          {/* Section 1: Invite a Member */}
           {canInvite && (
-            <div className="space-y-6 p-8">
+            <div className="bg-muted/10 space-y-6 p-8">
               <div className="space-y-1">
                 <h2 className="text-foreground text-xl font-semibold tracking-tight">
                   {t("inviteCard.title")}
@@ -306,7 +196,7 @@ export function OrganizationMembers() {
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
                       disabled={isInviting || isLimitReached}
-                      className="border-border/80 h-10 focus-visible:ring-1"
+                      className="border-border/80 bg-background h-10 focus-visible:ring-1"
                     />
                   </div>
 
@@ -318,7 +208,9 @@ export function OrganizationMembers() {
                       value={inviteRoleId}
                       onValueChange={setInviteRoleId}
                       disabled={isInviting || isLimitReached}>
-                      <SelectTrigger id="role" className="border-border/80 h-10 focus:ring-1">
+                      <SelectTrigger
+                        id="role"
+                        className="border-border/80 bg-background h-10 focus:ring-1">
                         <SelectValue placeholder={t("inviteCard.selectRole")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -344,6 +236,189 @@ export function OrganizationMembers() {
               </form>
             </div>
           )}
+
+          {/* Section 2: Manage Members List */}
+          <div className="space-y-6 p-8">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+              <div className="space-y-1">
+                <h2 className="text-foreground text-xl font-semibold tracking-tight">
+                  {t("title")} ({orgName})
+                </h2>
+                <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
+              </div>
+              <div className="bg-muted text-foreground/80 h-fit shrink-0 rounded-xl border px-4 py-2 text-xs font-medium">
+                {t("limit", { count: members.length, max: maxUsers })}
+              </div>
+            </div>
+
+            {/* Pencarian */}
+            <form onSubmit={handleSearchSubmit} className="flex max-w-md gap-2">
+              <div className="relative flex-1">
+                <Search className="text-muted-foreground absolute top-2.5 left-3 h-4 w-4" />
+                <Input
+                  placeholder="Cari nama anggota..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="border-border/80 h-10 pl-9 focus-visible:ring-1"
+                />
+              </div>
+              <Button type="submit" size="sm" className="h-10 px-4">
+                Cari
+              </Button>
+            </form>
+
+            <Tabs defaultValue="active" className="w-full space-y-6">
+              <TabsList className="h-auto w-full justify-start rounded-none border-b bg-transparent p-0">
+                <TabsTrigger
+                  value="active"
+                  className="data-[state=active]:border-b-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
+                  {t("tabs.active")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="pending"
+                  className="data-[state=active]:border-b-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-medium shadow-none transition-all data-[state=active]:bg-transparent">
+                  {t("tabs.pending")} ({pendingInvites.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="active" className="mt-0 focus-visible:outline-none">
+                <div className="max-h-[350px] space-y-3 overflow-y-auto pr-2">
+                  {members.length === 0 ? (
+                    <div className="text-muted-foreground py-6 text-center text-sm">
+                      {t("placeholders.noActive")}
+                    </div>
+                  ) : (
+                    members.map((member) => (
+                      <div
+                        key={member.id}
+                        className="border-border/60 bg-card hover:bg-accent/5 flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors">
+                        <div className="flex items-center gap-4">
+                          {/* Rendering Avatar Pengguna */}
+                          <Avatar className="border-border/60 h-10 w-10 shrink-0 rounded-lg border">
+                            {member.avatarUrl && (
+                              <AvatarImage
+                                src={member.avatarUrl}
+                                alt={member.name}
+                                className="object-cover"
+                              />
+                            )}
+                            <AvatarFallback className="bg-muted text-muted-foreground rounded-lg text-xs font-semibold">
+                              {getInitials(member.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex min-w-0 flex-col">
+                            <span className="text-foreground truncate text-sm font-semibold">
+                              {member.name}
+                            </span>
+                            <span className="text-muted-foreground truncate text-xs">
+                              {member.email}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {canManageMember(member) ? (
+                            <>
+                              <Select
+                                value={member.roleId ?? undefined}
+                                onValueChange={(val: string) => handleRoleChange(member.id, val)}>
+                                <SelectTrigger className="border-border/80 h-9 w-[110px] text-sm focus:ring-1">
+                                  <SelectValue placeholder="Select Role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {assignableRoles.map((r) => (
+                                    <SelectItem key={r.id} value={r.id}>
+                                      {r.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              {canRemove && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-muted-foreground h-9 w-9">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-40">
+                                    <DropdownMenuItem
+                                      onClick={() => setMemberToDelete(member)}
+                                      className="text-destructive focus:text-destructive flex cursor-pointer items-center gap-2">
+                                      <Trash2 className="h-4 w-4" />
+                                      Remove member
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </>
+                          ) : (
+                            <div className="border-border/40 bg-muted/30 text-muted-foreground flex h-9 w-[110px] items-center justify-between rounded-lg border px-3 py-1 text-sm select-none">
+                              <span>{member.roleName}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {/* Elemen Trigger untuk Infinite Scroll */}
+                  {hasMore && (
+                    <div ref={loadMoreRef} className="flex justify-center py-4">
+                      <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="pending" className="mt-0 focus-visible:outline-none">
+                <div className="max-h-[350px] space-y-3 overflow-y-auto pr-2">
+                  {pendingInvites.length === 0 ? (
+                    <div className="text-muted-foreground py-10 text-center text-sm">
+                      {t("placeholders.noPending")}
+                    </div>
+                  ) : (
+                    pendingInvites.map((invite) => (
+                      <div
+                        key={invite.id}
+                        className="border-border/60 bg-card flex items-center justify-between gap-4 rounded-xl border p-4 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className="bg-muted border-border/60 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
+                            <Mail className="text-muted-foreground h-5 w-5" />
+                          </div>
+                          <div className="flex min-w-0 flex-col">
+                            <span className="text-foreground truncate text-sm font-semibold">
+                              {invite.email}
+                            </span>
+                            <span className="text-muted-foreground truncate text-xs">
+                              {t("placeholders.invitedTo")} {invite.roleName}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="border-border/40 bg-muted/20 text-muted-foreground flex h-9 items-center justify-between rounded-lg border px-3 py-1 text-xs select-none">
+                            {t("placeholders.statusPending")}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleCancelInvitation(invite.id, invite.email)}
+                            className="text-muted-foreground hover:text-destructive h-9 w-9"
+                            title={t("placeholders.statusPending")}>
+                            <Ban className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         </CardContent>
       </Card>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { plans } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
@@ -17,6 +17,7 @@ export interface Member {
   userId: string;
   name: string;
   email: string;
+  avatarUrl: string | null; // Menyimpan data dari kolom 'avatar' di database
   roleId: string | null;
   roleName: string;
   roleHierarchy: number;
@@ -36,6 +37,8 @@ export interface AlertState {
   variant?: "default" | "destructive";
 }
 
+const PAGE_SIZE = 5;
+
 export function useOrganizationMembers() {
   const locale = useLocale();
   const t = useTranslations("organization.organization-member");
@@ -43,20 +46,22 @@ export function useOrganizationMembers() {
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("Our Organization");
 
-  // State anggota aktif & pending
   const [members, setMembers] = useState<Member[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
-
-  // State Batas Maksimal Pengguna berdasarkan Paket Berlangganan
-  const [maxUsers, setMaxUsers] = useState<number>(2); // Default limit untuk Free Plan = 2
+  const [maxUsers, setMaxUsers] = useState<number>(2);
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRoleId, setInviteRoleId] = useState<string>("");
 
-  // RBAC: daftar role global + otoritas pengguna saat ini di org ini
   const [roles, setRoles] = useState<Role[]>([]);
   const [currentUserHierarchy, setCurrentUserHierarchy] = useState<number | null>(null);
   const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
@@ -90,12 +95,15 @@ export function useOrganizationMembers() {
 
   const loadAllData = async (orgId: string) => {
     setIsLoading(true);
+    setMembers([]);
+    setPage(0);
+    setHasMore(true);
     await Promise.all([
       fetchRoles(),
       fetchCurrentUserAuthority(orgId),
-      fetchMembers(orgId),
       fetchPendingInvites(orgId),
-      fetchMaxUsersLimit(orgId)
+      fetchMaxUsersLimit(orgId),
+      fetchMembersPage(orgId, 0, "", true)
     ]);
     setIsLoading(false);
   };
@@ -142,9 +150,19 @@ export function useOrganizationMembers() {
     setUserPermissions(perms);
   };
 
-  const fetchMembers = async (orgId: string) => {
+  const fetchMembersPage = async (
+    orgId: string,
+    pageNum: number,
+    searchVal: string,
+    replace: boolean
+  ) => {
     try {
-      const { data, error } = await supabase
+      setIsFetchingMore(true);
+      const from = pageNum * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      // DISESUAIKAN: Menggunakan kolom 'avatar' sesuai dengan skema tabel profiles Anda
+      let query = supabase
         .from("memberships")
         .select(
           `
@@ -156,13 +174,21 @@ export function useOrganizationMembers() {
             name,
             hierarchy_level
           ),
-          profiles (
+          profiles!inner (
             id,
-            full_name
+            full_name,
+            avatar
           )
-        `
+        `,
+          { count: "exact" }
         )
         .eq("tenant_id", orgId);
+
+      if (searchVal.trim()) {
+        query = query.ilike("profiles.full_name", `%${searchVal.trim()}%`);
+      }
+
+      const { data, error, count } = await query.order("id", { ascending: true }).range(from, to);
 
       if (error) throw error;
 
@@ -173,17 +199,50 @@ export function useOrganizationMembers() {
           userId: item.user_id,
           name: fullName,
           email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
+          avatarUrl: item.profiles?.avatar ?? null, // Memetakan kolom 'avatar' ke properti avatarUrl
           roleId: item.role_id ?? null,
           roleName: item.roles?.name ?? "Member",
           roleHierarchy: item.roles?.hierarchy_level ?? 0
         };
       });
 
-      setMembers(formattedMembers);
+      if (replace) {
+        setMembers(formattedMembers);
+      } else {
+        setMembers((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const filteredNew = formattedMembers.filter((m) => !existingIds.has(m.id));
+          return [...prev, ...filteredNew];
+        });
+      }
+
+      const totalCount = count ?? 0;
+      const currentListLength = (replace ? 0 : members.length) + formattedMembers.length;
+      setHasMore(currentListLength < totalCount);
     } catch (error) {
-      console.error(error);
+      console.error("Gagal memuat halaman anggota:", error);
+    } finally {
+      setIsFetchingMore(false);
     }
   };
+
+  const handleSearchSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!activeOrgId) return;
+
+    setPage(0);
+    setAppliedSearch(searchQuery);
+    setIsLoading(true);
+    await fetchMembersPage(activeOrgId, 0, searchQuery, true);
+    setIsLoading(false);
+  };
+
+  const handleLoadMore = useCallback(async () => {
+    if (isFetchingMore || !hasMore || !activeOrgId) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    await fetchMembersPage(activeOrgId, nextPage, appliedSearch, false);
+  }, [isFetchingMore, hasMore, activeOrgId, page, appliedSearch]);
 
   const fetchPendingInvites = async (orgId: string) => {
     try {
@@ -404,6 +463,12 @@ export function useOrganizationMembers() {
     canInvite,
     canRemove,
     assignableRoles,
-    canManageMember
+    canManageMember,
+    searchQuery,
+    setSearchQuery,
+    handleSearchSubmit,
+    handleLoadMore,
+    hasMore,
+    isFetchingMore
   };
 }

@@ -6,16 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 import { useOrganizationGeneral } from "./logic"; // Sesuaikan path-nya
@@ -41,7 +32,8 @@ export function OrganizationGeneralSettings() {
     handleCropComplete,
     handleSaveName,
     handleDeleteOrganization,
-    isReadOnly
+    isReadOnly,
+    canDeleteOrg
   } = useOrganizationGeneral();
 
   if (isLoading) {
@@ -171,8 +163,8 @@ export function OrganizationGeneralSettings() {
             )}
           </div>
 
-          {/* Section 3: Delete Organization (Danger Zone) - Hanya muncul jika bukan Member */}
-          {!isReadOnly && (
+          {/* Section 3: Delete Organization (Danger Zone) - Hanya utk pemegang organization.delete (Owner) */}
+          {canDeleteOrg && (
             <div className="flex flex-col items-start justify-between gap-6 bg-red-50/10 p-8 md:flex-row md:items-center">
               <div className="space-y-1.5 md:max-w-xl">
                 <h2 className="text-destructive text-base font-semibold">{t("delete.title")}</h2>
@@ -192,25 +184,17 @@ export function OrganizationGeneralSettings() {
         </CardContent>
       </Card>
 
-      {/* SHADCN DIALOG KONFIRMASI PENGHAPUSAN ORGANISASI */}
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("delete.dialogTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("delete.dialogDesc", { orgName })}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>{tCommon("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteOrganization}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground inline-flex items-center gap-2">
-              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {tCommon("delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* DIALOG KONFIRMASI TYPE-TO-CONFIRM HAPUS ORGANISASI */}
+      <ConfirmDeleteDialog
+        open={isConfirmOpen}
+        onOpenChange={setIsConfirmOpen}
+        confirmName={orgName || "organization"}
+        title={t("delete.dialogTitle")}
+        description={t("delete.dialogDesc", { orgName })}
+        actionLabel={tCommon("delete")}
+        loading={isDeleting}
+        onConfirm={handleDeleteOrganization}
+      />
 
       {/* REUSABLE IMAGE CROPPER DIALOG */}
       <ImageCropperDialog

@@ -1,16 +1,8 @@
 "use client";
 
 import * as React from "react";
-import {
-  Check,
-  X,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  ArrowUpRight,
-  RefreshCw,
-  Undo2
-} from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Check, X, CheckCircle2, AlertCircle, Loader2, ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,8 +19,10 @@ import {
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { plans } from "@/config/billing";
 import { useOrganizationBilling } from "./logic";
+import { Switch } from "@/components/ui/switch";
 
 export function OrganizationBilling() {
+  const tBilling = useTranslations("billing");
   const {
     locale,
     t,
@@ -61,8 +55,7 @@ export function OrganizationBilling() {
     getPlanActionType,
     isSubActive,
     daysLeft,
-    showWarningBanner,
-    currentActivePrice
+    showWarningBanner
   } = useOrganizationBilling();
 
   if (isLoading) {
@@ -85,13 +78,18 @@ export function OrganizationBilling() {
     );
   }
 
+  // Melokalisasi nama paket aktif saat ini (untuk banner peringatan / refund dialog)
+  const activeSubLocalizedName = activeSub?.planId
+    ? tBilling(`plans.${activeSub.planId}.name`) || activeSub.planName
+    : activeSub?.planName || "";
+
   return (
     <PayPalScriptProvider
       options={{
         clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "test",
         currency: "USD"
       }}>
-      <div className="mx-auto w-full max-w-5xl space-y-10 px-4 py-8">
+      <div className="mx-auto w-full max-w-5xl space-y-10 px-4">
         {isVerifyingPayment && (
           <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
             <Loader2 className="h-10 w-10 animate-spin text-white" />
@@ -122,140 +120,51 @@ export function OrganizationBilling() {
           </Alert>
         )}
 
-        {/* SECTION 1: ACTIVE SUBSCRIPTION DETAILS */}
-        <div className="space-y-4">
-          <Card className="overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
-            <CardContent className="space-y-6 p-8">
-              <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2.5">
-                    <h3 className="text-2xl font-bold tracking-tight text-slate-950">
-                      {isSubActive && activeSub ? activeSub.planName : "Free"}
-                    </h3>
-
-                    {activeSub?.status === "refund_requested" ? (
-                      <Badge className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 hover:bg-amber-500/15">
-                        {t("badges.refundRequested") || "Refund Requested"}
-                      </Badge>
-                    ) : isSubActive && activeSub?.cancelAtPeriodEnd ? (
-                      <Badge className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-xs font-semibold text-red-600 hover:bg-red-500/15">
-                        {t("badges.willCancel") || "Will Cancel"}
-                      </Badge>
-                    ) : isSubActive ? (
-                      <Badge className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/15">
-                        {t("badges.active") || "Active"}
-                      </Badge>
-                    ) : (
-                      <Badge className="border-muted-foreground/20 bg-muted text-muted-foreground rounded-full border px-2.5 py-0.5 text-xs font-semibold">
-                        {t("badges.freeActive") || "Free Active"}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    {activeSub?.status === "refund_requested"
-                      ? t("subDetails.activeDesc", { price: formatPrice(activeSub?.price ?? 0) })
-                      : isSubActive && activeSub
-                        ? `${t("subDetails.activeDesc", { price: formatPrice(activeSub.price) })} ${
-                            activeSub.endsAt
-                              ? `${
-                                  activeSub.cancelAtPeriodEnd
-                                    ? t("subDetails.endsOn")
-                                    : t("subDetails.renewsOn")
-                                } ${new Date(activeSub.endsAt).toLocaleDateString("id-ID")}`
-                              : ""
-                          }`
-                        : t("subDetails.freeDesc") || "You are currently on the free plan."}
-                  </p>
-                </div>
-
-                {isSubActive && activeSub && (
-                  <div className="flex shrink-0 flex-wrap gap-3">
-                    {activeSub.cancelAtPeriodEnd ? (
-                      <Button
-                        onClick={handleResumeSubscription}
-                        disabled={isUpdatingSub}
-                        variant="outline"
-                        className="border-border/80 inline-flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-semibold">
-                        {isUpdatingSub ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-3.5 w-3.5" />
-                        )}
-                        {t("buttons.activateRenewal") || "Activate Renewal"}
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          onClick={() => setIsRefundDialogOpen(true)}
-                          disabled={isUpdatingSub}
-                          variant="outline"
-                          className="border-border/80 inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-xs font-semibold">
-                          <Undo2 className="h-3.5 w-3.5" />
-                          {t("buttons.claimRefund") || "Claim Refund"}
-                        </Button>
-                        <Button
-                          onClick={handleCancelSubscription}
-                          disabled={isUpdatingSub}
-                          variant="destructive"
-                          className="h-10 rounded-xl px-4 text-xs font-semibold">
-                          {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
-                          {t("buttons.cancelRenewal") || "Cancel Renewal"}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-baseline gap-1 pt-2">
-                <span className="text-4xl font-bold tracking-tight text-slate-950">
-                  {formatPrice(isSubActive ? currentActivePrice : 0)}
-                </span>
-                <span className="text-muted-foreground text-sm">/ month</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* SECTION 2: PLANS MATRIX (COMPARED TO IMAGE DESIGN) */}
+        {/* SECTION 2: PLANS MATRIX */}
         <div className="space-y-6">
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div className="space-y-1">
               <h2 className="text-2xl font-bold tracking-tight text-slate-950">
-                {t("changeTitle") || "Choose Your Plan"}
+                {t("changeTitle")}
               </h2>
             </div>
 
             {/* Custom Toggle Switch (Monthly vs Yearly) */}
-            <div className="flex items-center gap-2.5 rounded-full border border-slate-100 bg-slate-50 p-1.5">
+            <div className="flex items-center justify-center gap-3 py-2 select-none">
               <button
                 type="button"
                 onClick={() => setBillingCycle("monthly")}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                className={`text-sm font-semibold transition-colors focus:outline-none ${
                   billingCycle === "monthly"
-                    ? "bg-white text-slate-950 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "text-slate-950"
+                    : "text-slate-400 hover:text-slate-600"
                 }`}>
-                {t("cycles.monthly") || "Monthly"}
+                {t("cycles.monthly")}
               </button>
+
+              <Switch
+                checked={billingCycle === "yearly"}
+                onCheckedChange={(checked) => setBillingCycle(checked ? "yearly" : "monthly")}
+                className="bg-slate-200 data-[state=checked]:bg-slate-300 data-[state=unchecked]:bg-slate-200"
+              />
+
               <button
                 type="button"
                 onClick={() => setBillingCycle("yearly")}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                className={`text-sm font-semibold transition-colors focus:outline-none ${
                   billingCycle === "yearly"
-                    ? "bg-white text-slate-950 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "text-slate-950"
+                    : "text-slate-400 hover:text-slate-600"
                 }`}>
-                {t("cycles.yearly") || "Yearly"}
+                {t("cycles.yearly")}
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 pt-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 pt-4 sm:grid-cols-2 lg:grid-cols-3">
             {plans.map((plan) => {
               const actionType = getPlanActionType(plan.id);
 
-              // Helper untuk menentukan apakah plan saat ini adalah yang aktif untuk user
               const isThisPlanActive =
                 (plan.id === "free" && (!isSubActive || !activeSub)) ||
                 (isSubActive && activeSub?.planId === plan.id) ||
@@ -263,77 +172,94 @@ export function OrganizationBilling() {
 
               const isDisabled = activeSub?.status === "refund_requested" || isLoading;
 
-              // Tentukan harga berdasarkan siklus tagihan
               const planPrice =
                 billingCycle === "yearly" ? plan.prices.yearly.amount : plan.prices.monthly.amount;
+
+              // Ambil nama dan deskripsi terlokalisasi
+              const localizedName = tBilling(`plans.${plan.id}.name`) || plan.name;
+              const localizedDescription =
+                tBilling(`plans.${plan.id}.description`) || plan.description;
+
+              // Ambil daftar fitur terjemahan
+              let localizedFeatures = plan.features;
+              try {
+                const rawFeatures = tBilling.raw(`plans.${plan.id}.features`);
+                if (Array.isArray(rawFeatures)) {
+                  localizedFeatures = rawFeatures;
+                }
+              } catch (e) {
+                // Gunakan default fallback jika terjadi kesalahan
+              }
 
               return (
                 <Card
                   key={plan.id}
-                  className="flex h-full flex-col justify-between overflow-visible rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md">
-                  <CardContent className="flex h-full flex-col justify-between gap-6 p-8">
-                    <div className="space-y-5">
+                  className="flex h-full flex-col justify-between overflow-hidden bg-white py-0 transition-all hover:shadow-md">
+                  <CardContent className="flex h-full flex-col justify-between gap-0 sm:p-6">
+                    <div className="min-w-0 space-y-5">
                       <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="text-xl font-bold tracking-tight text-slate-900">
-                            {plan.name}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h3 className="truncate text-xl font-bold tracking-tight text-slate-900">
+                            {localizedName}
                           </h3>
                           {billingCycle === "yearly" && plan.id !== "free" && (
                             <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-500/30 bg-emerald-50/50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                              Save 17%
+                              {t("saveDiscount")}
                             </span>
                           )}
                         </div>
-                        <p className="min-h-[40px] text-sm leading-relaxed text-slate-500">
-                          {plan.description}
+                        <p className="min-h-[40px] text-sm leading-relaxed break-words text-slate-500">
+                          {localizedDescription}
                         </p>
                       </div>
 
-                      <div className="flex items-baseline gap-1 pt-1">
-                        <span className="text-4xl font-extrabold tracking-tight text-slate-900">
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-1 pt-1">
+                        <span className="text-3xl font-extrabold tracking-tight break-all text-slate-900 sm:text-4xl">
                           {formatPrice(planPrice)}
                         </span>
-                        <span className="text-sm font-medium text-slate-500">
+                        <span className="shrink-0 text-sm font-medium text-slate-500">
                           /{billingCycle === "yearly" ? "year" : "month"}
                         </span>
                       </div>
 
                       <div className="space-y-3 border-t border-slate-100 pt-2">
                         <ul className="space-y-2.5 text-sm text-slate-700">
-                          {plan.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-start gap-2.5">
+                          {localizedFeatures.map((feature, idx) => (
+                            <li key={idx} className="flex min-w-0 items-start gap-2.5">
                               <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                              <span className="text-[13px] text-slate-600">{feature}</span>
+                              <span className="text-[13px] leading-relaxed break-words text-slate-600">
+                                {feature}
+                              </span>
                             </li>
                           ))}
                         </ul>
                       </div>
                     </div>
 
-                    <div className="pt-4">
+                    <div className="shrink-0 pt-4">
                       {isThisPlanActive ? (
                         <Button
                           disabled
-                          className="w-full cursor-default rounded-xl border border-emerald-500/20 bg-emerald-500/10 py-5 font-semibold text-emerald-600 hover:bg-emerald-500/10">
-                          {t("buttons.planActive") || "Active"}
+                          className="w-full cursor-default border border-emerald-500/20 bg-emerald-500/10 py-5 font-semibold text-emerald-600 hover:bg-emerald-500/10">
+                          {t("buttons.planActive")}
                         </Button>
                       ) : actionType === "upgrade" && isSubActive ? (
                         <Button
                           onClick={() => handleChoosePlan(plan)}
                           disabled={isDisabled}
                           className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-950 py-5 font-semibold text-white hover:bg-slate-800">
-                          <ArrowUpRight className="h-4 w-4" />
-                          {t("buttons.upgrade") || "Upgrade Plan"}
+                          <ArrowUpRight className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{t("buttons.upgrade")}</span>
                         </Button>
                       ) : actionType === "downgrade" && isSubActive ? (
                         <div className="w-full space-y-2">
                           <Button
                             disabled
                             variant="outline"
-                            className="w-full cursor-not-allowed rounded-xl py-5 font-semibold opacity-60">
-                            {t("buttons.downgrade") || "Downgrade"}
+                            className="w-full cursor-not-allowed py-5 font-semibold opacity-60">
+                            {t("buttons.downgrade")}
                           </Button>
-                          <p className="px-2 text-center text-[10px] leading-normal text-slate-500">
+                          <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
                             *{t("downgradeinfo")}
                           </p>
                         </div>
@@ -341,8 +267,8 @@ export function OrganizationBilling() {
                         <Button
                           onClick={() => handleChoosePlan(plan)}
                           disabled={isDisabled}
-                          className="w-full rounded-xl bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
-                          {`Choose ${plan.name}`}
+                          className="w-full truncate bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
+                          {t("buttons.choose", { planName: localizedName })}
                         </Button>
                       )}
                     </div>
@@ -356,41 +282,35 @@ export function OrganizationBilling() {
           <div className="space-y-4 border-t border-slate-200/60 pt-8">
             <div className="space-y-1">
               <h2 className="text-xl font-bold tracking-tight text-slate-950">
-                {locale === "English" ? "Billing History" : "Riwayat Pembayaran"}
+                {t("history.title")}
               </h2>
-              <p className="text-sm text-slate-500">
-                {locale === "English"
-                  ? "View your past transactions and download official invoices/receipts."
-                  : "Lihat transaksi masa lalu Anda dan unduh invoice/kuitansi resmi."}
-              </p>
+              <p className="text-sm text-slate-500">{t("history.desc")}</p>
             </div>
 
             <Card className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-sm">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full min-w-[700px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-slate-200/60 bg-slate-50/70 text-xs font-semibold tracking-wider text-slate-500 uppercase">
-                      <th className="px-6 py-4">Date</th>
-                      <th className="px-6 py-4">Transaction ID</th>
-                      <th className="px-6 py-4">Plan Name</th>
-                      <th className="px-6 py-4">Amount</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4 text-right">Action</th>
+                      <th className="px-6 py-4">{t("history.table.date")}</th>
+                      <th className="px-6 py-4">{t("history.table.txId")}</th>
+                      <th className="px-6 py-4">{t("history.table.planName")}</th>
+                      <th className="px-6 py-4">{t("history.table.amount")}</th>
+                      <th className="px-6 py-4">{t("history.table.status")}</th>
+                      <th className="px-6 py-4 text-right">{t("history.table.action")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200/40 text-slate-800">
                     {transactions.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="py-10 text-center text-slate-400">
-                          {locale === "English"
-                            ? "No transaction history found."
-                            : "Belum ada riwayat transaksi."}
+                          {t("history.table.empty")}
                         </td>
                       </tr>
                     ) : (
                       transactions.map((tx) => (
                         <tr key={tx.id} className="transition-colors hover:bg-slate-50/50">
-                          <td className="px-6 py-4 font-medium">
+                          <td className="px-6 py-4 font-medium whitespace-nowrap">
                             {new Date(tx.created_at).toLocaleDateString(
                               locale === "English" ? "en-US" : "id-ID",
                               {
@@ -400,23 +320,25 @@ export function OrganizationBilling() {
                               }
                             )}
                           </td>
-                          <td className="px-6 py-4 font-mono text-xs text-slate-500">
+                          <td className="px-6 py-4 font-mono text-xs whitespace-nowrap text-slate-500">
                             {tx.order_id}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <Badge
                               variant="outline"
                               className="border-slate-200 font-semibold capitalize">
                               {tx.plan_name}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 font-bold">{formatPrice(tx.amount)}</td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 font-bold whitespace-nowrap">
+                            {formatPrice(tx.amount)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <Badge className="rounded-full border-emerald-500/10 bg-emerald-50 font-medium text-emerald-600 hover:bg-emerald-100/50">
                               {tx.status.toUpperCase()}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-6 py-4 text-right whitespace-nowrap">
                             <Button
                               variant="outline"
                               size="sm"
@@ -425,7 +347,7 @@ export function OrganizationBilling() {
                                 setIsInvoiceOpen(true);
                               }}
                               className="h-8 rounded-lg border-slate-200 text-xs font-semibold hover:bg-slate-50">
-                              {locale === "English" ? "View Invoice" : "Lihat Invoice"}
+                              {t("history.table.viewInvoice")}
                             </Button>
                           </td>
                         </tr>
@@ -443,15 +365,9 @@ export function OrganizationBilling() {
           <Alert className="flex items-start gap-3 rounded-2xl border-amber-500/30 bg-amber-50/50 p-4 text-amber-800">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <div className="space-y-1">
-              <AlertTitle className="font-bold text-amber-900">
-                {locale === "English"
-                  ? "Action Required: Plan Expiring Soon!"
-                  : "Perhatian: Masa Aktif Paket Paket Hampir Habis!"}
-              </AlertTitle>
-              <AlertDescription className="text-sm leading-normal text-amber-800/90">
-                {locale === "English"
-                  ? `Your premium prepaid access to the ${activeSub.planName} plan will expire in ${daysLeft} day(s). Renew or upgrade today to avoid interruption to your workflow.`
-                  : `Masa aktif akses premium paket ${activeSub.planName} Anda akan berakhir dalam ${daysLeft} hari lagi. Lakukan pembelian ulang atau upgrade hari ini agar alur kerja Anda tidak terganggu.`}
+              <AlertTitle className="font-bold text-amber-900">{t("warning.title")}</AlertTitle>
+              <AlertDescription className="text-sm leading-normal break-words text-amber-800/90">
+                {t("warning.desc", { planName: activeSubLocalizedName, days: daysLeft })}
               </AlertDescription>
             </div>
           </Alert>
@@ -459,23 +375,26 @@ export function OrganizationBilling() {
 
         {/* DIALOG MODAL DETAIL INVOICE */}
         <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 p-8 sm:max-w-[550px]">
+          <DialogContent className="max-h-[90vh] w-[95vw] max-w-[550px] overflow-y-auto rounded-2xl border border-slate-200 p-6 sm:p-8">
             {selectedInvoice && (
               <div className="space-y-6">
                 <div id="printable-invoice" className="space-y-6 print:p-0">
                   <div className="flex items-start justify-between border-b border-slate-200 pb-6">
                     <div>
                       <h2 className="text-xl font-bold tracking-tight text-slate-900">
-                        INVOICE RECEIPT
+                        {t("invoice.title")}
                       </h2>
                       <p className="mt-1 font-mono text-xs text-slate-400">
-                        ID: #{selectedInvoice.id.slice(0, 8).toUpperCase()}
+                        {t("invoice.id")}: #{selectedInvoice.id.slice(0, 8).toUpperCase()}
                       </p>
                     </div>
                     <div className="text-right">
-                      <h3 className="text-sm font-bold text-slate-900">PREPAID SERVICE</h3>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        {t("invoice.prepaidService")}
+                      </h3>
                       <p className="mt-0.5 text-xs text-slate-400">
-                        Date: {new Date(selectedInvoice.created_at).toLocaleDateString()}
+                        {t("invoice.date")}:{" "}
+                        {new Date(selectedInvoice.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -483,18 +402,22 @@ export function OrganizationBilling() {
                   <div className="grid grid-cols-2 gap-4 text-xs">
                     <div>
                       <p className="font-semibold tracking-wider text-slate-400 uppercase">
-                        Billed To:
+                        {t("invoice.billedTo")}:
                       </p>
-                      <p className="mt-1 text-sm font-bold text-slate-800">Organization ID</p>
-                      <p className="mt-0.5 font-mono text-slate-400">{selectedInvoice.tenant_id}</p>
+                      <p className="mt-1 text-sm font-bold text-slate-800">{t("invoice.orgId")}</p>
+                      <p className="mt-0.5 font-mono break-all text-slate-400">
+                        {selectedInvoice.tenant_id}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold tracking-wider text-slate-400 uppercase">
-                        Payment Method:
+                        {t("invoice.paymentMethod")}:
                       </p>
-                      <p className="mt-1 text-sm font-bold text-slate-800">PayPal Checkout</p>
-                      <p className="mt-0.5 text-slate-400">
-                        Ref ID: {selectedInvoice.order_id.slice(0, 15)}...
+                      <p className="mt-1 text-sm font-bold text-slate-800">
+                        {t("invoice.paypalCheckout")}
+                      </p>
+                      <p className="mt-0.5 break-all text-slate-400">
+                        {t("invoice.refId")}: {selectedInvoice.order_id.slice(0, 15)}...
                       </p>
                     </div>
                   </div>
@@ -503,18 +426,22 @@ export function OrganizationBilling() {
                     <table className="w-full border-collapse text-left text-xs">
                       <thead>
                         <tr className="border-b border-slate-100 bg-slate-50 font-semibold text-slate-500 uppercase">
-                          <th className="px-4 py-3">Description</th>
-                          <th className="px-4 py-3 text-right">Total</th>
+                          <th className="px-4 py-3">{t("invoice.table.desc")}</th>
+                          <th className="px-4 py-3 text-right">{t("invoice.table.total")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-700">
                         <tr>
                           <td className="px-4 py-4">
                             <p className="font-bold text-slate-900 capitalize">
-                              {selectedInvoice.plan_name} Plan Access
+                              {t("invoice.table.itemTitle", {
+                                planName:
+                                  tBilling(`plans.${selectedInvoice.plan_name}.name`) ||
+                                  selectedInvoice.plan_name
+                              })}
                             </p>
                             <p className="mt-1 text-[11px] text-slate-400">
-                              Prepaid SaaS premium feature access.
+                              {t("invoice.table.itemDesc")}
                             </p>
                           </td>
                           <td className="px-4 py-4 text-right text-sm font-bold text-slate-900">
@@ -526,15 +453,14 @@ export function OrganizationBilling() {
                   </div>
 
                   <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-sm font-bold">
-                    <span className="text-slate-700">Total Paid (USD)</span>
+                    <span className="text-slate-700">{t("invoice.totalPaid")}</span>
                     <span className="text-lg text-slate-950">
                       {formatPrice(selectedInvoice.amount)}
                     </span>
                   </div>
 
                   <div className="border-t border-slate-100 pt-4 text-center text-[10px] text-slate-400">
-                    Thank you for your purchase! This is an official digital receipt for your
-                    prepaid service.
+                    {t("invoice.footer")}
                   </div>
                 </div>
 
@@ -543,14 +469,14 @@ export function OrganizationBilling() {
                     variant="outline"
                     onClick={() => setIsInvoiceOpen(false)}
                     className="rounded-xl">
-                    Close
+                    {t("buttons.close")}
                   </Button>
                   <Button
                     onClick={() => {
                       window.print();
                     }}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-slate-950 text-white hover:bg-slate-800">
-                    Print / Save PDF
+                    {t("buttons.print")}
                   </Button>
                 </DialogFooter>
               </div>
@@ -560,27 +486,30 @@ export function OrganizationBilling() {
 
         {/* DIALOG MODAL CHECKOUT */}
         <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-          <DialogContent className="rounded-2xl border border-slate-200 sm:max-w-[450px]">
+          <DialogContent className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-slate-900">
-                {t("dialogPurchase.title") || "Confirm Purchase"}
+                {t("dialogPurchase.title")}
               </DialogTitle>
-              <DialogDescription>
-                {t("dialogPurchase.desc") || "Please review your package information below."}
-              </DialogDescription>
+              <DialogDescription>{t("dialogPurchase.desc")}</DialogDescription>
             </DialogHeader>
 
             {selectedPlan &&
               (() => {
                 const { finalPrice, creditUsed } = getUpgradePrice(selectedPlan);
                 const isUpgrade = getPlanActionType(selectedPlan.id) === "upgrade";
+                const selectedPlanLocalizedName =
+                  tBilling(`plans.${selectedPlan.id}.name`) || selectedPlan.name;
 
                 return (
                   <div className="space-y-6 py-4">
                     <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-slate-700">
-                          {selectedPlan.name} Plan ({billingCycle})
+                          {t("dialogPurchase.planCycle", {
+                            planName: selectedPlanLocalizedName,
+                            cycle: t(`cycles.${billingCycle}`)
+                          })}
                         </span>
                         <span className="font-semibold text-slate-950">
                           {formatPrice(
@@ -593,19 +522,19 @@ export function OrganizationBilling() {
 
                       {isUpgrade && creditUsed > 0 && (
                         <div className="flex items-center justify-between text-xs font-medium text-emerald-600">
-                          <span>Prepaid Credit Applied</span>
+                          <span>{t("dialogPurchase.creditApplied")}</span>
                           <span>-{formatPrice(creditUsed)}</span>
                         </div>
                       )}
 
                       <div className="flex items-center justify-between border-t border-slate-200/60 pt-2 text-base font-bold text-slate-900">
-                        <span>Amount to Pay</span>
+                        <span>{t("dialogPurchase.amountToPay")}</span>
                         <span>{formatPrice(finalPrice)}</span>
                       </div>
 
                       {billingCycle === "yearly" && (
                         <div className="text-right text-[10px] text-slate-400 italic">
-                          Billed annually
+                          {t("dialogPurchase.billedAnnually")}
                         </div>
                       )}
                     </div>
@@ -637,9 +566,9 @@ export function OrganizationBilling() {
                         }}
                         onError={() => {
                           setAlertMessage({
-                            title: "Payment Failed",
+                            title: t("alerts.errorPay"),
                             description:
-                              "Terjadi kesalahan selama memproses langganan PayPal. Silakan coba kembali.",
+                              "PayPal subscription processing encountered an issue. Please try again.",
                             variant: "destructive"
                           });
                           setIsCheckoutOpen(false);
@@ -654,13 +583,13 @@ export function OrganizationBilling() {
 
         {/* DIALOG MODAL REFUND */}
         <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
-          <DialogContent className="rounded-2xl border border-slate-200 sm:max-w-[450px]">
+          <DialogContent className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-slate-900">
-                {t("dialogRefund.title") || "Request Refund"}
+                {t("dialogRefund.title")}
               </DialogTitle>
               <DialogDescription>
-                {t("dialogRefund.desc", { planName: activeSub?.planName || "" })}
+                {t("dialogRefund.desc", { planName: activeSubLocalizedName })}
               </DialogDescription>
             </DialogHeader>
 
@@ -677,14 +606,14 @@ export function OrganizationBilling() {
                 disabled={isUpdatingSub}
                 onClick={() => setIsRefundDialogOpen(false)}
                 className="rounded-xl">
-                {t("buttons.cancel") || "Cancel"}
+                {t("buttons.cancel")}
               </Button>
               <Button
                 onClick={handleClaimRefund}
                 disabled={isUpdatingSub}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-red-700 text-white hover:bg-red-800">
                 {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
-                {t("buttons.confirmRefund") || "Confirm Refund"}
+                {t("buttons.confirmRefund")}
               </Button>
             </DialogFooter>
           </DialogContent>

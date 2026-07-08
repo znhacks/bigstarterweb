@@ -114,29 +114,26 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
         </Alert>
       )}
 
-      {/* Tabel */}
-      <Card>
-        <CardContent className="pt-6">
-          {h.isLoading ? (
-            <div className="flex min-h-[400px] items-center justify-center">
-              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-            </div>
-          ) : (
-            <TasksDataTable
-              tasks={h.tasks}
-              members={h.members}
-              orgName={tenantName}
-              canCreate={h.canCreate}
-              canDelete={h.canDelete}
-              canEditTask={h.canEditTask}
-              onUpdate={h.updateTask}
-              onView={(task) => setDetailTask(task)}
-              onDelete={(task) => h.setTaskToDelete(task)}
-              onCreateClick={openCreate}
-            />
-          )}
-        </CardContent>
-      </Card>
+      <div>
+        {h.isLoading ? (
+          <div className="flex min-h-[400px] items-center justify-center">
+            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <TasksDataTable
+            tasks={h.tasks}
+            members={h.members}
+            orgName={tenantName}
+            canCreate={h.canCreate}
+            canDelete={h.canDelete}
+            canEditTask={h.canEditTask}
+            onUpdate={h.updateTask}
+            onView={(task) => setDetailTask(task)}
+            onDelete={(task) => h.setTaskToDelete(task)}
+            onCreateClick={openCreate}
+          />
+        )}
+      </div>
 
       {/* DIALOG: Create task */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -208,7 +205,9 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
                 <Label>{t("form.fields.assignee")}</Label>
                 <Select
                   value={form.assignee_id || NONE}
-                  onValueChange={(v) => setForm((f) => ({ ...f, assignee_id: v === NONE ? "" : v }))}>
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, assignee_id: v === NONE ? "" : v }))
+                  }>
                   <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
@@ -269,7 +268,9 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
                   <Badge variant="secondary">{t(`data-table.statuses.${detailTask.status}`)}</Badge>
                 </DetailField>
                 <DetailField label={t("detail.fields.priority")}>
-                  <Badge variant="outline">{t(`data-table.priorities.${detailTask.priority}`)}</Badge>
+                  <Badge variant="outline">
+                    {t(`data-table.priorities.${detailTask.priority}`)}
+                  </Badge>
                 </DetailField>
                 <DetailField label={t("detail.fields.assignee")}>
                   <span className="text-sm">
@@ -334,7 +335,7 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
 function DetailField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">{label}</p>
+      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
       <div>{children}</div>
     </div>
   );
