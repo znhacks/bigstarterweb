@@ -27,6 +27,7 @@ import { Progress } from "@/components/ui/progress";
 
 // Impor klien Supabase Anda
 import { supabase } from "@/lib/supabase";
+import { useTranslations } from "next-intl";
 
 export default function UserMenu() {
   const router = useRouter();
@@ -36,6 +37,7 @@ export default function UserMenu() {
   const [fullName, setFullName] = useState("");
   const [avatar, setAvatar] = useState(""); // Menyimpan URL avatar dari database
   const [isLoading, setIsLoading] = useState(true);
+  const t = useTranslations("menu");
 
   // Memuat data user dari Supabase
   const loadUserData = async () => {
@@ -146,7 +148,7 @@ export default function UserMenu() {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild className="cursor-pointer">
             <Link href="https://shadcnuikit.com/pricing" target="_blank">
-              <Sparkles className="me-2 h-4 w-4 text-amber-500" /> Upgrade to Pro
+              <Sparkles className="me-2 h-4 w-4 text-amber-500" /> {t("upgradetopro")}
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
@@ -154,7 +156,7 @@ export default function UserMenu() {
           <DropdownMenuItem asChild>
             <Link href="/settings/general" className="cursor-pointer">
               <UserCircle2Icon className="me-2 h-4 w-4" />
-              Account
+              {t("account")}
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
@@ -163,9 +165,9 @@ export default function UserMenu() {
           onClick={handleLogOut}
           className="text-destructive focus:text-destructive cursor-pointer">
           <LogOut className="me-2 h-4 w-4" />
-          Log out
+          {t("logout")}
         </DropdownMenuItem>
-        <div className="bg-muted mt-1.5 rounded-md border">
+        {/* <div className="bg-muted mt-1.5 rounded-md border">
           <div className="space-y-3 p-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium">Credits</h4>
@@ -179,7 +181,7 @@ export default function UserMenu() {
               Daily credits used first
             </div>
           </div>
-        </div>
+        </div> */}
       </DropdownMenuContent>
     </DropdownMenu>
   );

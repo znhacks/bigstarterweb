@@ -84,10 +84,15 @@
     "error": "Error",
     "loading": "Memuat...",
     "search": "Pencarian...",
-    "account": "Akun"
+    "account": "Akun",
+    "noorgfound": "Organisasi tidak ditemukan",
+    "neworg": "Organisasi baru",
+    "addneworg": "Buat Organisasi baru"
   },
   "menu": {
     "menu": "Menu",
+    "upgradetopro": "Tingkatkan Menjadi Pro",
+    "logout": "Keluar",
     "users": {
       "dashboard": "Dasbor",
       "tasks": "Tugas",
@@ -127,6 +132,18 @@
     "notifications": "Notifikasi",
     "logout": "Keluar akun",
     "credits": "Kredit"
+  },
+  "authentication": {
+    "forgotpassword": {
+      "title": "Lupa Kata Sandi",
+      "desc": "Masukkan alamat email Anda dan kami akan mengirimkan petunjuk untuk mengatur ulang kata sandi Anda.",
+      "sendsuccess": "Kami berhasil mengirimkan petunjuk untuk mengatur ulang kata sandi ke email Anda. Silakan periksa kotak masuk atau folder spam Anda.",
+      "resend": "Kirim Ulang Email",
+      "emailaddress": "Alamat Email",
+      "pleasewait": "Harap Tunggu",
+      "haveaccount?": "Sudah memiliki akun?",
+      "login": "Masuk"
+    }
   },
   "tasks": {
     "title": "Tugas",

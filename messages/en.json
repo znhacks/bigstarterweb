@@ -83,10 +83,15 @@
     "error": "Error",
     "loading": "Loading...",
     "search": "Search...",
-    "account": "Account"
+    "account": "Account",
+    "noorgfound": "No organization found",
+    "neworg": "New Organization",
+    "addneworg": "Add New Organization"
   },
   "menu": {
     "menu": "Menu",
+    "upgradetopro": "Upgrade to Pro",
+    "logout": "Logout",
     "users": {
       "dashboard": "Dashboard",
       "tasks": "Tasks",
@@ -126,6 +131,18 @@
     "notifications": "Notifications",
     "logout": "Log out",
     "credits": "Credits"
+  },
+  "authentication": {
+    "forgotpassword": {
+      "title": "Forgot Password",
+      "desc": "Enter your email address and we'll send you instructions to reset your password.",
+      "sendsuccess": "We have successfully sent password reset instructions to your email. Please check your inbox or spam folder.",
+      "resend": "Resend Email",
+      "emailaddress": "Email Address",
+      "pleasewait": "Please Wait",
+      "haveaccount?": "Already have an account?",
+      "login": "Log in"
+    }
   },
   "tasks": {
     "title": "Tasks",

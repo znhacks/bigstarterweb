@@ -25,10 +25,12 @@ import { DotsVerticalIcon } from "@radix-ui/react-icons";
 // Impor klien Supabase Anda
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
   const router = useRouter();
+  const t = useTranslations("menu");
 
   // State data user & profil
   const [email, setEmail] = useState("");
@@ -166,7 +168,7 @@ export function NavUser() {
               <DropdownMenuItem asChild>
                 <Link href="/settings/general" className="cursor-pointer">
                   <UserCircle2Icon className="me-2 h-4 w-4" />
-                  Account
+                  {t("account")}
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
@@ -175,7 +177,7 @@ export function NavUser() {
               onClick={handleLogOut}
               className="text-destructive focus:text-destructive cursor-pointer">
               <LogOutIcon className="me-2 h-4 w-4" />
-              Log out
+              {t("logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
