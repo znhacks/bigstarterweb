@@ -586,6 +586,8 @@ model profiles {
   created_at  DateTime? @default(now()) @db.Timestamp(6)
   avatar      String?   @db.VarChar
   users       users     @relation(fields: [id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tasksAssigned tasks[] @relation("TaskAssignee")
+  tasksCreated  tasks[] @relation("TaskCreator")
 
   @@schema("public")
 }
@@ -605,13 +607,22 @@ model subscriptions {
 }
 
 model tasks {
-  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id  String     @db.Uuid
-  user_id    String?    @db.Uuid // Menghubungkan ke tabel app_users
-  title      String?    @db.VarChar(255)
-  created_at DateTime?  @default(now()) @db.Timestamp(6)
-  tenants    tenants    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  app_users  app_users? @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id   String    @db.Uuid
+  user_id     String?   @db.Uuid // Legacy: menghubungkan ke tabel app_users (tidak dipakai)
+  title       String?   @db.VarChar(255)
+  description String?
+  status      String?   @default("todo") @db.VarChar(20)
+  priority    String?   @default("medium") @db.VarChar(20)
+  due_date    DateTime? @db.Timestamptz(6)
+  assignee_id String?   @db.Uuid // Menghubungkan ke tabel profiles (penanggung jawab)
+  created_by  String?   @db.Uuid // Menghubungkan ke tabel profiles (pembuat)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  tenants     tenants    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  app_users   app_users? @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignee    profiles?  @relation("TaskAssignee", fields: [assignee_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator     profiles?  @relation("TaskCreator", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }

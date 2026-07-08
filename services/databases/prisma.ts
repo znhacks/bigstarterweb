@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { IDatabaseService } from "@/interfaces/database";
 
-const globalPrisma = new PrismaClient(); // DB Utama / System DB
+const globalPrisma = new PrismaClient(); 
 const connectionCache: Record<string, PrismaClient> = {};
 
 export class PrismaDatabaseService implements IDatabaseService<PrismaClient> {

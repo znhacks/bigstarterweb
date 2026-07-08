@@ -5,12 +5,22 @@ begin
   execute format('create schema if not exists %I', 'tenant_' || tenant_subdomain);
 
   -- 2. Buat tabel 'tasks' di dalam skema baru (Tanpa kolom tenant_id)
+  --    Assignee & creator -> profiles(id) di schema public.
   execute format('
     create table if not exists %I.tasks (
       id uuid not null default gen_random_uuid (),
       title character varying(255) null,
+      description text null,
+      status varchar(20) not null default ''todo'',
+      priority varchar(20) not null default ''medium'',
+      due_date timestamp with time zone null,
+      assignee_id uuid null references public.profiles(id) on delete set null,
+      created_by uuid null references public.profiles(id) on delete set null,
       created_at timestamp without time zone null default now(),
-      constraint tasks_pkey primary key (id)
+      updated_at timestamp with time zone not null default now(),
+      constraint tasks_pkey primary key (id),
+      constraint tasks_status_check check (status in (''todo'',''in_progress'',''done'',''cancelled'')),
+      constraint tasks_priority_check check (priority in (''low'',''medium'',''high'',''urgent''))
     )
   ', 'tenant_' || tenant_subdomain);
 
