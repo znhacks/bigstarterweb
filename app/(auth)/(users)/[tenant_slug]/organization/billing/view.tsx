@@ -1,3 +1,4 @@
+// OrganizationBilling.tsx
 "use client";
 
 import * as React from "react";
@@ -17,9 +18,9 @@ import {
 } from "@/components/ui/dialog";
 
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-import { plans } from "@/config/billing";
 import { useOrganizationBilling } from "./logic";
 import { Switch } from "@/components/ui/switch";
+import { formatDateTime } from "@/lib/i18n/format";
 
 export function OrganizationBilling() {
   const tBilling = useTranslations("billing");
@@ -36,6 +37,7 @@ export function OrganizationBilling() {
     isLoading,
     isUpdatingSub,
     isVerifyingPayment,
+    convertedPlans, // Gunakan paket hasil konversi
     selectedPlan,
     isCheckoutOpen,
     setIsCheckoutOpen,
@@ -47,8 +49,6 @@ export function OrganizationBilling() {
     isInvoiceOpen,
     setIsInvoiceOpen,
     handleChoosePlan,
-    handleCancelSubscription,
-    handleResumeSubscription,
     handleClaimRefund,
     handlePaymentSuccess,
     getUpgradePrice,
@@ -78,7 +78,6 @@ export function OrganizationBilling() {
     );
   }
 
-  // Melokalisasi nama paket aktif saat ini (untuk banner peringatan / refund dialog)
   const activeSubLocalizedName = activeSub?.planId
     ? tBilling(`plans.${activeSub.planId}.name`) || activeSub.planName
     : activeSub?.planName || "";
@@ -87,7 +86,7 @@ export function OrganizationBilling() {
     <PayPalScriptProvider
       options={{
         clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "test",
-        currency: "USD"
+        currency: "USD" // Transaksi PayPal riil di belakang layar tetap USD
       }}>
       <div className="mx-auto w-full max-w-5xl space-y-10 px-4">
         {isVerifyingPayment && (
@@ -100,7 +99,7 @@ export function OrganizationBilling() {
         {alertMessage && (
           <Alert
             variant={alertMessage.variant === "destructive" ? "destructive" : "default"}
-            className="border-border/80 relative flex items-start gap-3 rounded-xl border pr-10">
+            className="border-border/80 relative flex items-start gap-3 rounded-xl border pe-10">
             {alertMessage.variant === "destructive" ? (
               <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
             ) : (
@@ -114,7 +113,7 @@ export function OrganizationBilling() {
             </div>
             <button
               onClick={() => setAlertMessage(null)}
-              className="text-muted-foreground hover:text-foreground absolute top-4 right-4 transition-colors">
+              className="text-muted-foreground hover:text-foreground absolute end-4 top-4 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </Alert>
@@ -162,7 +161,7 @@ export function OrganizationBilling() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-            {plans.map((plan) => {
+            {convertedPlans.map((plan) => {
               const actionType = getPlanActionType(plan.id);
 
               const isThisPlanActive =
@@ -172,15 +171,16 @@ export function OrganizationBilling() {
 
               const isDisabled = activeSub?.status === "refund_requested" || isLoading;
 
+              // Ambil harga yang telah dikonversi secara dinamis (IDR/Mata uang lokal)
               const planPrice =
-                billingCycle === "yearly" ? plan.prices.yearly.amount : plan.prices.monthly.amount;
+                billingCycle === "yearly"
+                  ? plan.prices.yearly.convertedAmount
+                  : plan.prices.monthly.convertedAmount;
 
-              // Ambil nama dan deskripsi terlokalisasi
               const localizedName = tBilling(`plans.${plan.id}.name`) || plan.name;
               const localizedDescription =
                 tBilling(`plans.${plan.id}.description`) || plan.description;
 
-              // Ambil daftar fitur terjemahan
               let localizedFeatures = plan.features;
               try {
                 const rawFeatures = tBilling.raw(`plans.${plan.id}.features`);
@@ -297,7 +297,7 @@ export function OrganizationBilling() {
                       <th className="px-6 py-4">{t("history.table.planName")}</th>
                       <th className="px-6 py-4">{t("history.table.amount")}</th>
                       <th className="px-6 py-4">{t("history.table.status")}</th>
-                      <th className="px-6 py-4 text-right">{t("history.table.action")}</th>
+                      <th className="px-6 py-4 text-end">{t("history.table.action")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200/40 text-slate-800">
@@ -311,14 +311,7 @@ export function OrganizationBilling() {
                       transactions.map((tx) => (
                         <tr key={tx.id} className="transition-colors hover:bg-slate-50/50">
                           <td className="px-6 py-4 font-medium whitespace-nowrap">
-                            {new Date(tx.created_at).toLocaleDateString(
-                              locale === "English" ? "en-US" : "id-ID",
-                              {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric"
-                              }
-                            )}
+                            {formatDateTime(tx.created_at, locale, { dateStyle: "long" })}
                           </td>
                           <td className="px-6 py-4 font-mono text-xs whitespace-nowrap text-slate-500">
                             {tx.order_id}
@@ -331,14 +324,14 @@ export function OrganizationBilling() {
                             </Badge>
                           </td>
                           <td className="px-6 py-4 font-bold whitespace-nowrap">
-                            {formatPrice(tx.amount)}
+                            {formatPrice(tx.amount, tx.currency)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <Badge className="rounded-full border-emerald-500/10 bg-emerald-50 font-medium text-emerald-600 hover:bg-emerald-100/50">
                               {tx.status.toUpperCase()}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 text-right whitespace-nowrap">
+                          <td className="px-6 py-4 text-end whitespace-nowrap">
                             <Button
                               variant="outline"
                               size="sm"
@@ -388,13 +381,12 @@ export function OrganizationBilling() {
                         {t("invoice.id")}: #{selectedInvoice.id.slice(0, 8).toUpperCase()}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <h3 className="text-sm font-bold text-slate-900">
                         {t("invoice.prepaidService")}
                       </h3>
                       <p className="mt-0.5 text-xs text-slate-400">
-                        {t("invoice.date")}:{" "}
-                        {new Date(selectedInvoice.created_at).toLocaleDateString()}
+                        {t("invoice.date")}: {formatDateTime(selectedInvoice.created_at, locale)}
                       </p>
                     </div>
                   </div>
@@ -409,7 +401,7 @@ export function OrganizationBilling() {
                         {selectedInvoice.tenant_id}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="font-semibold tracking-wider text-slate-400 uppercase">
                         {t("invoice.paymentMethod")}:
                       </p>
@@ -427,7 +419,7 @@ export function OrganizationBilling() {
                       <thead>
                         <tr className="border-b border-slate-100 bg-slate-50 font-semibold text-slate-500 uppercase">
                           <th className="px-4 py-3">{t("invoice.table.desc")}</th>
-                          <th className="px-4 py-3 text-right">{t("invoice.table.total")}</th>
+                          <th className="px-4 py-3 text-end">{t("invoice.table.total")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -444,8 +436,8 @@ export function OrganizationBilling() {
                               {t("invoice.table.itemDesc")}
                             </p>
                           </td>
-                          <td className="px-4 py-4 text-right text-sm font-bold text-slate-900">
-                            {formatPrice(selectedInvoice.amount)}
+                          <td className="px-4 py-4 text-end text-sm font-bold text-slate-900">
+                            {formatPrice(selectedInvoice.amount, selectedInvoice.currency)}
                           </td>
                         </tr>
                       </tbody>
@@ -455,7 +447,7 @@ export function OrganizationBilling() {
                   <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-sm font-bold">
                     <span className="text-slate-700">{t("invoice.totalPaid")}</span>
                     <span className="text-lg text-slate-950">
-                      {formatPrice(selectedInvoice.amount)}
+                      {formatPrice(selectedInvoice.amount, selectedInvoice.currency)}
                     </span>
                   </div>
 
@@ -514,8 +506,8 @@ export function OrganizationBilling() {
                         <span className="font-semibold text-slate-950">
                           {formatPrice(
                             billingCycle === "yearly"
-                              ? selectedPlan.prices.yearly.amount
-                              : selectedPlan.prices.monthly.amount
+                              ? selectedPlan.prices.yearly.convertedAmount
+                              : selectedPlan.prices.monthly.convertedAmount
                           )}
                         </span>
                       </div>
@@ -533,7 +525,7 @@ export function OrganizationBilling() {
                       </div>
 
                       {billingCycle === "yearly" && (
-                        <div className="text-right text-[10px] text-slate-400 italic">
+                        <div className="text-end text-[10px] text-slate-400 italic">
                           {t("dialogPurchase.billedAnnually")}
                         </div>
                       )}

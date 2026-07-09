@@ -1,3 +1,4 @@
+// app/(auth)/(users)/[tenant_slug]/tasks/data-table.tsx
 "use client";
 
 import * as React from "react";
@@ -13,7 +14,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  FilterFn
+  FilterFn,
+  SortingFn
 } from "@tanstack/react-table";
 import {
   ArrowDown,
@@ -66,16 +68,19 @@ import {
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious
 } from "@/components/ui/pagination";
 
-import { formatToUserTimezone, formatRelativeTime } from "@/lib/date";
+// IMPORT: Helper I18n Kultur Terpusat Kita
+import { formatNumber, formatDateTime, formatRelativeTime } from "@/lib/i18n/format";
+import { compareStrings } from "@/lib/i18n/collator";
 import { useLocale, useTranslations } from "next-intl";
-import type { Task, MemberOption, TaskProfile } from "./logic";
+
+// SOLUSI: Mengambil tipe murni dari `./types` bukan dari `./logic`
+import type { Task, MemberOption, TaskProfile } from "./types";
 import type { SelectOption } from "./components/editable-cell";
 import { EditableCell, ReadonlyCell } from "./components/editable-cell";
 import { exportTasksToExcel } from "./export-tasks";
@@ -83,7 +88,6 @@ import { exportTasksToExcel } from "./export-tasks";
 const STATUS_VALUES = ["todo", "in_progress", "done", "cancelled"] as const;
 const PRIORITY_VALUES = ["low", "medium", "high", "urgent"] as const;
 
-// Pemetaan id kolom -> key terjemahan, untuk label dropdown "Columns".
 const COLUMN_LABEL_KEYS: Record<string, string> = {
   title: "data-table.headers.title",
   status: "data-table.headers.status",
@@ -105,16 +109,16 @@ const SortableHeader = ({ column, title }: { column: any; title: string }) => {
   const isSorted = column.getIsSorted();
   return (
     <Button
-      className="-ms-3 text-xs"
       variant="ghost"
-      onClick={() => column.toggleSorting(isSorted === "asc")}>
+      onClick={() => column.toggleSorting(isSorted === "asc")}
+      className="-ms-3 h-8 text-xs font-semibold">
       {title}
       {isSorted === "asc" ? (
-        <ArrowUp className="ms-2 h-4 w-4" />
+        <ArrowUp className="text-foreground ms-2 h-3.5 w-3.5 font-bold" />
       ) : isSorted === "desc" ? (
-        <ArrowDown className="ms-2 h-4 w-4" />
+        <ArrowDown className="text-foreground ms-2 h-3.5 w-3.5 font-bold" />
       ) : (
-        <ArrowUpDown className="ms-2 h-4 w-4" />
+        <ArrowUpDown className="ms-2 h-3.5 w-3.5 opacity-40 hover:opacity-100" />
       )}
     </Button>
   );
@@ -127,10 +131,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "success" | "outl
   cancelled: "outline"
 };
 
-const PRIORITY_VARIANT: Record<
-  string,
-  "outline" | "secondary" | "warning" | "destructive"
-> = {
+const PRIORITY_VARIANT: Record<string, "outline" | "secondary" | "warning" | "destructive"> = {
   low: "outline",
   medium: "secondary",
   high: "warning",
@@ -153,19 +154,14 @@ interface ColumnDeps {
   canEditTask: (t: Task) => boolean;
 }
 
-function getColumns(
-  t: any,
-  locale: string,
-  timeZone: string,
-  deps: ColumnDeps
-): ColumnDef<Task>[] {
-  const {
-    members,
-    statusOptions,
-    priorityOptions,
-    assigneeOptions,
-    canEditTask
-  } = deps;
+function getColumns(t: any, locale: string, timeZone: string, deps: ColumnDeps): ColumnDef<Task>[] {
+  const { members, statusOptions, priorityOptions, assigneeOptions, canEditTask } = deps;
+
+  const localeSortFn: SortingFn<Task> = (rowA, rowB, columnId) => {
+    const valA = String(rowA.getValue(columnId) ?? "");
+    const valB = String(rowB.getValue(columnId) ?? "");
+    return compareStrings(valA, valB, locale);
+  };
 
   return [
     {
@@ -192,7 +188,10 @@ function getColumns(
     },
     {
       accessorKey: "title",
-      header: ({ column }) => <SortableHeader column={column} title={t("data-table.headers.title")} />,
+      header: ({ column }) => (
+        <SortableHeader column={column} title={t("data-table.headers.title")} />
+      ),
+      sortingFn: localeSortFn,
       cell: ({ row, table }) => {
         const task = row.original;
         const meta = table.options.meta as any;
@@ -205,9 +204,7 @@ function getColumns(
             onView={() => meta?.onView(task)}
             displayValue={
               <div className="flex flex-col gap-0.5">
-                <span className="text-foreground text-sm font-semibold">
-                  {task.title || "—"}
-                </span>
+                <span className="text-foreground text-sm font-semibold">{task.title || "—"}</span>
                 {task.description ? (
                   <span className="text-muted-foreground line-clamp-1 max-w-[320px] text-[11px]">
                     {task.description}
@@ -225,6 +222,7 @@ function getColumns(
         <SortableHeader column={column} title={t("data-table.headers.status")} />
       ),
       filterFn: multiSelectFilterFn,
+      sortingFn: localeSortFn,
       cell: ({ row, table }) => {
         const task = row.original;
         const meta = table.options.meta as any;
@@ -237,9 +235,7 @@ function getColumns(
             options={statusOptions}
             onCommit={(v) => meta?.onUpdate(task.id, { status: v ?? "todo" })}
             onView={() => meta?.onView(task)}
-            displayValue={
-              <Badge variant={STATUS_VARIANT[task.status] ?? "outline"}>{label}</Badge>
-            }
+            displayValue={<Badge variant={STATUS_VARIANT[task.status] ?? "outline"}>{label}</Badge>}
           />
         );
       }
@@ -250,6 +246,7 @@ function getColumns(
         <SortableHeader column={column} title={t("data-table.headers.priority")} />
       ),
       filterFn: multiSelectFilterFn,
+      sortingFn: localeSortFn,
       cell: ({ row, table }) => {
         const task = row.original;
         const meta = table.options.meta as any;
@@ -276,6 +273,7 @@ function getColumns(
         <SortableHeader column={column} title={t("data-table.headers.assignee")} />
       ),
       filterFn: multiSelectFilterFn,
+      sortingFn: localeSortFn,
       cell: ({ row, table }) => {
         const task = row.original;
         const meta = table.options.meta as any;
@@ -326,7 +324,9 @@ function getColumns(
             onView={() => meta?.onView(task)}
             displayValue={
               value ? (
-                <span className="text-xs">{formatToUserTimezone(value, timeZone, locale)}</span>
+                <span className="text-xs">
+                  {formatDateTime(value, locale, { dateStyle: "medium", timeZone })}
+                </span>
               ) : (
                 <span className="text-muted-foreground text-xs">—</span>
               )
@@ -341,6 +341,7 @@ function getColumns(
       header: ({ column }) => (
         <SortableHeader column={column} title={t("data-table.headers.createdBy")} />
       ),
+      sortingFn: localeSortFn,
       cell: ({ row, table }) => {
         const task = row.original;
         const meta = table.options.meta as any;
@@ -372,7 +373,8 @@ function getColumns(
             displayValue={
               value ? (
                 <span className="text-muted-foreground text-xs">
-                  {formatRelativeTime(value, locale)}
+                  {/* SOLUSI: Menyertakan parameter 'timeZone' agar jam rincian dan pergantian hari tersinkronisasi sempurna */}
+                  {formatRelativeTime(value, locale, timeZone)}
                 </span>
               ) : (
                 <span className="text-muted-foreground text-xs">—</span>
@@ -396,7 +398,8 @@ function getColumns(
             displayValue={
               value ? (
                 <span className="text-muted-foreground text-xs">
-                  {formatToUserTimezone(value, timeZone, locale)}
+                  {/* SOLUSI: Menggunakan formatRelativeTime agar updated_at tampil adaptif seperti created_at */}
+                  {formatRelativeTime(value, locale, timeZone)}
                 </span>
               ) : (
                 <span className="text-muted-foreground text-xs">—</span>
@@ -422,9 +425,7 @@ function getColumns(
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => meta?.onView(task)}>
+              <DropdownMenuItem className="cursor-pointer" onClick={() => meta?.onView(task)}>
                 {t("data-table.actions.view")}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -451,6 +452,8 @@ interface TasksDataTableProps {
   onView: (task: Task) => void;
   onDelete: (task: Task) => void;
   onCreateClick: () => void;
+  preferredLanguage: string | null;
+  timeZone: string; // SOLUSI: Menambahkan prop timeZone yang berasal dari database user
 }
 
 export function TasksDataTable({
@@ -463,18 +466,20 @@ export function TasksDataTable({
   onUpdate,
   onView,
   onDelete,
-  onCreateClick
+  onCreateClick,
+  preferredLanguage,
+  timeZone // SOLUSI: Destrukturisasi langsung dari prop!
 }: TasksDataTableProps) {
   const t = useTranslations("tasks");
   const locale = useLocale();
-  const [timeZone, setTimeZone] = useState("UTC");
+
+  // HAPUS STATE LOKAL & EFFECT: state timeZone sekarang murni diatur oleh prop yang di-oper dari database!
 
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "created_at", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
 
-  // Filter facet state (apply-on-close).
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
@@ -489,17 +494,6 @@ export function TasksDataTable({
   const [searching, setSearching] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const z = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        if (z) setTimeZone(z);
-      } catch {
-        /* fallback UTC */
-      }
-    }
-  }, []);
-
   const statusOptions: SelectOption[] = useMemo(
     () => STATUS_VALUES.map((v) => ({ value: v, label: t(`data-table.statuses.${v}`) })),
     [t]
@@ -508,7 +502,7 @@ export function TasksDataTable({
     () => PRIORITY_VALUES.map((v) => ({ value: v, label: t(`data-table.priorities.${v}`) })),
     [t]
   );
-  // Opsi filter assignee: pakai nama (konsisten dgn accessorFn). Dedupe by nama.
+
   const assigneeFilterOptions = useMemo(() => {
     const seen = new Set<string>();
     const out: SelectOption[] = [];
@@ -520,7 +514,7 @@ export function TasksDataTable({
     }
     return out;
   }, [members]);
-  // Opsi editor assignee: pakai id.
+
   const assigneeEditOptions: SelectOption[] = useMemo(
     () => members.map((m) => ({ value: m.id, label: m.name })),
     [members]
@@ -529,6 +523,7 @@ export function TasksDataTable({
   const memoizedColumns = useMemo(
     () =>
       getColumns(t, locale, timeZone, {
+        // timeZone prop akan mentrigger kalkulasi ulang kolom otomatis jika berubah!
         members,
         statusOptions,
         priorityOptions,
@@ -553,7 +548,6 @@ export function TasksDataTable({
     meta: { onView, onUpdate, onDelete }
   });
 
-  // ---------- Search ----------
   const handleSearchTrigger = () => {
     setSearching(true);
     table.getColumn("title")?.setFilterValue(searchVal);
@@ -563,11 +557,7 @@ export function TasksDataTable({
     if (e.key === "Enter") handleSearchTrigger();
   };
 
-  // ---------- Facet handlers (apply on close) ----------
-  const makeOpenHandler = (
-    field: "status" | "priority" | "assignee",
-    open: boolean
-  ) => {
+  const makeOpenHandler = (field: "status" | "priority" | "assignee", open: boolean) => {
     if (open) {
       if (field === "status") setTempStatuses(selectedStatuses);
       if (field === "priority") setTempPriorities(selectedPriorities);
@@ -599,25 +589,26 @@ export function TasksDataTable({
     if (field === "assignee") setAssigneeOpen(true);
   };
 
-  const toggle = (
-    field: "status" | "priority" | "assignee",
-    value: string
-  ) => {
+  const toggle = (field: "status" | "priority" | "assignee", value: string) => {
     const setter =
-      field === "status" ? setTempStatuses : field === "priority" ? setTempPriorities : setTempAssignees;
+      field === "status"
+        ? setTempStatuses
+        : field === "priority"
+          ? setTempPriorities
+          : setTempAssignees;
     setter((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
   };
 
-  // ---------- Export ----------
   const handleExport = async () => {
     setIsExporting(true);
     try {
       const rows = table.getFilteredRowModel().rows.map((r) => r.original);
+      const exportLocale = preferredLanguage || locale;
+
       await exportTasksToExcel({
         rows,
         members,
-        t: (key: string, values?: Record<string, unknown>) => t(key as any, values as any),
-        locale,
+        locale: exportLocale,
         timeZone,
         orgName
       });
@@ -628,7 +619,6 @@ export function TasksDataTable({
     }
   };
 
-  // ---------- Pagination ----------
   const renderPaginationItems = () => {
     const totalPages = table.getPageCount();
     const currentPage = table.getState().pagination.pageIndex;
@@ -639,30 +629,13 @@ export function TasksDataTable({
           isActive={currentPage === pageIndex}
           onClick={() => table.setPageIndex(pageIndex)}
           className="cursor-pointer">
-          {pageIndex + 1}
+          {formatNumber(pageIndex + 1, locale)}
         </PaginationLink>
       </PaginationItem>
     );
-    if (totalPages <= 5) {
-      for (let i = 0; i < totalPages; i++) items.push(createPageItem(i));
-    } else {
-      items.push(createPageItem(0));
-      if (currentPage > 2)
-        items.push(
-          <PaginationItem key="ellipsis-start">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      const start = Math.max(1, currentPage - 1);
-      const end = Math.min(totalPages - 2, currentPage + 1);
-      for (let i = start; i <= end; i++) items.push(createPageItem(i));
-      if (currentPage < totalPages - 3)
-        items.push(
-          <PaginationItem key="ellipsis-end">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      items.push(createPageItem(totalPages - 1));
+
+    for (let i = 0; i < totalPages; i++) {
+      items.push(createPageItem(i));
     }
     return items;
   };
@@ -676,7 +649,11 @@ export function TasksDataTable({
     emptyKey: string
   ) => {
     const selectedArr =
-      field === "status" ? selectedStatuses : field === "priority" ? selectedPriorities : selectedAssignees;
+      field === "status"
+        ? selectedStatuses
+        : field === "priority"
+          ? selectedPriorities
+          : selectedAssignees;
     return (
       <Popover open={open} onOpenChange={(o) => makeOpenHandler(field, o)}>
         <PopoverTrigger asChild>
@@ -685,7 +662,7 @@ export function TasksDataTable({
             {label}
             {selectedArr.length > 0 && (
               <Badge variant="secondary" className="ms-2 rounded-sm px-1 font-normal lg:hidden">
-                {selectedArr.length}
+                {formatNumber(selectedArr.length, locale)}
               </Badge>
             )}
           </Button>
@@ -697,13 +674,16 @@ export function TasksDataTable({
               <CommandEmpty>{t(emptyKey)}</CommandEmpty>
               <CommandGroup>
                 {options.map((opt) => (
-                  <CommandItem key={opt.value} value={opt.value} onSelect={() => toggle(field, opt.value)}>
+                  <CommandItem
+                    key={opt.value}
+                    value={opt.value}
+                    onSelect={() => toggle(field, opt.value)}>
                     <div className="flex w-full cursor-pointer items-center gap-3 py-1">
                       <Checkbox
                         checked={temp.includes(opt.value)}
                         onCheckedChange={() => toggle(field, opt.value)}
                       />
-                      <label className="text-sm font-medium leading-none">{opt.label}</label>
+                      <label className="text-sm leading-none font-medium">{opt.label}</label>
                     </div>
                   </CommandItem>
                 ))}
@@ -715,12 +695,14 @@ export function TasksDataTable({
     );
   };
 
+  // ... Melanjutkan baris return (line 700+) dari data-table.tsx
   return (
     <div className="w-full">
       {/* TOOLBAR */}
-      <div className="flex flex-row flex-wrap gap-4 py-4 md:items-center">
+      <div className="flex flex-col gap-4 py-4 md:flex-row md:items-center">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="group relative max-w-sm flex-grow">
+          {/* SOLUSI: Menggunakan kelas 'grow' menggantikan 'flex-grow' sesuai linter Tailwind v4 */}
+          <div className="group relative max-w-sm grow">
             <Input
               placeholder={t("data-table.filters.search")}
               value={searchVal}
@@ -728,9 +710,18 @@ export function TasksDataTable({
               onKeyDown={handleSearchKeyDown}
               className="h-9 w-full pe-12"
             />
-            <div className="absolute end-1 top-1/2 -translate-y-1/2">
-              <Button onClick={handleSearchTrigger} disabled={searching} size="sm" className="h-8 w-8 p-0">
-                {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            {/* SOLUSI: Menggunakan kelas 'inset-e-1' menggantikan 'end-1' sesuai linter Tailwind v4 */}
+            <div className="absolute inset-e-1 top-1/2 -translate-y-1/2">
+              <Button
+                onClick={handleSearchTrigger}
+                disabled={searching}
+                size="sm"
+                className="h-8 w-8 p-0">
+                {searching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>
@@ -762,8 +753,16 @@ export function TasksDataTable({
         </div>
 
         <div className="ms-auto flex flex-wrap items-center gap-2">
-          <Button onClick={handleExport} variant="outline" className="h-9 text-xs" disabled={isExporting || tasks.length === 0}>
-            {isExporting ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Download className="me-2 h-4 w-4" />}
+          <Button
+            onClick={handleExport}
+            variant="outline"
+            className="h-9 text-xs"
+            disabled={isExporting || tasks.length === 0}>
+            {isExporting ? (
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="me-2 h-4 w-4" />
+            )}
             <span className="hidden sm:inline">{t("download")}</span>
           </Button>
 
@@ -823,9 +822,12 @@ export function TasksDataTable({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} className="hover:bg-accent/5">
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                  className="hover:bg-accent/5">
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3 text-xs align-top">
+                    <TableCell key={cell.id} className="py-3 align-top text-xs">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -833,7 +835,9 @@ export function TasksDataTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={memoizedColumns.length} className="text-muted-foreground h-24 text-center">
+                <TableCell
+                  colSpan={memoizedColumns.length}
+                  className="text-muted-foreground h-24 text-center">
                   {t("data-table.footer.noResults")}
                 </TableCell>
               </TableRow>
@@ -846,8 +850,8 @@ export function TasksDataTable({
       <div className="flex flex-col items-center justify-between gap-4 pt-4 md:flex-row">
         <div className="text-muted-foreground order-2 text-xs md:order-1">
           {t("data-table.footer.selected", {
-            selected: table.getFilteredSelectedRowModel().rows.length,
-            total: table.getFilteredRowModel().rows.length
+            selected: formatNumber(table.getFilteredSelectedRowModel().rows.length, locale),
+            total: formatNumber(table.getFilteredRowModel().rows.length, locale)
           })}
         </div>
         <div className="order-1 flex w-full flex-col items-center justify-end gap-4 sm:flex-row md:order-2 md:w-auto">
@@ -855,13 +859,15 @@ export function TasksDataTable({
             <Select
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(val) => table.setPageSize(Number(val))}>
-              <SelectTrigger className="border-border/80 h-8 w-[70px] rounded-lg text-xs">
-                <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectTrigger className="border-border/80 h-8 w-20 rounded-lg text-xs">
+                <SelectValue
+                  placeholder={formatNumber(table.getState().pagination.pageSize, locale)}
+                />
               </SelectTrigger>
               <SelectContent>
                 {[10, 20, 50, 100].map((size) => (
                   <SelectItem key={size} value={`${size}`} className="text-xs">
-                    {size}
+                    {formatNumber(size, locale)}
                   </SelectItem>
                 ))}
               </SelectContent>

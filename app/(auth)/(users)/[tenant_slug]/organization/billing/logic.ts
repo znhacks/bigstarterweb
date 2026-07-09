@@ -1,9 +1,13 @@
+// useOrganizationBilling.ts
 "use client";
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { plans, Plan } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
+import { formatCurrency } from "@/lib/i18n/currency";
+import { convertCurrency } from "@/actions/currency";
+import { getDisplayCurrency } from "@/config/i18n-culture";
 
 export interface AlertState {
   title: string;
@@ -15,6 +19,7 @@ export interface Transaction {
   id: string;
   tenant_id: string;
   amount: number;
+  currency?: string;
   plan_name: string;
   order_id: string;
   status: string;
@@ -32,16 +37,34 @@ export interface ActiveSubscription {
   cancelAtPeriodEnd: boolean;
 }
 
+export interface ConvertedPlan extends Plan {
+  prices: {
+    monthly: {
+      amount: number;
+      convertedAmount: number; // Nilai lokal terkonversi (default tetap IDR jika locale ID)
+      paypalPlanId?: string;
+      stripePriceId?: string;
+    };
+    yearly: {
+      amount: number;
+      convertedAmount: number;
+      paypalPlanId?: string;
+      stripePriceId?: string;
+    };
+  };
+}
+
 export function useOrganizationBilling() {
   const locale = useLocale();
   const t = useTranslations("organization.organization-billing");
+  const targetCurrency = getDisplayCurrency(locale);
 
-  const formatPrice = (price: number) => {
-    const isEn = locale.toLowerCase().startsWith("en") || locale === "English";
-    return new Intl.NumberFormat(isEn ? "en-US" : "id-ID", {
-      style: "currency",
-      currency: "USD"
-    }).format(price);
+  // Pemformatan Mata Uang berbasis Kultur terpusat
+  const formatPrice = (price: number, currencyCode?: string) => {
+    const activeCurrency = currencyCode ?? targetCurrency;
+    return formatCurrency(price, locale, {
+      currencyCode: activeCurrency
+    });
   };
 
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
@@ -53,7 +76,18 @@ export function useOrganizationBilling() {
   const [isUpdatingSub, setIsUpdatingSub] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  // Inisialisasi list paket menggunakan harga Rupiah dasar dari config
+  const [convertedPlans, setConvertedPlans] = useState<ConvertedPlan[]>(() =>
+    plans.map((p) => ({
+      ...p,
+      prices: {
+        monthly: { ...p.prices.monthly, convertedAmount: p.prices.monthly.amount },
+        yearly: { ...p.prices.yearly, convertedAmount: p.prices.yearly.amount }
+      }
+    }))
+  );
+
+  const [selectedPlan, setSelectedPlan] = useState<ConvertedPlan | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isRefundDialogOpen, setIsRefundDialogOpen] = useState(false);
 
@@ -61,10 +95,43 @@ export function useOrganizationBilling() {
   const [selectedInvoice, setSelectedInvoice] = useState<Transaction | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
+  // Mengonversi harga paket dari basis IDR ke mata uang target sistem
+  const initializeConvertedPlans = async () => {
+    try {
+      const updated = await Promise.all(
+        plans.map(async (plan) => {
+          // Tanpa override: konversi dari IDR (CURRENCY.base) ke targetCurrency (IDR/USD/SAR)
+          const monthlyConv = await convertCurrency(plan.prices.monthly.amount, targetCurrency);
+          const yearlyConv = await convertCurrency(plan.prices.yearly.amount, targetCurrency);
+          return {
+            ...plan,
+            prices: {
+              monthly: {
+                ...plan.prices.monthly,
+                convertedAmount: monthlyConv.amount
+              },
+              yearly: {
+                ...plan.prices.yearly,
+                convertedAmount: yearlyConv.amount
+              }
+            }
+          };
+        })
+      );
+      setConvertedPlans(updated);
+    } catch (err) {
+      console.error("Gagal mengonversi harga paket:", err);
+    }
+  };
+
   const loadBillingData = async (orgId: string) => {
     setIsLoading(true);
     try {
-      await Promise.all([fetchActiveSubscription(orgId), fetchTransactionHistory(orgId)]);
+      await Promise.all([
+        fetchActiveSubscription(orgId),
+        fetchTransactionHistory(orgId),
+        initializeConvertedPlans()
+      ]);
     } catch (e: any) {
       console.error("Gagal memuat data billing:", e);
     } finally {
@@ -146,7 +213,7 @@ export function useOrganizationBilling() {
     }
   }, [alertMessage]);
 
-  const handleChoosePlan = (plan: Plan) => {
+  const handleChoosePlan = (plan: ConvertedPlan) => {
     setSelectedPlan(plan);
     setIsCheckoutOpen(true);
   };
@@ -163,9 +230,9 @@ export function useOrganizationBilling() {
       if (error) throw error;
 
       setAlertMessage({
-        title: locale === "English" ? "Auto-Renewal Disabled" : "Perpanjangan Dinonaktifkan",
+        title: locale === "en" ? "Auto-Renewal Disabled" : "Perpanjangan Dinonaktifkan",
         description: t("alerts.successCancel", {
-          date: activeSub.endsAt ? new Date(activeSub.endsAt).toLocaleDateString("id-ID") : ""
+          date: activeSub.endsAt ? new Date(activeSub.endsAt).toLocaleDateString(locale) : ""
         }),
         variant: "default"
       });
@@ -194,7 +261,7 @@ export function useOrganizationBilling() {
       if (error) throw error;
 
       setAlertMessage({
-        title: locale === "English" ? "Subscription Resumed" : "Langganan Diaktifkan Kembali",
+        title: locale === "en" ? "Subscription Resumed" : "Langganan Diaktifkan Kembali",
         description: t("alerts.successResume"),
         variant: "default"
       });
@@ -223,7 +290,7 @@ export function useOrganizationBilling() {
       if (error) throw error;
 
       setAlertMessage({
-        title: locale === "English" ? "Refund Claimed" : "Refund Diajukan",
+        title: locale === "en" ? "Refund Claimed" : "Refund Diajukan",
         description: t("alerts.successRefund"),
         variant: "default"
       });
@@ -261,11 +328,11 @@ export function useOrganizationBilling() {
 
       const finalPrice =
         billingCycle === "yearly"
-          ? selectedPlan.prices.yearly.amount
-          : selectedPlan.prices.monthly.amount;
+          ? selectedPlan.prices.yearly.convertedAmount
+          : selectedPlan.prices.monthly.convertedAmount;
 
       setAlertMessage({
-        title: locale === "English" ? "Payment Successful" : "Pembayaran Berhasil",
+        title: locale === "en" ? "Payment Successful" : "Pembayaran Berhasil",
         description: t("alerts.successPay", {
           planName: selectedPlan.name,
           price: formatPrice(finalPrice),
@@ -299,13 +366,13 @@ export function useOrganizationBilling() {
     const totalDuration = end - start;
     const remainingTime = end - now;
 
-    const activePlanConfig = plans.find((p) => p.id === activeSub.planId);
+    const activePlanConfig = convertedPlans.find((p) => p.id === activeSub.planId);
     if (!activePlanConfig) return 0;
 
     const originalPrice =
       billingCycle === "yearly"
-        ? activePlanConfig.prices.yearly.amount
-        : activePlanConfig.prices.monthly.amount;
+        ? activePlanConfig.prices.yearly.convertedAmount
+        : activePlanConfig.prices.monthly.convertedAmount;
 
     const remainingRatio = remainingTime / totalDuration;
     const credit = remainingRatio * originalPrice;
@@ -313,11 +380,11 @@ export function useOrganizationBilling() {
     return Math.max(0, parseFloat(credit.toFixed(2)));
   };
 
-  const getUpgradePrice = (targetPlan: Plan) => {
+  const getUpgradePrice = (targetPlan: ConvertedPlan) => {
     const targetPrice =
       billingCycle === "yearly"
-        ? targetPlan.prices.yearly.amount
-        : targetPlan.prices.monthly.amount;
+        ? targetPlan.prices.yearly.convertedAmount
+        : targetPlan.prices.monthly.convertedAmount;
     const credit = getRemainingCredit();
 
     const isUpgrade = getPlanActionType(targetPlan.id) === "upgrade";
@@ -360,15 +427,16 @@ export function useOrganizationBilling() {
   const daysLeft = getDaysLeft();
   const showWarningBanner = isSubActive && daysLeft <= 3 && daysLeft > 0;
 
-  const activePlanConfig = activeSub ? plans.find((p) => p.id === activeSub.planId) : null;
+  const activePlanConfig = activeSub ? convertedPlans.find((p) => p.id === activeSub.planId) : null;
   const currentActivePrice = activePlanConfig
     ? billingCycle === "yearly"
-      ? activePlanConfig.prices.yearly.amount
-      : activePlanConfig.prices.monthly.amount
+      ? activePlanConfig.prices.yearly.convertedAmount
+      : activePlanConfig.prices.monthly.convertedAmount
     : 0;
 
   return {
     locale,
+    targetCurrency,
     t,
     formatPrice,
     activeOrgId,
@@ -380,6 +448,7 @@ export function useOrganizationBilling() {
     isLoading,
     isUpdatingSub,
     isVerifyingPayment,
+    convertedPlans,
     selectedPlan,
     isCheckoutOpen,
     setIsCheckoutOpen,

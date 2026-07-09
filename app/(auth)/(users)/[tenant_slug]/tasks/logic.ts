@@ -1,3 +1,4 @@
+// app/[locale]/settings/tasks/logic.ts
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -5,12 +6,8 @@ import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
 import { PERMISSIONS, hasPermission, type PermissionName } from "@/lib/rbac";
 import type { Task, MemberOption, AlertState, TaskInput } from "./types";
-import {
-  fetchTasksAction,
-  createTaskAction,
-  updateTaskAction,
-  deleteTaskAction
-} from "./actions";
+import { compareStrings } from "@/lib/i18n/collator";
+import { fetchTasksAction, createTaskAction, updateTaskAction, deleteTaskAction } from "./actions";
 
 interface UseTasksArgs {
   tenantSlug: string;
@@ -32,7 +29,9 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-  // Timezone pengguna (client-side, sama pola dgn superadmin/users).
+  // State Preferensi Bahasa murni dari database profil pengguna
+  const [preferredLanguage, setPreferredLanguage] = useState<string | null>(null);
+
   const [timeZone, setTimeZone] = useState("UTC");
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -45,14 +44,12 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
     }
   }, []);
 
-  // Auto-dismiss alert setelah 5 detik.
   useEffect(() => {
     if (!alertMessage) return;
     const timer = setTimeout(() => setAlertMessage(null), 5000);
     return () => clearTimeout(timer);
   }, [alertMessage]);
 
-  // ---------- Tasks (via server action; data ada di schema tenant_shared) ----------
   const fetchTasks = useCallback(async () => {
     const res = await fetchTasksAction(tenantSlug);
     if (res.error || !res.data) {
@@ -63,7 +60,6 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
     setTasks(res.data);
   }, [tenantSlug]);
 
-  // ---------- Members (public schema, via browser supabase) ----------
   const fetchMembers = useCallback(async () => {
     const { data, error } = await supabase
       .from("memberships")
@@ -79,16 +75,33 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
         name: item.profiles?.full_name || "Unknown"
       }))
       .filter((m) => !!m.id);
-    setMembers(mapped);
-  }, [tenantId]);
 
-  // ---------- Authority user (public schema) ----------
+    const sortedMembers = mapped.sort((a, b) => compareStrings(a.name, b.name, locale));
+    setMembers(sortedMembers);
+  }, [tenantId, locale]);
+
   const fetchCurrentUser = useCallback(async () => {
     const {
       data: { user }
     } = await supabase.auth.getUser();
     if (!user) return;
     setCurrentUserId(user.id);
+
+    // Ambil preferensi bahasa (preferred_language) dan zona waktu dari database user
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("timezone, preferred_language")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileData) {
+      if (profileData.timezone) {
+        setTimeZone(profileData.timezone);
+      }
+      if (profileData.preferred_language) {
+        setPreferredLanguage(profileData.preferred_language);
+      }
+    }
 
     const { data, error } = await supabase
       .from("memberships")
@@ -118,7 +131,6 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
     loadAll();
   }, [loadAll]);
 
-  // ---------- CRUD ----------
   const createTask = async (payload: TaskInput) => {
     setIsSaving(true);
     try {
@@ -143,13 +155,12 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
   };
 
   const updateTask = async (id: string, patch: Partial<Task>) => {
-    // Optimistic: update state lokal dulu, rollback bila gagal.
     const prev = tasks;
     setTasks((cur) => cur.map((tk) => (tk.id === id ? { ...tk, ...patch } : tk)));
 
     const res = await updateTaskAction(tenantSlug, id, patch);
     if (res.error || !res.data) {
-      setTasks(prev); // rollback
+      setTasks(prev);
       setAlertMessage({
         title: "Error",
         description: res.error || t("alerts.updateFailed"),
@@ -169,7 +180,7 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
 
     const res = await deleteTaskAction(tenantSlug, target.id);
     if (res.error) {
-      setTasks(prev); // rollback
+      setTasks(prev);
       setAlertMessage({
         title: "Error",
         description: res.error || t("alerts.deleteFailed"),
@@ -184,7 +195,6 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
     });
   };
 
-  // ---------- Derived authority ----------
   const canCreate = hasPermission(userPermissions, PERMISSIONS.tasksCreate);
   const canUpdateAll = hasPermission(userPermissions, PERMISSIONS.tasksUpdate);
   const canDelete = hasPermission(userPermissions, PERMISSIONS.tasksDelete);
@@ -198,34 +208,27 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
   const isReadOnly = !canCreate && !canUpdateAll;
 
   return {
-    // i18n / locale
     locale,
+    preferredLanguage, // Pasok preferensi bahasa database pengguna ke luar
     t,
     timeZone,
-    // data
     tasks,
     members,
     tenantName,
-    // authority
     canCreate,
     canUpdateAll,
     canDelete,
     canEditTask,
     isReadOnly,
-    // ui state
     isLoading,
     isSaving,
     alertMessage,
     setAlertMessage,
     taskToDelete,
     setTaskToDelete,
-    // actions
     createTask,
     updateTask,
     confirmDelete,
     refetch: loadAll
   };
 }
-
-// Re-export tipe agar pemakaian lama (mis. data-table) tetap kompatibel.
-export type { Task, MemberOption, TaskProfile, TaskStatus, TaskPriority } from "./types";

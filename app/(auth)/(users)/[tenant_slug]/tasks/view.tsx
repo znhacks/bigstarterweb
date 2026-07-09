@@ -1,10 +1,11 @@
+// app/(auth)/(users)/[tenant_slug]/tasks/view.tsx
 "use client";
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { useTasks, type Task } from "./logic";
+import { useTasks } from "./logic";
+import type { Task } from "./types";
 import { TasksDataTable } from "./data-table";
-import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -35,7 +36,8 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { formatToUserTimezone } from "@/lib/date";
+import { formatDateTime } from "@/lib/i18n/format";
+import { getLocaleMeta } from "@/config/i18n-culture";
 
 const STATUS_VALUES = ["todo", "in_progress", "done", "cancelled"] as const;
 const PRIORITY_VALUES = ["low", "medium", "high", "urgent"] as const;
@@ -59,6 +61,8 @@ interface TasksViewProps {
 export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) {
   const h = useTasks({ tenantSlug, tenantId, tenantName });
   const { t, locale, timeZone } = h;
+
+  const meta = getLocaleMeta(locale);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
@@ -91,7 +95,7 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
     id ? h.members.find((m) => m.id === id)?.name || id : t("detail.unassigned");
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8">
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8" dir={meta.dir}>
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("title")}</h1>
@@ -116,7 +120,7 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
 
       <div>
         {h.isLoading ? (
-          <div className="flex min-h-[400px] items-center justify-center">
+          <div className="flex min-h-100 items-center justify-center">
             <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
           </div>
         ) : (
@@ -131,13 +135,15 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
             onView={(task) => setDetailTask(task)}
             onDelete={(task) => h.setTaskToDelete(task)}
             onCreateClick={openCreate}
+            preferredLanguage={h.preferredLanguage}
+            timeZone={timeZone} // SOLUSI: Mengoper Zona Waktu resmi dari Database User ke Komponen Tabel!
           />
         )}
       </div>
 
       {/* DIALOG: Create task */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-[520px]">
+        <DialogContent className="sm:max-w-130" dir={meta.dir}>
           <DialogHeader>
             <DialogTitle>{t("form.createTitle")}</DialogTitle>
           </DialogHeader>
@@ -249,7 +255,7 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
 
       {/* DIALOG: Detail task */}
       <Dialog open={!!detailTask} onOpenChange={(o) => !o && setDetailTask(null)}>
-        <DialogContent className="sm:max-w-[560px]">
+        <DialogContent className="sm:max-w-140" dir={meta.dir}>
           <DialogHeader>
             <DialogTitle>{t("detail.title")}</DialogTitle>
           </DialogHeader>
@@ -282,24 +288,33 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
                     {detailTask.creator?.full_name || memberName(detailTask.created_by)}
                   </span>
                 </DetailField>
+
                 <DetailField label={t("detail.fields.dueDate")}>
                   <span className="text-sm">
                     {detailTask.due_date
-                      ? formatToUserTimezone(detailTask.due_date, timeZone, locale)
+                      ? formatDateTime(detailTask.due_date, locale, { dateStyle: "long", timeZone })
                       : "—"}
                   </span>
                 </DetailField>
                 <DetailField label={t("detail.fields.createdAt")}>
                   <span className="text-muted-foreground text-sm">
                     {detailTask.created_at
-                      ? formatToUserTimezone(detailTask.created_at, timeZone, locale)
+                      ? formatDateTime(detailTask.created_at, locale, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                          timeZone
+                        })
                       : "—"}
                   </span>
                 </DetailField>
                 <DetailField label={t("detail.fields.updatedAt")}>
                   <span className="text-muted-foreground text-sm">
                     {detailTask.updated_at
-                      ? formatToUserTimezone(detailTask.updated_at, timeZone, locale)
+                      ? formatDateTime(detailTask.updated_at, locale, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                          timeZone
+                        })
                       : "—"}
                   </span>
                 </DetailField>
@@ -311,7 +326,7 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
 
       {/* DIALOG: Confirm delete */}
       <AlertDialog open={!!h.taskToDelete} onOpenChange={(o) => !o && h.setTaskToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent dir={meta.dir}>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("data-table.confirmDelete")}</AlertDialogTitle>
             <AlertDialogDescription>

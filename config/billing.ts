@@ -54,12 +54,12 @@ export const plans: Plan[] = [
     maxScreenshots: 2000,
     prices: {
       monthly: {
-        amount: 19,
+        amount: 49000,
         paypalPlanId: "P-STARTER-MONTHLY", // Ganti dengan ID asli Anda
         stripePriceId: "price_starter_monthly"
       },
       yearly: {
-        amount: 190,
+        amount: 490000,
         paypalPlanId: "P-STARTER-YEARLY",
         stripePriceId: "price_starter_yearly"
       }
@@ -81,12 +81,12 @@ export const plans: Plan[] = [
     maxScreenshots: 10000,
     prices: {
       monthly: {
-        amount: 49,
+        amount: 99000,
         paypalPlanId: "P-PRO-MONTHLY",
         stripePriceId: "price_pro_monthly"
       },
       yearly: {
-        amount: 490,
+        amount: 990000,
         paypalPlanId: "P-PRO-YEARLY",
         stripePriceId: "price_pro_yearly"
       }
