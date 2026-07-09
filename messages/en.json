@@ -87,6 +87,11 @@
     "noorgfound": "No organization found",
     "neworg": "New Organization",
     "addneworg": "Add New Organization",
+    "searchdialog": {
+      "title": "Search Commands",
+      "empty": "No Results found",
+      "placeholder": "Type a command or search..."
+    },
     "confirmDelete": {
       "title": "Are you absolutely sure?",
       "description": "This action cannot be undone. This will permanently delete {name} and all of its associated data.",
@@ -102,6 +107,46 @@
       "empty": "Nothing to restore.",
       "deletedOn": "Deleted",
       "restore": "Restore"
+    }
+  },
+  "notfound": {
+    "code": "404",
+    "title": "Page not found",
+    "desc": "Sorry, we couldn’t find the page you’re looking for.",
+    "gohome": "Go Back Home",
+    "cs": "Contact Support"
+  },
+  "login": {
+    "title": "Log In",
+    "desc": "Enter your credentials to sign in to your account.",
+    "noaccount?": "Don't have an account?",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "forgotpassword": "Forgot your password?",
+    "magiclink": "Magic Link",
+    "sendmagiclink": "Send Magic Link",
+    "continuewith": "Or continue with",
+    "withpasskey": "Sign in with Passkey",
+    "logsucces": "Successfully signed in! Redirecting...",
+    "wronginput": "Incorrect email or password.",
+    "sendmailsuccess": "A sign-in link has been sent to your email.",
+    "sendmailfailed": "Failed to send the Magic Link.",
+    "googlefailed": "Failed to sign in with Google.",
+    "githubfailed": "Failed to sign in with GitHub.",
+    "passkeysuccess": "Passkey authentication successful!",
+    "passkeyfailed": "Passkey authentication failed.",
+    "error": "Error",
+    "success": "Success",
+    "deleted": {
+      "title": "Account Deleted",
+      "desc": "Your account has been deleted. Sign in with your credentials to restore it."
+    },
+    "banned": {
+      "title": "Account Suspended",
+      "desc": "Your account has been suspended by the administrator.",
+      "reason": "Reason: {{reason}}",
+      "until": "Until: {{date}}"
     }
   },
   "billing": {

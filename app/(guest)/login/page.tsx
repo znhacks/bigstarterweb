@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DemoSandbox } from "./components/demosanbox";
 import { constructMetadata } from "@/lib/metadata";
 import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.login");
@@ -18,21 +19,22 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
+  const tlogin = useTranslations("login");
   return (
     <div className="flex items-center justify-center py-4 lg:h-screen">
       <Card className="mx-auto w-96">
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>Enter your email below to login to your account</CardDescription>
+          <CardTitle className="text-2xl">{tlogin("title")}</CardTitle>
+          <CardDescription>{tlogin("desc")}</CardDescription>
         </CardHeader>
         <CardContent>
           {/* Form Login Client Component */}
           <LoginForm />
 
           <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account?{" "}
+            {tlogin("noaccount?")}{" "}
             <Link href="/register" className="underline">
-              Sign up
+              {"signup"}
             </Link>
           </div>
         </CardContent>

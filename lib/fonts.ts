@@ -22,62 +22,72 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const roboto = Roboto({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
-  variable: "--font-roboto"
+  variable: "--font-roboto",
+  preload: true
 });
 
 const plus_jakarta_sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "800"],
-  variable: "--font-plus-jakarta-sans"
+  variable: "--font-plus-jakarta-sans",
+  preload: true
 });
 
 const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-montserrat"
+  variable: "--font-montserrat",
+  preload: true
 });
 
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-poppins"
+  variable: "--font-poppins",
+  preload: true
 });
 
 const overpass_mono = Overpass_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
-  variable: "--font-overpass-mono"
+  variable: "--font-overpass-mono",
+  preload: true
 });
 
 const ptSans = PT_Sans({
   variable: "--font-pt-sans",
   subsets: ["latin"],
-  weight: ["400", "700"]
+  weight: ["400", "700"],
+  preload: true
 });
 
 const hedvig_letters_serif = Hedvig_Letters_Serif({
   subsets: ["latin"],
   weight: ["400"],
-  variable: "--font-hedvig-letters-serif"
+  variable: "--font-hedvig-letters-serif",
+  preload: true
 });
 
 const kumbh_sans = Kumbh_Sans({
   subsets: ["latin"],
   weight: ["400"],
-  variable: "--font-kumbh-sans"
+  variable: "--font-kumbh-sans",
+  preload: true
 });
 
 const outfit = Outfit({
   subsets: ["latin"],
   weight: ["400"],
-  variable: "--font-outfit"
+  variable: "--font-outfit",
+  preload: true
 });
 
 // Konfigurasi Font Arab Cairo
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
-  variable: "--font-arabic"
+  variable: "--font-arabic",
+  preload: true
 });
 
 export const fontVariables = cn(

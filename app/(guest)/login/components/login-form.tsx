@@ -22,6 +22,8 @@ import {
 
 // Gunakan client Supabase yang mendukung SSR/Cookies (lihat Bagian 2)
 import { supabase } from "@/lib/supabase";
+import { useLocale, useTranslations } from "next-intl";
+import { formatDateTime } from "@/lib/i18n/format";
 
 export function LoginForm() {
   const router = useRouter();
@@ -31,7 +33,10 @@ export function LoginForm() {
 
   // Jika diarahkan karena banned (user masih punya sesi), ambil detail ban
   // (until/reason) untuk ditampilkan. Profile sendiri selalu bisa dibaca.
-  const [bannedInfo, setBannedInfo] = useState<{ until: string | null; reason: string | null } | null>(null);
+  const [bannedInfo, setBannedInfo] = useState<{
+    until: string | null;
+    reason: string | null;
+  } | null>(null);
   useEffect(() => {
     if (reason !== "banned") return;
     (async () => {
@@ -44,7 +49,8 @@ export function LoginForm() {
         .select("banned_until, banned_reason")
         .eq("id", user.id)
         .maybeSingle();
-      if (data) setBannedInfo({ until: (data as any).banned_until, reason: (data as any).banned_reason });
+      if (data)
+        setBannedInfo({ until: (data as any).banned_until, reason: (data as any).banned_reason });
     })();
   }, [reason]);
 
@@ -57,6 +63,8 @@ export function LoginForm() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const locale = useLocale();
+  const t = useTranslations("login");
 
   // Fungsi pengarah halaman berdasarkan metadata pengguna
   const handleRedirect = (user: any) => {
@@ -90,13 +98,13 @@ export function LoginForm() {
       if (error) throw error;
 
       if (data.user) {
-        setSuccessMsg("Login berhasil! Mengalihkan halaman...");
+        setSuccessMsg(t("logsucces"));
         setTimeout(() => {
           handleRedirect(data.user);
         }, 1000);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "Email atau password salah.");
+      setErrorMsg(err.message || t("wronginput"));
     } finally {
       setIsLoading(false);
     }
@@ -125,10 +133,10 @@ export function LoginForm() {
 
       if (error) throw error;
 
-      setSuccessMsg("Tautan akses telah dikirim ke email Anda.");
+      setSuccessMsg(t("sendmailsuccess"));
       setEmail("");
     } catch (err: any) {
-      setErrorMsg(err.message || "Gagal mengirimkan Magic Link.");
+      setErrorMsg(err.message || t("sendmailfailed"));
     } finally {
       setIsLoading(false);
     }
@@ -147,7 +155,7 @@ export function LoginForm() {
       });
       if (error) throw error;
     } catch (err: any) {
-      setErrorMsg(err.message || "Gagal masuk menggunakan Google.");
+      setErrorMsg(err.message || t("googlefailed"));
       setIsLoading(false);
     }
   };
@@ -165,7 +173,7 @@ export function LoginForm() {
       });
       if (error) throw error;
     } catch (err: any) {
-      setErrorMsg(err.message || "Gagal masuk menggunakan GitHub.");
+      setErrorMsg(err.message || t("githubfailed"));
       setIsLoading(false);
     }
   };
@@ -185,7 +193,7 @@ export function LoginForm() {
       if (error) throw error;
 
       if (data?.user) {
-        setSuccessMsg("Autentikasi Passkey berhasil!");
+        setSuccessMsg(t("passkeysuccess"));
         setTimeout(() => {
           handleRedirect(data.user);
         }, 1000);
@@ -202,7 +210,7 @@ export function LoginForm() {
       ) {
         setErrorMsg(null);
       } else {
-        setErrorMsg(rawMessage || "Autentikasi Passkey gagal.");
+        setErrorMsg(rawMessage || t("passkeyfailed"));
       }
     } finally {
       setIsLoading(false);
@@ -215,7 +223,7 @@ export function LoginForm() {
       {errorMsg && (
         <Alert variant="destructive" className="rounded-xl">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t("error")}</AlertTitle>
           <AlertDescription>{errorMsg}</AlertDescription>
         </Alert>
       )}
@@ -223,7 +231,7 @@ export function LoginForm() {
       {successMsg && (
         <Alert className="rounded-xl border-emerald-500/20 bg-emerald-500/10 text-emerald-600">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          <AlertTitle>Success</AlertTitle>
+          <AlertTitle>{t("success")}</AlertTitle>
           <AlertDescription>{successMsg}</AlertDescription>
         </Alert>
       )}
@@ -231,23 +239,31 @@ export function LoginForm() {
       {reason === "deleted" && (
         <Alert className="rounded-xl border-amber-500/20 bg-amber-500/10 text-amber-600">
           <ShieldAlert className="h-4 w-4 text-amber-600" />
-          <AlertTitle>Account deleted</AlertTitle>
-          <AlertDescription>
-            Your account has been deleted. Log in with your credentials to restore it.
-          </AlertDescription>
+          <AlertTitle>{t("deleted.title")}</AlertTitle>
+          <AlertDescription>{t("deleted.desc")}</AlertDescription>
         </Alert>
       )}
 
       {reason === "banned" && (
         <Alert variant="destructive" className="rounded-xl">
           <ShieldAlert className="h-4 w-4" />
-          <AlertTitle>Account suspended</AlertTitle>
+          <AlertTitle>{t("banned.title")}</AlertTitle>
           <AlertDescription>
-            Your account has been suspended by an administrator.
-            {bannedInfo?.reason && <span className="block">Reason: {bannedInfo.reason}</span>}
+            {t("banned.desc")}
+
+            {bannedInfo?.reason && (
+              <span className="block">
+                {t("banned.reason")}: {bannedInfo.reason}
+              </span>
+            )}
+
             {bannedInfo?.until && (
               <span className="block">
-                Until: {new Date(bannedInfo.until).toLocaleString()}
+                {t("banned.until")}:{" "}
+                {formatDateTime(bannedInfo.until, locale, {
+                  dateStyle: "medium",
+                  timeStyle: "short"
+                })}
               </span>
             )}
           </AlertDescription>
@@ -260,12 +276,12 @@ export function LoginForm() {
           <TabsTrigger
             value="password"
             className="data-[state=active]:border-b-foreground rounded-none border-b-2 border-b-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:shadow-none">
-            Password
+            {t("password")}
           </TabsTrigger>
           <TabsTrigger
             value="magic"
             className="data-[state=active]:border-b-foreground rounded-none border-b-2 border-b-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:shadow-none">
-            Magic link
+            {t("magiclink")}
           </TabsTrigger>
         </TabsList>
 
@@ -273,7 +289,7 @@ export function LoginForm() {
         <TabsContent value="password" className="mt-0 focus-visible:outline-none">
           <form onSubmit={handlePasswordLogin} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email-password">Email</Label>
+              <Label htmlFor="email-password">{t("email")}</Label>
               <Input
                 id="email-password"
                 type="email"
@@ -287,11 +303,11 @@ export function LoginForm() {
             </div>
             <div className="grid gap-2">
               <div className="flex items-center">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("password")}</Label>
                 <Link
                   href="/forgot-password"
                   className="text-muted-foreground ml-auto inline-block text-xs hover:underline">
-                  Forgot your password?
+                  {t("forgotpassword")}
                 </Link>
               </div>
               <div className="relative">
@@ -307,7 +323,7 @@ export function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute top-1/2 end-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
@@ -317,7 +333,7 @@ export function LoginForm() {
               className="bg-foreground text-background hover:bg-foreground/90 mt-1 h-10 w-full font-medium"
               disabled={isLoading}>
               {isLoading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Login
+              {t("title")}
             </Button>
           </form>
         </TabsContent>
@@ -326,7 +342,7 @@ export function LoginForm() {
         <TabsContent value="magic" className="mt-0 focus-visible:outline-none">
           <form onSubmit={handleMagicLinkLogin} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email-magic">Email</Label>
+              <Label htmlFor="email-magic">{t("email")}</Label>
               <Input
                 id="email-magic"
                 type="email"
@@ -343,7 +359,7 @@ export function LoginForm() {
               className="bg-foreground text-background hover:bg-foreground/90 mt-1 h-10 w-full font-medium"
               disabled={isLoading || !email.trim()}>
               {isLoading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Send magic link
+              {t("sendmagiclink")}
             </Button>
           </form>
         </TabsContent>
@@ -353,7 +369,7 @@ export function LoginForm() {
       <div className="my-1">
         <div className="flex items-center gap-3">
           <div className="border-border/60 w-full border-t" />
-          <span className="text-muted-foreground shrink-0 text-xs">Or continue with</span>
+          <span className="text-muted-foreground shrink-0 text-xs">{t("continuewith")}</span>
           <div className="border-border/60 w-full border-t" />
         </div>
       </div>
@@ -400,7 +416,7 @@ export function LoginForm() {
         ) : (
           <KeyIcon className="me-2 h-4 w-4" />
         )}
-        Log in with Passkey
+        {t("withpasskey")}
       </Button>
     </div>
   );

@@ -87,6 +87,11 @@
     "noorgfound": "Organisasi tidak ditemukan",
     "neworg": "Organisasi baru",
     "addneworg": "Buat Organisasi baru",
+    "searchdialog": {
+      "title": "Cari Perintah",
+      "empty": "Tidak ada hasil yang ditemukan",
+      "placeholder": "Ketik perintah atau cari..."
+    },
     "confirmDelete": {
       "title": "Apakah Anda benar-benar yakin?",
       "description": "Tindakan ini tidak dapat dibatalkan. Ini akan menghapus {name} dan semua data terkait secara permanen.",
@@ -102,6 +107,46 @@
       "empty": "Tidak ada untuk dipulihkan.",
       "deletedOn": "Dihapus",
       "restore": "Pulihkan"
+    }
+  },
+  "notfound": {
+    "code": "404",
+    "title": "Halaman Tidak Ditemukan",
+    "desc": "Maaf, kami tidak dapat menemukan halaman yang Anda cari.",
+    "gohome": "Kembali ke Beranda",
+    "cs": "Hubungi Dukungan"
+  },
+  "login": {
+    "title": "Login",
+    "desc": "Masukan kredensial untuk masuk kedalam akun anda",
+    "noaccount?": "Tidak memiliki akun?",
+    "signup": "Daftar",
+    "email": "Email",
+    "password": "Password",
+    "forgotpassword": "Lupa passwordmu?",
+    "magiclink": "Magiclink",
+    "sendmagiclink": "Kirim magiclink",
+    "continuewith": "Atau lanjut dengan",
+    "withpasskey": "Login dengan passkey",
+    "logsucces": "Login berhasil! Mengalihkan halaman...",
+    "wronginput": "Email atau password salah.",
+    "sendmailsuccess": "Tautan akses telah dikirim ke email Anda.",
+    "sendmailfailed": "Gagal mengirimkan Magic Link.",
+    "googlefailed": "Gagal masuk menggunakan Google.",
+    "githubfailed": "Gagal masuk menggunakan GitHub.",
+    "passkeysuccess": "Autentikasi Passkey berhasil!",
+    "passkeyfailed": "Autentikasi Passkey gagal.",
+    "error": "Error",
+    "success": "Berhasil",
+    "deleted": {
+      "title": "Akun dihapus",
+      "desc": "Akun anda telah dihapus. Login dengan kredensial anda untuk memulihkannya."
+    },
+    "banned": {
+      "title": "Akun ditangguhkan",
+      "desc": "Akun anda telah ditangguh kan oleh pihak administrasi.",
+      "reason": "Reason: {{reason}}",
+      "until": "Until: {{date}}"
     }
   },
   "billing": {

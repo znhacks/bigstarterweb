@@ -207,10 +207,10 @@ export default function Search() {
       <CommandDialog open={open} onOpenChange={setOpen}>
         <VisuallyHidden>
           <DialogHeader>
-            <DialogTitle>Search Commands</DialogTitle>
+            <DialogTitle>{t("searchdialog.title")}</DialogTitle>
           </DialogHeader>
         </VisuallyHidden>
-        <CommandInput placeholder="Type a command or search..." />
+        <CommandInput placeholder={t("placeholder")} />
         <CommandList>
           {isLoading ? (
             <div className="flex items-center justify-center py-6">
@@ -218,7 +218,7 @@ export default function Search() {
             </div>
           ) : (
             <>
-              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandEmpty>{t("searchdialog.empty")}.</CommandEmpty>
               {filteredNavItems.map((route) => {
                 const flatGroupItems = getFlatItems(route.items as NavItem[]);
                 if (flatGroupItems.length === 0) return null;
@@ -235,7 +235,18 @@ export default function Search() {
                           }}>
                           {item.icon && <item.icon className="me-2 h-4 w-4" />}
                           {/* Menggunakan displayTitle agar menampilkan nama induk */}
-                          <span>{tmenu(item.displayTitle || item.title)}</span>
+                          <span>
+                            {(item.displayTitle || item.title)
+                              .split(" › ")
+                              .map((key) => {
+                                // Menghapus prefix "menu." jika ada, karena tmenu kemungkinan sudah menggunakan namespace "menu"
+                                const cleanKey = key.startsWith("menu.")
+                                  ? key.replace("menu.", "")
+                                  : key;
+                                return tmenu(cleanKey as any);
+                              })
+                              .join(" › ")}
+                          </span>
                         </CommandItem>
                       ))}
                     </CommandGroup>
