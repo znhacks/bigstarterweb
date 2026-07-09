@@ -1,3 +1,4 @@
+// app/layout.tsx
 import React from "react";
 import { cookies } from "next/headers";
 import { cn } from "@/lib/utils";
@@ -10,11 +11,11 @@ import "./globals.css";
 import { ActiveThemeProvider } from "@/components/active-theme";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { Toaster } from "@/components/ui/sonner";
-import { LanguageProvider } from "@/components/providers/language-provider";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
 import { DirectionProvider } from "@/components/ui/direction";
+import { getLocaleMeta, getFontVariable } from "@/config/i18n-culture";
 
 export const metadata = constructMetadata();
 
@@ -25,7 +26,12 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const locale = await getLocale();
-  const dir = locale === "ar" ? "rtl" : "ltr";
+
+  // Ambil metadata & variabel font dinamis dari Single Source of Truth
+  const meta = getLocaleMeta(locale);
+  const fontVar = getFontVariable(meta.font);
+  const dir = meta.dir;
+
   const themeSettings = {
     preset: (cookieStore.get("theme_preset")?.value ?? DEFAULT_THEME.preset) as any,
     scale: (cookieStore.get("theme_scale")?.value ?? DEFAULT_THEME.scale) as any,
@@ -51,6 +57,12 @@ export default async function RootLayout({
       <body
         suppressHydrationWarning
         className={cn("bg-background group/layout font-sans", fontVariables)}
+        style={
+          {
+            "--text-family": fontVar,
+            "--display-family": fontVar
+          } as React.CSSProperties
+        }
         {...bodyAttributes}>
         <ThemeProvider
           attribute="class"

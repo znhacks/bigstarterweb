@@ -1010,6 +1010,67 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           )}
         </div>
       </div>
+
+      {/* Soft-delete user — type-to-confirm */}
+      <ConfirmDeleteDialog
+        open={!!userToDelete}
+        onOpenChange={(o) => !o && setUserToDelete(null)}
+        confirmName={userToDelete?.name || ""}
+        loading={deleteSaving}
+        onConfirm={confirmDeleteUser}
+      />
+
+      {/* Ban/suspend user */}
+      <Dialog open={!!userToBan} onOpenChange={(o) => !o && setUserToBan(null)}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>{tMod("ban.title", { name: userToBan?.name || "" })}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>{tMod("ban.duration")}</Label>
+              <Select value={banDuration} onValueChange={setBanDuration}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BAN_DURATIONS.map((d) => (
+                    <SelectItem key={d.key} value={d.key}>
+                      {tMod(d.labelKey)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{tMod("ban.reason")}</Label>
+              <Textarea
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                rows={2}
+                placeholder={tMod("ban.reasonPlaceholder")}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUserToBan(null)} disabled={banSaving}>
+              {t("actions.cancel")}
+            </Button>
+            <Button onClick={confirmBan} disabled={banSaving} variant="destructive">
+              {banSaving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+              {tMod("ban.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Trash — restore user terhapus */}
+      <RestoreDialog
+        open={restoreOpen}
+        onOpenChange={setRestoreOpen}
+        kind="user"
+        onRestored={loadUsersFromSupabase}
+      />
     </div>
   );
 }

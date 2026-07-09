@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { ChevronsUpDown, Building2, Check, Plus, Loader2 } from "lucide-react";
-import { usePathname, useParams, useRouter } from "next/navigation"; // Tambahkan useParams & useRouter
+import { usePathname, useParams, useRouter } from "next/navigation";
 import { useIsTablet } from "@/hooks/use-mobile";
 import Link from "next/link";
 
@@ -59,7 +59,6 @@ const setCookie = (name: string, value: string) => {
   document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Lax; ${secure}`;
 };
 
-// Tambahkan 'slug' ke dalam interface Organization
 interface Organization {
   id: string;
   name: string;
@@ -69,9 +68,9 @@ interface Organization {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const params = useParams(); // Membaca parameter URL dinamis
+  const params = useParams();
   const router = useRouter();
-  const tenantSlug = params?.tenant_slug as string | undefined; // Ambil [tenant_slug] dari URL
+  const tenantSlug = params?.tenant_slug as string | undefined;
   const t = useTranslations();
 
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
@@ -88,7 +87,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [newOrgName, setNewOrgName] = useState("");
 
   // 1. Memuat Pengguna & Daftar Organisasi dari Database
-  // 1. Memuat Pengguna & Daftar Organisasi dari Database (Sudah diperbaiki)
   const loadUserAndOrganizations = async () => {
     setIsLoading(true);
     try {
@@ -141,31 +139,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     loadUserAndOrganizations();
   }, []);
 
-  // 2. REAKTIF: Menentukan & Mensinkronkan Organisasi Aktif jika URL / Cookie Berubah
+  // 2. Menentukan & Mensinkronkan Organisasi Aktif jika URL / Cookie Berubah
   useEffect(() => {
     if (organizations.length === 0) return;
 
     let targetOrg: Organization | null = null;
 
     if (tenantSlug) {
-      // Prioritas 1: Jika ada slug di URL, cari organisasi yang slug-nya cocok
       targetOrg = organizations.find((o) => o.slug === tenantSlug) || null;
     } else {
-      // Prioritas 2: Jika flat URL, baca dari Cookie/LocalStorage
       const savedOrgId = getCookie("active_tenant_id") || localStorage.getItem("active_org_id");
       targetOrg = organizations.find((o) => o.id === savedOrgId) || null;
     }
 
-    // Fallback: Jika tidak ada yang cocok, gunakan organisasi pertama
     const finalActiveOrg = targetOrg || organizations[0];
     setActiveOrg(finalActiveOrg);
 
-    // Otomatis sinkronkan Cookie dan LocalStorage agar selaras dengan server
     if (finalActiveOrg) {
       localStorage.setItem("active_org_id", finalActiveOrg.id);
       setCookie("active_tenant_id", finalActiveOrg.id);
     }
-  }, [tenantSlug, organizations]); // Berjalan otomatis jika URL (tenantSlug) atau daftar orgs berubah
+  }, [tenantSlug, organizations]);
 
   useEffect(() => {
     if (isMobile) setOpenMobile(false);
@@ -175,7 +169,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setOpen(!isTablet);
   }, [isTablet]);
 
-  // 3. Handler saat memilih Organisasi dari Dropdown
+  // 3. Handler saat memilih Organisasi dari Dropdown (Telah Diperbarui)
   const handleSelectOrg = (org: Organization) => {
     setActiveOrg(org);
     localStorage.setItem("active_org_id", org.id);
@@ -183,11 +177,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
     window.dispatchEvent(new Event("storage"));
 
-    if (tenantSlug) {
-      // Jika menggunakan URL Slug, arahkan URL ke slug baru (contoh dari /stm ke /studiotengahmalam)
-      router.push(`/${org.slug}/dashboard`);
+    if (tenantSlug && pathname) {
+      const segments = pathname.split("/");
+      const slugIndex = segments.indexOf(tenantSlug);
+
+      if (slugIndex !== -1) {
+        segments[slugIndex] = org.slug;
+        const newPath = segments.join("/");
+        router.push(newPath);
+      } else {
+        router.push(`/${org.slug}/dashboard`);
+      }
     } else {
-      // Jika flat route, cukup reload halaman untuk memuat state baru
       window.location.reload();
     }
   };
@@ -199,7 +200,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
     setIsSubmitting(true);
     try {
-      // Membuat slug otomatis sederhana dari nama organisasi baru
       const generatedSlug = newOrgName
         .trim()
         .toLowerCase()
@@ -217,7 +217,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       if (tenantError) throw tenantError;
 
-      // Ambil id role "Owner" dari tabel roles (RBAC ternormalisasi).
       const { data: ownerRole } = await supabase
         .from("roles")
         .select("id")

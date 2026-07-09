@@ -52,11 +52,11 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/login") ||
     path.startsWith("/register") ||
     path.startsWith("/forgot-password");
-
+  const isRestorePage = path.startsWith("/restore");
   const isJoinPage = path.startsWith("/join");
   const isAuthCallback = path.startsWith("/auth/callback");
 
-  // Rute default tujuan setelah login (bisa disesuaikan dengan kebutuhan Anda)
+  // Rute default tujuan setelah login
   const DEFAULT_REDIRECT_ROUTE = "/";
 
   // ALUR 1: JIKA USER BELUM LOGIN
@@ -69,22 +69,64 @@ export async function middleware(request: NextRequest) {
     }
 
     if (!isAuthPage && !isAuthCallback) {
-      // Peningkatan UX: Simpan halaman asal agar bisa kembali setelah login berhasil
       const nextTarget = encodeURIComponent(`${url.pathname}${url.search}`);
       url.pathname = "/login";
       url.search = `?next=${nextTarget}`;
       return NextResponse.redirect(url);
     }
+
+    return response;
   }
 
-  // ALUR 2: JIKA USER SUDAH LOGIN
-  if (user) {
-    if (isAuthPage) {
-      // Konsisten menggunakan DEFAULT_REDIRECT_ROUTE dibanding hardcoded "/default"
-      url.pathname = DEFAULT_REDIRECT_ROUTE;
+  // ALUR 2: USER SUDAH LOGIN — cek status akun (active/deleted/banned).
+  // Profile SENDIRI selalu bisa dibaca (policy profiles mengizinkan id=auth.uid()
+  // meski deleted/banned).
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("status, banned_until, banned_reason")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const status = (profile as any)?.status ?? "active";
+  const bannedUntil = (profile as any)?.banned_until ?? null;
+
+  // (a) SOFT-DELETED → arahkan ke /restore (kecuali route publik/restore/login).
+  if (status === "deleted") {
+    const allowed = isRestorePage || isAuthPage || isAuthCallback;
+    if (!allowed) {
+      url.pathname = "/restore";
       url.search = "";
       return NextResponse.redirect(url);
     }
+    return response;
+  }
+
+  // (b) BANNED → blok akses app.
+  if (status === "banned") {
+    const expired = bannedUntil ? new Date(bannedUntil).getTime() <= Date.now() : false;
+    if (expired) {
+      // Lazy unban: ban kedaluwarsa → aktifkan kembali (RLS mengizinkan update sendiri).
+      await supabase
+        .from("profiles")
+        .update({ status: "active", banned_until: null, banned_reason: null })
+        .eq("id", user.id);
+      // lanjut sebagai active (di bawah)
+    } else {
+      const allowed = isAuthPage || isAuthCallback;
+      if (!allowed) {
+        url.pathname = "/login";
+        url.search = "?reason=banned";
+        return NextResponse.redirect(url);
+      }
+      return response;
+    }
+  }
+
+  // (c) ACTIVE — alur normal.
+  if (isAuthPage) {
+    url.pathname = DEFAULT_REDIRECT_ROUTE;
+    url.search = "";
+    return NextResponse.redirect(url);
   }
 
   return response;

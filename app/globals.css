@@ -7,6 +7,10 @@
 @import "./themes.css";
 
 :root {
+  /* Default font families */
+  --text-family: var(--font-inter), sans-serif;
+  --display-family: var(--font-outfit), sans-serif;
+
   --base-50: oklch(0.985 0.0013 286.84);
   --base-100: oklch(0.967 0.0027 286.38);
   --base-200: oklch(0.92 0.0053 286.32);
@@ -66,6 +70,13 @@
   --fc-border-color: var(--border);
   --fc-page-bg-color: var(--muted);
   --fc-today-bg-color: var(--muted);
+}
+
+/* Penyesuaian Font dan Arah Layout untuk Bahasa Arab */
+[lang="ar"],
+html[lang="ar"] {
+  --text-family: var(--font-arabic), sans-serif;
+  --display-family: var(--font-arabic), sans-serif;
 }
 
 .dark {

@@ -44,6 +44,24 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      // Cek status akun setelah login (active/deleted/banned).
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("status, banned_until")
+        .eq("id", user?.id ?? "")
+        .maybeSingle();
+      const status = (profile as any)?.status ?? "active";
+
+      if (status === "deleted") {
+        return NextResponse.redirect(`${origin}/restore`);
+      }
+      if (status === "banned") {
+        await supabase.auth.signOut();
+        return NextResponse.redirect(`${origin}/login?reason=banned`);
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

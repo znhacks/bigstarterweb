@@ -5,6 +5,10 @@ import { SupabaseDatabaseService } from "@/services/databases/supabase";
 // lib/providers.ts
 import { bigstarterConfig } from "@/bigstarter.config";
 import { IDatabaseService } from "@/interfaces/database";
+import type { ICurrencyRateService } from "@/interfaces/currency-rate";
+import { CURRENCY_PROVIDERS } from "@/services/currency/registry";
+import { CachedRateService } from "@/services/currency/cachedRateService";
+import { CURRENCY } from "@/config/i18n-culture";
 
 // import { S3StorageService } from "@/services/storage/s3Storage";
 

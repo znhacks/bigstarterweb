@@ -41,6 +41,8 @@ import { getAllTimezones } from "@/lib/timezones";
 import { supabase } from "@/lib/supabase";
 import { useTranslations } from "next-intl";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
+import { AddressForm, AddressData } from "@/components/ui/address-form";
+import { getAddressConfig, AddressField } from "@/config/i18n-culture";
 
 interface AlertState {
   title: string;
@@ -82,6 +84,17 @@ export function GeneralSettingsPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
 
+  const [address, setAddress] = useState<AddressData>({
+    line1: "",
+    line2: "",
+    city: "",
+    region: "",
+    postalCode: "",
+    country: "US"
+  });
+  const [addressErrors, setAddressErrors] = useState<Partial<Record<AddressField, string>>>({});
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+
   useEffect(() => {
     const loadAccountData = async () => {
       setIsLoading(true);
@@ -100,7 +113,9 @@ export function GeneralSettingsPage() {
 
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, avatar, preferred_language, timezone")
+          .select(
+            "full_name, avatar, preferred_language, timezone, address_line1, address_line2, address_city, address_region, address_postal_code, address_country"
+          )
           .eq("id", user.id)
           .maybeSingle();
 
@@ -111,6 +126,16 @@ export function GeneralSettingsPage() {
           setAvatarUrl(profileData.avatar || null);
           setLocalLanguage(profileData.preferred_language || "en");
           setTimezone(profileData.timezone || "UTC");
+
+          // Sinkronkan alamat dari database ke local state
+          setAddress({
+            line1: profileData.address_line1 || "",
+            line2: profileData.address_line2 || "",
+            city: profileData.address_city || "",
+            region: profileData.address_region || "",
+            postalCode: profileData.address_postal_code || "",
+            country: profileData.address_country || "US"
+          });
         }
       } catch (error: any) {
         console.error("Gagal memuat data akun:", error);
@@ -135,6 +160,84 @@ export function GeneralSettingsPage() {
       return () => clearTimeout(timer);
     }
   }, [alertMessage]);
+
+  const handleAddressChange = (field: AddressField, value: string) => {
+    setAddress((prev) => ({ ...prev, [field]: value }));
+    if (addressErrors[field]) {
+      setAddressErrors((prev) => {
+        const copy = { ...prev };
+        delete copy[field];
+        return copy;
+      });
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    if (!userId) return;
+    setAddressErrors({});
+    setAlertMessage(null);
+
+    // Jalankan validasi dinamis berdasarkan locale komunikasi yang dipilih saat ini
+    const config = getAddressConfig(localLanguage);
+    const errors: Partial<Record<AddressField, string>> = {};
+
+    // 1. Validasi Kolom Wajib
+    config.required.forEach((field) => {
+      if (!address[field]?.trim()) {
+        errors[field] = "Kolom ini wajib diisi.";
+      }
+    });
+
+    // 2. Validasi Struktur Regex Kode Pos sesuai Negara
+    if (address.postalCode && config.postalPattern) {
+      const regex = new RegExp(config.postalPattern);
+      if (!regex.test(address.postalCode.trim())) {
+        errors.postalCode = `Format kode pos tidak valid (Contoh: ${config.postalPlaceholder}).`;
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setAddressErrors(errors);
+      setAlertMessage({
+        title: tCommon("error"),
+        description: "Harap perbaiki kesalahan pada kolom alamat.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSavingAddress(true);
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          address_line1: address.line1.trim(),
+          address_line2: address.line2.trim(),
+          address_city: address.city.trim(),
+          address_region: address.region.trim(),
+          address_postal_code: address.postalCode.trim(),
+          address_country: address.country
+        })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      setAlertMessage({
+        title: tCommon("success"),
+        description: "Alamat penagihan berhasil diperbarui.",
+        variant: "default"
+      });
+    } catch (error: any) {
+      setAlertMessage({
+        title: tCommon("error"),
+        description: error.message || tCommon("error"),
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
 
   const handleCropComplete = async (croppedBlob: Blob) => {
     if (!userId) return;
@@ -351,7 +454,7 @@ export function GeneralSettingsPage() {
           </div>
           <button
             onClick={() => setAlertMessage(null)}
-            className="text-muted-foreground hover:text-foreground absolute top-4 end-4 transition-colors">
+            className="text-muted-foreground hover:text-foreground absolute end-4 top-4 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </Alert>
@@ -553,6 +656,41 @@ export function GeneralSettingsPage() {
                 size="sm"
                 className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
                 {isSavingTz && <Loader2 className="h-3 w-3 animate-spin" />}
+                {tCommon("save")}
+              </Button>
+            </div>
+          </div>
+
+          {/* Section 6: Dynamic Billing Address Form */}
+          <div className="space-y-6 p-8">
+            <div className="flex flex-col items-start justify-between gap-4 lg:flex-row">
+              <div className="space-y-1 md:max-w-md">
+                <h2 className="text-foreground text-base font-semibold">
+                  Alamat Penagihan (Billing Address)
+                </h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Konfigurasi alamat Anda disesuaikan secara dinamis untuk pencetakan faktur dan
+                  pelaporan pajak regional.
+                </p>
+              </div>
+              <div className="w-full lg:max-w-xl">
+                <AddressForm
+                  locale={localLanguage}
+                  data={address}
+                  errors={addressErrors}
+                  onChange={handleAddressChange}
+                  disabled={isSavingAddress}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSaveAddress}
+                disabled={isSavingAddress}
+                variant="secondary"
+                size="sm"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
+                {isSavingAddress && <Loader2 className="h-3 w-3 animate-spin" />}
                 {tCommon("save")}
               </Button>
             </div>

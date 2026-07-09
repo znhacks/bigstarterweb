@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
@@ -27,6 +27,26 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextTarget = searchParams.get("next");
+  const reason = searchParams.get("reason");
+
+  // Jika diarahkan karena banned (user masih punya sesi), ambil detail ban
+  // (until/reason) untuk ditampilkan. Profile sendiri selalu bisa dibaca.
+  const [bannedInfo, setBannedInfo] = useState<{ until: string | null; reason: string | null } | null>(null);
+  useEffect(() => {
+    if (reason !== "banned") return;
+    (async () => {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("banned_until, banned_reason")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (data) setBannedInfo({ until: (data as any).banned_until, reason: (data as any).banned_reason });
+    })();
+  }, [reason]);
 
   // State Input
   const [email, setEmail] = useState("");
@@ -205,6 +225,32 @@ export function LoginForm() {
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           <AlertTitle>Success</AlertTitle>
           <AlertDescription>{successMsg}</AlertDescription>
+        </Alert>
+      )}
+
+      {reason === "deleted" && (
+        <Alert className="rounded-xl border-amber-500/20 bg-amber-500/10 text-amber-600">
+          <ShieldAlert className="h-4 w-4 text-amber-600" />
+          <AlertTitle>Account deleted</AlertTitle>
+          <AlertDescription>
+            Your account has been deleted. Log in with your credentials to restore it.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {reason === "banned" && (
+        <Alert variant="destructive" className="rounded-xl">
+          <ShieldAlert className="h-4 w-4" />
+          <AlertTitle>Account suspended</AlertTitle>
+          <AlertDescription>
+            Your account has been suspended by an administrator.
+            {bannedInfo?.reason && <span className="block">Reason: {bannedInfo.reason}</span>}
+            {bannedInfo?.until && (
+              <span className="block">
+                Until: {new Date(bannedInfo.until).toLocaleString()}
+              </span>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 

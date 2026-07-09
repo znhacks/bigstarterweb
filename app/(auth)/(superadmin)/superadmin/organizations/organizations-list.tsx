@@ -21,19 +21,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { RestoreDialog } from "@/components/restore-dialog";
+import { softDeleteTenant } from "@/app/(auth)/(superadmin)/superadmin/actions/account-moderation";
 
-// Impor klien Supabase
-import { supabase } from "@/lib/supabase";
+// Impor hook i18n
 import { useLocale, useTranslations } from "next-intl";
 
 export interface SuperadminOrganization {
@@ -70,6 +62,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [orgToDelete, setOrgToDelete] = useState<SuperadminOrganization | null>(null);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
 
   // KPIs Metrics
   const totalOrgs = orgs.length;
@@ -91,22 +84,16 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
     }
   }, [alertMessage]);
 
-  // Handler Hapus Organisasi Permanen beserta seluruh data relasi dependensinya (Cascade Clean-up)
+  // Soft-delete organisasi (tandai deleted_at + status). Data anak
+  // (memberships/subscriptions/transactions) dipertahankan agar bisa direstore.
   const handleConfirmDeleteOrg = async () => {
     if (!orgToDelete) return;
     setIsDeletingId(orgToDelete.id);
     setAlertMessage(null);
 
     try {
-      // 1. Bersihkan transaksi, langganan, dan keanggotaan penyewa terlebih dahulu untuk menghindari error Foreign Key
-      await supabase.from("transactions").delete().eq("tenant_id", orgToDelete.id);
-      await supabase.from("subscriptions").delete().eq("tenant_id", orgToDelete.id);
-      await supabase.from("memberships").delete().eq("tenant_id", orgToDelete.id);
-
-      // 2. Hapus data utama di tabel tenants
-      const { error } = await supabase.from("tenants").delete().eq("id", orgToDelete.id);
-
-      if (error) throw error;
+      const res = await softDeleteTenant(orgToDelete.id);
+      if (res.error) throw new Error(res.error);
 
       setAlertMessage({
         title: t("alerts.deletedTitle"),
@@ -114,14 +101,8 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
         variant: "default"
       });
 
-      // Bersihkan localStorage jika organisasi yang dihapus adalah organisasi aktif saat ini
-      if (localStorage.getItem("active_org_id") === orgToDelete.id) {
-        localStorage.removeItem("active_org_id");
-      }
-
       setOrgs((prev) => prev.filter((o) => o.id !== orgToDelete.id));
       setOrgToDelete(null);
-
       router.refresh();
     } catch (e: any) {
       setAlertMessage({
@@ -139,23 +120,30 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
 
   return (
     <div className="space-y-8">
-      {/* SEARCH BAR */}
-      <div className="relative flex w-full max-w-md items-center">
-        <Search className="text-muted-foreground/60 absolute start-3.5 h-4 w-4" />
-        <Input
-          type="text"
-          placeholder={t("searchPlaceholder")}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="border-border/80 h-10 rounded-xl ps-10"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            className="text-muted-foreground hover:text-foreground absolute end-3.5">
-            <X className="h-4 w-4" />
-          </button>
-        )}
+      {/* SEARCH BAR + TRASH */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative flex w-full max-w-md items-center">
+          <Search className="text-muted-foreground/60 absolute start-3.5 h-4 w-4" />
+          <Input
+            type="text"
+            placeholder={t("searchPlaceholder")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="border-border/80 h-10 rounded-xl ps-10"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="text-muted-foreground hover:text-foreground absolute end-3.5">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <Button variant="outline" className="h-10 shrink-0" onClick={() => setRestoreOpen(true)}>
+          <Trash2 className="me-2 h-4 w-4" />
+          <span className="hidden sm:inline">{t("buttons.trash")}</span>
+        </Button>
       </div>
 
       {/* NOTIFICATION ALERT */}
@@ -259,29 +247,25 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
         </CardContent>
       </Card>
 
-      {/* SHADCN DIALOG KONFIRMASI HAPUS ORGANISASI */}
-      <AlertDialog open={!!orgToDelete} onOpenChange={(open) => !open && setOrgToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("dialogDelete.title")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("dialogDelete.desc").replace("{orgName}", orgToDelete?.name || "")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingId !== null}>
-              {t("buttons.cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDeleteOrg}
-              disabled={isDeletingId !== null}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground inline-flex items-center gap-2">
-              {isDeletingId !== null && <Loader2 className="h-4 w-4 animate-spin" />}
-              {t("buttons.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* DIALOG TYPE-TO-CONFIRM HAPUS ORGANISASI */}
+      <ConfirmDeleteDialog
+        open={!!orgToDelete}
+        onOpenChange={(open) => !open && setOrgToDelete(null)}
+        confirmName={orgToDelete?.name || ""}
+        title={t("dialogDelete.title")}
+        description={t("dialogDelete.desc").replace("{orgName}", orgToDelete?.name || "")}
+        actionLabel={t("buttons.delete")}
+        loading={isDeletingId !== null}
+        onConfirm={handleConfirmDeleteOrg}
+      />
+
+      {/* TRASH — restore organisasi terhapus */}
+      <RestoreDialog
+        open={restoreOpen}
+        onOpenChange={setRestoreOpen}
+        kind="tenant"
+        onRestored={() => router.refresh()}
+      />
     </div>
   );
 }

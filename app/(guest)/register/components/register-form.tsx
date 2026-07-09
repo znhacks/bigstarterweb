@@ -26,6 +26,7 @@ export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [alreadyExists, setAlreadyExists] = useState(false);
 
   // Registrasi Menggunakan Email & Password
   const handleRegister = async (e: React.FormEvent) => {
@@ -33,6 +34,7 @@ export function RegisterForm() {
     setIsLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
+    setAlreadyExists(false);
 
     // Cari baris ini di dalam handleRegister (components/register-form.tsx)
     const fullName = `${firstName} ${lastName}`.trim();
@@ -69,7 +71,13 @@ export function RegisterForm() {
         // Hapus kode redirect otomatis di sini karena user harus verifikasi email dahulu
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "Terjadi kesalahan.");
+      // Email sudah terdaftar (kemungkinan akun lama yang di-soft-delete):
+      // arahkan user untuk login & memulihkan akun, bukan buat baru.
+      if (err?.message && /already registered/i.test(err.message)) {
+        setAlreadyExists(true);
+      } else {
+        setErrorMsg(err.message || "Terjadi kesalahan.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -107,6 +115,20 @@ export function RegisterForm() {
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           <AlertTitle>Success</AlertTitle>
           <AlertDescription>{successMsg}</AlertDescription>
+        </Alert>
+      )}
+
+      {alreadyExists && (
+        <Alert className="rounded-xl border-amber-500/20 bg-amber-500/10 text-amber-600">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertTitle>Account already exists</AlertTitle>
+          <AlertDescription>
+            An account with this email already exists. If you previously deleted your account, you
+            can restore it by logging in.{" "}
+            <Link href="/login" className="font-semibold underline">
+              Go to login
+            </Link>
+          </AlertDescription>
         </Alert>
       )}
 

@@ -1,15 +1,16 @@
+// components/ui/date-time-picker.tsx
 "use client";
 
 import * as React from "react";
-
+import { useLocale } from "next-intl";
 import { CalendarIcon } from "@radix-ui/react-icons";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { formatDateTime } from "@/lib/i18n/format";
 
 type Props = {
   date: Date | undefined;
@@ -18,6 +19,7 @@ type Props = {
 
 export function DateTimePicker({ date, setDate }: Props) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const locale = useLocale();
 
   const hours = Array.from({ length: 12 }, (_, i) => i + 1);
   const handleDateSelect = (selectedDate: Date | undefined) => {
@@ -51,7 +53,18 @@ export function DateTimePicker({ date, setDate }: Props) {
             !date && "text-muted-foreground"
           )}>
           <CalendarIcon className="me-2 h-4 w-4" />
-          {date ? format(date, "MM/dd/yyyy hh:mm aa") : <span>MM/DD/YYYY hh:mm aa</span>}
+          {date ? (
+            formatDateTime(date, locale, {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true
+            })
+          ) : (
+            <span>MM/DD/YYYY hh:mm aa</span>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">

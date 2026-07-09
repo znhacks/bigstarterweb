@@ -37,6 +37,7 @@ export default function Search() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const t = useTranslations("common");
+  const tmenu = useTranslations("menu");
 
   // State untuk melacak grup user dan permission organisasi internal
   const [userGroup, setUserGroup] = useState<"users" | "superadmin" | null>(null);
@@ -234,7 +235,7 @@ export default function Search() {
                           }}>
                           {item.icon && <item.icon className="me-2 h-4 w-4" />}
                           {/* Menggunakan displayTitle agar menampilkan nama induk */}
-                          <span>{item.displayTitle || item.title}</span>
+                          <span>{tmenu(item.displayTitle || item.title)}</span>
                         </CommandItem>
                       ))}
                     </CommandGroup>

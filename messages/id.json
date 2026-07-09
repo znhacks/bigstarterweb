@@ -58,7 +58,6 @@
       "users": {
         "title": "Pengguna Superadmin",
         "description": "Kelola, lihat, dan awasi semua profil pengguna terdaftar dan keanggotaan organisasi.",
-
         "organizations": {
           "title": "Organisasi Superadmin",
           "description": "Kelola dan awasi semua organisasi yang terdaftar, paket yang aktif, jumlah anggota, serta metadata."
@@ -95,6 +94,14 @@
       "hint": "Silakan ketik \"{phrase}\" untuk mengaktifkan tombol hapus.",
       "cancel": "Batal",
       "action": "Hapus"
+    },
+    "restore": {
+      "deletedUsers": "Pengguna terhapus",
+      "deletedOrgs": "Organisasi terhapus",
+      "desc": "Pulihkan data yang di-soft-delete. Data terkait masih utuh.",
+      "empty": "Tidak ada untuk dipulihkan.",
+      "deletedOn": "Dihapus",
+      "restore": "Pulihkan"
     }
   },
   "billing": {
@@ -151,7 +158,8 @@
       "tasks": "Tugas",
       "settings": "Pengaturan",
       "account": "Akun",
-      "organization": "Organisasi"
+      "organization": "Organisasi",
+      "i18n-culture": "Internasionalisasi & Budaya"
     },
     "superadmin": {
       "dashboard": "Dasbor",
@@ -166,6 +174,16 @@
     "symbol": "Rp",
     "rate": 15000,
     "locale": "id-ID"
+  },
+  "culture": {
+    "showcase": {
+      "title": "Sandbox I18n & Kultur",
+      "description": "Area bermain interaktif untuk menguji konversi mata uang, pengurutan peka lokal, pluralisasi Arab 6-form, pergeseran hari kalender, dan sistem konversi unit pengukuran.",
+      "formatting": "Format Global",
+      "pluralization": "Pluralisasi 6-Form Arab",
+      "collation": "Pengurutan Sensitif Lokal",
+      "measurements": "Konverter Pengukuran"
+    }
   },
   "sidebar": {
     "dashboards": "Dashboard",
@@ -544,7 +562,10 @@
         },
         "actions": {
           "view": "Lihat pengguna",
-          "delete": "Hapus"
+          "delete": "Hapus",
+          "ban": "Tangguhkan",
+          "unban": "Batal tangguh",
+          "cancel": "Batal"
         },
         "filters": {
           "search": "Cari pengguna...",
@@ -562,7 +583,13 @@
           "next": "Berikutnya",
           "noResults": "Tidak ada hasil."
         },
-        "confirmDelete": "Apakah Anda yakin ingin menghapus pengguna ini?"
+        "confirmDelete": "Apakah Anda yakin ingin menghapus pengguna ini?",
+        "accountStatus": {
+          "active": "Aktif",
+          "banned": "Ditangguhkan",
+          "deleted": "Terhapus"
+        },
+        "trash": "Sampah"
       }
     },
     "organizations": {
@@ -584,7 +611,8 @@
         },
         "buttons": {
           "cancel": "Batal",
-          "delete": "Hapus Organisasi"
+          "delete": "Hapus Organisasi",
+          "trash": "Sampah"
         },
         "dialogDelete": {
           "title": "Apakah Anda benar-benar yakin?",
@@ -684,6 +712,30 @@
         "cancel": "Batal",
         "delete": "Hapus",
         "confirmDelete": "Yakin ingin menghapus role ini?"
+      }
+    }
+  },
+  "auth": {
+    "restore": {
+      "title": "Pulihkan akun Anda",
+      "desc": "Akun Anda telah dihapus. Anda bisa memulihkannya sekarang — data Anda masih utuh.",
+      "deletedOn": "Dihapus pada",
+      "restore": "Pulihkan akun saya"
+    }
+  },
+  "moderation": {
+    "ban": {
+      "title": "Tangguhkan {name}",
+      "duration": "Durasi",
+      "reason": "Alasan (opsional)",
+      "reasonPlaceholder": "Alasan penangguhan",
+      "confirm": "Tangguhkan",
+      "cancel": "Batal",
+      "durations": {
+        "1d": "1 hari",
+        "7d": "7 hari",
+        "30d": "30 hari",
+        "permanent": "Permanen"
       }
     }
   }

@@ -103,6 +103,11 @@ export const navItems: NavGroup[] = [
             href: "/organization/general",
             tenantScoped: true,
             permissions: [PERMISSIONS.organizationRead]
+          },
+          // Tambahkan baris rute ini di dalam array navigasi sidebar Anda:
+          {
+            title: "users.i18n-culture",
+            href: "/settings/i18n-culture"
           }
         ]
       }

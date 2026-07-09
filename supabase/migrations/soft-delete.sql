@@ -57,15 +57,18 @@ end $$;
 -- ---------------------------------------------------------------
 
 -- profiles: "User dapat melihat profil sendiri dan rekan tim"
+-- User selalu bisa membaca profil SENDIRI (bahkan saat deleted/banned) agar
+-- middleware & halaman /restore bisa membaca status. Profil ORANG LAIN hanya
+-- terlihat bila tidak di-soft-delete.
 drop policy if exists "User dapat melihat profil sendiri dan rekan tim" on public.profiles;
 create policy "User dapat melihat profil sendiri dan rekan tim"
   on public.profiles for select
   to authenticated
   using (
-    deleted_at is null
-    and (
-      id = auth.uid()
-      or exists (
+    id = auth.uid()
+    or (
+      deleted_at is null
+      and exists (
         select 1
         from memberships m1
         join memberships m2 on m1.tenant_id = m2.tenant_id

@@ -67,7 +67,7 @@ model flow_state {
   provider_type          String
   provider_access_token  String?
   provider_refresh_token String?
-  created_at             DateTime?              @db.Timestamptz(6)
+  created_at             DateTime?              @db.Timestamptz(6)  
   updated_at             DateTime?              @db.Timestamptz(6)
   authentication_method  String
   auth_code_issued_at    DateTime?              @db.Timestamptz(6)
@@ -589,6 +589,13 @@ model profiles {
   tasksAssigned tasks[] @relation("TaskAssignee")
   tasksCreated  tasks[] @relation("TaskCreator")
 
+  // Soft-delete + moderasi (lihat supabase/migrations/soft-delete.sql).
+  // Catatan: skema dasar live ada di cloud; Prisma di sini sbg dokumentasi.
+  deleted_at   DateTime? @db.Timestamp(6)
+  status       String?   @default("active") @db.VarChar
+  banned_until DateTime? @db.Timestamp(6)
+  banned_reason String?  @db.Text
+
   @@schema("public")
 }
 
@@ -637,6 +644,10 @@ model tenants {
   subscriptions subscriptions?
   tasks         tasks[]
   transactions  transactions[]
+
+  // Soft-delete (lihat supabase/migrations/soft-delete.sql).
+  deleted_at DateTime? @db.Timestamp(6)
+  status     String?   @default("active") @db.VarChar
 
   @@schema("public")
 }

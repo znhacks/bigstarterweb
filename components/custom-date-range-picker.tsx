@@ -1,8 +1,9 @@
+// components/ui/calendar-date-range-picker.tsx
 "use client";
 
 import * as React from "react";
+import { useLocale } from "next-intl";
 import {
-  format,
   subDays,
   startOfMonth,
   endOfMonth,
@@ -29,6 +30,8 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getDateFnsLocale } from "@/lib/i18n/weekStart";
+import { formatDateTime } from "@/lib/i18n/format";
 
 const dateFilterPresets = [
   { name: "Today", value: "today" },
@@ -45,10 +48,10 @@ export default function CalendarDateRangePicker({
   className
 }: React.HTMLAttributes<HTMLDivElement>) {
   const isMobile = useIsMobile();
+  const locale = useLocale();
   const today = new Date();
   const twentyEightDaysAgo = startOfDay(subDays(today, 27));
 
-  // Initialize with "Last 28 days" as default
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: twentyEightDaysAgo,
     to: endOfDay(today)
@@ -63,6 +66,7 @@ export default function CalendarDateRangePicker({
 
   const changeHandle = (type: string) => {
     const today = new Date();
+    const dateFnsLocale = getDateFnsLocale(locale);
 
     switch (type) {
       case "today":
@@ -73,7 +77,8 @@ export default function CalendarDateRangePicker({
         handleQuickSelect(startOfDay(yesterday), endOfDay(yesterday));
         break;
       case "thisWeek":
-        const startOfCurrentWeek = startOfWeek(today);
+        // Menentukan awal minggu sesuai dengan kalender lokal aktif
+        const startOfCurrentWeek = startOfWeek(today, { locale: dateFnsLocale });
         handleQuickSelect(startOfDay(startOfCurrentWeek), endOfDay(today));
         break;
       case "last7Days":
@@ -81,7 +86,7 @@ export default function CalendarDateRangePicker({
         handleQuickSelect(startOfDay(sevenDaysAgo), endOfDay(today));
         break;
       case "last28Days":
-        const twentyEightDaysAgo = subDays(today, 27); // 27 days ago + today = 28 days
+        const twentyEightDaysAgo = subDays(today, 27);
         handleQuickSelect(startOfDay(twentyEightDaysAgo), endOfDay(today));
         break;
       case "thisMonth":
@@ -96,6 +101,24 @@ export default function CalendarDateRangePicker({
         handleQuickSelect(startOfDay(startOfCurrentYear), endOfDay(today));
         break;
     }
+  };
+
+  const renderFormattedRange = (range: DateRange | undefined) => {
+    if (!range?.from) return <span>Select date range</span>;
+
+    const fromStr = formatDateTime(range.from, locale, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+    if (!range.to) return fromStr;
+
+    const toStr = formatDateTime(range.to, locale, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+    return `${fromStr} - ${toStr}`;
   };
 
   return (
@@ -117,19 +140,7 @@ export default function CalendarDateRangePicker({
                       <CalendarIcon />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    {date?.from ? (
-                      date.to ? (
-                        <>
-                          {format(date.from, "dd MMM yyyy")} - {format(date.to, "dd MMM yyyy")}
-                        </>
-                      ) : (
-                        format(date.from, "dd MMM yyyy")
-                      )
-                    ) : (
-                      <span>Select date range</span>
-                    )}
-                  </TooltipContent>
+                  <TooltipContent>{renderFormattedRange(date)}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
@@ -141,18 +152,8 @@ export default function CalendarDateRangePicker({
                 "justify-start text-start font-normal",
                 !date && "text-muted-foreground"
               )}>
-              <CalendarIcon />
-              {date?.from ? (
-                date.to ? (
-                  <>
-                    {format(date.from, "dd MMM yyyy")} - {format(date.to, "dd MMM yyyy")}
-                  </>
-                ) : (
-                  format(date.from, "dd MMM yyyy")
-                )
-              ) : (
-                <span>Select date range</span>
-              )}
+              <CalendarIcon className="me-2 h-4 w-4" />
+              {renderFormattedRange(date)}
             </Button>
           )}
         </PopoverTrigger>

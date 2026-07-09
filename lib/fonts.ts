@@ -1,3 +1,4 @@
+// lib/fonts.ts
 import {
   Geist,
   Inter,
@@ -9,7 +10,8 @@ import {
   Plus_Jakarta_Sans,
   Hedvig_Letters_Serif,
   Kumbh_Sans,
-  Outfit
+  Outfit,
+  Cairo // Tambahkan Cairo
 } from "next/font/google";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +73,13 @@ const outfit = Outfit({
   variable: "--font-outfit"
 });
 
+// Konfigurasi Font Arab Cairo
+const cairo = Cairo({
+  subsets: ["arabic", "latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-arabic"
+});
+
 export const fontVariables = cn(
   geist.variable,
   inter.variable,
@@ -82,5 +91,6 @@ export const fontVariables = cn(
   plus_jakarta_sans.variable,
   hedvig_letters_serif.variable,
   kumbh_sans.variable,
-  outfit.variable
+  outfit.variable,
+  cairo.variable // Tambahkan ke variabel gabungan
 );
