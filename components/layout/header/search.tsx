@@ -210,7 +210,7 @@ export default function Search() {
             <DialogTitle>{t("searchdialog.title")}</DialogTitle>
           </DialogHeader>
         </VisuallyHidden>
-        <CommandInput placeholder={t("placeholder")} />
+        <CommandInput placeholder={t("searchdialog.placeholder")} />
         <CommandList>
           {isLoading ? (
             <div className="flex items-center justify-center py-6">
