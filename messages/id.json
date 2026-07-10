@@ -149,6 +149,26 @@
       "until": "Until: {{date}}"
     }
   },
+  "register": {
+    "error": "Error",
+    "success": "Sukses",
+    "accountExistsTitle": "Akun sudah terdaftar",
+    "accountExistsDesc": "Akun dengan email ini sudah ada. Jika Anda sebelumnya menghapus akun Anda, Anda dapat memulihkannya dengan masuk kembali.",
+    "goToLogin": "Masuk ke akun",
+    "firstName": "Nama depan",
+    "lastName": "Nama belakang",
+    "email": "Email",
+    "emailPlaceholder": "kontak@bundui.com",
+    "password": "Kata sandi",
+    "creatingAccount": "Membuat Akun...",
+    "register": "Daftar",
+    "orContinueWith": "atau lanjutkan dengan",
+    "google": "Google",
+    "github": "GitHub",
+    "successText": "Akun sukses dibuat! Kami telah mengirimkan link verifikasi ke email Anda. Silakan buka kotak masuk email Anda dan klik link tersebut untuk langsung bergabung ke organisasi.",
+    "errorGoogle": "Gagal masuk menggunakan Google.",
+    "errorDefault": "Terjadi kesalahan."
+  },
   "billing": {
     "plans": {
       "free": {

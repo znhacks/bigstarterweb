@@ -149,6 +149,26 @@
       "until": "Until: {{date}}"
     }
   },
+  "register": {
+    "error": "Error",
+    "success": "Success",
+    "accountExistsTitle": "Account already exists",
+    "accountExistsDesc": "An account with this email already exists. If you previously deleted your account, you can restore it by logging in.",
+    "goToLogin": "Go to login",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "emailPlaceholder": "contact@bundui.com",
+    "password": "Password",
+    "creatingAccount": "Creating Account...",
+    "register": "Register",
+    "orContinueWith": "or continue with",
+    "google": "Google",
+    "github": "GitHub",
+    "successText": "Account successfully created! We have sent a verification link to your email. Please open your inbox and click the link to join the organization.",
+    "errorGoogle": "Failed to sign in with Google.",
+    "errorDefault": "An error occurred."
+  },
   "billing": {
     "plans": {
       "free": {
