@@ -47,3 +47,5 @@ next-env.d.ts
 
 .claude
 /lib/generated/prisma
+
+.pnpm-lock.yaml
