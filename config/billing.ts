@@ -1,23 +1,44 @@
 // config/billing.ts
 
+export interface GatewayIds {
+  stripe?: string;
+  paypal?: string;
+  lemonsqueezy?: string;
+  paddle?: string;
+  braintree?: string;
+  midtrans?: string;
+  xendit?: string;
+  mayar?: string;
+}
+
+/**
+ * 1. DEFINISI FEATURE GATES (Sangat penting untuk Developer)
+ * Di sini developer bisa melihat dan menambah kunci fitur yang ingin dibatasi.
+ * Penamaan di sini harus berupa key yang akan dicek secara programmatic di dalam kode.
+ */
+export interface FeatureGates {
+  maxUsers: number; // Batas maksimal pengguna dalam satu tenant
+  maxTasks: number; // Batas kuota screenshot per bulan
+  allowPdfFormat: boolean; // Apakah diizinkan mengunduh format PDF
+  chooseIpLocation: boolean; // Apakah diizinkan memilih lokasi IP geolocator
+  removeAttribution: boolean; // Apakah tautan atribusi dihapus (White-label)
+  prioritySupport: boolean; // Apakah mendapatkan jalur dukungan prioritas
+}
+
+export interface PlanPriceDetail {
+  amount: number;
+  providers?: GatewayIds;
+}
+
 export interface Plan {
   id: string;
   name: string;
   description: string;
-  features: string[];
-  maxUsers: number;
-  maxScreenshots: number;
+  displayFeatures: string[]; // Fitur berupa teks biasa untuk tampilan tabel harga (UI)
+  featureGates: FeatureGates; // Fitur terstruktur untuk dibaca oleh kode logika (Sistem)
   prices: {
-    monthly: {
-      amount: number;
-      paypalPlanId?: string; // ID Plan dari PayPal Dashboard
-      stripePriceId?: string; // ID Price dari Stripe Dashboard
-    };
-    yearly: {
-      amount: number;
-      paypalPlanId?: string;
-      stripePriceId?: string;
-    };
+    monthly: PlanPriceDetail;
+    yearly: PlanPriceDetail;
   };
 }
 
@@ -26,14 +47,20 @@ export const plans: Plan[] = [
     id: "free",
     name: "Free",
     description: "For testing and hobby use.",
-    features: [
-      "200 screenshots per month",
+    displayFeatures: [
+      "200 Tasks per month",
       "20 requests per minute",
       "PNG, JPEG, WebP format",
       "Attribution link required"
     ],
-    maxUsers: 5,
-    maxScreenshots: 200,
+    featureGates: {
+      maxUsers: 5,
+      maxTasks: 20,
+      allowPdfFormat: false,
+      chooseIpLocation: false,
+      removeAttribution: false,
+      prioritySupport: false
+    },
     prices: {
       monthly: { amount: 0 },
       yearly: { amount: 0 }
@@ -43,25 +70,39 @@ export const plans: Plan[] = [
     id: "starter",
     name: "Starter",
     description: "For projects moving into production.",
-    features: [
-      "2,000 screenshots per month",
+    displayFeatures: [
+      "2,000 Tasks per month",
       "40 requests per minute",
       "PNG, JPEG, WebP, PDF format",
       "No attribution link required",
       "Choose IP location"
     ],
-    maxUsers: 10,
-    maxScreenshots: 2000,
+    featureGates: {
+      maxUsers: 10,
+      maxTasks: 2000,
+      allowPdfFormat: true,
+      chooseIpLocation: true,
+      removeAttribution: true, // No attribution
+      prioritySupport: false
+    },
     prices: {
       monthly: {
         amount: 49000,
-        paypalPlanId: "P-STARTER-MONTHLY", // Ganti dengan ID asli Anda
-        stripePriceId: "price_starter_monthly"
+        providers: {
+          paddle: "pri_01kx5gffxd7njjqjernsaf1pv2",
+          stripe: "price_starter_monthly",
+          paypal: "P-STARTER-MONTHLY",
+          midtrans: "starter-monthly"
+        }
       },
       yearly: {
-        amount: 490000,
-        paypalPlanId: "P-STARTER-YEARLY",
-        stripePriceId: "price_starter_yearly"
+        amount: 499000,
+        providers: {
+          paddle: "pri_01kx5expy305m7kbtwpkt0jcvk",
+          stripe: "price_starter_yearly",
+          paypal: "P-STARTER-YEARLY",
+          midtrans: "starter-yearly"
+        }
       }
     }
   },
@@ -69,26 +110,40 @@ export const plans: Plan[] = [
     id: "pro",
     name: "Pro",
     description: "For production workloads at higher volume.",
-    features: [
-      "10,000 screenshots per month",
+    displayFeatures: [
+      "10,000 Tasks per month",
       "80 requests per minute",
       "PNG, JPEG, WebP, PDF format",
       "No attribution link required",
       "Choose IP location",
       "Priority Support"
     ],
-    maxUsers: 20,
-    maxScreenshots: 10000,
+    featureGates: {
+      maxUsers: 20,
+      maxTasks: 10000,
+      allowPdfFormat: true,
+      chooseIpLocation: true,
+      removeAttribution: true,
+      prioritySupport: true
+    },
     prices: {
       monthly: {
         amount: 99000,
-        paypalPlanId: "P-PRO-MONTHLY",
-        stripePriceId: "price_pro_monthly"
+        providers: {
+          paddle: "pri_01kx5gc9ga1h4bygs7y73mx4fj",
+          stripe: "price_pro_monthly",
+          paypal: "P-PRO-MONTHLY",
+          midtrans: "pro-monthly"
+        }
       },
       yearly: {
-        amount: 990000,
-        paypalPlanId: "P-PRO-YEARLY",
-        stripePriceId: "price_pro_yearly"
+        amount: 999000,
+        providers: {
+          paddle: "pri_01kx5f03c7e6ckdtgv8z5wj37j",
+          stripe: "price_pro_yearly",
+          paypal: "P-PRO-YEARLY",
+          midtrans: "pro-yearly"
+        }
       }
     }
   }
