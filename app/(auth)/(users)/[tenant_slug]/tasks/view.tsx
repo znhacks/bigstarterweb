@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, CreditCard } from "lucide-react";
 import { useTasks } from "./logic";
 import type { Task } from "./types";
 import { TasksDataTable } from "./data-table";
@@ -56,26 +56,38 @@ interface TasksViewProps {
   tenantSlug: string;
   tenantId: string;
   tenantName: string;
+  activePlanId: string;
+  // currentUsageCount TELAH DIHAPUS dari props karena dihitung real-time di logic.ts
 }
 
-export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) {
-  const h = useTasks({ tenantSlug, tenantId, tenantName });
-  const { t, locale, timeZone } = h;
+export function TasksView({ tenantSlug, tenantId, tenantName, activePlanId }: TasksViewProps) {
+  // Panggil hook tanpa mengirim currentUsageCount
+  const h = useTasks({ tenantSlug, tenantId, tenantName }, { activePlanId });
+  const { t, locale, timeZone, currentUsageCount } = h;
 
   const meta = getLocaleMeta(locale);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [formError, setFormError] = useState<string | null>(null);
 
   const openCreate = () => {
+    if (h.isLimitReached) {
+      setUpgradeDialogOpen(true);
+      return;
+    }
     setForm({ ...EMPTY_FORM });
     setFormError(null);
     setCreateOpen(true);
   };
 
   const handleCreate = async () => {
+    if (h.isLimitReached) {
+      setCreateOpen(false);
+      return;
+    }
     if (!form.title.trim()) {
       setFormError(t("form.titleRequired"));
       return;
@@ -97,9 +109,24 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8" dir={meta.dir}>
       {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
+        </div>
+
+        {/* Lencana Kuota Dinamis */}
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="px-3 py-1 text-xs">
+            Plan: {h.planName} ({currentUsageCount}/{h.limit} Tasks)
+          </Badge>
+          {h.isLimitReached && (
+            <Button size="sm" variant="destructive" onClick={() => setUpgradeDialogOpen(true)}>
+              <CreditCard className="me-1.5 h-4 w-4" />
+              Upgrade Now
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Read-only banner */}
@@ -107,6 +134,16 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
         <Alert>
           <AlertTitle>{t("readOnly.title")}</AlertTitle>
           <AlertDescription>{t("readOnly.desc")}</AlertDescription>
+        </Alert>
+      )}
+
+      {h.isLimitReached && (
+        <Alert variant="destructive">
+          <AlertTitle>Batas Kuota Tercapai</AlertTitle>
+          <AlertDescription>
+            Anda telah menggunakan {currentUsageCount} dari maksimal {h.limit} tugas untuk paket{" "}
+            {h.planName}. Silakan tingkatkan paket Anda untuk melanjutkan pembuatan tugas.
+          </AlertDescription>
         </Alert>
       )}
 
@@ -128,7 +165,7 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
             tasks={h.tasks}
             members={h.members}
             orgName={tenantName}
-            canCreate={h.canCreate}
+            canCreate={h.canCreate && !h.isLimitReached}
             canDelete={h.canDelete}
             canEditTask={h.canEditTask}
             onUpdate={h.updateTask}
@@ -136,14 +173,74 @@ export function TasksView({ tenantSlug, tenantId, tenantName }: TasksViewProps) 
             onDelete={(task) => h.setTaskToDelete(task)}
             onCreateClick={openCreate}
             preferredLanguage={h.preferredLanguage}
-            timeZone={timeZone} // SOLUSI: Mengoper Zona Waktu resmi dari Database User ke Komponen Tabel!
+            timeZone={timeZone}
           />
         )}
       </div>
 
+      {/* DIALOG: PILIHAN GATEWAY PEMBAYARAN UNTUK UPGRADE */}
+      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <DialogContent className="sm:max-w-md" dir={meta.dir}>
+          <DialogHeader>
+            <DialogTitle>Tingkatkan ke Paket Pro</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4 text-center">
+            <p className="text-muted-foreground text-sm">
+              Tingkatkan batas pembuatan tugas Anda menjadi <b>10.000 tugas</b> per bulan serta
+              dapatkan dukungan prioritas. Pilih metode pembayaran Anda:
+            </p>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Button
+                variant="outline"
+                onClick={() => h.handleUpgrade("mayar")}
+                disabled={h.isUpgrading}
+                className="flex h-20 flex-col items-center justify-center gap-1.5 text-xs">
+                <span className="font-semibold text-blue-600">Mayar.id</span>
+                <span className="text-muted-foreground text-[10px]">QRIS, VA, e-Wallet</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => h.handleUpgrade("paypal")}
+                disabled={h.isUpgrading}
+                className="flex h-20 flex-col items-center justify-center gap-1.5 text-xs">
+                <span className="font-semibold text-yellow-600">PayPal</span>
+                <span className="text-muted-foreground text-[10px]">Kartu / Saldo USD</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => h.handleUpgrade("paddle")}
+                disabled={h.isUpgrading}
+                className="flex h-20 flex-col items-center justify-center gap-1.5 text-xs">
+                <span className="font-semibold text-purple-600">Paddle Billing</span>
+                <span className="text-muted-foreground text-[10px]">Pajak Global Terhitung</span>
+              </Button>
+            </div>
+
+            {h.isUpgrading && (
+              <div className="text-muted-foreground mt-2 flex items-center justify-center gap-2 text-xs">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Menghubungkan ke gateway pembayaran...
+              </div>
+            )}
+          </div>
+          <DialogFooter className="sm:justify-center">
+            <Button
+              variant="ghost"
+              onClick={() => setUpgradeDialogOpen(false)}
+              disabled={h.isUpgrading}>
+              Kembali ke Aplikasi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* DIALOG: Create task */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-130" dir={meta.dir}>
+          {/* ... Sisa komponen dialog pembuatan task Anda tetap sama ... */}
           <DialogHeader>
             <DialogTitle>{t("form.createTitle")}</DialogTitle>
           </DialogHeader>

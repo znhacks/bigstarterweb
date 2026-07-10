@@ -8,6 +8,7 @@ import { PERMISSIONS, hasPermission, type PermissionName } from "@/lib/rbac";
 import type { Task, MemberOption, AlertState, TaskInput } from "./types";
 import { compareStrings } from "@/lib/i18n/collator";
 import { fetchTasksAction, createTaskAction, updateTaskAction, deleteTaskAction } from "./actions";
+import { useFeatureGate } from "@/hooks/use-feature-gate";
 
 interface UseTasksArgs {
   tenantSlug: string;
@@ -15,7 +16,14 @@ interface UseTasksArgs {
   tenantName: string;
 }
 
-export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
+interface Props {
+  activePlanId: string; // Kita hanya membutuhkan activePlanId dari parent sekarang
+}
+
+export function useTasks(
+  { tenantSlug, tenantId, tenantName }: UseTasksArgs,
+  { activePlanId }: Props
+) {
   const locale = useLocale();
   const t = useTranslations("tasks");
 
@@ -26,13 +34,27 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-  // State Preferensi Bahasa murni dari database profil pengguna
-  const [preferredLanguage, setPreferredLanguage] = useState<string | null>(null);
+  const { canUse, getLimit, planName } = useFeatureGate({ activePlanId });
 
+  /**
+   * PENGHITUNGAN KUOTA DINAMIS (REAL-TIME)
+   * Kita menghitung jumlah task langsung dari panjang array state `tasks`.
+   * Jika sistem Anda menggunakan pagination (halaman), Anda bisa menggantinya dengan query
+   * `.select('*', { count: 'exact', head: true })` ke tabel tasks Supabase.
+   */
+  const currentUsageCount = tasks.length;
+
+  // Mengambil limit kuota maksimal tugas
+  const limit = getLimit("maxTasks" as any) || 0;
+  const isLimitReached = currentUsageCount >= limit;
+
+  const [preferredLanguage, setPreferredLanguage] = useState<string | null>(null);
   const [timeZone, setTimeZone] = useState("UTC");
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
@@ -82,32 +104,27 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
 
   const fetchCurrentUser = useCallback(async () => {
     const {
-      data: { user }
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    setCurrentUserId(user.id);
+      data: { session }
+    } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    setCurrentUserId(session.user.id);
 
-    // Ambil preferensi bahasa (preferred_language) dan zona waktu dari database user
     const { data: profileData } = await supabase
       .from("profiles")
       .select("timezone, preferred_language")
-      .eq("id", user.id)
+      .eq("id", session.user.id)
       .maybeSingle();
 
     if (profileData) {
-      if (profileData.timezone) {
-        setTimeZone(profileData.timezone);
-      }
-      if (profileData.preferred_language) {
-        setPreferredLanguage(profileData.preferred_language);
-      }
+      if (profileData.timezone) setTimeZone(profileData.timezone);
+      if (profileData.preferred_language) setPreferredLanguage(profileData.preferred_language);
     }
 
     const { data, error } = await supabase
       .from("memberships")
       .select("roles(name, hierarchy_level, role_permissions(permissions(name)))")
       .eq("tenant_id", tenantId)
-      .eq("user_id", user.id)
+      .eq("user_id", session.user.id)
       .maybeSingle();
 
     const d = data as any;
@@ -131,12 +148,58 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
     loadAll();
   }, [loadAll]);
 
+  const handleUpgrade = async (provider: "mayar" | "paypal" | "paddle") => {
+    setIsUpgrading(true);
+    try {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Anda harus masuk terlebih dahulu");
+
+      const response = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          planId: "pro",
+          interval: "month",
+          provider: provider,
+          tenantId: tenantId,
+          successUrl: `${window.location.origin}/${locale}/settings/tasks?upgrade_success=true`,
+          cancelUrl: `${window.location.origin}/${locale}/settings/tasks?upgrade_canceled=true`
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Gagal membuat sesi pembayaran");
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    } catch (err: any) {
+      console.error(err);
+      setAlertMessage({
+        title: "Upgrade Error",
+        description: err.message || "Gagal menghubungkan ke gateway pembayaran",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
   const createTask = async (payload: TaskInput) => {
     setIsSaving(true);
     try {
       const res = await createTaskAction(tenantSlug, payload);
       if (res.error || !res.data) throw new Error(res.error);
+
+      // Ketika task berhasil ditambahkan ke state, tasks.length otomatis bertambah (+1)
+      // Hal ini memicu isLimitReached ter-update secara otomatis secara real-time
       setTasks((prev) => [res.data as Task, ...prev]);
+
       setAlertMessage({
         title: locale === "en" ? "Success" : locale === "id" ? "Sukses" : "نجاح",
         description: t("alerts.created"),
@@ -175,6 +238,8 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
     if (!taskToDelete) return;
     const target = taskToDelete;
     const prev = tasks;
+
+    // Ketika task dihapus dari state, tasks.length otomatis berkurang (-1)
     setTasks((cur) => cur.filter((tk) => tk.id !== target.id));
     setTaskToDelete(null);
 
@@ -209,7 +274,7 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
 
   return {
     locale,
-    preferredLanguage, // Pasok preferensi bahasa database pengguna ke luar
+    preferredLanguage,
     t,
     timeZone,
     tasks,
@@ -220,8 +285,15 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
     canDelete,
     canEditTask,
     isReadOnly,
+    canUse,
+    getLimit,
+    planName,
+    limit,
+    currentUsageCount, // Dikembalikan ke view untuk ditampilkan di UI lencana kuota
+    isLimitReached,
     isLoading,
     isSaving,
+    isUpgrading,
     alertMessage,
     setAlertMessage,
     taskToDelete,
@@ -229,6 +301,7 @@ export function useTasks({ tenantSlug, tenantId, tenantName }: UseTasksArgs) {
     createTask,
     updateTask,
     confirmDelete,
+    handleUpgrade,
     refetch: loadAll
   };
 }
