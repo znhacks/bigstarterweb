@@ -1,13 +1,14 @@
+// ./services/databases/prisma.ts
 import { PrismaClient } from "@prisma/client";
 import { IDatabaseService } from "@/interfaces/database";
 
-const globalPrisma = new PrismaClient(); 
+const globalPrisma = new PrismaClient();
 const connectionCache: Record<string, PrismaClient> = {};
 
 export class PrismaDatabaseService implements IDatabaseService<PrismaClient> {
   async getClient(subdomain: string) {
-    // 1. Cari data tenant di Database Sistem Utama
-    const tenant = await globalPrisma.tenant.findUnique({
+    // 1. Cari data tenant di Database Sistem Utama menggunakan findFirst
+    const tenant = await globalPrisma.tenant.findFirst({
       where: { subdomain }
     });
 
