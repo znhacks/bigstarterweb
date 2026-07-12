@@ -27,7 +27,7 @@ export function generateMeta({
   return {
     title: `${title} for Shadcn UI${additionalTitle ? " – Admin Dashboard Template" : ""}`,
     description: description,
-    metadataBase: new URL(`https://shadcnuikit.com`),
+    metadataBase: new URL(`https://bigstarter.vercel.app/`),
     alternates: {
       canonical: `/dashboard${canonical}`
     },
