@@ -1,13 +1,17 @@
+// app/api/billing/verify/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Menggunakan service role key agar bypass RLS saat menulis data krusial sistem penagihan
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Memaksa rute dievaluasi secara dinamis saat runtime (mencegah error build statis)
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  // Menggunakan service role key agar bypass RLS saat menulis data krusial sistem penagihan (Lazy Initialization)
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder"
+  );
+
   try {
     const { orderId, tenantId, planId, billingCycle } = await req.json();
 

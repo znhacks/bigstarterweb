@@ -1,22 +1,23 @@
 // app/api/billing/checkout/route.ts
-
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { createClient } from "@supabase/supabase-js";
 
-// Inisialisasi Supabase khusus sisi server dengan bypass RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
+// Memaksa rute dievaluasi secara dinamis saat runtime (mencegah error build statis)
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  // Inisialisasi Supabase khusus sisi server dengan bypass RLS (Lazy Initialization)
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder"
+  );
+
   try {
     const body = await req.json();
     const { planId, interval, provider, tenantId, successUrl, cancelUrl } = body;
 
     // 1. Dapatkan data pengguna aktif untuk memastikan otorisasi
-    // Catatan: Sesuaikan dengan cara boilerplate Anda mengambil sesi user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
