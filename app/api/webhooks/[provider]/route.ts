@@ -14,8 +14,13 @@ const drivers: Record<string, BillingProviderDriver> = {
   paypal: paypalDriver
 };
 
-export async function POST(req: Request, { params }: { params: { provider: string } }) {
-  const provider = params.provider;
+export async function POST(
+  req: Request,
+  // Perubahan tipe data: params dibungkus dalam Promise untuk Next.js 15
+  { params }: { params: Promise<{ provider: string }> }
+) {
+  // Mengekstrak parameter secara asinkronus menggunakan await
+  const { provider } = await params;
   const driver = drivers[provider];
 
   if (!driver) {
