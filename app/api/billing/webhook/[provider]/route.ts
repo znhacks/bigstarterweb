@@ -1,20 +1,18 @@
-// app/api/webhooks/[provider]/route.ts
-
+// app/api/billing/webhook/[provider]/route.ts
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
+// Memaksa rute dievaluasi secara dinamis saat runtime (mencegah error build statis)
+export const dynamic = "force-dynamic";
 
-export async function POST(
-  req: Request,
-  // Menggunakan tipe Promise<{ provider: string }> untuk kompatibilitas Next.js 15
-  { params }: { params: Promise<{ provider: string }> }
-) {
-  // Melakukan await untuk mengambil nilai 'provider' secara asinkronus
+export async function POST(req: Request, { params }: { params: Promise<{ provider: string }> }) {
+  // Inisialisasi di dalam handler untuk mencegah error "supabaseUrl is required" saat build-time
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder"
+  );
+
   const { provider } = await params;
   const providerName = provider;
 

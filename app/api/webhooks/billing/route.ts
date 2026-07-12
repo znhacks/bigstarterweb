@@ -1,12 +1,17 @@
+// app/api/webhooks/billing/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-);
+// Memaksa rute dievaluasi secara dinamis saat runtime (mencegah error build statis)
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  // Inisialisasi di dalam handler untuk mencegah error "supabaseUrl is required" saat build-time
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder"
+  );
+
   try {
     const event = await req.json();
 

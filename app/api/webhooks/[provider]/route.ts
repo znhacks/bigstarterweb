@@ -4,10 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 import { paypalDriver } from "@/lib/billing/providers/paypal";
 import { BillingProviderDriver } from "@/lib/billing/types";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Memaksa rute dievaluasi secara dinamis saat runtime (mencegah error build statis)
+export const dynamic = "force-dynamic";
 
 // Map semua driver terdaftar
 const drivers: Record<string, BillingProviderDriver> = {
@@ -19,6 +17,12 @@ export async function POST(
   // Perubahan tipe data: params dibungkus dalam Promise untuk Next.js 15
   { params }: { params: Promise<{ provider: string }> }
 ) {
+  // Inisialisasi di dalam handler untuk mencegah error "supabaseUrl is required" saat build-time
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder"
+  );
+
   // Mengekstrak parameter secara asinkronus menggunakan await
   const { provider } = await params;
   const driver = drivers[provider];
