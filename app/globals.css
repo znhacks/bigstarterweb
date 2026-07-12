@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
+@import "./themes.css";
+
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
-
-@import "./themes.css";
 
 :root {
   /* Default font families */
