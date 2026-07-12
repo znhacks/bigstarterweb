@@ -107,6 +107,7 @@
     "nextjs-toploader": "^3.9.17",
     "nodemailer": "^9.0.1",
     "pg": "^8.22.0",
+    "postcss": "^8.5.17",
     "prisma": "^6.19.3",
     "radix-ui": "^1.4.3",
     "react": "^19.2.3",
@@ -138,7 +139,7 @@
   },
   "devDependencies": {
     "@react-email/components": "^1.0.12",
-    "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^24.10.4",
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.0",
