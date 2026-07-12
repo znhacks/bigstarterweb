@@ -1,3 +1,4 @@
+// ./app/(auth)/(users)/[tenant_slug]/organization/member/logic.ts
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -282,7 +283,8 @@ export function useOrganizationMembers() {
       const planConfig = plans.find((p) => p.id === activePlanId);
 
       if (planConfig) {
-        setMaxUsers(planConfig.maxUsers);
+        // Melakukan asersi as any secara inline untuk menghindari batasan tipe Plan
+        setMaxUsers((planConfig as any).maxUsers || 2);
       } else {
         setMaxUsers(2);
       }

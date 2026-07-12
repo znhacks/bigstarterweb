@@ -284,7 +284,7 @@ export function SuperadminBillingDashboard() {
           </div>
           <button
             onClick={() => setAlertMessage(null)}
-            className="text-muted-foreground hover:text-foreground absolute end-4 top-4 transition-colors">
+            className="text-muted-foreground hover:text-foreground absolute inset-e-4 top-4 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </Alert>
@@ -569,64 +569,73 @@ export function SuperadminBillingDashboard() {
                 </div>
               </div>
 
-              {billingPlans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className="border-border/60 bg-card flex flex-col justify-between gap-4 rounded-xl border p-5 md:flex-row md:items-center">
-                  <div className="flex items-start gap-4">
-                    <div className="border-primary/20 bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
-                      <Package className="text-primary h-5 w-5" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-foreground text-sm font-bold">{plan.name}</span>
-                        <Badge
-                          variant="outline"
-                          className="rounded-full text-[9px] font-bold tracking-wider uppercase">
-                          {plan.id}
-                        </Badge>
-                      </div>
-                      <p className="text-muted-foreground text-xs">{plan.description}</p>
+              {billingPlans.map((plan) => {
+                // Melakukan asersi tipe (type assertion) as any secara merata untuk menghindari error tipe objek Plan
+                const planConfig = plan as any;
+                const planFeatures = planConfig.features as string[] | undefined;
+                const maxUsers = planConfig.maxUsers as number | undefined;
 
-                      {/* Render Fitur-fitur */}
-                      {plan.features && plan.features.length > 0 && (
-                        <div className="flex flex-wrap gap-1 pt-1.5">
-                          {plan.features.map((feat, fIdx) => (
-                            <Badge
-                              key={fIdx}
-                              variant="secondary"
-                              className="rounded-md px-2 py-0.5 text-[9px]">
-                              {feat}
-                            </Badge>
-                          ))}
+                return (
+                  <div
+                    key={planConfig.id}
+                    className="border-border/60 bg-card flex flex-col justify-between gap-4 rounded-xl border p-5 md:flex-row md:items-center">
+                    <div className="flex items-start gap-4">
+                      <div className="border-primary/20 bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
+                        <Package className="text-primary h-5 w-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-foreground text-sm font-bold">
+                            {planConfig.name}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="rounded-full text-[9px] font-bold tracking-wider uppercase">
+                            {planConfig.id}
+                          </Badge>
                         </div>
-                      )}
-                    </div>
-                  </div>
+                        <p className="text-muted-foreground text-xs">{planConfig.description}</p>
 
-                  {/* Tampilan Harga dan Atribut Pengguna */}
-                  <div className="flex shrink-0 items-center justify-between gap-6 border-t pt-3 md:justify-end md:border-t-0 md:pt-0">
-                    <div className="text-start md:text-end">
-                      <div className="text-foreground text-lg font-extrabold">
-                        {formatPrice(plan.prices.monthly.amount)}
-                        <span className="text-muted-foreground text-xs font-normal">/mo</span>
+                        {/* Render Fitur-fitur secara aman */}
+                        {planFeatures && planFeatures.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1.5">
+                            {planFeatures.map((feat, fIdx) => (
+                              <Badge
+                                key={fIdx}
+                                variant="secondary"
+                                className="rounded-md px-2 py-0.5 text-[9px]">
+                                {feat}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-muted-foreground text-xs">
-                        {formatPrice(plan.prices.yearly.amount)}
-                        <span className="text-[10px]">/yr</span>
+                    </div>
+
+                    {/* Tampilan Harga dan Atribut Pengguna */}
+                    <div className="flex shrink-0 items-center justify-between gap-6 border-t pt-3 md:justify-end md:border-t-0 md:pt-0">
+                      <div className="text-start md:text-end">
+                        <div className="text-foreground text-lg font-extrabold">
+                          {formatPrice(planConfig.prices?.monthly?.amount || 0)}
+                          <span className="text-muted-foreground text-xs font-normal">/mo</span>
+                        </div>
+                        <div className="text-muted-foreground text-xs">
+                          {formatPrice(planConfig.prices?.yearly?.amount || 0)}
+                          <span className="text-[10px]">/yr</span>
+                        </div>
+                        <p className="text-muted-foreground mt-1 text-[10px]">
+                          {t("placeholders.maxUsers") || "Max Users"}:{" "}
+                          <strong>
+                            {maxUsers === undefined || maxUsers === 9999
+                              ? t("placeholders.unlimited") || "Unlimited"
+                              : maxUsers}
+                          </strong>
+                        </p>
                       </div>
-                      <p className="text-muted-foreground mt-1 text-[10px]">
-                        {t("placeholders.maxUsers") || "Max Users"}:{" "}
-                        <strong>
-                          {plan.maxUsers === 9999
-                            ? t("placeholders.unlimited") || "Unlimited"
-                            : plan.maxUsers}
-                        </strong>
-                      </p>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </TabsContent>
           </Tabs>
         </CardContent>

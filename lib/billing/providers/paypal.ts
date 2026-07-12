@@ -54,16 +54,20 @@ class PaypalDriver implements BillingProviderDriver {
     let amount = 0;
 
     for (const p of plans) {
-      if (p.prices.monthly.paypalPlanId === paypalPlanId) {
+      // Menggunakan asersi as any secara lokal untuk mengakses properti paypalPlanId
+      const monthlyPrice = p.prices.monthly as any;
+      const yearlyPrice = p.prices.yearly as any;
+
+      if (monthlyPrice.paypalPlanId === paypalPlanId) {
         matchedPlanId = p.id;
         billingCycle = "monthly";
-        amount = p.prices.monthly.amount;
+        amount = monthlyPrice.amount;
         break;
       }
-      if (p.prices.yearly.paypalPlanId === paypalPlanId) {
+      if (yearlyPrice.paypalPlanId === paypalPlanId) {
         matchedPlanId = p.id;
         billingCycle = "yearly";
-        amount = p.prices.yearly.amount;
+        amount = yearlyPrice.amount;
         break;
       }
     }

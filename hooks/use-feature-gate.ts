@@ -15,13 +15,13 @@ export function useFeatureGate({ activePlanId }: UseFeatureGateParams) {
    * Cek apakah fitur boolean diizinkan
    * Contoh: canUse('allowPdfFormat')
    */
-  const canUse = (featureKey: keyof Omit<FeatureGates, "maxUsers" | "maxScreenshots">): boolean => {
+  const canUse = (featureKey: keyof Omit<FeatureGates, "maxUsers" | "maxTasks">): boolean => {
     return currentPlan.featureGates[featureKey] === true;
   };
 
   /**
    * Cek batas limit numerik fitur
-   * Contoh: getLimit('maxScreenshots')
+   * Contoh: getLimit('maxTasks')
    */
   const getLimit = (limitKey: "maxUsers" | "maxTasks"): number => {
     return currentPlan.featureGates[limitKey];

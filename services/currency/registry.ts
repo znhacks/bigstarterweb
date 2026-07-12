@@ -4,6 +4,9 @@ import { ICurrencyRateService } from "./types";
 import { FrankfurterCurrencyService } from "./frankfurter-service";
 import { MockCurrencyService } from "./mock-service";
 
+// RE-EKSPOR: Mengekspor kembali CURRENCY_PROVIDERS agar dapat diimpor oleh file lain (seperti ./lib/providers.ts)
+export { CURRENCY_PROVIDERS };
+
 const providers: Record<string, ICurrencyRateService> = {
   [CURRENCY_PROVIDERS.frankfurter]: new FrankfurterCurrencyService(),
   [CURRENCY_PROVIDERS.mock]: new MockCurrencyService()

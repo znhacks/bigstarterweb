@@ -181,7 +181,8 @@ export function OrganizationBilling() {
               const localizedDescription =
                 tBilling(`plans.${plan.id}.description`) || plan.description;
 
-              let localizedFeatures = plan.features;
+              // Ditambahkan fallback array kosong jika properti features tidak didefinisikan
+              let localizedFeatures = plan.features || [];
               try {
                 const rawFeatures = tBilling.raw(`plans.${plan.id}.features`);
                 if (Array.isArray(rawFeatures)) {

@@ -371,7 +371,12 @@ export function I18nCultureView({ locale }: I18nCultureViewProps) {
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label>Uji Nomor Telepon</Label>
-              <PhoneInput defaultCountry="ID" value={phoneNumber} onChange={setPhoneNumber} />
+              {/* Diubah agar melewatkan string kosong "" sebagai fallback jika input bernilai undefined */}
+              <PhoneInput
+                defaultCountry="ID"
+                value={phoneNumber}
+                onChange={(val) => setPhoneNumber(val || "")}
+              />
             </div>
             <div className="bg-muted/50 rounded-md p-3 text-xs">
               <span className="text-muted-foreground block">Raw Output State:</span>

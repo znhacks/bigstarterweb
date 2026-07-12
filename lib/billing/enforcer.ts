@@ -18,7 +18,13 @@ export async function checkSeatLimit(tenantId: string): Promise<LimitCheckResult
 
   const isExpired = sub?.ends_at ? new Date() > new Date(sub.ends_at) : false;
   const activePlanId = sub && sub.status === "active" && !isExpired ? sub.plan_id : "free";
-  const planConfig = plans.find((p) => p.id === activePlanId)!;
+
+  // Melakukan asersi as any untuk membaca properti maxUsers secara dinamis
+  const planConfig = plans.find((p) => p.id === activePlanId) as any;
+
+  if (!planConfig) {
+    throw new Error(`Konfigurasi paket untuk ID "${activePlanId}" tidak ditemukan.`);
+  }
 
   const { count, error } = await supabaseAdmin
     .from("memberships")
@@ -28,7 +34,7 @@ export async function checkSeatLimit(tenantId: string): Promise<LimitCheckResult
   if (error) throw error;
 
   const currentSeats = count || 0;
-  const maxSeats = planConfig.maxUsers;
+  const maxSeats = planConfig.maxUsers || 2; // Memberikan nilai fallback aman
 
   return {
     allowed: currentSeats < maxSeats,
@@ -47,7 +53,13 @@ export async function checkUsageLimit(tenantId: string): Promise<LimitCheckResul
 
   const isExpired = sub?.ends_at ? new Date() > new Date(sub.ends_at) : false;
   const activePlanId = sub && sub.status === "active" && !isExpired ? sub.plan_id : "free";
-  const planConfig = plans.find((p) => p.id === activePlanId)!;
+
+  // Melakukan asersi as any untuk membaca properti maxTasks secara dinamis
+  const planConfig = plans.find((p) => p.id === activePlanId) as any;
+
+  if (!planConfig) {
+    throw new Error(`Konfigurasi paket untuk ID "${activePlanId}" tidak ditemukan.`);
+  }
 
   // B. Hitung penggunaan screenshot di bulan kalender berjalan saat ini
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
@@ -62,7 +74,7 @@ export async function checkUsageLimit(tenantId: string): Promise<LimitCheckResul
   if (error) throw error;
 
   const currentUsage = count || 0;
-  const maxUsage = planConfig.maxScreenshots;
+  const maxUsage = planConfig.maxTasks || 100; // Memberikan nilai fallback aman
 
   return {
     allowed: currentUsage < maxUsage,

@@ -31,7 +31,7 @@ export async function getTenantPlan(tenantId: string) {
  */
 export async function hasFeature(
   tenantId: string,
-  featureKey: keyof Omit<FeatureGates, "maxUsers" | "maxScreenshots">
+  featureKey: keyof Omit<FeatureGates, "maxUsers" | "maxTasks">
 ): Promise<boolean> {
   const plan = await getTenantPlan(tenantId);
   if (!plan) return false;
@@ -40,7 +40,7 @@ export async function hasFeature(
 }
 
 /**
- * Mengambil batas kuota angka dari suatu fitur (misal: 'maxScreenshots')
+ * Mengambil batas kuota angka dari suatu fitur (misal: 'maxTasks')
  */
 export async function getFeatureLimit(
   tenantId: string,

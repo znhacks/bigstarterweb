@@ -1,3 +1,4 @@
+// ./components/ui/image-cropper-dialog.tsx
 "use client";
 
 import * as React from "react";
@@ -35,8 +36,8 @@ export function ImageCropperDialog({
   const cropperRef = useRef<ReactCropperElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // State Manajemen Pemuatan Berkas
-  const [imageSrc, setImageSrc] = useState<string | null>(initialImageSrc);
+  // State Manajemen Pemuatan Berkas (menggunakan ?? null untuk mengantisipasi nilai undefined)
+  const [imageSrc, setImageSrc] = useState<string | null>(initialImageSrc ?? null);
   const [urlInput, setUrlInput] = useState("");
   const [urlPreview, setUrlPreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("upload");
@@ -62,7 +63,8 @@ export function ImageCropperDialog({
       setRotation(0);
       setIsDragging(false);
     } else {
-      setImageSrc(initialImageSrc);
+      // Mengonversi undefined ke null jika initialImageSrc kosong saat modal dibuka
+      setImageSrc(initialImageSrc ?? null);
     }
   }, [open, initialImageSrc]);
 

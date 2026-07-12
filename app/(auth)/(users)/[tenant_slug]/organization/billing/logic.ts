@@ -37,7 +37,9 @@ export interface ActiveSubscription {
   cancelAtPeriodEnd: boolean;
 }
 
+// Menambahkan properti 'features' opsional agar dikenal oleh TypeScript
 export interface ConvertedPlan extends Plan {
+  features?: string[];
   prices: {
     monthly: {
       amount: number;
