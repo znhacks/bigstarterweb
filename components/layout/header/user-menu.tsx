@@ -147,7 +147,7 @@ export default function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild className="cursor-pointer">
-            <Link href="https://shadcnuikit.com/pricing" target="_blank">
+            <Link href="https://bigstarter.vercel.app/pricing" target="_blank">
               <Sparkles className="me-2 h-4 w-4 text-amber-500" /> {t("upgradetopro")}
             </Link>
           </DropdownMenuItem>
