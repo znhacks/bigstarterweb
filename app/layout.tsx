@@ -50,7 +50,7 @@ export default async function RootLayout({
     <html lang={locale} suppressHydrationWarning dir={dir}>
       <head>
         <Script
-          src="https://dashboard.shadcnuikit.com/iframe-listener.js"
+          src="https://bigstarter.vercel.app/iframe-listener.js"
           strategy="afterInteractive"
         />
       </head>
