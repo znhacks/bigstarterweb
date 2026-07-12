@@ -150,6 +150,9 @@
     }
   },
   "register": {
+    "title": "Create New Accout",
+    "haveaccount": "Already have an account?",
+    "login": "Log in",
     "error": "Error",
     "success": "Success",
     "accountExistsTitle": "Account already exists",

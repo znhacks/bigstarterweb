@@ -150,6 +150,9 @@
     }
   },
   "register": {
+    "title": "Buat Akun Baru",
+    "haveaccount": "Sudah memiliki akun?",
+    "login": "Login",
     "error": "Error",
     "success": "Sukses",
     "accountExistsTitle": "Akun sudah terdaftar",

@@ -150,6 +150,9 @@
     }
   },
   "register": {
+    "title": "إنشاء حساب جديد",
+    "haveaccount": "هل لديك حساب بالفعل؟",
+    "login": "تسجيل الدخول",
     "error": "خطأ",
     "success": "نجاح",
     "accountExistsTitle": "الحساب موجود بالفعل",

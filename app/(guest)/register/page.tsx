@@ -4,6 +4,7 @@ import { generateMeta } from "@/lib/utils";
 import { RegisterForm } from "./components/register-form"; // Import komponen Client Form
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
+import { useTranslations } from "next-intl";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.register");
@@ -15,20 +16,22 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
+  const t = useTranslations("register")
   return (
     <div className="flex items-center justify-center py-4 lg:h-screen">
       <Card className="mx-auto w-96">
         <CardHeader>
-          <CardTitle className="text-2xl">Create New Account</CardTitle>
+          <CardTitle className="text-2xl">{t("title")}</CardTitle>
         </CardHeader>
         <CardContent>
           {/* Panggil Client Form yang terhubung ke Supabase di sini */}
           <RegisterForm />
 
           <div className="mt-4 text-center text-sm">
-            Already have an account?{" "}
+            {t("haveaccount")}
+            {" "}
             <Link href="/login" className="underline">
-              Sign in
+              {t("login")}
             </Link>
           </div>
         </CardContent>

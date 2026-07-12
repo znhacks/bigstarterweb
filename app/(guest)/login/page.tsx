@@ -34,7 +34,7 @@ export default function Page() {
           <div className="mt-4 text-center text-sm">
             {tlogin("noaccount?")}{" "}
             <Link href="/register" className="underline">
-              {"signup"}
+              {tlogin("signup")}
             </Link>
           </div>
         </CardContent>
