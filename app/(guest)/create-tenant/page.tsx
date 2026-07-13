@@ -1,9 +1,8 @@
 import React from "react";
 import { requireAuth } from "@/lib/auth";
 import { CreateTenantForm } from "@/components/create-tenant-form";
-import { getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server"; // Menggunakan getTranslations untuk Server Component
 import { constructMetadata } from "@/lib/metadata";
-import { useTranslations } from "next-intl";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.guest.create-tenant");
@@ -15,7 +14,9 @@ export async function generateMetadata() {
 }
 
 export default async function CreateTenantPage() {
-  const t = useTranslations("guest.create-tenant");
+  // PERBAIKAN: Ubah useTranslations menjadi await getTranslations
+  const t = await getTranslations("guest.create-tenant");
+
   // Wajibkan autentikasi sesi sebelum masuk halaman ini
   await requireAuth();
 
