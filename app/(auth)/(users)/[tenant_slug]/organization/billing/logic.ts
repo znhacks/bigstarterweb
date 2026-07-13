@@ -501,10 +501,15 @@ export function useOrganizationBilling() {
 
     const currentInterval = getActiveSubscriptionInterval();
 
-    // SINKRONISASI BARU: Jika paketnya sama, tetapi pengguna mengubah switch ke tahunan (Monthly -> Yearly)
+    // SINKRONISASI BARU: Jika paketnya sama, tetapi siklus tagihan berbeda
     if (activeSub.planId === planId) {
+      // Skenario A: Bulanan beralih ke Tahunan (Upgrade Siklus)
       if (currentInterval === "monthly" && billingCycle === "yearly") {
-        return "upgrade_cycle"; // Memicu aksi switch ke tahunan
+        return "upgrade_cycle";
+      }
+      // Skenario B: Tahunan beralih ke Bulanan (Downgrade Siklus)
+      if (currentInterval === "yearly" && billingCycle === "monthly") {
+        return "downgrade_cycle"; // Memicu aksi switch ke bulanan (tertunda)
       }
       return "active";
     }

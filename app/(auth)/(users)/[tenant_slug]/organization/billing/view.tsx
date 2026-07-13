@@ -251,58 +251,109 @@ export function OrganizationBilling() {
                   </div>
 
                   <div className="shrink-0 pt-4">
-                    {/* 1. KONDISI: Jika Plan ini adalah tujuan downgrade yang dijadwalkan */}
-                    {activeSub && activeSub.pendingPlanId === plan.id ? (
-                      <Button
-                        disabled
-                        className="w-full cursor-default border border-amber-500/20 bg-amber-500/10 py-5 font-semibold text-amber-600 hover:bg-amber-500/10">
-                        Scheduled Downgrade
-                      </Button>
-                    ) : // 2. KONDISI: Jika paket ini aktif saat ini, dan BUKAN merupakan aksi upgrade siklus
-                    isThisPlanActive && getPlanActionType(plan.id) !== "upgrade_cycle" ? (
-                      <div className="w-full space-y-2">
+                    <div className="shrink-0 pt-4">
+                      {/* 1. KONDISI: Jika Plan ini adalah tujuan downgrade yang dijadwalkan */}
+                      {activeSub && activeSub.pendingPlanId === plan.id ? (
                         <Button
                           disabled
-                          className="w-full cursor-default border border-emerald-500/20 bg-emerald-500/10 py-5 font-semibold text-emerald-600 hover:bg-emerald-500/10">
-                          {t("buttons.planActive")}
+                          className="w-full cursor-default border border-amber-500/20 bg-amber-500/10 py-5 font-semibold text-amber-600 hover:bg-amber-500/10">
+                          Scheduled Downgrade
                         </Button>
-                        {activeSub?.pendingPlanId && (
-                          <p className="px-2 text-center text-[10px] leading-normal font-semibold text-amber-600">
-                            *Active until{" "}
-                            {activeSub.endsAt
-                              ? new Date(activeSub.endsAt).toLocaleDateString(locale)
-                              : ""}{" "}
-                            (Scheduled Downgrade)
+                      ) : // 2. KONDISI (SOLUSI): Mengecualikan 'upgrade_cycle' DAN 'downgrade_cycle' dari tombol kunci Active Plan
+                      isThisPlanActive &&
+                        getPlanActionType(plan.id) !== "upgrade_cycle" &&
+                        getPlanActionType(plan.id) !== "downgrade_cycle" ? (
+                        <div className="w-full space-y-2">
+                          <Button
+                            disabled
+                            className="w-full cursor-default border border-emerald-500/20 bg-emerald-500/10 py-5 font-semibold text-emerald-600 hover:bg-emerald-500/10">
+                            {t("buttons.planActive")}
+                          </Button>
+                          {activeSub?.pendingPlanId && (
+                            <p className="px-2 text-center text-[10px] leading-normal font-semibold text-amber-600">
+                              *Active until{" "}
+                              {activeSub.endsAt
+                                ? new Date(activeSub.endsAt).toLocaleDateString(locale)
+                                : ""}{" "}
+                              (Scheduled Downgrade)
+                            </p>
+                          )}
+                        </div>
+                      ) : // 3. KONDISI: Jika pengguna memilih Switch ke Tahunan (Monthly -> Yearly)
+                      getPlanActionType(plan.id) === "upgrade_cycle" ? (
+                        <Button
+                          onClick={() => handleChoosePlan(plan)}
+                          disabled={isDisabled}
+                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
+                          <ArrowUpRight className="h-4 w-4 shrink-0" />
+                          <span>Switch to Yearly</span>
+                        </Button>
+                      ) : // 4. KONDISI (SEKARANG AKAN TERPANGGIL): Jika pengguna memilih Switch ke Bulanan (Yearly -> Monthly)
+                      getPlanActionType(plan.id) === "downgrade_cycle" ? (
+                        <div className="w-full space-y-2">
+                          <Button
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Apakah Anda yakin ingin menjadwalkan peralihan ke tagihan Bulanan? Paket Tahunan Anda saat ini tetap aktif sampai akhir periode tanpa tagihan tahunan baru.`
+                                )
+                              ) {
+                                handleDowngrade(plan.id);
+                              }
+                            }}
+                            disabled={isDisabled || isDowngrading}
+                            variant="outline"
+                            className="w-full border-slate-200 py-5 font-semibold text-slate-700 transition-all hover:bg-slate-50">
+                            {isDowngrading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                            <span>Switch to Monthly</span>
+                          </Button>
+                          <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
+                            *Paket tahunan Anda tetap aktif sampai masa berakhir, baru kemudian
+                            beralih ke bulanan.
                           </p>
-                        )}
-                      </div>
-                    ) : // 3. KONDISI BARU: Jika pengguna memilih Switch ke Tahunan (Monthly -> Yearly)
-                    getPlanActionType(plan.id) === "upgrade_cycle" ? (
-                      <Button
-                        onClick={() => handleChoosePlan(plan)}
-                        disabled={isDisabled}
-                        className="inline-flex w-full items-center justify-center gap-1.5 bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
-                        <ArrowUpRight className="h-4 w-4 shrink-0" />
-                        <span>Switch to Yearly</span>
-                      </Button>
-                    ) : // 4. KONDISI: Jika tombol upgrade paket ditekan (misal: Starter ke Pro)
-                    actionType === "upgrade" && isSubActive ? (
-                      <Button
-                        onClick={() => handleChoosePlan(plan)}
-                        disabled={isDisabled}
-                        className="inline-flex w-full items-center justify-center gap-1.5 bg-slate-950 py-5 font-semibold text-white hover:bg-slate-800">
-                        <ArrowUpRight className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{t("buttons.upgrade")}</span>
-                      </Button>
-                    ) : (
-                      // 5. KONDISI DEFAULT: Tombol pilih paket biasa
-                      <Button
-                        onClick={() => handleChoosePlan(plan)}
-                        disabled={isDisabled}
-                        className="w-full truncate bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
-                        {t("buttons.choose", { planName: localizedName })}
-                      </Button>
-                    )}
+                        </div>
+                      ) : // 5. KONDISI: Jika tombol upgrade paket ditekan (misal: Starter ke Pro)
+                      actionType === "upgrade" && isSubActive ? (
+                        <Button
+                          onClick={() => handleChoosePlan(plan)}
+                          disabled={isDisabled}
+                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-950 py-5 font-semibold text-white hover:bg-slate-800">
+                          <ArrowUpRight className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{t("buttons.upgrade")}</span>
+                        </Button>
+                      ) : // 4. KONDISI: Jika tombol downgrade ditekan
+                      actionType === "downgrade" && isSubActive ? (
+                        <div className="w-full space-y-2">
+                          <Button
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Apakah Anda yakin ingin menjadwalkan penurunan paket ke ${localizedName}? Paket aktif Anda tetap bisa digunakan hingga jatuh tempo.`
+                                )
+                              ) {
+                                handleDowngrade(plan.id);
+                              }
+                            }}
+                            disabled={isDisabled || isDowngrading}
+                            variant="outline"
+                            className="w-full border-slate-200 py-5 font-semibold text-slate-700 transition-all hover:bg-slate-50">
+                            {isDowngrading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                            {t("buttons.downgrade") || "Downgrade Plan"}
+                          </Button>
+                          <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
+                            *{t("downgradeinfo")}
+                          </p>
+                        </div>
+                      ) : (
+                        // 5. KONDISI DEFAULT: Tombol pilih paket biasa
+                        <Button
+                          onClick={() => handleChoosePlan(plan)}
+                          disabled={isDisabled}
+                          className="w-full truncate bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
+                          {t("buttons.choose", { planName: localizedName })}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

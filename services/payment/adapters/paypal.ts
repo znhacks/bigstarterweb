@@ -45,14 +45,6 @@ export class PayPalAdapter implements PaymentProvider {
     const selectedPlan = plans.find((p) => p.id === params.planId);
     if (!selectedPlan) throw new Error("Selected plan not found");
 
-    const amountInIdr =
-      params.interval === "monthly"
-        ? selectedPlan.prices.monthly.amount
-        : selectedPlan.prices.yearly.amount;
-
-    // Ambil nilai konversi ke USD real-time dari layanan Tahap 2
-    const exchange = await convertIdrToCurrency(amountInIdr, "USD");
-
     const paypalPlanId =
       params.interval === "monthly"
         ? selectedPlan.prices.monthly.providers?.paypal
@@ -62,7 +54,54 @@ export class PayPalAdapter implements PaymentProvider {
       throw new Error(`PayPal Plan ID is not configured for ${params.planId}`);
     }
 
-    // Buat request Subscription ke PayPal dengan parameter digital aman
+    // 1. Tentukan nominal harga dasar (IDR)
+    const amountInIdr =
+      params.customPrice !== undefined
+        ? params.customPrice
+        : params.interval === "monthly"
+          ? selectedPlan.prices.monthly.amount
+          : selectedPlan.prices.yearly.amount;
+
+    // 2. Konversi nominal Rupiah ke USD secara real-time
+    const exchange = await convertIdrToCurrency(amountInIdr, "USD");
+    const finalUsdAmount = exchange.convertedAmount;
+
+    // 3. Rakit body payload transaksi PayPal
+    const requestBody: any = {
+      plan_id: paypalPlanId,
+      subscriber: {
+        email_address: params.userEmail
+      },
+      application_context: {
+        brand_name: "SaaS Application",
+        user_action: "SUBSCRIBE_NOW",
+        shipping_preference: "NO_SHIPPING",
+        return_url: params.successUrl,
+        cancel_url: params.cancelUrl
+      },
+      custom_id: params.tenantId
+    };
+
+    // 4. PAYPAL PRICING OVERRIDE (SOLUSI UTAMA):
+    // Jika harga yang dikirim adalah harga terpotong pro-rata / kupon diskon,
+    // instruksikan PayPal untuk menimpa harga normal pada siklus pertama penagihan.
+    if (params.customPrice !== undefined) {
+      requestBody.plan = {
+        billing_cycles: [
+          {
+            sequence: 1,
+            total_cycles: 1,
+            pricing_scheme: {
+              fixed_price: {
+                value: finalUsdAmount.toString(), // Nilai potong harga USD (misal: "60.00")
+                currency_code: "USD"
+              }
+            }
+          }
+        ]
+      };
+    }
+
     const response = await fetch(`${this.baseUrl}/v1/billing/subscriptions`, {
       method: "POST",
       headers: {
@@ -70,27 +109,12 @@ export class PayPalAdapter implements PaymentProvider {
         "Content-Type": "application/json",
         Prefer: "return=representation"
       },
-      body: JSON.stringify({
-        plan_id: paypalPlanId,
-        subscriber: {
-          email_address: params.userEmail
-        },
-        application_context: {
-          brand_name: "SaaS Application",
-          user_action: "SUBSCRIBE_NOW",
-          shipping_preference: "NO_SHIPPING", // Menghapus form alamat pengiriman
-          return_url: params.successUrl,
-          cancel_url: params.cancelUrl
-        },
-        // Mengirimkan tenantId langsung sebagai teks biasa demi mematuhi regex PayPal: ^[a-zA-Z0-9_.@|=-]*$
-        custom_id: params.tenantId
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
       const err = await response.json();
 
-      // Membongkar detail error jika ada field yang salah kirim
       if (err.details && Array.isArray(err.details)) {
         const detailMessages = err.details
           .map((d: any) => `[Field: ${d.field}] Issue: ${d.issue} - ${d.description}`)

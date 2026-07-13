@@ -10,6 +10,7 @@ export interface CreateCheckoutSessionParams {
   interval: SubscriptionInterval;
   successUrl: string;
   cancelUrl: string;
+  customPrice?: number;
 }
 
 export interface CheckoutSessionResult {
