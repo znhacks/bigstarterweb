@@ -46,7 +46,7 @@ export class PayPalAdapter implements PaymentProvider {
     if (!selectedPlan) throw new Error("Selected plan not found");
 
     const amountInIdr =
-      params.interval === "month"
+      params.interval === "monthly"
         ? selectedPlan.prices.monthly.amount
         : selectedPlan.prices.yearly.amount;
 
@@ -54,7 +54,7 @@ export class PayPalAdapter implements PaymentProvider {
     const exchange = await convertIdrToCurrency(amountInIdr, "USD");
 
     const paypalPlanId =
-      params.interval === "month"
+      params.interval === "monthly"
         ? selectedPlan.prices.monthly.providers?.paypal
         : selectedPlan.prices.yearly.providers?.paypal;
 

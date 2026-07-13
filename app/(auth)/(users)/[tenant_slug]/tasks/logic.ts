@@ -148,7 +148,9 @@ export function useTasks(
     loadAll();
   }, [loadAll]);
 
-  const handleUpgrade = async (provider: "mayar" | "paypal" | "paddle") => {
+  const handleUpgrade = async (
+    provider: "mayar" | "paypal" | "paddle" | "midtrans" | "xendit" | "lemonsqueezy" | "stripe"
+  ) => {
     setIsUpgrading(true);
     try {
       const {
@@ -164,7 +166,7 @@ export function useTasks(
         },
         body: JSON.stringify({
           planId: "pro",
-          interval: "month",
+          interval: "monthly",
           provider: provider,
           tenantId: tenantId,
           successUrl: `${window.location.origin}/${locale}/settings/tasks?upgrade_success=true`,

@@ -74,7 +74,9 @@ export function OrganizationBilling() {
     getPlanActionType,
     isSubActive,
     daysLeft,
-    showWarningBanner
+    showWarningBanner,
+    handleDowngrade,
+    isDowngrading
   } = useOrganizationBilling();
 
   if (isLoading) {
@@ -247,40 +249,75 @@ export function OrganizationBilling() {
                   </div>
 
                   <div className="shrink-0 pt-4">
-                    {isThisPlanActive ? (
-                      <Button
-                        disabled
-                        className="w-full cursor-default border border-emerald-500/20 bg-emerald-500/10 py-5 font-semibold text-emerald-600 hover:bg-emerald-500/10">
-                        {t("buttons.planActive")}
-                      </Button>
-                    ) : actionType === "upgrade" && isSubActive ? (
-                      <Button
-                        onClick={() => handleChoosePlan(plan)}
-                        disabled={isDisabled}
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-950 py-5 font-semibold text-white hover:bg-slate-800">
-                        <ArrowUpRight className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{t("buttons.upgrade")}</span>
-                      </Button>
-                    ) : actionType === "downgrade" && isSubActive ? (
-                      <div className="w-full space-y-2">
+                    <div className="shrink-0 pt-4">
+                      {/* 1. KONDISI: Jika Plan ini adalah tujuan downgrade yang dijadwalkan */}
+                      {activeSub && activeSub.pendingPlanId === plan.id ? (
                         <Button
                           disabled
-                          variant="outline"
-                          className="w-full cursor-not-allowed py-5 font-semibold opacity-60">
-                          {t("buttons.downgrade")}
+                          className="w-full cursor-default border border-amber-500/20 bg-amber-500/10 py-5 font-semibold text-amber-600 hover:bg-amber-500/10">
+                          Scheduled Downgrade
                         </Button>
-                        <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
-                          *{t("downgradeinfo")}
-                        </p>
-                      </div>
-                    ) : (
-                      <Button
-                        onClick={() => handleChoosePlan(plan)}
-                        disabled={isDisabled}
-                        className="w-full truncate bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
-                        {t("buttons.choose", { planName: localizedName })}
-                      </Button>
-                    )}
+                      ) : // 2. KONDISI: Jika Plan ini adalah paket aktif saat ini
+                      isThisPlanActive ? (
+                        <div className="w-full space-y-2">
+                          <Button
+                            disabled
+                            className="w-full cursor-default border border-emerald-500/20 bg-emerald-500/10 py-5 font-semibold text-emerald-600 hover:bg-emerald-500/10">
+                            {t("buttons.planActive")}
+                          </Button>
+                          {/* Jika paket aktif ini memiliki jadwal downgrade tertunda */}
+                          {activeSub?.pendingPlanId && (
+                            <p className="px-2 text-center text-[10px] leading-normal font-semibold text-amber-600">
+                              *Active until{" "}
+                              {activeSub.endsAt
+                                ? new Date(activeSub.endsAt).toLocaleDateString(locale)
+                                : ""}{" "}
+                              (Scheduled Downgrade)
+                            </p>
+                          )}
+                        </div>
+                      ) : // 3. KONDISI: Jika tombol upgrade ditekan
+                      actionType === "upgrade" && isSubActive ? (
+                        <Button
+                          onClick={() => handleChoosePlan(plan)}
+                          disabled={isDisabled}
+                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-950 py-5 font-semibold text-white hover:bg-slate-800">
+                          <ArrowUpRight className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{t("buttons.upgrade")}</span>
+                        </Button>
+                      ) : // 4. KONDISI: Jika tombol downgrade ditekan
+                      actionType === "downgrade" && isSubActive ? (
+                        <div className="w-full space-y-2">
+                          <Button
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Apakah Anda yakin ingin menjadwalkan penurunan paket ke ${localizedName}? Paket aktif Anda tetap bisa digunakan hingga jatuh tempo.`
+                                )
+                              ) {
+                                handleDowngrade(plan.id);
+                              }
+                            }}
+                            disabled={isDisabled || isDowngrading}
+                            variant="outline"
+                            className="w-full border-slate-200 py-5 font-semibold text-slate-700 transition-all hover:bg-slate-50">
+                            {isDowngrading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                            {t("buttons.downgrade") || "Downgrade Plan"}
+                          </Button>
+                          <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
+                            *{t("downgradeinfo")}
+                          </p>
+                        </div>
+                      ) : (
+                        // 5. KONDISI DEFAULT: Tombol pilih paket biasa
+                        <Button
+                          onClick={() => handleChoosePlan(plan)}
+                          disabled={isDisabled}
+                          className="w-full truncate bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
+                          {t("buttons.choose", { planName: localizedName })}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

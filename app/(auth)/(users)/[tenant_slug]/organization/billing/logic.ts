@@ -38,6 +38,7 @@ export interface ActiveSubscription {
   status: string;
   cancelAtPeriodEnd: boolean;
   provider?: string;
+  pendingPlanId?: string; // TAMBAHKAN BARIS INI
 }
 
 export interface ConvertedPlan extends Omit<Plan, "prices"> {
@@ -100,6 +101,7 @@ export function useOrganizationBilling() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Transaction | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [isDowngrading, setIsDowngrading] = useState(false);
 
   const initializeConvertedPlans = async () => {
     try {
@@ -164,7 +166,10 @@ export function useOrganizationBilling() {
   const fetchActiveSubscription = async (orgId: string) => {
     const { data, error } = await supabase
       .from("subscriptions")
-      .select("id, status, starts_at, ends_at, cancel_at_period_end, plan_id, provider")
+      // TAMBAHKAN kolom 'pending_plan_id' di query select di bawah ini:
+      .select(
+        "id, status, starts_at, ends_at, cancel_at_period_end, plan_id, provider, pending_plan_id"
+      )
       .eq("tenant_id", orgId)
       .in("status", ["active", "refund_requested", "expired"])
       .maybeSingle();
@@ -198,7 +203,9 @@ export function useOrganizationBilling() {
           endsAt: data.ends_at,
           status: data.status,
           cancelAtPeriodEnd: !!data.cancel_at_period_end,
-          provider: data.provider || undefined
+          provider: data.provider || undefined,
+          // PETAKAN kolom database ke state frontend di bawah ini:
+          pendingPlanId: data.pending_plan_id || undefined
         });
         return;
       }
@@ -283,7 +290,6 @@ export function useOrganizationBilling() {
       } = await supabase.auth.getSession();
       if (!authSession) throw new Error("Silakan masuk terlebih dahulu");
 
-      // RENCANA URUTAN DINAMIS: Menjamin pengalihan kembali tepat sasaran ke [tenant_slug]/organization/billing
       const billingRedirectPath = `/${tenantSlug}/organization/billing`;
 
       const response = await fetch("/api/billing/checkout", {
@@ -294,7 +300,7 @@ export function useOrganizationBilling() {
         },
         body: JSON.stringify({
           planId: selectedPlan.id,
-          interval: billingCycle,
+          interval: billingCycle, // Langsung kirim 'monthly' atau 'yearly' secara aman
           provider: provider,
           tenantId: activeOrgId,
           successUrl: `${window.location.origin}${billingRedirectPath}?success=true`,
@@ -385,6 +391,50 @@ export function useOrganizationBilling() {
       });
     } finally {
       setIsUpdatingSub(false);
+    }
+  };
+
+  const handleDowngrade = async (targetPlanId: string) => {
+    if (!activeOrgId) return;
+    setIsDowngrading(true);
+
+    try {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Silakan masuk terlebih dahulu");
+
+      const response = await fetch("/api/billing/downgrade", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          tenantId: activeOrgId,
+          targetPlanId: targetPlanId
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.error) throw new Error(data.error || "Gagal memproses downgrade");
+
+      setAlertMessage({
+        title: locale === "en" ? "Downgrade Scheduled" : "Downgrade Dijadwalkan",
+        description: `Sukses! Paket Anda saat ini tetap aktif hingga tanggal kadaluarsa. Sistem akan otomatis menurunkan paket Anda setelah jatuh tempo.`,
+        variant: "default"
+      });
+
+      await fetchActiveSubscription(activeOrgId);
+    } catch (err: any) {
+      console.error(err);
+      setAlertMessage({
+        title: "Downgrade Failed",
+        description: err.message || "Gagal menjadwalkan penurunan paket.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDowngrading(false);
     }
   };
 
@@ -530,6 +580,8 @@ export function useOrganizationBilling() {
     isSubActive,
     daysLeft,
     showWarningBanner,
-    currentActivePrice
+    currentActivePrice,
+    handleDowngrade,
+    isDowngrading
   };
 }
