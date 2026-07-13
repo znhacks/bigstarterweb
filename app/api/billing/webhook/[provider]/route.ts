@@ -30,7 +30,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       orderId
     } = result;
 
-    // CETAK LOG DEBUGGING DI KONSOL SERVER:
     console.log("========== WEBHOOK RECEIVED ==========");
     console.log("Provider   :", providerName);
     console.log("Event Type :", eventType);
@@ -47,30 +46,45 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       );
     }
 
+    const normalizedStatus = status.toLowerCase().trim();
+
     if (eventType === "subscription.created" || eventType === "subscription.updated") {
-      // Eksekusi upsert ke tabel subscriptions
+      // PROTEKSI ARSITEKTUR UTAMA:
+      // Jangan pernah menimpa atau memodifikasi tabel subscriptions jika statusnya masih menggantung (belum dibayar)
+      if (normalizedStatus === "approval_pending" || normalizedStatus === "pending") {
+        console.log(
+          `[Webhook Ignored] Mengabaikan event karena status transaksi masih pending (${normalizedStatus}) untuk tenant: ${tenantId}`
+        );
+        return NextResponse.json({
+          received: true,
+          ignored: true,
+          reason: "Transaksi belum dibayar (status pending). Database aman dan tidak diubah."
+        });
+      }
+
+      // Hanya lakukan upsert jika status sudah resmi AKTIF
       const { error: upsertError } = await supabaseAdmin.from("subscriptions").upsert(
         {
           tenant_id: tenantId,
           plan_id: planId || "free",
-          status: status,
+          status: normalizedStatus, // Menyimpan status lowercase 'active'
           ends_at: endsAt || null,
           provider: providerName,
           provider_subscription_id: providerSubscriptionId,
           provider_customer_id: providerCustomerId,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          // Kosongkan pending_plan_id jika mereka baru saja sukses melakukan transaksi upgrade/pembayaran baru
+          pending_plan_id: null
         },
         { onConflict: "tenant_id" }
       );
 
-      // SOLUSI: Lempar error jika operasi database gagal agar terdeteksi di konsol
       if (upsertError) {
         throw new Error(
           `Database Upsert Subscriptions Failed: ${upsertError.message} (Code: ${upsertError.code})`
         );
       }
     } else if (eventType === "subscription.deleted") {
-      // 1. Ambil data langganan saat ini untuk memeriksa adanya downgrade tertunda (pending_plan_id)
       const { data: currentSub, error: fetchError } = await supabaseAdmin
         .from("subscriptions")
         .select("pending_plan_id, provider")
@@ -82,15 +96,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       }
 
       if (currentSub?.pending_plan_id) {
-        // SKENARIO A: Ada downgrade tertunda, pindahkan tenant ke paket baru tersebut secara otomatis
         const { error: downgradeError } = await supabaseAdmin
           .from("subscriptions")
           .update({
             plan_id: currentSub.pending_plan_id,
             status: "active",
-            ends_at: null, // Di-set null jika downgrade ke free, atau hitung siklus baru jika paid downgrade
+            ends_at: null,
             cancel_at_period_end: false,
-            pending_plan_id: null, // Kosongkan kembali kolom penampung
+            pending_plan_id: null,
             updated_at: new Date().toISOString()
           })
           .eq("tenant_id", tenantId);
@@ -99,7 +112,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
           throw new Error(`Database Process Downgrade Failed: ${downgradeError.message}`);
         }
       } else {
-        // SKENARIO B: Tidak ada downgrade tertunda, matikan langganan (kembali ke paket free)
         const { error: deleteError } = await supabaseAdmin
           .from("subscriptions")
           .update({
@@ -137,7 +149,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    // Seluruh error (termasuk error Supabase) sekarang akan tercetak jelas di sini
     console.error(`Webhook Error [${providerName}]:`, error.message || error);
     return NextResponse.json({ error: error.message || "Webhook Handler Error" }, { status: 500 });
   }

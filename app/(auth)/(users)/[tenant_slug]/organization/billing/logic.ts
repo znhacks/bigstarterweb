@@ -171,7 +171,14 @@ export function useOrganizationBilling() {
         "id, status, starts_at, ends_at, cancel_at_period_end, plan_id, provider, pending_plan_id"
       )
       .eq("tenant_id", orgId)
-      .in("status", ["active", "refund_requested", "expired"])
+      .in("status", [
+        "active",
+        "ACTIVE",
+        "refund_requested",
+        "REFUND_REQUESTED",
+        "expired",
+        "EXPIRED"
+      ])
       .maybeSingle();
 
     if (error) throw error;
