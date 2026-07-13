@@ -1,9 +1,10 @@
-// useOrganizationBilling.ts
+// app/(auth)/(users)/[tenant_slug]/organization/billing/logic.ts
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation"; // IMPOR BARU: Untuk membaca parameter dinamis rute
 import { supabase } from "@/lib/supabase";
-import { plans, Plan } from "@/config/billing";
+import { plans, Plan, GatewayIds } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/i18n/currency";
 import { convertCurrency } from "@/actions/currency";
@@ -24,6 +25,7 @@ export interface Transaction {
   order_id: string;
   status: string;
   created_at: string;
+  provider?: string;
 }
 
 export interface ActiveSubscription {
@@ -35,33 +37,33 @@ export interface ActiveSubscription {
   endsAt: string | null;
   status: string;
   cancelAtPeriodEnd: boolean;
+  provider?: string;
 }
 
-// Menambahkan properti 'features' opsional agar dikenal oleh TypeScript
-export interface ConvertedPlan extends Plan {
-  features?: string[];
+export interface ConvertedPlan extends Omit<Plan, "prices"> {
+  features: string[];
   prices: {
     monthly: {
       amount: number;
-      convertedAmount: number; // Nilai lokal terkonversi (default tetap IDR jika locale ID)
-      paypalPlanId?: string;
-      stripePriceId?: string;
+      convertedAmount: number;
+      providers?: GatewayIds;
     };
     yearly: {
       amount: number;
       convertedAmount: number;
-      paypalPlanId?: string;
-      stripePriceId?: string;
+      providers?: GatewayIds;
     };
   };
 }
 
 export function useOrganizationBilling() {
   const locale = useLocale();
+  const routeParams = useParams(); // Membaca parameter url aktif [tenant_slug]
+  const tenantSlug = (routeParams?.tenant_slug as string) || "";
+
   const t = useTranslations("organization.organization-billing");
   const targetCurrency = getDisplayCurrency(locale);
 
-  // Pemformatan Mata Uang berbasis Kultur terpusat
   const formatPrice = (price: number, currencyCode?: string) => {
     const activeCurrency = currencyCode ?? targetCurrency;
     return formatCurrency(price, locale, {
@@ -78,10 +80,12 @@ export function useOrganizationBilling() {
   const [isUpdatingSub, setIsUpdatingSub] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
-  // Inisialisasi list paket menggunakan harga Rupiah dasar dari config
+  const [enabledProviders, setEnabledProviders] = useState<string[]>([]);
+
   const [convertedPlans, setConvertedPlans] = useState<ConvertedPlan[]>(() =>
     plans.map((p) => ({
       ...p,
+      features: p.displayFeatures || [],
       prices: {
         monthly: { ...p.prices.monthly, convertedAmount: p.prices.monthly.amount },
         yearly: { ...p.prices.yearly, convertedAmount: p.prices.yearly.amount }
@@ -97,16 +101,15 @@ export function useOrganizationBilling() {
   const [selectedInvoice, setSelectedInvoice] = useState<Transaction | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
-  // Mengonversi harga paket dari basis IDR ke mata uang target sistem
   const initializeConvertedPlans = async () => {
     try {
       const updated = await Promise.all(
         plans.map(async (plan) => {
-          // Tanpa override: konversi dari IDR (CURRENCY.base) ke targetCurrency (IDR/USD/SAR)
           const monthlyConv = await convertCurrency(plan.prices.monthly.amount, targetCurrency);
           const yearlyConv = await convertCurrency(plan.prices.yearly.amount, targetCurrency);
           return {
             ...plan,
+            features: plan.displayFeatures || [],
             prices: {
               monthly: {
                 ...plan.prices.monthly,
@@ -135,7 +138,13 @@ export function useOrganizationBilling() {
         initializeConvertedPlans()
       ]);
     } catch (e: any) {
-      console.error("Gagal memuat data billing:", e);
+      console.error("================ BILLING ERROR ================");
+      console.error("Message :", e?.message || e);
+      if (e?.code) console.error("Code    :", e.code);
+      if (e?.details) console.error("Details :", e.details);
+      if (e?.hint) console.error("Hint    :", e.hint);
+      if (e?.stack) console.error("Stack   :", e.stack);
+      console.error("===============================================");
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +164,7 @@ export function useOrganizationBilling() {
   const fetchActiveSubscription = async (orgId: string) => {
     const { data, error } = await supabase
       .from("subscriptions")
-      .select("id, status, starts_at, ends_at, cancel_at_period_end, plan_id")
+      .select("id, status, starts_at, ends_at, cancel_at_period_end, plan_id, provider")
       .eq("tenant_id", orgId)
       .in("status", ["active", "refund_requested", "expired"])
       .maybeSingle();
@@ -188,7 +197,8 @@ export function useOrganizationBilling() {
           startsAt: data.starts_at,
           endsAt: data.ends_at,
           status: data.status,
-          cancelAtPeriodEnd: !!data.cancel_at_period_end
+          cancelAtPeriodEnd: !!data.cancel_at_period_end,
+          provider: data.provider || undefined
         });
         return;
       }
@@ -198,6 +208,14 @@ export function useOrganizationBilling() {
 
   useEffect(() => {
     const orgId = localStorage.getItem("active_org_id");
+
+    const providersEnv = process.env.NEXT_PUBLIC_ENABLED_PAYMENT_PROVIDERS;
+    if (providersEnv) {
+      setEnabledProviders(providersEnv.split(",").map((p) => p.trim().toLowerCase()));
+    } else {
+      setEnabledProviders(["mayar"]);
+    }
+
     if (orgId) {
       setActiveOrgId(orgId);
       loadBillingData(orgId);
@@ -215,21 +233,111 @@ export function useOrganizationBilling() {
     }
   }, [alertMessage]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !activeOrgId) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const hasSuccess = params.get("success") === "true";
+    const hasCanceled = params.get("canceled") === "true";
+
+    if (hasSuccess) {
+      setAlertMessage({
+        title: locale === "en" ? "Payment Processing" : "Pembayaran Sedang Diproses",
+        description:
+          "Terima kasih! Transaksi Anda sedang diverifikasi secara aman oleh sistem di latar belakang. Mohon tunggu beberapa detik selagi kami memperbarui status akun Anda.",
+        variant: "default"
+      });
+
+      const timer = setTimeout(() => {
+        fetchActiveSubscription(activeOrgId);
+        fetchTransactionHistory(activeOrgId);
+      }, 4000);
+
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      return () => clearTimeout(timer);
+    } else if (hasCanceled) {
+      setAlertMessage({
+        title: locale === "en" ? "Checkout Canceled" : "Pembayaran Dibatalkan",
+        description:
+          "Anda membatalkan proses transaksi pembayaran. Silakan coba kembali saat Anda sudah siap.",
+        variant: "destructive"
+      });
+
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [activeOrgId, locale]);
+
   const handleChoosePlan = (plan: ConvertedPlan) => {
     setSelectedPlan(plan);
     setIsCheckoutOpen(true);
+  };
+
+  const handleInitiateCheckout = async (provider: string) => {
+    if (!activeOrgId || !selectedPlan || !tenantSlug) return;
+    setIsVerifyingPayment(true);
+
+    try {
+      const {
+        data: { session: authSession }
+      } = await supabase.auth.getSession();
+      if (!authSession) throw new Error("Silakan masuk terlebih dahulu");
+
+      // RENCANA URUTAN DINAMIS: Menjamin pengalihan kembali tepat sasaran ke [tenant_slug]/organization/billing
+      const billingRedirectPath = `/${tenantSlug}/organization/billing`;
+
+      const response = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authSession.access_token}`
+        },
+        body: JSON.stringify({
+          planId: selectedPlan.id,
+          interval: billingCycle,
+          provider: provider,
+          tenantId: activeOrgId,
+          successUrl: `${window.location.origin}${billingRedirectPath}?success=true`,
+          cancelUrl: `${window.location.origin}${billingRedirectPath}?canceled=true`
+        })
+      });
+
+      const checkoutSession = await response.json();
+
+      if (!response.ok || checkoutSession.error) {
+        throw new Error(checkoutSession.error || "Gagal menginisiasi checkout.");
+      }
+
+      if (checkoutSession.checkoutUrl) {
+        window.location.href = checkoutSession.checkoutUrl;
+      }
+    } catch (error: any) {
+      console.error("Checkout failed:", error);
+      setAlertMessage({
+        title: "Checkout Failed",
+        description: error?.message || "Koneksi ke gateway pembayaran terputus.",
+        variant: "destructive"
+      });
+      setIsCheckoutOpen(false);
+    } finally {
+      setIsVerifyingPayment(false);
+    }
   };
 
   const handleCancelSubscription = async () => {
     if (!activeSub || !activeOrgId) return;
     setIsUpdatingSub(true);
     try {
-      const { error } = await supabase
-        .from("subscriptions")
-        .update({ cancel_at_period_end: true })
-        .eq("id", activeSub.id);
+      const response = await fetch(`/api/billing/cancel-subscription`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subscriptionId: activeSub.id,
+          provider: activeSub.provider
+        })
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error("Gagal membatalkan langganan ke gateway");
 
       setAlertMessage({
         title: locale === "en" ? "Auto-Renewal Disabled" : "Perpanjangan Dinonaktifkan",
@@ -303,56 +411,6 @@ export function useOrganizationBilling() {
       setAlertMessage({ title: "Refund Failed", description: e.message, variant: "destructive" });
     } finally {
       setIsUpdatingSub(false);
-    }
-  };
-
-  const handlePaymentSuccess = async (details: any) => {
-    if (!activeOrgId || !selectedPlan) return;
-    setIsVerifyingPayment(true);
-
-    try {
-      const response = await fetch("/api/billing/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: details.id,
-          tenantId: activeOrgId,
-          planId: selectedPlan.id,
-          billingCycle: billingCycle
-        })
-      });
-
-      const verificationResult = await response.json();
-
-      if (!response.ok || verificationResult.error) {
-        throw new Error(verificationResult.error || "Gagal memverifikasi transaksi.");
-      }
-
-      const finalPrice =
-        billingCycle === "yearly"
-          ? selectedPlan.prices.yearly.convertedAmount
-          : selectedPlan.prices.monthly.convertedAmount;
-
-      setAlertMessage({
-        title: locale === "en" ? "Payment Successful" : "Pembayaran Berhasil",
-        description: t("alerts.successPay", {
-          planName: selectedPlan.name,
-          price: formatPrice(finalPrice),
-          orderId: details.id
-        }),
-        variant: "default"
-      });
-
-      await fetchActiveSubscription(activeOrgId);
-    } catch (error: any) {
-      console.error("Verification failed:", error);
-      setAlertMessage({
-        title: "Verification Failed",
-        description: t("alerts.errorDb", { error: error?.message || error }),
-        variant: "destructive"
-      });
-    } finally {
-      setIsVerifyingPayment(false);
     }
   };
 
@@ -461,11 +519,12 @@ export function useOrganizationBilling() {
     setSelectedInvoice,
     isInvoiceOpen,
     setIsInvoiceOpen,
+    enabledProviders,
     handleChoosePlan,
     handleCancelSubscription,
     handleResumeSubscription,
     handleClaimRefund,
-    handlePaymentSuccess,
+    handleInitiateCheckout,
     getUpgradePrice,
     getPlanActionType,
     isSubActive,
