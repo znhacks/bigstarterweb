@@ -23,7 +23,7 @@ export class MayarAdapter implements PaymentProvider {
     if (!selectedPlan) throw new Error("Selected plan not found");
 
     const amount =
-      params.interval === "month"
+      params.interval === "monthly"
         ? selectedPlan.prices.monthly.amount
         : selectedPlan.prices.yearly.amount;
 

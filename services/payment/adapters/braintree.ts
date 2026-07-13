@@ -29,7 +29,7 @@ export class BraintreeAdapter implements PaymentProvider {
     if (!selectedPlan) throw new Error("Selected plan not found");
 
     const braintreePlanId =
-      params.interval === "month"
+      params.interval === "monthly"
         ? selectedPlan.prices.monthly.providers?.braintree
         : selectedPlan.prices.yearly.providers?.braintree;
 

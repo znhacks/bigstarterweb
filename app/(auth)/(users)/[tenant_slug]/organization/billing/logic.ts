@@ -489,16 +489,40 @@ export function useOrganizationBilling() {
 
     return Math.max(0, parseFloat(credit.toFixed(2)));
   };
+  const getPlanActionType = (planId: string) => {
+    if (!activeSub || activeSub.status === "refund_requested") return "choose";
+
+    const currentInterval = getActiveSubscriptionInterval();
+
+    // SINKRONISASI BARU: Jika paketnya sama, tetapi pengguna mengubah switch ke tahunan (Monthly -> Yearly)
+    if (activeSub.planId === planId) {
+      if (currentInterval === "monthly" && billingCycle === "yearly") {
+        return "upgrade_cycle"; // Memicu aksi switch ke tahunan
+      }
+      return "active";
+    }
+
+    const planWeights: Record<string, number> = { free: 1, starter: 2, pro: 3 };
+    const currentWeight = planWeights[activeSub.planId] || 1;
+    const targetWeight = planWeights[planId] || 1;
+
+    return targetWeight > currentWeight ? "upgrade" : "downgrade";
+  };
 
   const getUpgradePrice = (targetPlan: ConvertedPlan) => {
     const targetPrice =
       billingCycle === "yearly"
         ? targetPlan.prices.yearly.convertedAmount
         : targetPlan.prices.monthly.convertedAmount;
-    const credit = getRemainingCredit();
 
-    const isUpgrade = getPlanActionType(targetPlan.id) === "upgrade";
-    if (!isUpgrade) {
+    const credit = getRemainingCredit();
+    const actionType = getPlanActionType(targetPlan.id);
+
+    // Potongan harga kredit pro-rata berlaku untuk upgrade paket MAUPUN upgrade siklus (bulanan ke tahunan)
+    const isUpgrade = actionType === "upgrade";
+    const isCycleUpgrade = actionType === "upgrade_cycle";
+
+    if (!isUpgrade && !isCycleUpgrade) {
       return { finalPrice: targetPrice, creditUsed: 0 };
     }
 
@@ -508,17 +532,6 @@ export function useOrganizationBilling() {
       finalPrice: Math.max(1, parseFloat(finalPrice.toFixed(2))),
       creditUsed: credit
     };
-  };
-
-  const getPlanActionType = (planId: string) => {
-    if (!activeSub || activeSub.status === "refund_requested") return "choose";
-    if (activeSub.planId === planId) return "active";
-
-    const planWeights: Record<string, number> = { free: 1, starter: 2, pro: 3 };
-    const currentWeight = planWeights[activeSub.planId] || 1;
-    const targetWeight = planWeights[planId] || 1;
-
-    return targetWeight > currentWeight ? "upgrade" : "downgrade";
   };
 
   const isSubActive =
@@ -543,6 +556,32 @@ export function useOrganizationBilling() {
       ? activePlanConfig.prices.yearly.convertedAmount
       : activePlanConfig.prices.monthly.convertedAmount
     : 0;
+
+  /**
+   * MENDETEKSI SIKLUS AKTIF (REAL-TIME)
+   * Menghitung sisa hari paket saat ini untuk mendeteksi apakah langganan aktif bertipe bulanan atau tahunan
+   */
+  const getActiveSubscriptionInterval = (): "monthly" | "yearly" => {
+    if (!activeSub || !activeSub.startsAt || !activeSub.endsAt) return "monthly";
+    const start = new Date(activeSub.startsAt).getTime();
+    const end = new Date(activeSub.endsAt).getTime();
+    const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    return diffDays > 45 ? "yearly" : "monthly"; // Di atas 45 hari diasumsikan tahunan
+  };
+
+  /**
+   * KALKULATOR DISKON TAHUNAN DINAMIS (UI)
+   * Menghitung persentase kehematan paket tahunan secara dinamis dari config/billing.ts
+   */
+  const getYearlyDiscountPercent = (plan: ConvertedPlan): number => {
+    const monthlyTotal = plan.prices.monthly.amount * 12;
+    const yearlyTotal = plan.prices.yearly.amount;
+
+    if (monthlyTotal === 0 || yearlyTotal === 0) return 0;
+
+    const savings = ((monthlyTotal - yearlyTotal) / monthlyTotal) * 100;
+    return Math.round(savings);
+  };
 
   return {
     locale,
@@ -582,6 +621,8 @@ export function useOrganizationBilling() {
     showWarningBanner,
     currentActivePrice,
     handleDowngrade,
-    isDowngrading
+    isDowngrading,
+    getYearlyDiscountPercent, // Ekspor ke UI
+    getActiveSubscriptionInterval
   };
 }

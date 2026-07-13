@@ -23,7 +23,7 @@ export class StripeAdapter implements PaymentProvider {
     if (!selectedPlan) throw new Error("Selected plan not found");
 
     const stripePriceId =
-      params.interval === "month"
+      params.interval === "monthly"
         ? selectedPlan.prices.monthly.providers?.stripe
         : selectedPlan.prices.yearly.providers?.stripe;
 

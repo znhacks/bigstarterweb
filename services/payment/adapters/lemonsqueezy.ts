@@ -18,7 +18,7 @@ export class LemonSqueezyAdapter implements PaymentProvider {
     if (!selectedPlan) throw new Error("Selected plan not found");
 
     const variantId =
-      params.interval === "month"
+      params.interval === "monthly"
         ? selectedPlan.prices.monthly.providers?.lemonsqueezy
         : selectedPlan.prices.yearly.providers?.lemonsqueezy;
 

@@ -21,7 +21,7 @@ export class PaddleAdapter implements PaymentProvider {
     if (!selectedPlan) throw new Error("Selected plan not found");
 
     const paddlePriceId =
-      params.interval === "month"
+      params.interval === "monthly"
         ? selectedPlan.prices.monthly.providers?.paddle
         : selectedPlan.prices.yearly.providers?.paddle;
 
