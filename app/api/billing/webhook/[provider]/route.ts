@@ -1,15 +1,18 @@
 // app/api/billing/webhook/[provider]/route.ts
 
-import { NextResponse } from "next/server";
-import { PaymentFactory } from "@/services/payment/factory";
-import { createClient } from "@supabase/supabase-js";
+import { NextResponse } from 'next/server';
+import { PaymentFactory } from '@/services/payment/factory';
+import { createClient } from '@supabase/supabase-js';
 
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
-export async function POST(req: Request, { params }: { params: Promise<{ provider: string }> }) {
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ provider: string }> }
+) {
   const { provider } = await params;
   const providerName = provider;
 
@@ -17,17 +20,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     const paymentProvider = PaymentFactory.getProvider(providerName);
     const result = await paymentProvider.handleWebhook(req);
 
-    const {
-      eventType,
-      tenantId,
-      planId,
-      endsAt,
-      status,
-      providerSubscriptionId,
-      providerCustomerId,
-      amount,
-      currency,
-      orderId
+    const { 
+      eventType, 
+      tenantId, 
+      planId,       
+      endsAt,       
+      status, 
+      providerSubscriptionId, 
+      providerCustomerId, 
+      amount, 
+      currency, 
+      orderId 
     } = result;
 
     // CETAK LOG DEBUGGING DI KONSOL SERVER:
@@ -41,60 +44,57 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     console.log("======================================");
 
     if (!tenantId) {
-      return NextResponse.json(
-        { error: "Tenant ID not found in webhook metadata" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Tenant ID not found in webhook metadata' }, { status: 400 });
     }
 
-    if (eventType === "subscription.created" || eventType === "subscription.updated") {
+    if (eventType === 'subscription.created' || eventType === 'subscription.updated') {
       // Eksekusi upsert ke tabel subscriptions
-      const { error: upsertError } = await supabaseAdmin.from("subscriptions").upsert(
-        {
+      const { error: upsertError } = await supabaseAdmin
+        .from('subscriptions')
+        .upsert({
           tenant_id: tenantId,
-          plan_id: planId || "free",
+          plan_id: planId || 'free',              
           status: status,
-          ends_at: endsAt || null,
-          provider: providerName,
+          ends_at: endsAt || null,                
+          provider: providerName,                 
           provider_subscription_id: providerSubscriptionId,
           provider_customer_id: providerCustomerId,
-          updated_at: new Date().toISOString()
-        },
-        { onConflict: "tenant_id" }
-      );
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'tenant_id' });
 
       // SOLUSI: Lempar error jika operasi database gagal agar terdeteksi di konsol
       if (upsertError) {
-        throw new Error(
-          `Database Upsert Subscriptions Failed: ${upsertError.message} (Code: ${upsertError.code})`
-        );
+        throw new Error(`Database Upsert Subscriptions Failed: ${upsertError.message} (Code: ${upsertError.code})`);
       }
-    } else if (eventType === "subscription.deleted") {
+    } 
+    
+    else if (eventType === 'subscription.deleted') {
       const { error: deleteError } = await supabaseAdmin
-        .from("subscriptions")
+        .from('subscriptions')
         .update({
-          status: "canceled",
-          updated_at: new Date().toISOString()
+          status: 'canceled',
+          updated_at: new Date().toISOString(),
         })
-        .eq("tenant_id", tenantId);
+        .eq('tenant_id', tenantId);
 
       if (deleteError) {
         throw new Error(`Database Delete Subscription Failed: ${deleteError.message}`);
       }
-    } else if (eventType === "payment.succeeded") {
-      const { error: txError } = await supabaseAdmin.from("transactions").upsert(
-        {
+    } 
+    
+    else if (eventType === 'payment.succeeded') {
+      const { error: txError } = await supabaseAdmin
+        .from('transactions')
+        .upsert({
           tenant_id: tenantId,
           amount: amount || 0,
-          currency: currency || "IDR",
-          plan_name: planId || "pro",
+          currency: currency || 'IDR',
+          plan_name: planId || 'pro', 
           order_id: orderId || `TX-${Date.now()}`,
-          status: "paid",
+          status: 'paid',
           provider: providerName,
-          created_at: new Date().toISOString()
-        },
-        { onConflict: "order_id" }
-      );
+          created_at: new Date().toISOString(),
+        }, { onConflict: 'order_id' });
 
       if (txError) {
         throw new Error(`Database Insert Transaction Failed: ${txError.message}`);
@@ -105,6 +105,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
   } catch (error: any) {
     // Seluruh error (termasuk error Supabase) sekarang akan tercetak jelas di sini
     console.error(`Webhook Error [${providerName}]:`, error.message || error);
-    return NextResponse.json({ error: error.message || "Webhook Handler Error" }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Webhook Handler Error' }, { status: 500 });
   }
 }
