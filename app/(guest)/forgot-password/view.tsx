@@ -32,7 +32,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function Page() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const t = useTranslations("authentication.forgotpassword");
+  const t = useTranslations("guest.forgotpassword");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

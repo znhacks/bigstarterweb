@@ -19,8 +19,7 @@ import { CheckCircle2, AlertCircle, Loader2, EyeOff, Eye } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
-
-
+import { useTranslations } from "next-intl";
 
 export function UpdatePasswordPage() {
   const router = useRouter();
@@ -31,15 +30,16 @@ export function UpdatePasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const t = useTranslations("guest.update-password");
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password || password.length < 8) {
-      setErrorMsg("Kata sandi minimal harus terdiri dari 8 karakter.");
+      setErrorMsg(t("passwordlength"));
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMsg("Konfirmasi kata sandi tidak cocok.");
+      setErrorMsg(t("confirmpassword"));
       return;
     }
 
@@ -62,7 +62,7 @@ export function UpdatePasswordPage() {
         router.refresh();
       }, 2000);
     } catch (error: any) {
-      setErrorMsg(error.message || "Gagal memperbarui kata sandi.");
+      setErrorMsg(error.message || t("failedupdate"));
     } finally {
       setIsLoading(false);
     }
@@ -75,37 +75,35 @@ export function UpdatePasswordPage() {
           <CardContent className="flex flex-col items-center justify-center space-y-4 py-12 text-center">
             <CheckCircle2 className="h-16 w-16 animate-bounce text-emerald-600" />
             <div className="space-y-1">
-              <CardTitle className="text-xl">Kata Sandi Diperbarui!</CardTitle>
-              <CardDescription>Kata sandi baru Anda sukses disimpan.</CardDescription>
+              <CardTitle className="text-xl">{t("success.title")}</CardTitle>
+              <CardDescription>{t("success.desc")}</CardDescription>
             </div>
-            <p className="text-muted-foreground text-xs">Mengarahkan Anda ke halaman utama...</p>
+            <p className="text-muted-foreground text-xs">{t("success.loading")}</p>
           </CardContent>
         ) : (
           <form onSubmit={handleUpdatePassword}>
             <CardHeader className="space-y-1.5 pb-4">
-              <CardTitle className="text-2xl font-bold tracking-tight">Setel Sandi Baru</CardTitle>
-              <CardDescription>
-                Silakan ketik kata sandi baru Anda yang aman di bawah ini.
-              </CardDescription>
+              <CardTitle className="text-2xl font-bold tracking-tight">{t("title")}</CardTitle>
+              <CardDescription>{t("desc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Alert Error */}
               {errorMsg && (
                 <Alert variant="destructive" className="rounded-xl">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Gagal Menyimpan</AlertTitle>
+                  <AlertTitle>{t("error.failedsave")}</AlertTitle>
                   <AlertDescription>{errorMsg}</AlertDescription>
                 </Alert>
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="password">Kata Sandi Baru</Label>
+                <Label htmlFor="password">{t("newpassword")}</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     required
-                    placeholder="Min. 8 karakter"
+                    placeholder={t("placeholder.newpassword")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
@@ -113,20 +111,20 @@ export function UpdatePasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute top-1/2 end-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
+                    className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirm-password">Konfirmasi Kata Sandi</Label>
+                <Label htmlFor="confirm-password">{t("confirmpassword")}</Label>
                 <div className="relative">
                   <Input
                     id="confirm-password"
                     type={showPassword ? "text" : "password"}
                     required
-                    placeholder="Ketik ulang kata sandi"
+                    placeholder={t("placeholder.confirmpassword")}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={isLoading}
@@ -134,7 +132,7 @@ export function UpdatePasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute top-1/2 end-3 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
+                    className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus:outline-none">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
@@ -146,7 +144,7 @@ export function UpdatePasswordPage() {
                 disabled={isLoading || !password || !confirmPassword}
                 className="inline-flex h-10 w-full items-center justify-center gap-2 font-medium">
                 {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isLoading ? "Saving..." : "Simpan Sandi Baru"}
+                {isLoading ? t("saving") : t("save")}
               </Button>
             </CardFooter>
           </form>

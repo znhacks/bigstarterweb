@@ -1,20 +1,30 @@
 {
   "metadata": {
-    "register": {
-      "title": "Register",
-      "description": "Create a new account"
-    },
-    "login": {
-      "title": "Login",
-      "description": "Login to your account"
-    },
-    "forgot-password": {
-      "title": "Forgot Password",
-      "description": "Reset your password"
-    },
-    "update-password": {
-      "title": "Update Password",
-      "description": "Update your password"
+    "guest": {
+      "register": {
+        "title": "Register",
+        "description": "Create a new account"
+      },
+      "login": {
+        "title": "Login",
+        "description": "Login to your account"
+      },
+      "forgot-password": {
+        "title": "Forgot Password",
+        "description": "Reset your password"
+      },
+      "update-password": {
+        "title": "Update Password",
+        "description": "Update your password"
+      },
+      "create-tenant": {
+        "title": "Create Tenant",
+        "description": "Register your tenant"
+      },
+      "join": {
+        "title": "Join",
+        "description": "Join a tenant"
+      }
     },
     "users": {
       "dashboard": {
@@ -116,61 +126,147 @@
     "gohome": "Go Back Home",
     "cs": "Contact Support"
   },
-  "login": {
-    "title": "Log In",
-    "desc": "Enter your credentials to sign in to your account.",
-    "noaccount?": "Don't have an account?",
-    "signup": "Sign Up",
-    "email": "Email",
-    "password": "Password",
-    "forgotpassword": "Forgot your password?",
-    "magiclink": "Magic Link",
-    "sendmagiclink": "Send Magic Link",
-    "continuewith": "Or continue with",
-    "withpasskey": "Sign in with Passkey",
-    "logsucces": "Successfully signed in! Redirecting...",
-    "wronginput": "Incorrect email or password.",
-    "sendmailsuccess": "A sign-in link has been sent to your email.",
-    "sendmailfailed": "Failed to send the Magic Link.",
-    "googlefailed": "Failed to sign in with Google.",
-    "githubfailed": "Failed to sign in with GitHub.",
-    "passkeysuccess": "Passkey authentication successful!",
-    "passkeyfailed": "Passkey authentication failed.",
-    "error": "Error",
-    "success": "Success",
-    "deleted": {
-      "title": "Account Deleted",
-      "desc": "Your account has been deleted. Sign in with your credentials to restore it."
+  "guest": {
+    "login": {
+      "title": "Login",
+      "desc": "Enter your credentials to sign in to your account.",
+      "noaccount?": "Don't have an account?",
+      "signup": "Sign Up",
+      "email": "Email",
+      "password": "Password",
+      "forgotpassword": "Forgot your password?",
+      "magiclink": "Magic Link",
+      "sendmagiclink": "Send Magic Link",
+      "continuewith": "Or continue with",
+      "withpasskey": "Sign in with Passkey",
+      "logsucces": "Login successful! Redirecting...",
+      "wronginput": "Invalid email or password.",
+      "sendmailsuccess": "The access link has been sent to your email.",
+      "sendmailfailed": "Failed to send the Magic Link.",
+      "googlefailed": "Failed to sign in with Google.",
+      "githubfailed": "Failed to sign in with GitHub.",
+      "passkeysuccess": "Passkey authentication successful!",
+      "passkeyfailed": "Passkey authentication failed.",
+      "error": "Error",
+      "success": "Success",
+      "deleted": {
+        "title": "Account Deleted",
+        "desc": "Your account has been deleted. Sign in with your credentials to restore it."
+      },
+      "banned": {
+        "title": "Account Suspended",
+        "desc": "Your account has been suspended by the administrator.",
+        "reason": "Reason: {{reason}}",
+        "until": "Until: {{date}}"
+      }
     },
-    "banned": {
-      "title": "Account Suspended",
-      "desc": "Your account has been suspended by the administrator.",
-      "reason": "Reason: {{reason}}",
-      "until": "Until: {{date}}"
+    "register": {
+      "title": "Create a New Account",
+      "haveaccount": "Already have an account?",
+      "login": "Login",
+      "error": "Error",
+      "success": "Success",
+      "accountExistsTitle": "Account Already Exists",
+      "accountExistsDesc": "An account with this email already exists. If you previously deleted your account, you can restore it by signing in again.",
+      "goToLogin": "Go to Login",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "emailPlaceholder": "contact@bundui.com",
+      "password": "Password",
+      "creatingAccount": "Creating Account...",
+      "register": "Sign Up",
+      "orContinueWith": "or continue with",
+      "google": "Google",
+      "github": "GitHub",
+      "successText": "Your account has been created successfully! We've sent a verification link to your email. Please check your inbox and click the link to join your organization.",
+      "errorGoogle": "Failed to sign in with Google.",
+      "errorDefault": "An error occurred."
+    },
+    "create-tenant": {
+      "title": "One More Step!",
+      "desc": "We noticed that you're not part of any organization yet. Please create your first organization.",
+      "error": {
+        "title": "An Error Occurred"
+      },
+      "org-name": "Organization Name",
+      "create": "Create"
+    },
+    "join": {
+      "title": "Accept Invitation",
+      "desc": "You have been invited to join the following organization:",
+      "error": {
+        "title": "Failed to Join"
+      },
+      "org": "Organization",
+      "your-role": "Your Role",
+      "reject": "Reject",
+      "accept": "Accept",
+      "loading": "Joining...",
+      "org-notfound": "Organization {{orgname}} was not found.",
+      "alreadyjoin": "You are already a member of {{orgname}}.",
+      "invalidinvite": "The invitation is invalid or no role has been assigned.",
+      "failedprocess": "Failed to process the organization invitation.",
+      "failedreject": "Failed to reject the invitation.",
+      "backhome": "Back to Home",
+      "rejected": {
+        "title": "Invitation Rejected",
+        "desc": "You have declined the invitation to join"
+      },
+      "nonactive": {
+        "title": "Inactive Invitation",
+        "desc": "This invitation link has been canceled by the administrator, has expired, or is no longer valid."
+      },
+      "joined": {
+        "title": "Successfully Joined!",
+        "desc": "You are now officially a member of",
+        "loading": "Redirecting you to the dashboard..."
+      }
+    },
+    "forgotpassword": {
+      "title": "Forgot Password",
+      "desc": "Enter your email address and we'll send you instructions to reset your password.",
+      "sendsuccess": "We've sent password reset instructions to your email. Please check your inbox or spam folder.",
+      "resend": "Resend Email",
+      "emailaddress": "Email Address",
+      "pleasewait": "Please Wait",
+      "haveaccount?": "Already have an account?",
+      "login": "Login"
+    },
+    "update-password": {
+      "title": "Set New Password",
+      "desc": "Please enter your new secure password below.",
+      "newpassword": "New Password",
+      "confirmpassword": "Confirm Password",
+      "save": "Save New Password",
+      "saving": "Saving...",
+      "placeholder": {
+        "newpassword": "Minimum 8 characters",
+        "confirmpassword": "Re-enter your password"
+      },
+      "success": {
+        "title": "Password Updated!",
+        "desc": "Your new password has been saved successfully.",
+        "loading": "Redirecting you to the homepage..."
+      },
+      "error": {
+        "passwordlength": "Password must be at least 8 characters long.",
+        "confirmpassword": "Passwords do not match.",
+        "failedupdate": "Failed to update password.",
+        "failedsave": "Failed to Save"
+      }
+    },
+    "error": {
+      "404": {
+        "404": "404",
+        "title": "Page Not Found",
+        "backhome": "Back to Home"
+      },
+      "500": {
+        "500": "500",
+        "title": "Internal Server Error"
+      }
     }
-  },
-  "register": {
-    "title": "Create New Accout",
-    "haveaccount": "Already have an account?",
-    "login": "Log in",
-    "error": "Error",
-    "success": "Success",
-    "accountExistsTitle": "Account already exists",
-    "accountExistsDesc": "An account with this email already exists. If you previously deleted your account, you can restore it by logging in.",
-    "goToLogin": "Go to login",
-    "firstName": "First name",
-    "lastName": "Last name",
-    "email": "Email",
-    "emailPlaceholder": "contact@bundui.com",
-    "password": "Password",
-    "creatingAccount": "Creating Account...",
-    "register": "Register",
-    "orContinueWith": "or continue with",
-    "google": "Google",
-    "github": "GitHub",
-    "successText": "Account successfully created! We have sent a verification link to your email. Please open your inbox and click the link to join the organization.",
-    "errorGoogle": "Failed to sign in with Google.",
-    "errorDefault": "An error occurred."
   },
   "billing": {
     "plans": {

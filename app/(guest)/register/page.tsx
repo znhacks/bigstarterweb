@@ -7,7 +7,7 @@ import { constructMetadata } from "@/lib/metadata";
 import { useTranslations } from "next-intl";
 
 export async function generateMetadata() {
-  const t = await getTranslations("metadata.register");
+  const t = await getTranslations("metadata.guest.register");
 
   return constructMetadata({
     title: t("title"),
@@ -16,7 +16,7 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
-  const t = useTranslations("register")
+  const t = useTranslations("guest.register");
   return (
     <div className="flex items-center justify-center py-4 lg:h-screen">
       <Card className="mx-auto w-96">
@@ -28,8 +28,7 @@ export default function Page() {
           <RegisterForm />
 
           <div className="mt-4 text-center text-sm">
-            {t("haveaccount")}
-            {" "}
+            {t("haveaccount")}{" "}
             <Link href="/login" className="underline">
               {t("login")}
             </Link>

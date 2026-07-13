@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useTranslations } from "next-intl";
 
 export function CreateTenantForm() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const t = useTranslations("guest.create-tenant");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,13 +34,13 @@ export function CreateTenantForm() {
       {errorMsg && (
         <Alert variant="destructive" className="rounded-xl">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Terjadi Kesalahan</AlertTitle>
+          <AlertTitle>{t("error.title")}</AlertTitle>
           <AlertDescription>{errorMsg}</AlertDescription>
         </Alert>
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="name">Nama Organisasi</Label>
+        <Label htmlFor="name">{t("org-name")}</Label>
         <Input
           id="name"
           name="name"
@@ -52,7 +54,7 @@ export function CreateTenantForm() {
 
       <Button type="submit" className="mt-2 h-10 w-full font-medium" disabled={isLoading}>
         {isLoading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-        Buat
+        {t("create")}
       </Button>
     </form>
   );

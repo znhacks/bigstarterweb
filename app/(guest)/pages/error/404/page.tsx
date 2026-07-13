@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { generateMeta } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 export async function generateMetadata() {
   return generateMeta({
@@ -13,6 +14,7 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
+  const t = useTranslations("guest.error.404");
   return (
     <div className="from-background to-secondary/10 flex min-h-screen flex-col items-center justify-center bg-gradient-to-b p-4">
       <div className="w-full max-w-3xl space-y-4 lg:space-y-8">
@@ -31,9 +33,9 @@ export default function Page() {
 
           <div className="relative z-10 text-center">
             <div className="text-primary mb-4 text-8xl font-black tracking-tighter sm:text-9xl">
-              404
+              {t("404")}
             </div>
-            <div className="text-foreground text-xl font-medium sm:text-2xl">Page Not Found</div>
+            <div className="text-foreground text-xl font-medium sm:text-2xl">{t("title")}</div>
           </div>
 
           <div className="from-background/80 absolute right-0 bottom-0 left-0 h-1/3 bg-gradient-to-t to-transparent" />
@@ -42,7 +44,7 @@ export default function Page() {
         <div className="flex justify-center">
           <Button asChild variant="outline" size="lg" className="group">
             <Link href="/">
-              Back to Home
+              {t("backhome")}
               <ArrowRight className="rtl:-scale-x-100" />
             </Link>
           </Button>

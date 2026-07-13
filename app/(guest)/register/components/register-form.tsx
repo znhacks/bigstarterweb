@@ -16,7 +16,7 @@ import { useTranslations } from "next-intl";
 export function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const t = useTranslations("register");
+  const t = useTranslations("guest.register");
 
   // Baca tujuan pengalihan berikutnya dari URL (?next=...)
   const nextTarget = searchParams.get("next");

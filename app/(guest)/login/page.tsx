@@ -10,7 +10,7 @@ import { getTranslations } from "next-intl/server";
 import { useTranslations } from "next-intl";
 
 export async function generateMetadata() {
-  const t = await getTranslations("metadata.login");
+  const t = await getTranslations("metadata.guest.login");
 
   return constructMetadata({
     title: t("title"),
@@ -19,7 +19,7 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
-  const tlogin = useTranslations("login");
+  const tlogin = useTranslations("guest.login");
   return (
     <div className="flex items-center justify-center py-4 lg:h-screen">
       <Card className="mx-auto w-96">

@@ -1,6 +1,6 @@
 // interfaces/payment-provider.ts
 
-export type SubscriptionInterval = "month" | "year";
+export type SubscriptionInterval = "monthly" | "yearly";
 
 export interface CreateCheckoutSessionParams {
   tenantId: string;

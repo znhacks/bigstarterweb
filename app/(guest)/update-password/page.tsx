@@ -3,7 +3,7 @@ import { UpdatePasswordPage } from "./view";
 import { getTranslations } from "next-intl/server";
 
 export async function generateMetadata() {
-  const t = await getTranslations("metadata.update-password");
+  const t = await getTranslations("metadata.guest.update-password");
 
   return constructMetadata({
     title: t("title"),

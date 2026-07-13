@@ -64,7 +64,7 @@ export function LoginForm() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const locale = useLocale();
-  const t = useTranslations("login");
+  const t = useTranslations("guest.login");
 
   // Fungsi pengarah halaman berdasarkan metadata pengguna
   const handleRedirect = (user: any) => {

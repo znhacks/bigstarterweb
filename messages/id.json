@@ -1,20 +1,30 @@
 {
   "metadata": {
-    "register": {
-      "title": "Register",
-      "description": "Buat akun baru"
-    },
-    "login": {
-      "title": "Login",
-      "description": "Login ke akun Anda"
-    },
-    "forgot-password": {
-      "title": "Lupa Kata Sandi",
-      "description": "Atur ulang kata sandi Anda"
-    },
-    "update-password": {
-      "title": "Perbarui Kata Sandi",
-      "description": "Perbarui kata sandi Anda"
+    "guest": {
+      "register": {
+        "title": "Register",
+        "description": "Buat akun baru"
+      },
+      "login": {
+        "title": "Login",
+        "description": "Login ke akun Anda"
+      },
+      "forgot-password": {
+        "title": "Lupa Kata Sandi",
+        "description": "Atur ulang kata sandi Anda"
+      },
+      "update-password": {
+        "title": "Perbarui Kata Sandi",
+        "description": "Perbarui kata sandi Anda"
+      },
+      "create-tenant": {
+        "title": "Buat Tenant",
+        "description": "Daftarkan tenant anda"
+      },
+      "join": {
+        "title": "Bergabung",
+        "description": "Bergabung ke tenant"
+      }
     },
     "users": {
       "dashboard": {
@@ -116,61 +126,147 @@
     "gohome": "Kembali ke Beranda",
     "cs": "Hubungi Dukungan"
   },
-  "login": {
-    "title": "Login",
-    "desc": "Masukan kredensial untuk masuk kedalam akun anda",
-    "noaccount?": "Tidak memiliki akun?",
-    "signup": "Daftar",
-    "email": "Email",
-    "password": "Password",
-    "forgotpassword": "Lupa passwordmu?",
-    "magiclink": "Magiclink",
-    "sendmagiclink": "Kirim magiclink",
-    "continuewith": "Atau lanjut dengan",
-    "withpasskey": "Login dengan passkey",
-    "logsucces": "Login berhasil! Mengalihkan halaman...",
-    "wronginput": "Email atau password salah.",
-    "sendmailsuccess": "Tautan akses telah dikirim ke email Anda.",
-    "sendmailfailed": "Gagal mengirimkan Magic Link.",
-    "googlefailed": "Gagal masuk menggunakan Google.",
-    "githubfailed": "Gagal masuk menggunakan GitHub.",
-    "passkeysuccess": "Autentikasi Passkey berhasil!",
-    "passkeyfailed": "Autentikasi Passkey gagal.",
-    "error": "Error",
-    "success": "Berhasil",
-    "deleted": {
-      "title": "Akun dihapus",
-      "desc": "Akun anda telah dihapus. Login dengan kredensial anda untuk memulihkannya."
+  "guest": {
+    "login": {
+      "title": "Login",
+      "desc": "Masukan kredensial untuk masuk kedalam akun anda",
+      "noaccount?": "Tidak memiliki akun?",
+      "signup": "Daftar",
+      "email": "Email",
+      "password": "Password",
+      "forgotpassword": "Lupa passwordmu?",
+      "magiclink": "Magiclink",
+      "sendmagiclink": "Kirim magiclink",
+      "continuewith": "Atau lanjut dengan",
+      "withpasskey": "Login dengan passkey",
+      "logsucces": "Login berhasil! Mengalihkan halaman...",
+      "wronginput": "Email atau password salah.",
+      "sendmailsuccess": "Tautan akses telah dikirim ke email Anda.",
+      "sendmailfailed": "Gagal mengirimkan Magic Link.",
+      "googlefailed": "Gagal masuk menggunakan Google.",
+      "githubfailed": "Gagal masuk menggunakan GitHub.",
+      "passkeysuccess": "Autentikasi Passkey berhasil!",
+      "passkeyfailed": "Autentikasi Passkey gagal.",
+      "error": "Error",
+      "success": "Berhasil",
+      "deleted": {
+        "title": "Akun dihapus",
+        "desc": "Akun anda telah dihapus. Login dengan kredensial anda untuk memulihkannya."
+      },
+      "banned": {
+        "title": "Akun ditangguhkan",
+        "desc": "Akun anda telah ditangguh kan oleh pihak administrasi.",
+        "reason": "Reason: {{reason}}",
+        "until": "Until: {{date}}"
+      }
     },
-    "banned": {
-      "title": "Akun ditangguhkan",
-      "desc": "Akun anda telah ditangguh kan oleh pihak administrasi.",
-      "reason": "Reason: {{reason}}",
-      "until": "Until: {{date}}"
+    "register": {
+      "title": "Buat Akun Baru",
+      "haveaccount": "Sudah memiliki akun?",
+      "login": "Login",
+      "error": "Error",
+      "success": "Sukses",
+      "accountExistsTitle": "Akun sudah terdaftar",
+      "accountExistsDesc": "Akun dengan email ini sudah ada. Jika Anda sebelumnya menghapus akun Anda, Anda dapat memulihkannya dengan masuk kembali.",
+      "goToLogin": "Masuk ke akun",
+      "firstName": "Nama depan",
+      "lastName": "Nama belakang",
+      "email": "Email",
+      "emailPlaceholder": "kontak@bundui.com",
+      "password": "Kata sandi",
+      "creatingAccount": "Membuat Akun...",
+      "register": "Daftar",
+      "orContinueWith": "atau lanjutkan dengan",
+      "google": "Google",
+      "github": "GitHub",
+      "successText": "Akun sukses dibuat! Kami telah mengirimkan link verifikasi ke email Anda. Silakan buka kotak masuk email Anda dan klik link tersebut untuk langsung bergabung ke organisasi.",
+      "errorGoogle": "Gagal masuk menggunakan Google.",
+      "errorDefault": "Terjadi kesalahan."
+    },
+    "create-tenant": {
+      "title": "Satu langkah lagi!",
+      "desc": "Aplikasi mendeteksi Anda belum tergabung di organisasi mana pun. Silakan buat organisasi pertama Anda.",
+      "error": {
+        "title": "Terjadi Kesalahan"
+      },
+      "org-name": "Nama Organisasi",
+      "create": "Buat"
+    },
+    "join": {
+      "title": "Terima Undangan",
+      "desc": "Anda diundang untuk bergabung ke organisasi berikut:",
+      "error": {
+        "title": "Gagal Bergabung"
+      },
+      "org": "Organisasi",
+      "your-role": "Peran Anda",
+      "reject": "Tolak",
+      "accept": "Terima",
+      "loading": "Sedang Bergabung...",
+      "org-notfound": "Organisasi {{orgname}} tidak ditemukan.",
+      "alreadyjoin": "Anda sudah terdaftar sebagai anggota di organisasi {{orgname}}.",
+      "invalidinvite": "Undangan tidak valid atau role belum ditetapkan.",
+      "failedprocess": "Gagal memproses pendaftaran bergabung.",
+      "failedreject": "Gagal menolak undangan",
+      "backhome": "Kembali ke Beranda",
+      "rejected": {
+        "title": "Undangan ditolak",
+        "desc": "Anda telah menolak undangan untuk bergabung dengan"
+      },
+      "nonactive": {
+        "title": "Undangan Tidak Aktif",
+        "desc": "Tautan undangan ini telah dibatalkan oleh admin, kedaluwarsa, atau tidak lagi valid."
+      },
+      "joined": {
+        "title": "Berhasil Bergabung!",
+        "desc": "Anda sekarang resmi menjadi bagian dari",
+        "loading": "Mengarahkan Anda ke dashboard..."
+      }
+    },
+    "forgotpassword": {
+      "title": "Lupa Kata Sandi",
+      "desc": "Masukkan alamat email Anda dan kami akan mengirimkan petunjuk untuk mengatur ulang kata sandi Anda.",
+      "sendsuccess": "Kami berhasil mengirimkan petunjuk untuk mengatur ulang kata sandi ke email Anda. Silakan periksa kotak masuk atau folder spam Anda.",
+      "resend": "Kirim Ulang Email",
+      "emailaddress": "Alamat Email",
+      "pleasewait": "Harap Tunggu",
+      "haveaccount?": "Sudah memiliki akun?",
+      "login": "Masuk"
+    },
+    "update-password": {
+      "title": "Setel Sandi Baru",
+      "desc": "Silakan ketik kata sandi baru Anda yang aman di bawah ini.",
+      "newpassword": "Kata Sandi Baru",
+      "confirmpassword": "Konfirmasi Kata Sandi",
+      "save": "Simpan Sandi Baru",
+      "saving": "Saving...",
+      "placeholder": {
+        "newpassword": "Min. 8 Karakter",
+        "confirmpassword": "Ketik ulang kata sandi"
+      },
+      "success": {
+        "title": "Kata Sandi Diperbarui!",
+        "desc": "Kata sandi baru Anda sukses disimpan.",
+        "loading": "Mengarahkan Anda ke halaman utama..."
+      },
+      "error": {
+        "passwordlength": "Kata sandi minimal harus terdiri dari 8 karakter.",
+        "confirmpassword": "Konfirmasi kata sandi tidak cocok.",
+        "failedupdate": "Gagal memperbarui kata sandi.",
+        "failedsave": "Gagal Menyimpan"
+      }
+    },
+    "error": {
+      "404": {
+        "404": "404",
+        "title": "Halaman Tidak Ditemukan",
+        "backhome": "Kembali ke Beranda"
+      },
+      "500": {
+        "500": "500",
+        "title": "Server Error"
+      }
     }
-  },
-  "register": {
-    "title": "Buat Akun Baru",
-    "haveaccount": "Sudah memiliki akun?",
-    "login": "Login",
-    "error": "Error",
-    "success": "Sukses",
-    "accountExistsTitle": "Akun sudah terdaftar",
-    "accountExistsDesc": "Akun dengan email ini sudah ada. Jika Anda sebelumnya menghapus akun Anda, Anda dapat memulihkannya dengan masuk kembali.",
-    "goToLogin": "Masuk ke akun",
-    "firstName": "Nama depan",
-    "lastName": "Nama belakang",
-    "email": "Email",
-    "emailPlaceholder": "kontak@bundui.com",
-    "password": "Kata sandi",
-    "creatingAccount": "Membuat Akun...",
-    "register": "Daftar",
-    "orContinueWith": "atau lanjutkan dengan",
-    "google": "Google",
-    "github": "GitHub",
-    "successText": "Akun sukses dibuat! Kami telah mengirimkan link verifikasi ke email Anda. Silakan buka kotak masuk email Anda dan klik link tersebut untuk langsung bergabung ke organisasi.",
-    "errorGoogle": "Gagal masuk menggunakan Google.",
-    "errorDefault": "Terjadi kesalahan."
   },
   "billing": {
     "plans": {
@@ -272,18 +368,7 @@
     "logout": "Keluar akun",
     "credits": "Kredit"
   },
-  "authentication": {
-    "forgotpassword": {
-      "title": "Lupa Kata Sandi",
-      "desc": "Masukkan alamat email Anda dan kami akan mengirimkan petunjuk untuk mengatur ulang kata sandi Anda.",
-      "sendsuccess": "Kami berhasil mengirimkan petunjuk untuk mengatur ulang kata sandi ke email Anda. Silakan periksa kotak masuk atau folder spam Anda.",
-      "resend": "Kirim Ulang Email",
-      "emailaddress": "Alamat Email",
-      "pleasewait": "Harap Tunggu",
-      "haveaccount?": "Sudah memiliki akun?",
-      "login": "Masuk"
-    }
-  },
+
   "tasks": {
     "title": "Tugas",
     "subtitle": "Buat, tugaskan, dan lacak tugas di seluruh organisasi Anda.",
