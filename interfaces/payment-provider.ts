@@ -28,6 +28,7 @@ export interface UnifiedWebhookResult {
   eventType: WebhookEventType;
   tenantId: string;
   planId?: string; // TAMBAHAN: Untuk menyimpan ID plan ('starter' / 'pro')
+  startsAt?: string;
   endsAt?: string; // TAMBAHAN: Tanggal berakhir langganan
   providerSubscriptionId?: string;
   providerCustomerId?: string;

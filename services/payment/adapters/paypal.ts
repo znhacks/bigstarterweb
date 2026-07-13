@@ -140,25 +140,6 @@ export class PayPalAdapter implements PaymentProvider {
     }
 
     const paypalPlanId = payload.resource?.plan_id;
-
-    // ================== BARIS DEBUGGING BARU ==================
-    console.log("=== PAYPAL WEBHOOK PLAN ID MATCHING ===");
-    console.log("Incoming Plan ID dari PayPal Webhook :", paypalPlanId);
-    console.log(
-      "Daftar Plan ID Terdaftar di billing.ts:",
-      JSON.stringify(
-        plans.map((p) => ({
-          id: p.id,
-          monthlyPaypal: p.prices.monthly.providers?.paypal,
-          yearlyPaypal: p.prices.yearly.providers?.paypal
-        })),
-        null,
-        2
-      )
-    );
-    console.log("=================================================");
-    // ==========================================================
-
     const matchingPlan = plans.find(
       (p) =>
         p.prices.monthly.providers?.paypal === paypalPlanId ||
@@ -166,12 +147,15 @@ export class PayPalAdapter implements PaymentProvider {
     );
     const planId = matchingPlan ? matchingPlan.id : undefined;
 
+    // EKSTRAKSI TANGGAL MULAI DAN BERAKHIR RESMI DARI PAYPAL
+    const startsAt = payload.resource?.start_time || undefined; // Tanggal mulai resmi
     const endsAt = payload.resource?.billing_info?.next_billing_time || undefined;
 
     return {
       eventType,
       tenantId,
       planId,
+      startsAt, // Dikembalikan ke router
       endsAt,
       providerSubscriptionId: payload.resource?.id,
       providerCustomerId: payload.resource?.subscriber?.payer_id,

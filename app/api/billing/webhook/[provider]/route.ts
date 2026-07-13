@@ -21,6 +21,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       eventType,
       tenantId,
       planId,
+      startsAt,
       endsAt,
       status,
       providerSubscriptionId,
@@ -68,6 +69,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
           tenant_id: tenantId,
           plan_id: planId || "free",
           status: normalizedStatus, // Menyimpan status lowercase 'active'
+          starts_at: startsAt || new Date().toISOString(),
           ends_at: endsAt || null,
           provider: providerName,
           provider_subscription_id: providerSubscriptionId,
