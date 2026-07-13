@@ -1,6 +1,5 @@
 // interfaces/payment-provider.ts
 
-// Kita definisikan tipe ini di sini agar mandiri (self-contained)
 export type SubscriptionInterval = "month" | "year";
 
 export interface CreateCheckoutSessionParams {
@@ -28,6 +27,8 @@ export type WebhookEventType =
 export interface UnifiedWebhookResult {
   eventType: WebhookEventType;
   tenantId: string;
+  planId?: string; // TAMBAHAN: Untuk menyimpan ID plan ('starter' / 'pro')
+  endsAt?: string; // TAMBAHAN: Tanggal berakhir langganan
   providerSubscriptionId?: string;
   providerCustomerId?: string;
   status: string;

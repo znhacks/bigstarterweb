@@ -91,7 +91,7 @@ export const plans: Plan[] = [
         providers: {
           paddle: "pri_01kx5gffxd7njjqjernsaf1pv2",
           stripe: "price_starter_monthly",
-          paypal: "P-STARTER-MONTHLY",
+          paypal: "P-8RT67572UE321251WNJKEUSY",
           midtrans: "starter-monthly"
         }
       },
@@ -100,7 +100,7 @@ export const plans: Plan[] = [
         providers: {
           paddle: "pri_01kx5expy305m7kbtwpkt0jcvk",
           stripe: "price_starter_yearly",
-          paypal: "P-STARTER-YEARLY",
+          paypal: "P-3C2171138L1229134NJKEVRI",
           midtrans: "starter-yearly"
         }
       }
@@ -132,7 +132,7 @@ export const plans: Plan[] = [
         providers: {
           paddle: "pri_01kx5gc9ga1h4bygs7y73mx4fj",
           stripe: "price_pro_monthly",
-          paypal: "P-PRO-MONTHLY",
+          paypal: "P-0HS37391YR5408237NJKEU4A",
           midtrans: "pro-monthly"
         }
       },
@@ -141,7 +141,7 @@ export const plans: Plan[] = [
         providers: {
           paddle: "pri_01kx5f03c7e6ckdtgv8z5wj37j",
           stripe: "price_pro_yearly",
-          paypal: "P-PRO-YEARLY",
+          paypal: "P-9EW74982SN4545717NJKEV7A",
           midtrans: "pro-yearly"
         }
       }
