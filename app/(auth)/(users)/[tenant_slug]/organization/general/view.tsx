@@ -7,8 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
-
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
+
+// 1. IMPOR KONFIGURASI DAN KOMPONEN BARU
+import { tenantConfig } from "@/config/tenant"; // Sesuaikan path-nya
+import { RegionalSettingsForm } from "./components/regionalsettings"; // Sesuaikan path-nya
+import { AddressContactSettingsForm } from "./components/addresscontactpage"; // Sesuaikan path-nya
+
 import { useOrganizationGeneral } from "./logic"; // Sesuaikan path-nya
 
 export function OrganizationGeneralSettings() {
@@ -33,7 +38,32 @@ export function OrganizationGeneralSettings() {
     handleSaveName,
     handleDeleteOrganization,
     isReadOnly,
-    canDeleteOrg
+    canDeleteOrg,
+    businessEmail,
+    setBusinessEmail,
+    phoneNumber,
+    setPhoneNumber,
+    taxId,
+    setTaxId,
+    addressLine1,
+    setAddressLine1,
+    addressLine2,
+    setAddressLine2,
+    city,
+    setCity,
+    stateProvince,
+    setStateProvince,
+    postalCode,
+    setPostalCode,
+    countryCode,
+    setCountryCode,
+    defaultLocale,
+    setDefaultLocale,
+    timezone,
+    setTimezone,
+    currency,
+    setCurrency,
+    handleSaveAdditionalDetails
   } = useOrganizationGeneral();
 
   if (isLoading) {
@@ -94,7 +124,7 @@ export function OrganizationGeneralSettings() {
         </Alert>
       )}
 
-      {/* KONSOLIDASI: SATU CARD UNTUK SELURUH PENGATURAN ORGANISASI */}
+      {/* SATU CARD UNTUK SELURUH PENGATURAN ORGANISASI */}
       <Card className="overflow-hidden">
         <CardContent className="divide-border/60 divide-y p-0">
           {/* Section 1: Organization Logo */}
@@ -163,7 +193,53 @@ export function OrganizationGeneralSettings() {
             )}
           </div>
 
-          {/* Section 3: Delete Organization (Danger Zone) - Hanya utk pemegang organization.delete (Owner) */}
+          {/* Section 3: Regional & Localization (Pemasangan Komponen Baru 1 - Kondisional) */}
+          {tenantConfig.features.enableRegionalSettings && (
+            <RegionalSettingsForm
+              isReadOnly={isReadOnly}
+              isSaving={isSaving}
+              defaultLocale={defaultLocale}
+              setDefaultLocale={setDefaultLocale}
+              timezone={timezone}
+              setTimezone={setTimezone}
+              currency={currency}
+              setCurrency={setCurrency}
+              onSave={handleSaveAdditionalDetails}
+              tCommon={tCommon}
+            />
+          )}
+
+          {/* Section 4: Address & Contact (Pemasangan Komponen Baru 2 - Kondisional) */}
+          {(tenantConfig.features.enableAddress ||
+            tenantConfig.features.enableTaxId ||
+            tenantConfig.features.enableBusinessContact) && (
+            <AddressContactSettingsForm
+              isReadOnly={isReadOnly}
+              isSaving={isSaving}
+              businessEmail={businessEmail}
+              setBusinessEmail={setBusinessEmail}
+              phoneNumber={phoneNumber}
+              setPhoneNumber={setPhoneNumber}
+              taxId={taxId}
+              setTaxId={setTaxId}
+              addressLine1={addressLine1}
+              setAddressLine1={setAddressLine1}
+              addressLine2={addressLine2}
+              setAddressLine2={setAddressLine2}
+              city={city}
+              setCity={setCity}
+              stateProvince={stateProvince}
+              setStateProvince={setStateProvince}
+              postalCode={postalCode}
+              setPostalCode={setPostalCode}
+              countryCode={countryCode}
+              setCountryCode={setCountryCode}
+              onSave={handleSaveAdditionalDetails}
+              tCommon={tCommon}
+            />
+          )}
+
+          {/* Section 5: Delete Organization (Danger Zone) */}
           {canDeleteOrg && (
             <div className="flex flex-col items-start justify-between gap-6 bg-red-50/10 p-8 md:flex-row md:items-center">
               <div className="space-y-1.5 md:max-w-xl">

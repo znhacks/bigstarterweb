@@ -9,6 +9,27 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
+/**
+ * FUNGSI PEMBANTU: Menghitung perkiraan potongan biaya administrasi riil dari ke-8 gateway (Tetap Sama)
+ */
+function calculateGatewayFee(amount: number, provider: string, currency: string = "IDR"): number {
+  const p = provider.toLowerCase().trim();
+
+  if (p === "stripe") {
+    return amount * 0.029 + (currency === "USD" ? 0.3 : 5000); // 2.9% + $0.30
+  }
+  if (p === "paypal" || p === "braintree") {
+    return amount * 0.034 + (currency === "USD" ? 0.3 : 5000); // 3.4% + $0.30
+  }
+  if (p === "paddle" || p === "lemonsqueezy") {
+    return amount * 0.05 + (currency === "USD" ? 0.5 : 7500); // 5% + $0.50 (SaaS MoR standard)
+  }
+  if (p === "midtrans" || p === "xendit" || p === "mayar") {
+    return 4000; // Rata-rata flat fee untuk Virtual Account & QRIS lokal Indonesia
+  }
+  return 0;
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ provider: string }> }) {
   const { provider } = await params;
   const providerName = provider;
@@ -20,7 +41,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     const {
       eventType,
       tenantId,
-      planId,
+      planId, // ID paket bawaan dari adapter (jika terdeteksi)
       startsAt,
       endsAt,
       status,
@@ -28,7 +49,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       providerCustomerId,
       amount,
       currency,
-      orderId
+      orderId,
+      taxAmount,
+      feeAmount
     } = result;
 
     console.log("========== WEBHOOK RECEIVED ==========");
@@ -36,7 +59,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     console.log("Event Type :", eventType);
     console.log("Tenant ID  :", tenantId);
     console.log("Plan ID    :", planId);
-    console.log("Ends At    :", endsAt);
     console.log("Status     :", status);
     console.log("======================================");
 
@@ -48,10 +70,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     }
 
     const normalizedStatus = status.toLowerCase().trim();
+    let finalPlanId = planId;
+
+    // =========================================================================
+    // SINKRONISASI DATABASE DINAMIS (Pencarian JSONB Kueri Baru)
+    // Jika planId dari adapter kosong, kueri database secara dinamis menggunakan Price ID eksternal
+    // =========================================================================
+    if (!finalPlanId && providerSubscriptionId) {
+      const externalPriceId = providerSubscriptionId;
+
+      const { data: priceRecord, error: priceErr } = await supabaseAdmin
+        .from("plan_prices")
+        .select("plan_id")
+        // Mencari langsung di kolom JSONB provider_ids berdasarkan nama provider aktif
+        .or(`provider_ids->>${providerName}.eq.${externalPriceId}`)
+        .maybeSingle();
+
+      if (!priceErr && priceRecord) {
+        finalPlanId = priceRecord.plan_id;
+      }
+    }
 
     if (eventType === "subscription.created" || eventType === "subscription.updated") {
-      // PROTEKSI ARSITEKTUR UTAMA:
-      // Jangan pernah menimpa atau memodifikasi tabel subscriptions jika statusnya masih menggantung (belum dibayar)
       if (normalizedStatus === "approval_pending" || normalizedStatus === "pending") {
         console.log(
           `[Webhook Ignored] Mengabaikan event karena status transaksi masih pending (${normalizedStatus}) untuk tenant: ${tenantId}`
@@ -63,28 +103,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
         });
       }
 
-      // Hanya lakukan upsert jika status sudah resmi AKTIF
       const { error: upsertError } = await supabaseAdmin.from("subscriptions").upsert(
         {
           tenant_id: tenantId,
-          plan_id: planId || "free",
-          status: normalizedStatus, // Menyimpan status lowercase 'active'
+          plan_id: finalPlanId || "free", // Menggunakan ID paket hasil kueri dinamis
+          status: normalizedStatus,
           starts_at: startsAt || new Date().toISOString(),
           ends_at: endsAt || null,
           provider: providerName,
           provider_subscription_id: providerSubscriptionId,
           provider_customer_id: providerCustomerId,
           updated_at: new Date().toISOString(),
-          // Kosongkan pending_plan_id jika mereka baru saja sukses melakukan transaksi upgrade/pembayaran baru
           pending_plan_id: null
         },
         { onConflict: "tenant_id" }
       );
 
       if (upsertError) {
-        throw new Error(
-          `Database Upsert Subscriptions Failed: ${upsertError.message} (Code: ${upsertError.code})`
-        );
+        throw new Error(`Database Upsert Subscriptions Failed: ${upsertError.message}`);
       }
     } else if (eventType === "subscription.deleted") {
       const { data: currentSub, error: fetchError } = await supabaseAdmin
@@ -130,15 +166,34 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
         }
       }
     } else if (eventType === "payment.succeeded") {
+      const grossAmount = amount || 0;
+      const activeCurrency = currency || "IDR";
+
+      const calculatedTax =
+        taxAmount !== undefined
+          ? taxAmount
+          : providerName === "midtrans" || providerName === "xendit" || providerName === "mayar"
+            ? grossAmount * 0.11
+            : 0;
+
+      const calculatedFee =
+        feeAmount !== undefined
+          ? feeAmount
+          : calculateGatewayFee(grossAmount, providerName, activeCurrency);
+
+      const calculatedNet = Math.max(0, grossAmount - calculatedTax - calculatedFee);
+
       const { error: txError } = await supabaseAdmin.from("transactions").upsert(
         {
           tenant_id: tenantId,
-          amount: amount || 0,
-          currency: currency || "IDR",
-          plan_name: planId || "pro",
+          amount: grossAmount,
+          currency: activeCurrency,
+          plan_name: finalPlanId || "pro", // Menggunakan ID paket hasil kueri dinamis
           order_id: orderId || `TX-${Date.now()}`,
           status: "paid",
           provider: providerName,
+          tax_amount: parseFloat(calculatedTax.toFixed(2)),
+          net_amount: parseFloat(calculatedNet.toFixed(2)),
           created_at: new Date().toISOString()
         },
         { onConflict: "order_id" }

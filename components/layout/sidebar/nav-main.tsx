@@ -138,6 +138,11 @@ export const navItems: NavGroup[] = [
         icon: Building2
       },
       {
+        title: "superadmin.plans",
+        href: "/superadmin/plans",
+        icon: CreditCardIcon
+      },
+      {
         title: "superadmin.billing",
         href: "/superadmin/billing",
         icon: CreditCardIcon

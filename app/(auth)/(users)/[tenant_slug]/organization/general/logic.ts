@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { PERMISSIONS, hasPermission, type PermissionName } from "@/lib/rbac";
 import { useLocale, useTranslations } from "next-intl";
+import { tenantConfig } from "@/config/tenant"; // Pastikan path import ini sesuai
 
 export interface AlertState {
   title: string;
@@ -21,6 +22,20 @@ export function useOrganizationGeneral() {
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  // --- 1. STATE BARU UNTUK KONTAK, PAJAK, ALAMAT & i18n ---
+  const [businessEmail, setBusinessEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [stateProvince, setStateProvince] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [countryCode, setCountryCode] = useState("");
+  const [defaultLocale, setDefaultLocale] = useState(tenantConfig.defaults.locale);
+  const [timezone, setTimezone] = useState(tenantConfig.defaults.timezone);
+  const [currency, setCurrency] = useState(tenantConfig.defaults.currency);
 
   // State permission pengguna aktif (RBAC)
   const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
@@ -60,7 +75,14 @@ export function useOrganizationGeneral() {
       }
 
       const [tenantRes, membershipRes] = await Promise.all([
-        supabase.from("tenants").select("name, logo").eq("id", orgId).single(),
+        // --- 2. UPDATE SELECT QUERY UNTUK MENGAMBIL KOLOM BARU ---
+        supabase
+          .from("tenants")
+          .select(
+            "name, logo, address_line1, address_line2, city, state_province, postal_code, country_code, business_email, phone_number, tax_id, default_locale, timezone, currency"
+          )
+          .eq("id", orgId)
+          .single(),
         supabase
           .from("memberships")
           .select("roles(role_permissions(permissions(name)))")
@@ -70,9 +92,24 @@ export function useOrganizationGeneral() {
       ]);
 
       if (tenantRes.error) throw tenantRes.error;
+
       if (tenantRes.data) {
         setOrgName(tenantRes.data.name);
         setLogoPreview((tenantRes.data as any).logo || null);
+
+        // --- 3. POPULATE DATA BARU KE DALAM STATE ---
+        setBusinessEmail((tenantRes.data as any).business_email || "");
+        setPhoneNumber((tenantRes.data as any).phone_number || "");
+        setTaxId((tenantRes.data as any).tax_id || "");
+        setAddressLine1((tenantRes.data as any).address_line1 || "");
+        setAddressLine2((tenantRes.data as any).address_line2 || "");
+        setCity((tenantRes.data as any).city || "");
+        setStateProvince((tenantRes.data as any).state_province || "");
+        setPostalCode((tenantRes.data as any).postal_code || "");
+        setCountryCode((tenantRes.data as any).country_code || "");
+        setDefaultLocale((tenantRes.data as any).default_locale || tenantConfig.defaults.locale);
+        setTimezone((tenantRes.data as any).timezone || tenantConfig.defaults.timezone);
+        setCurrency((tenantRes.data as any).currency || tenantConfig.defaults.currency);
       }
 
       const mData = membershipRes.data as any;
@@ -187,14 +224,66 @@ export function useOrganizationGeneral() {
     }
   };
 
+  // --- 4. FUNGSI BARU UNTUK MENYIMPAN PENGATURAN SPESIFIK ---
+  const handleSaveAdditionalDetails = async () => {
+    if (!activeOrgId) return;
+    setIsSaving(true);
+    setAlertMessage(null);
+
+    try {
+      const updatePayload: Record<string, any> = {};
+
+      if (tenantConfig.features.enableRegionalSettings) {
+        updatePayload.default_locale = defaultLocale;
+        updatePayload.timezone = timezone;
+        updatePayload.currency = currency;
+      }
+
+      if (tenantConfig.features.enableBusinessContact) {
+        updatePayload.business_email = businessEmail.trim() || null;
+        updatePayload.phone_number = phoneNumber.trim() || null;
+      }
+
+      if (tenantConfig.features.enableTaxId) {
+        updatePayload.tax_id = taxId.trim() || null;
+      }
+
+      if (tenantConfig.features.enableAddress) {
+        updatePayload.address_line1 = addressLine1.trim() || null;
+        updatePayload.address_line2 = addressLine2.trim() || null;
+        updatePayload.city = city.trim() || null;
+        updatePayload.state_province = stateProvince.trim() || null;
+        updatePayload.postal_code = postalCode.trim() || null;
+        updatePayload.country_code = countryCode || null;
+      }
+
+      const { error } = await supabase.from("tenants").update(updatePayload).eq("id", activeOrgId);
+
+      if (error) throw error;
+
+      setAlertMessage({
+        title: locale === "en" ? "Success" : "Sukses",
+        description:
+          locale === "en" ? "Settings updated successfully." : "Pengaturan berhasil diperbarui.",
+        variant: "default"
+      });
+    } catch (error: any) {
+      setAlertMessage({
+        title: "Error",
+        description: error.message || "Gagal memperbarui pengaturan organisasi.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDeleteOrganization = async () => {
     if (!activeOrgId) return;
     setIsDeleting(true);
     setAlertMessage(null);
 
     try {
-      // Soft-delete: tandai tenant deleted. Data anak (memberships,
-      // subscriptions, transactions, tasks) dipertahankan agar bisa direstore.
       const { error } = await supabase
         .from("tenants")
         .update({ status: "deleted", deleted_at: new Date().toISOString() })
@@ -211,7 +300,6 @@ export function useOrganizationGeneral() {
       });
 
       setTimeout(() => {
-        // Owner kehilangan akses ke org ini -> kembali ke root.
         window.location.assign("/");
       }, 1200);
     } catch (error: any) {
@@ -229,6 +317,7 @@ export function useOrganizationGeneral() {
   // Hapus organisasi hanya utk pemegang organization.delete (Owner).
   const canDeleteOrg = hasPermission(userPermissions, PERMISSIONS.organizationDelete);
 
+  // --- 5. PASTIKAN SEMUA STATE DAN FUNGSI BARU DIKEMBALIKAN ---
   return {
     t,
     tCommon,
@@ -250,6 +339,32 @@ export function useOrganizationGeneral() {
     handleSaveName,
     handleDeleteOrganization,
     isReadOnly,
-    canDeleteOrg
+    canDeleteOrg,
+
+    businessEmail,
+    setBusinessEmail,
+    phoneNumber,
+    setPhoneNumber,
+    taxId,
+    setTaxId,
+    addressLine1,
+    setAddressLine1,
+    addressLine2,
+    setAddressLine2,
+    city,
+    setCity,
+    stateProvince,
+    setStateProvince,
+    postalCode,
+    setPostalCode,
+    countryCode,
+    setCountryCode,
+    defaultLocale,
+    setDefaultLocale,
+    timezone,
+    setTimezone,
+    currency,
+    setCurrency,
+    handleSaveAdditionalDetails
   };
 }
