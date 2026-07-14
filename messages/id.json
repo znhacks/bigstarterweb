@@ -256,6 +256,12 @@
         "failedsave": "Gagal Menyimpan"
       }
     },
+    "restore": {
+      "title": "Pulihkan akun Anda",
+      "desc": "Akun Anda telah dihapus. Anda bisa memulihkannya sekarang — data Anda masih utuh.",
+      "deletedOn": "Dihapus pada",
+      "restore": "Pulihkan akun saya"
+    },
     "error": {
       "404": {
         "404": "404",
@@ -866,14 +872,6 @@
         "delete": "Hapus",
         "confirmDelete": "Yakin ingin menghapus role ini?"
       }
-    }
-  },
-  "auth": {
-    "restore": {
-      "title": "Pulihkan akun Anda",
-      "desc": "Akun Anda telah dihapus. Anda bisa memulihkannya sekarang — data Anda masih utuh.",
-      "deletedOn": "Dihapus pada",
-      "restore": "Pulihkan akun saya"
     }
   },
   "moderation": {

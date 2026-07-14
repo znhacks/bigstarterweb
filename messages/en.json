@@ -256,6 +256,12 @@
         "failedsave": "Failed to Save"
       }
     },
+    "restore": {
+      "title": "Restore your account",
+      "desc": "Your account was deleted. You can restore it now — your data is still intact.",
+      "deletedOn": "Deleted on",
+      "restore": "Restore my account"
+    },
     "error": {
       "404": {
         "404": "404",
@@ -877,14 +883,6 @@
         "delete": "Delete",
         "confirmDelete": "Are you sure you want to delete this role?"
       }
-    }
-  },
-  "auth": {
-    "restore": {
-      "title": "Restore your account",
-      "desc": "Your account was deleted. You can restore it now — your data is still intact.",
-      "deletedOn": "Deleted on",
-      "restore": "Restore my account"
     }
   },
   "moderation": {
