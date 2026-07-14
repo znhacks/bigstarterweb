@@ -21,6 +21,7 @@ import {
 import { useOrganizationBilling } from "./logic";
 import { Switch } from "@/components/ui/switch";
 import { formatDateTime } from "@/lib/i18n/format";
+import { Input } from "@/components/ui/input";
 
 const PROVIDER_LABELS: Record<string, { title: string; subtitle: string; color: string }> = {
   stripe: { title: "Credit Card", subtitle: "Stripe Global Secure", color: "text-indigo-600" },
@@ -750,7 +751,7 @@ export function OrganizationBilling() {
                         id="coupon-input"
                         placeholder="Contoh: DISKONSAAS20"
                         value={couponCodeInput}
-                        onChange={(e) => setCouponCodeInput(e.target.value)}
+                        onChange={(e: any) => setCouponCodeInput(e.target.value)}
                         disabled={isValidatingCoupon || !!appliedCoupon}
                         className="h-9 text-xs uppercase"
                       />
