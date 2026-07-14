@@ -73,7 +73,7 @@ export class PayPalAdapter implements PaymentProvider {
         email_address: params.userEmail
       },
       application_context: {
-        brand_name: "SaaS Application",
+        brand_name: "",
         user_action: "SUBSCRIBE_NOW",
         shipping_preference: "NO_SHIPPING",
         return_url: params.successUrl,

@@ -77,7 +77,14 @@ export function OrganizationBilling() {
     showWarningBanner,
     handleDowngrade,
     isDowngrading,
-    getYearlyDiscountPercent
+    getYearlyDiscountPercent,
+    couponCodeInput,
+  setCouponCodeInput,
+  appliedCoupon,
+  setAppliedCoupon,
+  couponError,
+  isValidatingCoupon,
+  handleApplyCoupon,
   } = useOrganizationBilling();
 
   if (isLoading) {
@@ -635,6 +642,149 @@ export function OrganizationBilling() {
                             variant="outline"
                             onClick={() => handleInitiateCheckout(provider)}
                             className="flex h-16 flex-col items-start justify-center gap-0.5 rounded-xl border border-slate-200 px-4 hover:border-slate-300 hover:bg-slate-50/50">
+                            <span className={`text-sm font-bold ${meta.color}`}>{meta.title}</span>
+                            <span className="text-[10px] text-slate-400">{meta.subtitle}</span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG MODAL CHECKOUT MULTI-PROVIDER */}
+      <Dialog open={isCheckoutOpen} onOpenChange={(open) => {
+        setIsCheckoutOpen(open);
+        if (!open) {
+          setAppliedCoupon(null); // Reset kupon jika modal ditutup
+          setCouponCodeInput("");
+        }
+      }}>
+        <DialogContent className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-900">
+              {t("dialogPurchase.title")}
+            </DialogTitle>
+            <DialogDescription>{t("dialogPurchase.desc")}</DialogDescription>
+          </DialogHeader>
+
+          {selectedPlan &&
+            (() => {
+              const { finalPrice, creditUsed } = getUpgradePrice(selectedPlan);
+              const isUpgrade = getPlanActionType(selectedPlan.id) === "upgrade" || getPlanActionType(selectedPlan.id) === "upgrade_cycle";
+              const selectedPlanLocalizedName = tBilling(`plans.${selectedPlan.id}.name`) || selectedPlan.name;
+
+              // 1. KALKULASI NOMINAL DISKON KUPON DI SISI FRONTEND (INTERAKTIF)
+              let couponDiscountValue = 0;
+              if (appliedCoupon) {
+                if (appliedCoupon.type === 'percentage') {
+                  couponDiscountValue = (appliedCoupon.value / 100) * finalPrice;
+                } else {
+                  couponDiscountValue = appliedCoupon.value;
+                }
+              }
+
+              const totalToPay = Math.max(1, parseFloat((finalPrice - couponDiscountValue).toFixed(2)));
+
+              return (
+                <div className="space-y-5 py-2">
+                  <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-slate-700">
+                        {t("dialogPurchase.planCycle", {
+                          planName: selectedPlanLocalizedName,
+                          cycle: t(`cycles.${billingCycle}`)
+                        })}
+                      </span>
+                      <span className="font-semibold text-slate-950">
+                        {formatPrice(
+                          billingCycle === "yearly"
+                            ? selectedPlan.prices.yearly.convertedAmount
+                            : selectedPlan.prices.monthly.convertedAmount
+                        )}
+                      </span>
+                    </div>
+
+                    {isUpgrade && creditUsed > 0 && (
+                      <div className="flex items-center justify-between text-xs font-medium text-emerald-600">
+                        <span>{t("dialogPurchase.creditApplied")}</span>
+                        <span>-{formatPrice(creditUsed)}</span>
+                      </div>
+                    )}
+
+                    {/* Rincian Potongan Kupon Diskon Aktif */}
+                    {appliedCoupon && (
+                      <div className="flex items-center justify-between text-xs font-medium text-blue-600">
+                        <span>Diskon Kupon ({appliedCoupon.code})</span>
+                        <span>-{formatPrice(couponDiscountValue)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between border-t border-slate-200/60 pt-2 text-base font-bold text-slate-900">
+                      <span>{t("dialogPurchase.amountToPay")}</span>
+                      <span className="text-lg text-emerald-600">{formatPrice(totalToPay)}</span>
+                    </div>
+                  </div>
+
+                  {/* FORM INPUT KODE KUPON (FITUR BARU) */}
+                  <div className="space-y-1.5 border-t border-slate-100 pt-3">
+                    <Label htmlFor="coupon-input" className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                      Miliki Kode Promo?
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="coupon-input"
+                        placeholder="Contoh: DISKONSAAS20"
+                        value={couponCodeInput}
+                        onChange={(e) => setCouponCodeInput(e.target.value)}
+                        disabled={isValidatingCoupon || !!appliedCoupon}
+                        className="h-9 text-xs uppercase"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={isValidatingCoupon || !couponCodeInput.trim() || !!appliedCoupon}
+                        className="h-9 px-4 bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 rounded-lg shrink-0"
+                      >
+                        {isValidatingCoupon && <Loader2 className="me-1 h-3 w-3 animate-spin" />}
+                        Terapkan
+                      </Button>
+                    </div>
+                    {couponError && <p className="text-red-500 text-xs mt-1">{couponError}</p>}
+                    {appliedCoupon && (
+                      <div className="flex items-center justify-between bg-emerald-50 text-emerald-700 text-xs p-2 rounded-lg mt-1 border border-emerald-100">
+                        <span>Kupon <b>{appliedCoupon.code}</b> sukses diterapkan!</span>
+                        <button 
+                          onClick={() => setAppliedCoupon(null)} 
+                          className="text-emerald-500 hover:text-emerald-950 font-bold"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Render Tombol Pilihan Payment Gateway */}
+                  <div className="space-y-2 border-t border-slate-100 pt-3">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t("dialogPurchase.selectPaymentMethod") || "Pilih Metode Pembayaran:"}</p>
+                    <div className="flex flex-col gap-2 max-h-[180px] overflow-y-auto pr-1">
+                      {enabledProviders.map((provider) => {
+                        const meta = PROVIDER_LABELS[provider] || {
+                          title: provider.toUpperCase(),
+                          subtitle: "Secure Payment Option",
+                          color: "text-slate-600"
+                        };
+
+                        return (
+                          <Button
+                            key={provider}
+                            variant="outline"
+                            onClick={() => handleInitiateCheckout(provider)}
+                            className="flex flex-col items-start justify-center gap-0.5 h-14 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 px-4"
+                          >
                             <span className={`text-sm font-bold ${meta.color}`}>{meta.title}</span>
                             <span className="text-[10px] text-slate-400">{meta.subtitle}</span>
                           </Button>

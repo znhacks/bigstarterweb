@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation"; // IMPOR BARU: Untuk membaca parameter dinamis rute
+import { useParams } from "next/navigation"; 
 import { supabase } from "@/lib/supabase";
 import { plans, Plan, GatewayIds } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
@@ -38,7 +38,7 @@ export interface ActiveSubscription {
   status: string;
   cancelAtPeriodEnd: boolean;
   provider?: string;
-  pendingPlanId?: string; // TAMBAHKAN BARIS INI
+  pendingPlanId?: string; 
 }
 
 export interface ConvertedPlan extends Omit<Plan, "prices"> {
@@ -59,7 +59,7 @@ export interface ConvertedPlan extends Omit<Plan, "prices"> {
 
 export function useOrganizationBilling() {
   const locale = useLocale();
-  const routeParams = useParams(); // Membaca parameter url aktif [tenant_slug]
+  const routeParams = useParams(); 
   const tenantSlug = (routeParams?.tenant_slug as string) || "";
 
   const t = useTranslations("organization.organization-billing");
@@ -102,6 +102,10 @@ export function useOrganizationBilling() {
   const [selectedInvoice, setSelectedInvoice] = useState<Transaction | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [isDowngrading, setIsDowngrading] = useState(false);
+  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; type: string; value: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   const initializeConvertedPlans = async () => {
     try {
@@ -166,7 +170,6 @@ export function useOrganizationBilling() {
   const fetchActiveSubscription = async (orgId: string) => {
     const { data, error } = await supabase
       .from("subscriptions")
-      // TAMBAHKAN kolom 'pending_plan_id' di query select di bawah ini:
       .select(
         "id, status, starts_at, ends_at, cancel_at_period_end, plan_id, provider, pending_plan_id"
       )
@@ -211,7 +214,6 @@ export function useOrganizationBilling() {
           status: data.status,
           cancelAtPeriodEnd: !!data.cancel_at_period_end,
           provider: data.provider || undefined,
-          // PETAKAN kolom database ke state frontend di bawah ini:
           pendingPlanId: data.pending_plan_id || undefined
         });
         return;
@@ -287,14 +289,13 @@ export function useOrganizationBilling() {
     setIsCheckoutOpen(true);
   };
 
+  // FUNGSI UNIFIED CHECKOUT: Sudah disatukan penuh & menyertakan appliedCoupon (Bebas Duplikasi)
   const handleInitiateCheckout = async (provider: string) => {
     if (!activeOrgId || !selectedPlan || !tenantSlug) return;
     setIsVerifyingPayment(true);
 
     try {
-      const {
-        data: { session: authSession }
-      } = await supabase.auth.getSession();
+      const { data: { session: authSession } } = await supabase.auth.getSession();
       if (!authSession) throw new Error("Silakan masuk terlebih dahulu");
 
       const billingRedirectPath = `/${tenantSlug}/organization/billing`;
@@ -307,16 +308,16 @@ export function useOrganizationBilling() {
         },
         body: JSON.stringify({
           planId: selectedPlan.id,
-          interval: billingCycle, // Langsung kirim 'monthly' atau 'yearly' secara aman
+          interval: billingCycle,
           provider: provider,
           tenantId: activeOrgId,
+          couponCode: appliedCoupon?.code || undefined, // Mengirimkan kupon diskon aktif
           successUrl: `${window.location.origin}${billingRedirectPath}?success=true`,
           cancelUrl: `${window.location.origin}${billingRedirectPath}?canceled=true`
         })
       });
 
       const checkoutSession = await response.json();
-
       if (!response.ok || checkoutSession.error) {
         throw new Error(checkoutSession.error || "Gagal menginisiasi checkout.");
       }
@@ -471,6 +472,38 @@ export function useOrganizationBilling() {
     }
   };
 
+  const handleApplyCoupon = async () => {
+    if (!couponCodeInput.trim() || !activeOrgId) return;
+    setIsValidatingCoupon(true);
+    setCouponError(null);
+
+    try {
+      const response = await fetch('/api/billing/validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponCodeInput,
+          tenantId: activeOrgId
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.error) throw new Error(data.error || "Gagal memproses kupon");
+
+      setAppliedCoupon({
+        code: data.code,
+        type: data.discountType,
+        value: data.discountValue
+      });
+      setCouponCodeInput(""); 
+    } catch (err: any) {
+      setCouponError(err.message || "Kupon tidak dikenal");
+      setAppliedCoupon(null);
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
   const getRemainingCredit = (): number => {
     if (!activeSub || !activeSub.startsAt || !activeSub.endsAt) return 0;
 
@@ -496,20 +529,18 @@ export function useOrganizationBilling() {
 
     return Math.max(0, parseFloat(credit.toFixed(2)));
   };
+
   const getPlanActionType = (planId: string) => {
     if (!activeSub || activeSub.status === "refund_requested") return "choose";
 
     const currentInterval = getActiveSubscriptionInterval();
 
-    // SINKRONISASI BARU: Jika paketnya sama, tetapi siklus tagihan berbeda
     if (activeSub.planId === planId) {
-      // Skenario A: Bulanan beralih ke Tahunan (Upgrade Siklus)
       if (currentInterval === "monthly" && billingCycle === "yearly") {
         return "upgrade_cycle";
       }
-      // Skenario B: Tahunan beralih ke Bulanan (Downgrade Siklus)
       if (currentInterval === "yearly" && billingCycle === "monthly") {
-        return "downgrade_cycle"; // Memicu aksi switch ke bulanan (tertunda)
+        return "downgrade_cycle"; 
       }
       return "active";
     }
@@ -530,7 +561,6 @@ export function useOrganizationBilling() {
     const credit = getRemainingCredit();
     const actionType = getPlanActionType(targetPlan.id);
 
-    // Potongan harga kredit pro-rata berlaku untuk upgrade paket MAUPUN upgrade siklus (bulanan ke tahunan)
     const isUpgrade = actionType === "upgrade";
     const isCycleUpgrade = actionType === "upgrade_cycle";
 
@@ -569,22 +599,14 @@ export function useOrganizationBilling() {
       : activePlanConfig.prices.monthly.convertedAmount
     : 0;
 
-  /**
-   * MENDETEKSI SIKLUS AKTIF (REAL-TIME)
-   * Menghitung sisa hari paket saat ini untuk mendeteksi apakah langganan aktif bertipe bulanan atau tahunan
-   */
   const getActiveSubscriptionInterval = (): "monthly" | "yearly" => {
     if (!activeSub || !activeSub.startsAt || !activeSub.endsAt) return "monthly";
     const start = new Date(activeSub.startsAt).getTime();
     const end = new Date(activeSub.endsAt).getTime();
     const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    return diffDays > 45 ? "yearly" : "monthly"; // Di atas 45 hari diasumsikan tahunan
+    return diffDays > 45 ? "yearly" : "monthly"; 
   };
 
-  /**
-   * KALKULATOR DISKON TAHUNAN DINAMIS (UI)
-   * Menghitung persentase kehematan paket tahunan secara dinamis dari config/billing.ts
-   */
   const getYearlyDiscountPercent = (plan: ConvertedPlan): number => {
     const monthlyTotal = plan.prices.monthly.amount * 12;
     const yearlyTotal = plan.prices.yearly.amount;
@@ -634,7 +656,15 @@ export function useOrganizationBilling() {
     currentActivePrice,
     handleDowngrade,
     isDowngrading,
-    getYearlyDiscountPercent, // Ekspor ke UI
-    getActiveSubscriptionInterval
+    getYearlyDiscountPercent, 
+    getActiveSubscriptionInterval,
+    couponCodeInput,
+    setCouponCodeInput,
+    appliedCoupon,
+    setAppliedCoupon,
+    couponError,
+    setCouponError,
+    isValidatingCoupon,
+    handleApplyCoupon,
   };
 }
