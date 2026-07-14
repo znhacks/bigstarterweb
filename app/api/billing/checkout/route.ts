@@ -1,13 +1,12 @@
 // app/api/billing/checkout/route.ts
 
-import { NextResponse } from 'next/server';
-import { PaymentFactory } from '@/services/payment/factory';
-import { createClient } from '@supabase/supabase-js';
-import { plans } from '@/config/billing';
+import { NextResponse } from "next/server";
+import { PaymentFactory } from "@/services/payment/factory";
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
 export async function POST(req: Request) {
@@ -15,30 +14,45 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { planId, interval, provider, tenantId, successUrl, cancelUrl, couponCode } = body;
 
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const token = authHeader.replace("Bearer ", "");
+    const {
+      data: { user },
+      error: authError
+    } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const targetPlan = plans.find(p => p.id === planId);
-    if (!targetPlan) {
-      return NextResponse.json({ error: 'Selected plan not found' }, { status: 400 });
+    // 1. TARIK DATA HARGA TARGET DARI DATABASE SECARA DINAMIS
+    const { data: dbTargetPrice, error: targetPriceErr } = await supabaseAdmin
+      .from("plan_prices")
+      .select("amount, plan_id")
+      .eq("plan_id", planId)
+      .eq("interval", interval)
+      .maybeSingle();
+
+    if (targetPriceErr || !dbTargetPrice) {
+      return NextResponse.json(
+        { error: `Harga untuk paket ${planId} dengan interval ${interval} tidak ditemukan.` },
+        { status: 400 }
+      );
     }
 
-    // 1. KALKULASI KREDIT PRO-RATA
+    const targetPrice = parseFloat(dbTargetPrice.amount);
+
+    // 2. KALKULASI KREDIT PRO-RATA DINAMIS
     let credit = 0;
     const { data: activeSub } = await supabaseAdmin
-      .from('subscriptions')
-      .select('starts_at, ends_at, plan_id')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active')
+      .from("subscriptions")
+      .select("starts_at, ends_at, plan_id, provider")
+      .eq("tenant_id", tenantId)
+      .eq("status", "active")
       .maybeSingle();
 
     if (activeSub && activeSub.starts_at && activeSub.ends_at) {
@@ -50,43 +64,43 @@ export async function POST(req: Request) {
         const totalDuration = end - start;
         const remainingTime = end - now;
 
-        const activePlanConfig = plans.find(p => p.id === activeSub.plan_id);
-        if (activePlanConfig) {
-          const originalPrice = interval === 'yearly'
-            ? activePlanConfig.prices.yearly.amount
-            : activePlanConfig.prices.monthly.amount;
+        // Tarik harga paket aktif lama dari database untuk kalkulasi sisa kredit
+        const { data: dbOldPrice } = await supabaseAdmin
+          .from("plan_prices")
+          .select("amount")
+          .eq("plan_id", activeSub.plan_id)
+          .eq("interval", interval)
+          .maybeSingle();
 
+        if (dbOldPrice) {
+          const originalPrice = parseFloat(dbOldPrice.amount);
           const remainingRatio = remainingTime / totalDuration;
           credit = remainingRatio * originalPrice;
         }
       }
     }
 
-    const targetPrice = interval === 'yearly'
-      ? targetPlan.prices.yearly.amount
-      : targetPlan.prices.monthly.amount;
-
     let finalPriceInIdr = targetPrice - credit;
 
-    // 2. INTEGRASI SISTEM KUPON DISKON (VALIDASI SISI SERVER)
+    // 3. VALIDASI KUPON DISKON DINAMIS DI SISI SERVER
     let discountAmount = 0;
     if (couponCode) {
       const formattedCode = couponCode.trim().toUpperCase();
       const { data: coupon } = await supabaseAdmin
-        .from('coupons')
-        .select('*')
-        .eq('code', formattedCode)
+        .from("coupons")
+        .select("*")
+        .eq("code", formattedCode)
         .maybeSingle();
 
       if (coupon) {
-        // Cek kedaluwarsa & kuota kembali demi keamanan
         const isValidDate = !coupon.valid_until || new Date() < new Date(coupon.valid_until);
-        const isValidQuota = coupon.max_redemptions === null || coupon.redeemed_count < coupon.max_redemptions;
+        const isValidQuota =
+          coupon.max_redemptions === null || coupon.redeemed_count < coupon.max_redemptions;
 
         if (isValidDate && isValidQuota) {
-          if (coupon.discount_type === 'percentage') {
+          if (coupon.discount_type === "percentage") {
             discountAmount = (parseFloat(coupon.discount_value) / 100) * finalPriceInIdr;
-          } else if (coupon.discount_type === 'fixed_amount') {
+          } else if (coupon.discount_type === "fixed_amount") {
             discountAmount = parseFloat(coupon.discount_value);
           }
           finalPriceInIdr = finalPriceInIdr - discountAmount;
@@ -94,27 +108,26 @@ export async function POST(req: Request) {
       }
     }
 
-    // Pastikan harga tidak minus (minimal Rp 1 / $0.01)
     const secureFinalPrice = Math.max(1, parseFloat(finalPriceInIdr.toFixed(2)));
 
-    // 3. Ambil adapter pembayaran yang sesuai
+    // 4. Ambil adapter pembayaran yang sesuai
     const paymentProvider = PaymentFactory.getProvider(provider);
 
-    // 4. Jalankan checkout dengan mengirimkan nominal harga kustom yang sudah dipotong pro-rata + kupon diskon
+    // 5. Jalankan checkout menggunakan harga kustom yang sudah dipotong pro-rata + kupon diskon
     const session = await paymentProvider.createCheckoutSession({
       tenantId,
       userId: user.id,
-      userEmail: user.email || '',
+      userEmail: user.email || "",
       planId,
       interval,
-      customPrice: secureFinalPrice, // Diskon kupon aman terkirim ke gateway!
-      successUrl: successUrl || `${req.headers.get('origin')}/dashboard/billing?success=true`,
-      cancelUrl: cancelUrl || `${req.headers.get('origin')}/dashboard/billing?canceled=true`,
+      customPrice: secureFinalPrice,
+      successUrl: successUrl || `${req.headers.get("origin")}/dashboard/billing?success=true`,
+      cancelUrl: cancelUrl || `${req.headers.get("origin")}/dashboard/billing?canceled=true`
     });
 
     return NextResponse.json(session);
   } catch (error: any) {
-    console.error('Checkout API Error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    console.error("Checkout API Error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }

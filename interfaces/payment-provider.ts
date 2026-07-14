@@ -28,15 +28,17 @@ export type WebhookEventType =
 export interface UnifiedWebhookResult {
   eventType: WebhookEventType;
   tenantId: string;
-  planId?: string; // TAMBAHAN: Untuk menyimpan ID plan ('starter' / 'pro')
+  planId?: string;
   startsAt?: string;
-  endsAt?: string; // TAMBAHAN: Tanggal berakhir langganan
+  endsAt?: string;
   providerSubscriptionId?: string;
   providerCustomerId?: string;
   status: string;
   amount?: number;
   currency?: string;
   orderId?: string;
+  taxAmount?: number;
+  feeAmount?: number;
 }
 
 export interface PaymentProvider {

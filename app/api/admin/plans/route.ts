@@ -1,0 +1,194 @@
+// app/api/admin/plans/route.ts
+
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+);
+
+/**
+ * FUNGSI PEMBANTU: Memvalidasi apakah pemanggil adalah Superadmin
+ */
+async function validateSuperadmin(req: Request) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) throw new Error("Unauthorized");
+
+  const token = authHeader.replace("Bearer ", "");
+  const {
+    data: { user },
+    error: authError
+  } = await supabaseAdmin.auth.getUser(token);
+
+  if (authError || !user) throw new Error("Invalid token");
+
+  // SOLUSI: Mengambil semua keanggotaan user (tanpa maybeSingle) untuk mencegah error "multiple rows"
+  const { data: memberships, error: memError } = await supabaseAdmin
+    .from("memberships")
+    .select("roles(name)")
+    .eq("user_id", user.id);
+
+  if (memError || !memberships || memberships.length === 0) {
+    throw new Error("Forbidden: Hanya Superadmin yang diizinkan");
+  }
+
+  // SOLUSI: Memeriksa secara case-insensitive apakah ada salah satu role bernilai 'superadmin'
+  const isSuperadmin = memberships.some((membership: any) => {
+    const name = membership?.roles?.name?.toLowerCase().trim();
+    return name === "superadmin";
+  });
+
+  if (!isSuperadmin) {
+    throw new Error("Forbidden: Hanya Superadmin yang diizinkan");
+  }
+
+  return user;
+}
+
+/**
+ * 1. GET: Menarik seluruh paket (aktif maupun non-aktif) untuk Konsol Admin
+ */
+export async function GET(req: Request) {
+  try {
+    await validateSuperadmin(req);
+
+    // Ambil seluruh plans
+    const { data: plans, error: plansErr } = await supabaseAdmin
+      .from("plans")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (plansErr) throw plansErr;
+
+    // Ambil seluruh plan_prices
+    const { data: prices, error: pricesErr } = await supabaseAdmin.from("plan_prices").select("*");
+
+    if (pricesErr) throw pricesErr;
+
+    return NextResponse.json({ success: true, plans, prices });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Internal Server Error" },
+      {
+        status:
+          error.message === "Unauthorized"
+            ? 401
+            : error.message.includes("Hanya Superadmin")
+              ? 403
+              : 500
+      }
+    );
+  }
+}
+
+/**
+ * 2. POST: Menyimpan paket baru atau memperbarui paket lama beserta harga & gateway-nya (UPSERT)
+ */
+export async function POST(req: Request) {
+  try {
+    await validateSuperadmin(req);
+    const body = await req.json();
+
+    const { id, name, description, isActive, displayFeatures, features, prices } = body;
+
+    if (!id || !name || !description) {
+      return NextResponse.json(
+        { error: "ID, Nama, dan Deskripsi paket wajib diisi" },
+        { status: 400 }
+      );
+    }
+
+    // A. Upsert ke tabel 'plans'
+    const { error: planErr } = await supabaseAdmin.from("plans").upsert({
+      id: id.toLowerCase().trim(),
+      name,
+      description,
+      is_active: isActive !== undefined ? isActive : true,
+      display_features: displayFeatures || [],
+      features: features || [], // Menyimpan array rbac terpadu: ['allowPdfFormat', 'limit:maxTasks:2000']
+      updated_at: new Date().toISOString()
+    });
+
+    if (planErr) throw planErr;
+
+    // B. Upsert harga Bulanan (monthly) ke tabel 'plan_prices'
+    if (prices?.monthly) {
+      const { error: mPriceErr } = await supabaseAdmin.from("plan_prices").upsert(
+        {
+          plan_id: id,
+          interval: "monthly",
+          amount: prices.monthly.amount,
+          provider_ids: prices.monthly.providerIds || {}
+        },
+        { onConflict: "plan_id,interval" }
+      );
+
+      if (mPriceErr) throw mPriceErr;
+    }
+
+    // C. Upsert harga Tahunan (yearly) ke tabel 'plan_prices'
+    if (prices?.yearly) {
+      const { error: yPriceErr } = await supabaseAdmin.from("plan_prices").upsert(
+        {
+          plan_id: id,
+          interval: "yearly",
+          amount: prices.yearly.amount,
+          provider_ids: prices.yearly.providerIds || {}
+        },
+        { onConflict: "plan_id,interval" }
+      );
+
+      if (yPriceErr) throw yPriceErr;
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Admin Plans Save Error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+  }
+}
+
+/**
+ * 3. DELETE: Soft-delete paket (Mengubah status is_active = false) untuk melindungi transaksi pelanggan aktif
+ */
+export async function DELETE(req: Request) {
+  try {
+    await validateSuperadmin(req);
+    const { searchParams } = new URL(req.url);
+    const planId = searchParams.get("id");
+
+    if (!planId) {
+      return NextResponse.json({ error: "ID paket wajib dikirimkan" }, { status: 400 });
+    }
+
+    // Proteksi: Periksa apakah ada pelanggan yang sedang aktif di paket ini
+    const { count, error: countErr } = await supabaseAdmin
+      .from("subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("plan_id", planId)
+      .eq("status", "active");
+
+    if (countErr) throw countErr;
+
+    if (count && count > 0) {
+      return NextResponse.json(
+        { error: `Gagal menghapus. Paket ini sedang digunakan oleh ${count} pelanggan aktif.` },
+        { status: 400 }
+      );
+    }
+
+    // Lakukan soft-delete
+    const { error: deleteErr } = await supabaseAdmin
+      .from("plans")
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq("id", planId);
+
+    if (deleteErr) throw deleteErr;
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Admin Plans Delete Error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+  }
+}
