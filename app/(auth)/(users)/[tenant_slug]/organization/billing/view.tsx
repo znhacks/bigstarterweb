@@ -7,6 +7,7 @@ import { Check, X, CheckCircle2, AlertCircle, Loader2, ArrowUpRight } from "luci
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -79,12 +80,12 @@ export function OrganizationBilling() {
     isDowngrading,
     getYearlyDiscountPercent,
     couponCodeInput,
-  setCouponCodeInput,
-  appliedCoupon,
-  setAppliedCoupon,
-  couponError,
-  isValidatingCoupon,
-  handleApplyCoupon,
+    setCouponCodeInput,
+    appliedCoupon,
+    setAppliedCoupon,
+    couponError,
+    isValidatingCoupon,
+    handleApplyCoupon
   } = useOrganizationBilling();
 
   if (isLoading) {
@@ -656,13 +657,15 @@ export function OrganizationBilling() {
       </Dialog>
 
       {/* DIALOG MODAL CHECKOUT MULTI-PROVIDER */}
-      <Dialog open={isCheckoutOpen} onOpenChange={(open) => {
-        setIsCheckoutOpen(open);
-        if (!open) {
-          setAppliedCoupon(null); // Reset kupon jika modal ditutup
-          setCouponCodeInput("");
-        }
-      }}>
+      <Dialog
+        open={isCheckoutOpen}
+        onOpenChange={(open) => {
+          setIsCheckoutOpen(open);
+          if (!open) {
+            setAppliedCoupon(null); // Reset kupon jika modal ditutup
+            setCouponCodeInput("");
+          }
+        }}>
         <DialogContent className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-slate-900">
@@ -674,20 +677,26 @@ export function OrganizationBilling() {
           {selectedPlan &&
             (() => {
               const { finalPrice, creditUsed } = getUpgradePrice(selectedPlan);
-              const isUpgrade = getPlanActionType(selectedPlan.id) === "upgrade" || getPlanActionType(selectedPlan.id) === "upgrade_cycle";
-              const selectedPlanLocalizedName = tBilling(`plans.${selectedPlan.id}.name`) || selectedPlan.name;
+              const isUpgrade =
+                getPlanActionType(selectedPlan.id) === "upgrade" ||
+                getPlanActionType(selectedPlan.id) === "upgrade_cycle";
+              const selectedPlanLocalizedName =
+                tBilling(`plans.${selectedPlan.id}.name`) || selectedPlan.name;
 
               // 1. KALKULASI NOMINAL DISKON KUPON DI SISI FRONTEND (INTERAKTIF)
               let couponDiscountValue = 0;
               if (appliedCoupon) {
-                if (appliedCoupon.type === 'percentage') {
+                if (appliedCoupon.type === "percentage") {
                   couponDiscountValue = (appliedCoupon.value / 100) * finalPrice;
                 } else {
                   couponDiscountValue = appliedCoupon.value;
                 }
               }
 
-              const totalToPay = Math.max(1, parseFloat((finalPrice - couponDiscountValue).toFixed(2)));
+              const totalToPay = Math.max(
+                1,
+                parseFloat((finalPrice - couponDiscountValue).toFixed(2))
+              );
 
               return (
                 <div className="space-y-5 py-2">
@@ -731,7 +740,9 @@ export function OrganizationBilling() {
 
                   {/* FORM INPUT KODE KUPON (FITUR BARU) */}
                   <div className="space-y-1.5 border-t border-slate-100 pt-3">
-                    <Label htmlFor="coupon-input" className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                    <Label
+                      htmlFor="coupon-input"
+                      className="text-xs font-bold tracking-wide text-slate-500 uppercase">
                       Miliki Kode Promo?
                     </Label>
                     <div className="flex gap-2">
@@ -747,20 +758,20 @@ export function OrganizationBilling() {
                         type="button"
                         onClick={handleApplyCoupon}
                         disabled={isValidatingCoupon || !couponCodeInput.trim() || !!appliedCoupon}
-                        className="h-9 px-4 bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 rounded-lg shrink-0"
-                      >
+                        className="h-9 shrink-0 rounded-lg bg-slate-900 px-4 text-xs font-semibold text-white hover:bg-slate-800">
                         {isValidatingCoupon && <Loader2 className="me-1 h-3 w-3 animate-spin" />}
                         Terapkan
                       </Button>
                     </div>
-                    {couponError && <p className="text-red-500 text-xs mt-1">{couponError}</p>}
+                    {couponError && <p className="mt-1 text-xs text-red-500">{couponError}</p>}
                     {appliedCoupon && (
-                      <div className="flex items-center justify-between bg-emerald-50 text-emerald-700 text-xs p-2 rounded-lg mt-1 border border-emerald-100">
-                        <span>Kupon <b>{appliedCoupon.code}</b> sukses diterapkan!</span>
-                        <button 
-                          onClick={() => setAppliedCoupon(null)} 
-                          className="text-emerald-500 hover:text-emerald-950 font-bold"
-                        >
+                      <div className="mt-1 flex items-center justify-between rounded-lg border border-emerald-100 bg-emerald-50 p-2 text-xs text-emerald-700">
+                        <span>
+                          Kupon <b>{appliedCoupon.code}</b> sukses diterapkan!
+                        </span>
+                        <button
+                          onClick={() => setAppliedCoupon(null)}
+                          className="font-bold text-emerald-500 hover:text-emerald-950">
                           Hapus
                         </button>
                       </div>
@@ -769,8 +780,10 @@ export function OrganizationBilling() {
 
                   {/* Render Tombol Pilihan Payment Gateway */}
                   <div className="space-y-2 border-t border-slate-100 pt-3">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t("dialogPurchase.selectPaymentMethod") || "Pilih Metode Pembayaran:"}</p>
-                    <div className="flex flex-col gap-2 max-h-[180px] overflow-y-auto pr-1">
+                    <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
+                      {t("dialogPurchase.selectPaymentMethod") || "Pilih Metode Pembayaran:"}
+                    </p>
+                    <div className="flex max-h-[180px] flex-col gap-2 overflow-y-auto pr-1">
                       {enabledProviders.map((provider) => {
                         const meta = PROVIDER_LABELS[provider] || {
                           title: provider.toUpperCase(),
@@ -783,8 +796,7 @@ export function OrganizationBilling() {
                             key={provider}
                             variant="outline"
                             onClick={() => handleInitiateCheckout(provider)}
-                            className="flex flex-col items-start justify-center gap-0.5 h-14 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 px-4"
-                          >
+                            className="flex h-14 flex-col items-start justify-center gap-0.5 rounded-xl border border-slate-200 px-4 hover:border-slate-300 hover:bg-slate-50/50">
                             <span className={`text-sm font-bold ${meta.color}`}>{meta.title}</span>
                             <span className="text-[10px] text-slate-400">{meta.subtitle}</span>
                           </Button>
