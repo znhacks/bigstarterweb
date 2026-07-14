@@ -1,0 +1,30 @@
+
+
+SELECT
+    Id AS id,
+    Name AS name,
+    Iso3 AS iso3,
+    NumericCode AS numeric_code,
+    Iso2 AS iso2,
+    PhoneCode AS phone_code,
+    Capital AS capital,
+    Currency AS currency,
+    CurrencySymbol AS currency_symbol,
+    Tld AS tld,
+    Native AS native,
+    Region AS region,
+    SubRegion AS sub_region,
+    Timezones AS timezones,
+    Translations AS translations,
+    DefaultFormat AS default_format,
+    REPLACE(CAST(Latitude AS CHAR), ',', '.') AS latitude,
+    REPLACE(CAST(Longitude AS CHAR), ',', '.') AS longitude,
+    Emoji AS emoji,
+    EmojiU AS emoji_u,
+    WikiDataId AS wiki_data_id,
+    Notes AS notes,
+    DATE_FORMAT(`In`, '%Y-%m-%d %H:%i:%s') AS inserted_at,
+    InBy AS inserted_by,
+    DATE_FORMAT(`Up`, '%Y-%m-%d %H:%i:%s') AS updated_at,
+    UpBy AS updated_by
+FROM countries;
