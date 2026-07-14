@@ -26,10 +26,13 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/lib/supabase";
 import { plans as billingPlans } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
+import { formatCurrency, formatTransactionAmount } from "@/lib/i18n/currency";
 
 interface SuperadminTransaction {
   id: string;
   amount: number;
+  currency: string | null;
+  amount_in_idr: number | null;
   plan_name: string;
   order_id: string;
   status: string;
@@ -61,15 +64,12 @@ interface AlertState {
 }
 
 export function SuperadminBillingDashboard() {
-  // Formatter harga lokal (LanguageProvider tidak lagi membungkus tree).
-  const formatPrice = (amount: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0
-    }).format(amount);
   const locale = useLocale();
   const t = useTranslations("superadmin.billing");
+
+  // Formatter harga lokal — default IDR (base currency aplikasi).
+  const formatPrice = (amount: number, currency?: string) =>
+    formatCurrency(amount, locale, { currencyCode: currency ?? "IDR" });
 
   // State Data Global dari Supabase
   const [transactions, setTransactions] = useState<SuperadminTransaction[]>([]);
@@ -108,6 +108,8 @@ export function SuperadminBillingDashboard() {
         `
         id,
         amount,
+        currency,
+        amount_in_idr,
         plan_name,
         order_id,
         status,
@@ -125,9 +127,12 @@ export function SuperadminBillingDashboard() {
       const txs = data as unknown as SuperadminTransaction[];
       setTransactions(txs);
 
+      // Total pendapatan dihitung dalam IDR (amount_in_idr) agar konsisten lintas mata uang.
+      // Status sukses pembayaran: "paid" (webhook) — fallback "completed" untuk data lama.
+      const PAID = ["paid", "completed"];
       const total = txs
-        .filter((tx) => tx.status === "completed")
-        .reduce((sum, tx) => sum + tx.amount, 0);
+        .filter((tx) => PAID.includes(tx.status?.toLowerCase()))
+        .reduce((sum, tx) => sum + (tx.amount_in_idr ?? tx.amount ?? 0), 0);
       setTotalRevenue(total);
     }
   };
@@ -532,7 +537,7 @@ export function SuperadminBillingDashboard() {
                       <span
                         className={`text-lg font-bold ${tx.status === "refunded" ? "text-red-600" : "text-foreground"}`}>
                         {tx.status === "refunded" ? "-" : ""}
-                        {formatPrice(tx.amount)}
+                        {formatTransactionAmount(tx.amount, tx.currency, tx.amount_in_idr, locale)}
                       </span>
                       <Badge
                         className={`rounded-full text-[9px] font-bold ${

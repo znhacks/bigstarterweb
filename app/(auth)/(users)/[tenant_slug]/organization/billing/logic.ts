@@ -20,7 +20,8 @@ export interface Transaction {
   id: string;
   tenant_id: string;
   amount: number;
-  currency?: string;
+  currency?: string | null;
+  amount_in_idr?: number | null;
   plan_name: string;
   order_id: string;
   status: string;

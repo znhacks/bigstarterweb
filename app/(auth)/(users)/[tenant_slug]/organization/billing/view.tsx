@@ -21,6 +21,7 @@ import {
 import { useOrganizationBilling } from "./logic";
 import { Switch } from "@/components/ui/switch";
 import { formatDateTime } from "@/lib/i18n/format";
+import { formatTransactionAmount } from "@/lib/i18n/currency";
 import { Input } from "@/components/ui/input";
 
 const PROVIDER_LABELS: Record<string, { title: string; subtitle: string; color: string }> = {
@@ -416,7 +417,7 @@ export function OrganizationBilling() {
                           </Badge>
                         </td>
                         <td className="px-6 py-4 font-bold whitespace-nowrap">
-                          {formatPrice(tx.amount, tx.currency)}
+                          {formatTransactionAmount(tx.amount, tx.currency, tx.amount_in_idr, locale)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <Badge className="rounded-full border-emerald-500/10 bg-emerald-50 font-medium text-emerald-600 hover:bg-emerald-100/50">
@@ -531,7 +532,12 @@ export function OrganizationBilling() {
                           </p>
                         </td>
                         <td className="px-4 py-4 text-end text-sm font-bold text-slate-900">
-                          {formatPrice(selectedInvoice.amount, selectedInvoice.currency)}
+                          {formatTransactionAmount(
+                      selectedInvoice.amount,
+                      selectedInvoice.currency,
+                      selectedInvoice.amount_in_idr,
+                      locale
+                    )}
                         </td>
                       </tr>
                     </tbody>
@@ -541,7 +547,12 @@ export function OrganizationBilling() {
                 <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-sm font-bold">
                   <span className="text-slate-700">{t("invoice.totalPaid")}</span>
                   <span className="text-lg text-slate-950">
-                    {formatPrice(selectedInvoice.amount, selectedInvoice.currency)}
+                    {formatTransactionAmount(
+                      selectedInvoice.amount,
+                      selectedInvoice.currency,
+                      selectedInvoice.amount_in_idr,
+                      locale
+                    )}
                   </span>
                 </div>
 

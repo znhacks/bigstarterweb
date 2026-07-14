@@ -251,7 +251,8 @@ export class PayPalAdapter implements PaymentProvider {
 
     const currency =
       payload.resource?.amount?.currency_code ||
-      payload.resource?.billing_info?.last_payment_amount?.currency_code;
+      payload.resource?.billing_info?.last_payment_amount?.currency_code ||
+      "USD"; // PayPal kita selalu charge dalam USD (hasil konversi IDR->USD di checkout)
 
     return {
       eventType,
