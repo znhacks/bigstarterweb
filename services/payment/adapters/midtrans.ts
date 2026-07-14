@@ -4,9 +4,9 @@ import {
   PaymentProvider,
   CreateCheckoutSessionParams,
   CheckoutSessionResult,
-  UnifiedWebhookResult
+  UnifiedWebhookResult,
+  SubscriptionInterval
 } from "../../../interfaces/payment-provider";
-import { plans } from "../../../config/billing";
 import crypto from "crypto";
 
 export class MidtransAdapter implements PaymentProvider {
@@ -20,15 +20,13 @@ export class MidtransAdapter implements PaymentProvider {
   }
 
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
-    const selectedPlan = plans.find((p) => p.id === params.planId);
-    if (!selectedPlan) throw new Error("Selected plan not found");
+    // IDR-native one-time charge: diskon/pro-rata langsung diterapkan via customPrice
+    const amount = params.customPrice ?? params.baseAmount ?? 0;
+    if (!amount) throw new Error("Midtrans: amount tidak boleh 0 (customPrice/baseAmount wajib)");
 
-    const amount =
-      params.interval === "monthly"
-        ? selectedPlan.prices.monthly.amount
-        : selectedPlan.prices.yearly.amount;
-
-    const orderId = `MID-${params.tenantId.substring(0, 8)}-${Date.now()}`;
+    // order_id hanya untuk keunikan & tampilan. tenantId/planId/interval/couponCode
+    // disimpan penuh di custom_field (bukan di order_id) agar tidak terpotong.
+    const orderId = `MID-${Date.now()}-${params.tenantId.substring(0, 8)}`;
     const authHeader = Buffer.from(`${this.serverKey}:`).toString("base64");
 
     const response = await fetch(`${this.baseUrl}/transactions`, {
@@ -49,7 +47,14 @@ export class MidtransAdapter implements PaymentProvider {
         callbacks: {
           finish: params.successUrl,
           cancel: params.cancelUrl
-        }
+        },
+        // Key pendek agar muat dalam batas 100 char custom_field Midtrans
+        custom_field1: JSON.stringify({
+          t: params.tenantId,
+          p: params.planId,
+          i: params.interval
+        }),
+        custom_field2: params.couponCode ?? ""
       })
     });
 
@@ -76,9 +81,23 @@ export class MidtransAdapter implements PaymentProvider {
       throw new Error("Invalid Midtrans signature key");
     }
 
-    // Ekstraksi tenantId dari struktur penamaan order_id kita (MID-tenantId-timestamp)
-    const orderParts = payload.order_id.split("-");
-    const tenantPrefix = orderParts[1] || ""; // Mengambil tenantId parsial
+    // Ambil context penuh dari custom_field (bukan dari order_id yg terpotong)
+    let tenantId = "";
+    let planId: string | undefined;
+    let interval: SubscriptionInterval | undefined;
+    let couponCode: string | undefined;
+
+    try {
+      const ctx = payload.custom_field1 ? JSON.parse(payload.custom_field1) : {};
+      tenantId = ctx.t || "";
+      planId = ctx.p;
+      interval = ctx.i;
+    } catch {
+      // custom_field1 bukan JSON valid — biarkan kosong
+    }
+    if (payload.custom_field2) {
+      couponCode = payload.custom_field2 || undefined;
+    }
 
     // Pencocokan status pembayaran Midtrans
     const transactionStatus = payload.transaction_status;
@@ -100,7 +119,10 @@ export class MidtransAdapter implements PaymentProvider {
 
     return {
       eventType: status === "paid" ? "payment.succeeded" : "payment.failed",
-      tenantId: tenantPrefix, // Mengembalikan ID parsial untuk penanganan DB
+      tenantId,
+      planId,
+      interval,
+      couponCode,
       status: status,
       amount: parseFloat(payload.gross_amount),
       currency: "IDR",

@@ -4,24 +4,22 @@ import {
   PaymentProvider,
   CreateCheckoutSessionParams,
   CheckoutSessionResult,
-  UnifiedWebhookResult
+  UnifiedWebhookResult,
+  SubscriptionInterval
 } from "../../../interfaces/payment-provider";
-import { plans } from "../../../config/billing";
 
 export class XenditAdapter implements PaymentProvider {
   private apiKey = process.env.XENDIT_API_KEY || "";
   private baseUrl = "https://api.xendit.co";
 
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
-    const selectedPlan = plans.find((p) => p.id === params.planId);
-    if (!selectedPlan) throw new Error("Selected plan not found");
+    // IDR-native one-time charge: diskon/pro-rata langsung diterapkan via customPrice
+    const amount = params.customPrice ?? params.baseAmount ?? 0;
+    if (!amount) throw new Error("Xendit: amount tidak boleh 0 (customPrice/baseAmount wajib)");
 
-    const amount =
-      params.interval === "monthly"
-        ? selectedPlan.prices.monthly.amount
-        : selectedPlan.prices.yearly.amount;
-
-    const externalId = `XEN-${params.tenantId.substring(0, 8)}-${Date.now()}`;
+    // external_id hanya untuk keunikan & tampilan. Context penuh disimpan di metadata
+    // (bukan di external_id) agar tenantId tidak terpotong oleh split("-").
+    const externalId = `XEN-${Date.now()}-${params.tenantId.substring(0, 8)}`;
     const authHeader = Buffer.from(`${this.apiKey}:`).toString("base64");
 
     const response = await fetch(`${this.baseUrl}/v2/invoices`, {
@@ -34,9 +32,15 @@ export class XenditAdapter implements PaymentProvider {
         external_id: externalId,
         amount: amount,
         payer_email: params.userEmail,
-        description: `Upgrade ke paket ${selectedPlan.name}`,
+        description: `Upgrade ke paket ${params.planName ?? params.planId}`,
         success_redirect_url: params.successUrl,
-        failure_redirect_url: params.cancelUrl
+        failure_redirect_url: params.cancelUrl,
+        metadata: {
+          tenantId: params.tenantId,
+          planId: params.planId,
+          interval: params.interval,
+          couponCode: params.couponCode ?? null
+        }
       })
     });
 
@@ -61,14 +65,21 @@ export class XenditAdapter implements PaymentProvider {
       throw new Error("Unauthorized Xendit callback token");
     }
 
-    const externalId = payload.external_id || "";
-    const tenantPrefix = externalId.split("-")[1] || "";
+    // Ambil context penuh dari metadata (bukan dari external_id)
+    const metadata = payload.metadata || {};
+    const tenantId: string = metadata.tenantId || "";
+    const planId: string | undefined = metadata.planId;
+    const interval: SubscriptionInterval | undefined = metadata.interval;
+    const couponCode: string | undefined = metadata.couponCode || undefined;
 
     const status = payload.status === "PAID" ? "paid" : "failed";
 
     return {
       eventType: status === "paid" ? "payment.succeeded" : "payment.failed",
-      tenantId: tenantPrefix,
+      tenantId,
+      planId,
+      interval,
+      couponCode,
       status: status,
       amount: payload.amount,
       currency: payload.currency || "IDR",

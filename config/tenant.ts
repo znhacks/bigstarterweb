@@ -11,7 +11,7 @@ export const tenantConfig = {
   defaults: {
     locale: "en",
     timezone: "UTC",
-    currency: "USD"
+    currency: "IDR"
   },
 
   supported: {

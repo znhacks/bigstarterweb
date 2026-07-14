@@ -29,10 +29,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    // 1. TARIK DATA HARGA TARGET DARI DATABASE SECARA DINAMIS
+    // 1. TARIK HARGA TARGET + ID PROVIDER DARI DATABASE (single source of truth)
     const { data: dbTargetPrice, error: targetPriceErr } = await supabaseAdmin
       .from("plan_prices")
-      .select("amount, plan_id")
+      .select("amount, plan_id, provider_ids")
       .eq("plan_id", planId)
       .eq("interval", interval)
       .maybeSingle();
@@ -46,11 +46,26 @@ export async function POST(req: Request) {
 
     const targetPrice = parseFloat(dbTargetPrice.amount);
 
-    // 2. KALKULASI KREDIT PRO-RATA DINAMIS
+    // Ambil ID plan di sisi provider dari JSONB provider_ids
+    const providerPriceId =
+      dbTargetPrice.provider_ids && dbTargetPrice.provider_ids[provider]
+        ? dbTargetPrice.provider_ids[provider]
+        : null;
+
+    // Ambil nama plan untuk deskripsi invoice
+    const { data: planRow } = await supabaseAdmin
+      .from("plans")
+      .select("name")
+      .eq("id", planId)
+      .maybeSingle();
+    const planName = planRow?.name || planId;
+
+    // 2. KALKULASI KREDIT PRO-RATA DINAMIS (pakai interval langganan LAMA)
     let credit = 0;
+    let oldProviderSubscriptionId: string | null = null;
     const { data: activeSub } = await supabaseAdmin
       .from("subscriptions")
-      .select("starts_at, ends_at, plan_id, provider")
+      .select("starts_at, ends_at, plan_id, provider, provider_subscription_id, interval")
       .eq("tenant_id", tenantId)
       .eq("status", "active")
       .maybeSingle();
@@ -64,32 +79,41 @@ export async function POST(req: Request) {
         const totalDuration = end - start;
         const remainingTime = end - now;
 
-        // Tarik harga paket aktif lama dari database untuk kalkulasi sisa kredit
-        const { data: dbOldPrice } = await supabaseAdmin
-          .from("plan_prices")
-          .select("amount")
-          .eq("plan_id", activeSub.plan_id)
-          .eq("interval", interval)
-          .maybeSingle();
+        // FIX BUG: gunakan interval langganan LAMA (bukan interval baru yg diminta)
+        const oldInterval = activeSub.interval;
+        if (oldInterval) {
+          const { data: dbOldPrice } = await supabaseAdmin
+            .from("plan_prices")
+            .select("amount")
+            .eq("plan_id", activeSub.plan_id)
+            .eq("interval", oldInterval)
+            .maybeSingle();
 
-        if (dbOldPrice) {
-          const originalPrice = parseFloat(dbOldPrice.amount);
-          const remainingRatio = remainingTime / totalDuration;
-          credit = remainingRatio * originalPrice;
+          if (dbOldPrice) {
+            const originalPrice = parseFloat(dbOldPrice.amount);
+            const remainingRatio = remainingTime / totalDuration;
+            credit = remainingRatio * originalPrice;
+          }
         }
+      }
+
+      // Simpan referensi subscription lama untuk dicegah orphan-nya (lihat langkah 5)
+      if (activeSub.provider_subscription_id) {
+        oldProviderSubscriptionId = activeSub.provider_subscription_id;
       }
     }
 
     let finalPriceInIdr = targetPrice - credit;
 
-    // 3. VALIDASI KUPON DISKON DINAMIS DI SISI SERVER
+    // 3. VALIDASI KUPON DISKON DI SISI SERVER (lookup .ilike — mendukung mixed-case)
     let discountAmount = 0;
     if (couponCode) {
-      const formattedCode = couponCode.trim().toUpperCase();
+      const formattedCode = couponCode.trim();
+
       const { data: coupon } = await supabaseAdmin
         .from("coupons")
         .select("*")
-        .eq("code", formattedCode)
+        .ilike("code", formattedCode)
         .maybeSingle();
 
       if (coupon) {
@@ -113,14 +137,33 @@ export async function POST(req: Request) {
     // 4. Ambil adapter pembayaran yang sesuai
     const paymentProvider = PaymentFactory.getProvider(provider);
 
+    // 4b. CEGAH ORPHAN SUBSCRIPTION: bila ada langganan aktif lama di provider yg sama,
+    // batalkan di gateway (cancel = berhenti perpanjangan, siklus berjalan tetap sampai jatuh tempo).
+    // Pro-rata credit sudah mengkompensasi sisa waktu. Non-blocking: kegagalan cancel tidak membatalkan checkout.
+    if (oldProviderSubscriptionId && activeSub?.provider === provider) {
+      try {
+        await paymentProvider.cancelSubscription(oldProviderSubscriptionId);
+      } catch (cancelErr) {
+        console.warn(
+          `[checkout] Gagal membatalkan subscription lama (${oldProviderSubscriptionId}):`,
+          cancelErr
+        );
+      }
+    }
+
     // 5. Jalankan checkout menggunakan harga kustom yang sudah dipotong pro-rata + kupon diskon
     const session = await paymentProvider.createCheckoutSession({
       tenantId,
       userId: user.id,
       userEmail: user.email || "",
       planId,
+      planName,
       interval,
+      baseAmount: targetPrice,
+      currency: "IDR",
       customPrice: secureFinalPrice,
+      providerPriceId: providerPriceId || undefined,
+      couponCode: couponCode ? couponCode.trim() : undefined,
       successUrl: successUrl || `${req.headers.get("origin")}/dashboard/billing?success=true`,
       cancelUrl: cancelUrl || `${req.headers.get("origin")}/dashboard/billing?canceled=true`
     });

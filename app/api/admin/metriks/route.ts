@@ -26,16 +26,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    // Periksa role user di tabel memberships Anda
-    const { data: membership, error: memError } = await supabaseAdmin
-      .from("memberships")
-      .select("roles(name)")
-      .eq("user_id", user.id)
+    // KOREKSI ARSITEKTUR: Membaca kolom is_superadmin langsung dari tabel profiles (System Role)
+    const { data: profile, error: profileErr } = await supabaseAdmin
+      .from("profiles")
+      .select("is_superadmin")
+      .eq("id", user.id)
       .maybeSingle();
 
-    const roleName = (membership as any)?.roles?.name;
-
-    if (memError || roleName !== "superadmin") {
+    if (profileErr || !profile || profile.is_superadmin !== true) {
       return NextResponse.json(
         { error: "Hanya akun Superadmin yang diizinkan mengakses halaman ini" },
         { status: 403 }

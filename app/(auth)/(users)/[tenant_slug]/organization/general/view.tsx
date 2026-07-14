@@ -137,7 +137,7 @@ export function OrganizationGeneralSettings() {
             <div className="flex shrink-0 items-center gap-4">
               <div
                 onClick={isReadOnly || isUploadingLogo ? undefined : () => setCropperOpen(true)}
-                className={`group bg-muted border-border/60 relative flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border transition-all ${
+                className={`group bg-muted border-border/60 relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border object-cover transition-all ${
                   isReadOnly ? "cursor-default" : "hover:bg-muted/80 cursor-pointer"
                 }`}>
                 {isUploadingLogo ? (
@@ -146,13 +146,13 @@ export function OrganizationGeneralSettings() {
                   <img
                     src={logoPreview}
                     alt="Organization Logo"
-                    className="h-full w-full rounded-xl object-cover"
+                    className="h-full w-full rounded-full object-cover"
                   />
                 ) : (
                   <Users className="text-muted-foreground h-6 w-6 transition-transform group-hover:scale-105" />
                 )}
                 {!isReadOnly && !isUploadingLogo && (
-                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                     <Upload className="h-5 w-5 text-white" />
                   </div>
                 )}

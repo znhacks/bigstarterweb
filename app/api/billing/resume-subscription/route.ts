@@ -1,0 +1,81 @@
+// app/api/billing/resume-subscription/route.ts
+
+import { NextResponse } from "next/server";
+import { PaymentFactory } from "@/services/payment/factory";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+);
+
+/**
+ * Mengaktifkan kembali perpanjangan otomatis (membatalkan cancel_at_period_end).
+ * Selain update DB, juga reaktivasi di gateway bila adapter mendukungnya
+ * (mis. PayPal /v1/billing/subscriptions/{id}/activate, Stripe cancel_at_period_end=false).
+ * Body: { tenantId }
+ */
+export async function POST(req: Request) {
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const {
+      data: { user },
+      error: authError
+    } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !user) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { tenantId } = body;
+    if (!tenantId) {
+      return NextResponse.json({ error: "tenantId wajib diisi" }, { status: 400 });
+    }
+
+    const { data: activeSub, error: subError } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id, provider, provider_subscription_id, cancel_at_period_end")
+      .eq("tenant_id", tenantId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (subError) throw subError;
+    if (!activeSub) {
+      return NextResponse.json(
+        { error: "Tidak ditemukan langganan aktif untuk tenant ini" },
+        { status: 400 }
+      );
+    }
+
+    // Reaktivasi di gateway bila adapter mendukung (opsional method)
+    if (activeSub.provider && activeSub.provider_subscription_id) {
+      try {
+        const paymentProvider = PaymentFactory.getProvider(activeSub.provider);
+        if (typeof paymentProvider.reactivateSubscription === "function") {
+          await paymentProvider.reactivateSubscription(activeSub.provider_subscription_id);
+        }
+      } catch (reactErr: any) {
+        console.warn(`[resume-subscription] Gateway reactivate gagal: ${reactErr?.message}`);
+      }
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from("subscriptions")
+      .update({
+        cancel_at_period_end: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", activeSub.id);
+
+    if (updateError) throw updateError;
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Resume Subscription API Error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+  }
+}

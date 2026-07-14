@@ -260,11 +260,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton className="hover:text-foreground h-10 group-data-[collapsible=icon]:px-0!">
                     {activeOrg?.logo ? (
-                      <img
-                        src={activeOrg.logo}
-                        alt={activeOrg.name}
-                        className="size-6 shrink-0 rounded-md object-cover"
-                      />
+                      <div className="rounded-full object-cover">
+                        <img
+                          src={activeOrg.logo}
+                          alt={activeOrg.name}
+                          className="size-6 shrink-0 rounded-md object-cover"
+                        />
+                      </div>
                     ) : (
                       <Logo />
                     )}

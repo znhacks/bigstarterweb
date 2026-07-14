@@ -58,19 +58,15 @@ export const updateTenantSchema = z.object({
 
   // 3. Validasi Internasionalisasi (i18n)
   default_locale: tenantConfig.features.enableRegionalSettings
-    ? z
-        .string()
-        .refine((val) => tenantConfig.supported.locales.some((l) => l.code === val), {
-          message: "Unsupported language locale"
-        })
+    ? z.string().refine((val) => tenantConfig.supported.locales.some((l) => l.code === val), {
+        message: "Unsupported language locale"
+      })
     : z.string().optional(),
 
   currency: tenantConfig.features.enableRegionalSettings
-    ? z
-        .string()
-        .refine((val) => tenantConfig.supported.currencies.some((c) => c.code === val), {
-          message: "Unsupported currency"
-        })
+    ? z.string().refine((val) => tenantConfig.supported.currencies.some((c) => c.code === val), {
+        message: "Unsupported currency"
+      })
     : z.string().optional(),
   timezone: tenantConfig.features.enableRegionalSettings
     ? z.string().min(1, { message: "Timezone is required" }) // Validasi nama zona waktu IANA dasar

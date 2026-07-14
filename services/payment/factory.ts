@@ -53,15 +53,21 @@ export class PaymentFactory {
 
   /**
    * Mendapatkan daftar semua provider yang saat ini diaktifkan di berkas .env.
+   * "braintree" selalu difilter karena adapter-nya belum diimplementasikan (stub).
    */
   static getEnabledProviders(): string[] {
     const envProviders = process.env.NEXT_PUBLIC_ENABLED_PAYMENT_PROVIDERS;
 
-    if (envProviders) {
-      return envProviders.split(",").map((p) => p.trim().toLowerCase());
-    }
+    const list = envProviders
+      ? envProviders.split(",").map((p) => p.trim().toLowerCase())
+      : ["mayar"]; // Default jika .env kosong
 
-    // Default jika .env kosong
-    return ["mayar"];
+    return list.filter((p) => {
+      if (p === "braintree") {
+        console.warn("[factory] 'braintree' diabaikan dari enabled providers: adapter belum diimplementasikan.");
+        return false;
+      }
+      return true;
+    });
   }
 }

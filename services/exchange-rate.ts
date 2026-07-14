@@ -138,3 +138,25 @@ export async function convertIdrToCurrency(
     providerUsed: "hardcoded"
   };
 }
+
+/**
+ * Inverse: konversi mata uang asing → IDR.
+ * Dipakai webhook untuk mengisi transactions.amount_in_idr saat provider charge dlm valuta asing (mis. PayPal/USD).
+ * Memakai rate yg sama (cache) dgn convertIdrToCurrency: rate = IDR per 1 unit foreign.
+ */
+export async function convertToIdr(
+  amount: number,
+  fromCurrency: string
+): Promise<{ amountInIdr: number; rate: number; providerUsed: string }> {
+  const cur = (fromCurrency || "IDR").toUpperCase();
+  if (cur === "IDR") {
+    return { amountInIdr: amount, rate: 1, providerUsed: "base" };
+  }
+  // Ambil rate (IDR per 1 unit foreign) lewat cache yg sama
+  const { rate, providerUsed } = await convertIdrToCurrency(1, cur);
+  return {
+    amountInIdr: parseFloat((amount * rate).toFixed(2)),
+    rate,
+    providerUsed
+  };
+}

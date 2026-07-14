@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { createClient } from "@supabase/supabase-js";
+import { convertToIdr } from "@/services/exchange-rate";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -10,7 +11,7 @@ const supabaseAdmin = createClient(
 );
 
 /**
- * FUNGSI PEMBANTU: Menghitung perkiraan potongan biaya administrasi riil dari ke-8 gateway (Tetap Sama)
+ * FUNGSI PEMBANTU: Menghitung perkiraan potongan biaya administrasi riil dari ke-8 gateway
  */
 function calculateGatewayFee(amount: number, provider: string, currency: string = "IDR"): number {
   const p = provider.toLowerCase().trim();
@@ -30,6 +31,33 @@ function calculateGatewayFee(amount: number, provider: string, currency: string 
   return 0;
 }
 
+/** Hitung ends_at default: +1 bulan (monthly) atau +1 tahun (yearly) dari sekarang. */
+function computeEndsAt(interval?: string, provided?: string): string | null {
+  if (provided) return provided;
+  const now = new Date();
+  if (interval === "yearly") now.setFullYear(now.getFullYear() + 1);
+  else now.setMonth(now.getMonth() + 1);
+  return now.toISOString();
+}
+
+/** Redeem kupon via RPC (atomic, idempotent). Aman dipanggil di banyak event (subscription.activated & payment.succeeded). */
+async function redeemCouponIfPresent(couponCode: string | undefined, tenantId: string): Promise<void> {
+  if (!couponCode) return;
+  try {
+    const { data: redeemResult, error: redeemErr } = await supabaseAdmin.rpc("redeem_coupon", {
+      p_code: couponCode,
+      p_tenant: tenantId
+    });
+    if (redeemErr) {
+      console.error(`[webhook] redeem_coupon error: ${redeemErr.message}`);
+    } else if (redeemResult && redeemResult !== "redeemed" && redeemResult !== "already_redeemed") {
+      console.warn(`[webhook] Kupon ${couponCode} tidak ter-redeem: ${redeemResult}`);
+    }
+  } catch (redeemEx) {
+    console.error("[webhook] redeem_coupon exception:", redeemEx);
+  }
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ provider: string }> }) {
   const { provider } = await params;
   const providerName = provider;
@@ -42,6 +70,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       eventType,
       tenantId,
       planId, // ID paket bawaan dari adapter (jika terdeteksi)
+      interval,
+      couponCode,
       startsAt,
       endsAt,
       status,
@@ -54,13 +84,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       feeAmount
     } = result;
 
-    console.log("========== WEBHOOK RECEIVED ==========");
-    console.log("Provider   :", providerName);
-    console.log("Event Type :", eventType);
-    console.log("Tenant ID  :", tenantId);
-    console.log("Plan ID    :", planId);
-    console.log("Status     :", status);
-    console.log("======================================");
+    console.log(
+      `========== WEBHOOK [${providerName}] ==========\n` +
+        `Event: ${eventType} | Tenant: ${tenantId} | Plan: ${planId} | Status: ${status}\n` +
+        `================================================`
+    );
 
     if (!tenantId) {
       return NextResponse.json(
@@ -73,8 +101,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     let finalPlanId = planId;
 
     // =========================================================================
-    // SINKRONISASI DATABASE DINAMIS (Pencarian JSONB Kueri Baru)
-    // Jika planId dari adapter kosong, kueri database secara dinamis menggunakan Price ID eksternal
+    // SINKRONISASI DATABASE DINAMIS (Pencarian JSONB)
+    // Jika planId dari adapter kosong, kueri database menggunakan Price ID eksternal
     // =========================================================================
     if (!finalPlanId && providerSubscriptionId) {
       const externalPriceId = providerSubscriptionId;
@@ -82,7 +110,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       const { data: priceRecord, error: priceErr } = await supabaseAdmin
         .from("plan_prices")
         .select("plan_id")
-        // Mencari langsung di kolom JSONB provider_ids berdasarkan nama provider aktif
         .or(`provider_ids->>${providerName}.eq.${externalPriceId}`)
         .maybeSingle();
 
@@ -94,25 +121,26 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     if (eventType === "subscription.created" || eventType === "subscription.updated") {
       if (normalizedStatus === "approval_pending" || normalizedStatus === "pending") {
         console.log(
-          `[Webhook Ignored] Mengabaikan event karena status transaksi masih pending (${normalizedStatus}) untuk tenant: ${tenantId}`
+          `[Webhook Ignored] Status masih pending (${normalizedStatus}) untuk tenant: ${tenantId}`
         );
         return NextResponse.json({
           received: true,
           ignored: true,
-          reason: "Transaksi belum dibayar (status pending). Database aman dan tidak diubah."
+          reason: "Transaksi belum dibayar (status pending). Database tidak diubah."
         });
       }
 
       const { error: upsertError } = await supabaseAdmin.from("subscriptions").upsert(
         {
           tenant_id: tenantId,
-          plan_id: finalPlanId || "free", // Menggunakan ID paket hasil kueri dinamis
+          plan_id: finalPlanId || "free",
           status: normalizedStatus,
           starts_at: startsAt || new Date().toISOString(),
           ends_at: endsAt || null,
           provider: providerName,
           provider_subscription_id: providerSubscriptionId,
           provider_customer_id: providerCustomerId,
+          interval: interval || null,
           updated_at: new Date().toISOString(),
           pending_plan_id: null
         },
@@ -122,6 +150,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       if (upsertError) {
         throw new Error(`Database Upsert Subscriptions Failed: ${upsertError.message}`);
       }
+
+      // Redeem kupon juga saat subscription aktif (PayPal ACTIVATED membawa custom_id lebih andal
+      // daripada event sale). Idempotent — aman bila juga ter-redeem di payment.succeeded.
+      await redeemCouponIfPresent(couponCode, tenantId);
     } else if (eventType === "subscription.deleted") {
       const { data: currentSub, error: fetchError } = await supabaseAdmin
         .from("subscriptions")
@@ -169,6 +201,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       const grossAmount = amount || 0;
       const activeCurrency = currency || "IDR";
 
+      // === 1. Hitung pajak, fee, net ===
       const calculatedTax =
         taxAmount !== undefined
           ? taxAmount
@@ -177,23 +210,42 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
             : 0;
 
       const calculatedFee =
-        feeAmount !== undefined
-          ? feeAmount
-          : calculateGatewayFee(grossAmount, providerName, activeCurrency);
+        feeAmount !== undefined ? feeAmount : calculateGatewayFee(grossAmount, providerName, activeCurrency);
 
       const calculatedNet = Math.max(0, grossAmount - calculatedTax - calculatedFee);
 
+      // === 2. Konversi ke IDR untuk amount_in_idr ===
+      let amountInIdr: number | null = grossAmount;
+      let exchangeRate: number | null = 1;
+      let exchangeApiUsed: string | null = "base";
+      try {
+        const conv = await convertToIdr(grossAmount, activeCurrency);
+        amountInIdr = conv.amountInIdr;
+        exchangeRate = conv.rate;
+        exchangeApiUsed = conv.providerUsed;
+      } catch (convErr) {
+        console.warn(`[webhook] Konversi IDR gagal untuk ${activeCurrency}:`, convErr);
+        amountInIdr = null;
+        exchangeRate = null;
+        exchangeApiUsed = null;
+      }
+
+      // === 3. Catat transaksi (kolom tax/net/fee kini ada; amount_in_idr/rate/api terisi) ===
       const { error: txError } = await supabaseAdmin.from("transactions").upsert(
         {
           tenant_id: tenantId,
           amount: grossAmount,
           currency: activeCurrency,
-          plan_name: finalPlanId || "pro", // Menggunakan ID paket hasil kueri dinamis
+          plan_name: finalPlanId || "unknown",
           order_id: orderId || `TX-${Date.now()}`,
           status: "paid",
           provider: providerName,
           tax_amount: parseFloat(calculatedTax.toFixed(2)),
+          fee_amount: parseFloat(calculatedFee.toFixed(2)),
           net_amount: parseFloat(calculatedNet.toFixed(2)),
+          amount_in_idr: amountInIdr !== null ? parseFloat(amountInIdr.toFixed(2)) : null,
+          exchange_rate: exchangeRate,
+          exchange_api_used: exchangeApiUsed,
           created_at: new Date().toISOString()
         },
         { onConflict: "order_id" }
@@ -202,6 +254,49 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       if (txError) {
         throw new Error(`Database Insert Transaction Failed: ${txError.message}`);
       }
+
+      // === 4. GRANT SUBSCRIPTION (penting untuk provider invoice mayar/midtrans/xendit
+      //      yang tidak memancarkan subscription.created). Hanya grant bila perlu agar
+      //      tidak menimpa ends_at provider subscription (paypal/stripe) yg sudah benar. ===
+      if (finalPlanId) {
+        const { data: existingSub } = await supabaseAdmin
+          .from("subscriptions")
+          .select("id, plan_id, provider_subscription_id")
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+
+        const needsGrant =
+          !existingSub ||
+          existingSub.plan_id !== finalPlanId ||
+          !existingSub.provider_subscription_id;
+
+        if (needsGrant) {
+          const { error: subGrantError } = await supabaseAdmin.from("subscriptions").upsert(
+            {
+              tenant_id: tenantId,
+              plan_id: finalPlanId,
+              status: "active",
+              starts_at: startsAt || new Date().toISOString(),
+              ends_at: computeEndsAt(interval, endsAt),
+              provider: providerName,
+              provider_subscription_id: providerSubscriptionId || orderId || null,
+              provider_customer_id: providerCustomerId || null,
+              interval: interval || null,
+              cancel_at_period_end: false,
+              pending_plan_id: null,
+              updated_at: new Date().toISOString()
+            },
+            { onConflict: "tenant_id" }
+          );
+
+          if (subGrantError) {
+            console.error(`[webhook] Grant subscription gagal: ${subGrantError.message}`);
+          }
+        }
+      }
+
+      // === 5. REDEEM KUPON (atomic, idempotent via RPC) ===
+      await redeemCouponIfPresent(couponCode, tenantId);
     }
 
     return NextResponse.json({ received: true });

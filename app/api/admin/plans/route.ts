@@ -23,23 +23,14 @@ async function validateSuperadmin(req: Request) {
 
   if (authError || !user) throw new Error("Invalid token");
 
-  // SOLUSI: Mengambil semua keanggotaan user (tanpa maybeSingle) untuk mencegah error "multiple rows"
-  const { data: memberships, error: memError } = await supabaseAdmin
-    .from("memberships")
-    .select("roles(name)")
-    .eq("user_id", user.id);
+  // KOREKSI ARSITEKTUR: Membaca kolom is_superadmin langsung dari tabel profiles (System Role)
+  const { data: profile, error: profileErr } = await supabaseAdmin
+    .from("profiles")
+    .select("is_superadmin")
+    .eq("id", user.id)
+    .maybeSingle();
 
-  if (memError || !memberships || memberships.length === 0) {
-    throw new Error("Forbidden: Hanya Superadmin yang diizinkan");
-  }
-
-  // SOLUSI: Memeriksa secara case-insensitive apakah ada salah satu role bernilai 'superadmin'
-  const isSuperadmin = memberships.some((membership: any) => {
-    const name = membership?.roles?.name?.toLowerCase().trim();
-    return name === "superadmin";
-  });
-
-  if (!isSuperadmin) {
+  if (profileErr || !profile || profile.is_superadmin !== true) {
     throw new Error("Forbidden: Hanya Superadmin yang diizinkan");
   }
 

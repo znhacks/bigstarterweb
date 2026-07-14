@@ -6,7 +6,6 @@ import {
   CheckoutSessionResult,
   UnifiedWebhookResult
 } from "@/interfaces/payment-provider";
-import { plans } from "@/config/billing";
 
 export class MayarAdapter implements PaymentProvider {
   private apiKey = process.env.MAYAR_API_KEY;
@@ -19,13 +18,9 @@ export class MayarAdapter implements PaymentProvider {
   }
 
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
-    const selectedPlan = plans.find((p) => p.id === params.planId);
-    if (!selectedPlan) throw new Error("Selected plan not found");
-
-    const amount =
-      params.interval === "monthly"
-        ? selectedPlan.prices.monthly.amount
-        : selectedPlan.prices.yearly.amount;
+    // IDR-native one-time charge: diskon/pro-rata langsung diterapkan via customPrice
+    const amount = params.customPrice ?? params.baseAmount ?? 0;
+    if (!amount) throw new Error("Mayar: amount tidak boleh 0 (customPrice/baseAmount wajib)");
 
     // Membuat pembayaran kustom menggunakan API Mayar
     const response = await fetch(`${this.baseUrl}/payment`, {
@@ -38,13 +33,14 @@ export class MayarAdapter implements PaymentProvider {
         name: params.userEmail.split("@")[0], // Fallback nama dari email
         email: params.userEmail,
         amount: amount,
-        description: `Subscription ${selectedPlan.name} - ${params.interval}`,
+        description: `Subscription ${params.planName ?? params.planId} - ${params.interval}`,
         redirect_url: params.successUrl,
         metadata: {
           tenantId: params.tenantId,
           userId: params.userId,
           planId: params.planId,
-          interval: params.interval
+          interval: params.interval,
+          couponCode: params.couponCode ?? null
         }
       })
     });
@@ -80,6 +76,9 @@ export class MayarAdapter implements PaymentProvider {
     return {
       eventType: status === "paid" ? "payment.succeeded" : "payment.failed",
       tenantId: metadata.tenantId,
+      planId: metadata.planId,
+      interval: metadata.interval,
+      couponCode: metadata.couponCode,
       status: status,
       amount: payload.amount,
       currency: "IDR",

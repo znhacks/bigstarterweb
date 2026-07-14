@@ -342,16 +342,22 @@ export function useOrganizationBilling() {
     if (!activeSub || !activeOrgId) return;
     setIsUpdatingSub(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Silakan masuk terlebih dahulu");
+
       const response = await fetch(`/api/billing/cancel-subscription`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subscriptionId: activeSub.id,
-          provider: activeSub.provider
-        })
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ tenantId: activeOrgId })
       });
 
-      if (!response.ok) throw new Error("Gagal membatalkan langganan ke gateway");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Gagal membatalkan langganan ke gateway");
+      }
 
       setAlertMessage({
         title: locale === "en" ? "Auto-Renewal Disabled" : "Perpanjangan Dinonaktifkan",
@@ -377,12 +383,22 @@ export function useOrganizationBilling() {
     if (!activeSub || !activeOrgId) return;
     setIsUpdatingSub(true);
     try {
-      const { error } = await supabase
-        .from("subscriptions")
-        .update({ cancel_at_period_end: false })
-        .eq("id", activeSub.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Silakan masuk terlebih dahulu");
 
-      if (error) throw error;
+      const response = await fetch(`/api/billing/resume-subscription`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ tenantId: activeOrgId })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Gagal mengaktifkan kembali langganan");
+      }
 
       setAlertMessage({
         title: locale === "en" ? "Subscription Resumed" : "Langganan Diaktifkan Kembali",
@@ -563,8 +579,11 @@ export function useOrganizationBilling() {
 
     const isUpgrade = actionType === "upgrade";
     const isCycleUpgrade = actionType === "upgrade_cycle";
+    const isCycleDowngrade = actionType === "downgrade_cycle";
 
-    if (!isUpgrade && !isCycleUpgrade) {
+    // Kredit pro-rata diberikan untuk upgrade, switch monthly->yearly, DAN switch yearly->monthly
+    // agar tampilan konsisten dgn perhitungan server (yg mengkompensasi sisa waktu interval lama).
+    if (!isUpgrade && !isCycleUpgrade && !isCycleDowngrade) {
       return { finalPrice: targetPrice, creditUsed: 0 };
     }
 

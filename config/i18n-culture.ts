@@ -69,6 +69,7 @@ export function getFontVariable(fontKey: string | undefined): string {
 
 // ---- REGISTRY PROVIDER & CONFIG CURRENCY ----
 export const CURRENCY_PROVIDERS = {
+  exchangerate_api: "exchangerate_api",
   frankfurter: "frankfurter",
   mock: "mock"
 } as const;
@@ -83,7 +84,9 @@ export const CURRENCY = {
       ar: "SAR"
     } as Record<string, string>
   },
-  activeProvider: CURRENCY_PROVIDERS.frankfurter,
+  // exchangerate-api mendukung IDR sebagai base (Frankfurter tidak), sehingga
+  // konversi display IDR->USD/SAR tidak lagi jatuh ke MockCurrencyService.
+  activeProvider: CURRENCY_PROVIDERS.exchangerate_api,
   allowedProviders: Object.values(CURRENCY_PROVIDERS)
 };
 

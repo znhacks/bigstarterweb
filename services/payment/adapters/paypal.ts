@@ -4,15 +4,40 @@ import {
   PaymentProvider,
   CreateCheckoutSessionParams,
   CheckoutSessionResult,
-  UnifiedWebhookResult
+  UnifiedWebhookResult,
+  SubscriptionInterval
 } from "../../../interfaces/payment-provider";
-import { plans } from "../../../config/billing";
 import { convertIdrToCurrency } from "../../exchange-rate";
+
+//Delimiter untuk custom_id: aman karena UUID berisi '-' tapi bukan '::'
+const CUSTOM_ID_DELIMITER = "::";
+
+function encodeCustomId(tenantId: string, planId: string, interval: string, couponCode?: string): string {
+  const parts = [tenantId, planId, interval];
+  if (couponCode) parts.push(couponCode);
+  return parts.join(CUSTOM_ID_DELIMITER);
+}
+
+function decodeCustomId(raw: string): {
+  tenantId: string;
+  planId?: string;
+  interval?: SubscriptionInterval;
+  couponCode?: string;
+} {
+  const parts = (raw || "").split(CUSTOM_ID_DELIMITER);
+  return {
+    tenantId: parts[0] || "",
+    planId: parts[1] || undefined,
+    interval: parts[2] as SubscriptionInterval | undefined,
+    couponCode: parts[3] || undefined
+  };
+}
 
 export class PayPalAdapter implements PaymentProvider {
   private clientId = process.env.PAYPAL_CLIENT_ID;
   private clientSecret = process.env.PAYPAL_CLIENT_SECRET;
   private mode = process.env.PAYPAL_MODE || "sandbox";
+  private webhookId = process.env.PAYPAL_WEBHOOK_ID;
 
   private get baseUrl() {
     return this.mode === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
@@ -42,49 +67,44 @@ export class PayPalAdapter implements PaymentProvider {
 
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
     const token = await this.getAccessToken();
-    const selectedPlan = plans.find((p) => p.id === params.planId);
-    if (!selectedPlan) throw new Error("Selected plan not found");
 
-    const paypalPlanId =
-      params.interval === "monthly"
-        ? selectedPlan.prices.monthly.providers?.paypal
-        : selectedPlan.prices.yearly.providers?.paypal;
-
+    // ID plan PayPal di sisi provider — dari DB via params (bukan config/billing.ts)
+    const paypalPlanId = params.providerPriceId;
     if (!paypalPlanId) {
-      throw new Error(`PayPal Plan ID is not configured for ${params.planId}`);
+      throw new Error(`PayPal Plan ID is not configured for plan ${params.planId} (${params.interval})`);
     }
 
-    // 1. Tentukan nominal harga dasar (IDR)
+    // 1. Nominal IDR (diskon/pro-rata sudah terpotong di customPrice)
     const amountInIdr =
       params.customPrice !== undefined
         ? params.customPrice
-        : params.interval === "monthly"
-          ? selectedPlan.prices.monthly.amount
-          : selectedPlan.prices.yearly.amount;
+        : params.baseAmount !== undefined
+          ? params.baseAmount
+          : 0;
+    if (!amountInIdr) {
+      throw new Error("PayPal: amount tidak boleh 0 (customPrice/baseAmount wajib)");
+    }
 
     // 2. Konversi nominal Rupiah ke USD secara real-time
     const exchange = await convertIdrToCurrency(amountInIdr, "USD");
     const finalUsdAmount = exchange.convertedAmount;
 
-    // 3. Rakit body payload transaksi PayPal
     const requestBody: any = {
       plan_id: paypalPlanId,
       subscriber: {
         email_address: params.userEmail
       },
       application_context: {
-        brand_name: "",
         user_action: "SUBSCRIBE_NOW",
         shipping_preference: "NO_SHIPPING",
         return_url: params.successUrl,
         cancel_url: params.cancelUrl
       },
-      custom_id: params.tenantId
+      // Sematkan context penuh agar webhook bisa recover tenantId/planId/interval/couponCode
+      custom_id: encodeCustomId(params.tenantId, params.planId, params.interval, params.couponCode)
     };
 
-    // 4. PAYPAL PRICING OVERRIDE (SOLUSI UTAMA):
-    // Jika harga yang dikirim adalah harga terpotong pro-rata / kupon diskon,
-    // instruksikan PayPal untuk menimpa harga normal pada siklus pertama penagihan.
+    // LOGIKA PENIMPAAN HARGA SIKLUS PERTAMA (diskon kupon / sisa kredit pro-rata)
     if (params.customPrice !== undefined) {
       requestBody.plan = {
         billing_cycles: [
@@ -93,7 +113,7 @@ export class PayPalAdapter implements PaymentProvider {
             total_cycles: 1,
             pricing_scheme: {
               fixed_price: {
-                value: finalUsdAmount.toString(), // Nilai potong harga USD (misal: "60.00")
+                value: finalUsdAmount.toString(),
                 currency_code: "USD"
               }
             }
@@ -138,13 +158,68 @@ export class PayPalAdapter implements PaymentProvider {
     };
   }
 
+  /**
+   * Verifikasi signature webhook PayPal via /v1/notifications/verify-webhook-signature.
+   * Mencegah webhook palsu. Bila PAYPAL_WEBHOOK_ID belum diset, beri peringatan & lanjut (dev).
+   */
+  private async verifyWebhookSignature(rawBody: string, headers: Headers, token: string): Promise<boolean> {
+    if (!this.webhookId) {
+      console.warn(
+        "[paypal] PAYPAL_WEBHOOK_ID belum diset — verifikasi signature dilewati. SET env ini di production!"
+      );
+      return true;
+    }
+
+    const transmissionId = headers.get("paypal-transmission-id");
+    const transmissionTime = headers.get("paypal-transmission-time");
+    const transmissionSig = headers.get("paypal-transmission-sig");
+    const certUrl = headers.get("paypal-cert-url");
+    const authAlgo = headers.get("paypal-auth-algo");
+
+    if (!transmissionId || !transmissionSig || !certUrl || !authAlgo) {
+      return false;
+    }
+
+    const verifyRes = await fetch(`${this.baseUrl}/v1/notifications/verify-webhook-signature`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        auth_algo: authAlgo,
+        cert_url: certUrl,
+        transmission_id: transmissionId,
+        transmission_sig: transmissionSig,
+        transmission_time: transmissionTime,
+        webhook_id: this.webhookId,
+        webhook_event: JSON.parse(rawBody)
+      })
+    });
+
+    if (!verifyRes.ok) return false;
+    const data = await verifyRes.json();
+    return data.verification_status === "SUCCESS";
+  }
+
   async handleWebhook(req: Request): Promise<UnifiedWebhookResult> {
-    const payload = await req.json();
+    // Baca raw body dulu (untuk verifikasi signature), baru parse JSON
+    const rawBody = await req.text();
+    const headers = req.headers;
+    const token = await this.getAccessToken();
 
-    const customIdRaw = payload.resource?.custom_id || payload.resource?.custom;
-    const tenantId = customIdRaw || "";
+    const isVerified = await this.verifyWebhookSignature(rawBody, headers, token);
+    if (!isVerified) {
+      throw new Error("Invalid PayPal webhook signature");
+    }
 
-    let eventType: any = "subscription.updated";
+    const payload = JSON.parse(rawBody);
+
+    // Recover context dari custom_id (ada di semua event subscription & sale)
+    const customIdRaw = payload.resource?.custom_id || payload.resource?.custom || "";
+    const ctx = decodeCustomId(customIdRaw);
+
+    let eventType: UnifiedWebhookResult["eventType"] = "subscription.updated";
     const paypalEvent = payload.event_type;
 
     if (
@@ -163,31 +238,33 @@ export class PayPalAdapter implements PaymentProvider {
       eventType = "payment.succeeded";
     }
 
-    const paypalPlanId = payload.resource?.plan_id;
-    const matchingPlan = plans.find(
-      (p) =>
-        p.prices.monthly.providers?.paypal === paypalPlanId ||
-        p.prices.yearly.providers?.paypal === paypalPlanId
-    );
-    const planId = matchingPlan ? matchingPlan.id : undefined;
-
-    // EKSTRAKSI TANGGAL MULAI DAN BERAKHIR RESMI DARI PAYPAL
-    const startsAt = payload.resource?.start_time || undefined; // Tanggal mulai resmi
     const endsAt = payload.resource?.billing_info?.next_billing_time || undefined;
+
+    // Amount: coba beberapa bentuk payload (subscription vs sale)
+    let amount: number | undefined;
+    const amtTotal = payload.resource?.amount?.total;
+    const amtValue = payload.resource?.value;
+    const lastPayment = payload.resource?.billing_info?.last_payment_amount?.value;
+    if (amtTotal) amount = parseFloat(amtTotal);
+    else if (amtValue) amount = parseFloat(amtValue);
+    else if (lastPayment) amount = parseFloat(lastPayment);
+
+    const currency =
+      payload.resource?.amount?.currency_code ||
+      payload.resource?.billing_info?.last_payment_amount?.currency_code;
 
     return {
       eventType,
-      tenantId,
-      planId,
-      startsAt, // Dikembalikan ke router
+      tenantId: ctx.tenantId,
+      planId: ctx.planId,
+      interval: ctx.interval,
+      couponCode: ctx.couponCode,
       endsAt,
       providerSubscriptionId: payload.resource?.id,
       providerCustomerId: payload.resource?.subscriber?.payer_id,
       status: payload.resource?.status?.toLowerCase() || "active",
-      amount: payload.resource?.amount?.total
-        ? parseFloat(payload.resource.amount.total)
-        : undefined,
-      currency: payload.resource?.amount?.currency,
+      amount,
+      currency,
       orderId: payload.resource?.id
     };
   }
@@ -203,6 +280,23 @@ export class PayPalAdapter implements PaymentProvider {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ reason: "User cancelled via application dashboard" })
+      }
+    );
+
+    return response.ok;
+  }
+
+  async reactivateSubscription(providerSubscriptionId: string): Promise<boolean> {
+    const token = await this.getAccessToken();
+    const response = await fetch(
+      `${this.baseUrl}/v1/billing/subscriptions/${providerSubscriptionId}/activate`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ reason: "User reactivated via application dashboard" })
       }
     );
 

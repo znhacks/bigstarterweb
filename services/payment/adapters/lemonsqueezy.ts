@@ -4,9 +4,10 @@ import {
   PaymentProvider,
   CreateCheckoutSessionParams,
   CheckoutSessionResult,
-  UnifiedWebhookResult
+  UnifiedWebhookResult,
+  SubscriptionInterval
 } from "../../../interfaces/payment-provider";
-import { plans } from "../../../config/billing";
+import { convertIdrToCurrency } from "../../exchange-rate";
 import crypto from "crypto";
 
 export class LemonSqueezyAdapter implements PaymentProvider {
@@ -14,16 +15,17 @@ export class LemonSqueezyAdapter implements PaymentProvider {
   private baseUrl = "https://api.lemonsqueezy.com/v1";
 
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
-    const selectedPlan = plans.find((p) => p.id === params.planId);
-    if (!selectedPlan) throw new Error("Selected plan not found");
-
-    const variantId =
-      params.interval === "monthly"
-        ? selectedPlan.prices.monthly.providers?.lemonsqueezy
-        : selectedPlan.prices.yearly.providers?.lemonsqueezy;
-
+    const variantId = params.providerPriceId;
     if (!variantId) {
-      throw new Error(`Lemon Squeezy Variant ID is not configured for ${params.planId}`);
+      throw new Error(`Lemon Squeezy Variant ID is not configured for plan ${params.planId} (${params.interval})`);
+    }
+
+    // Diskon first-cycle via custom_price (cents). Catatan: variant harus mengizinkan custom price
+    // di dashboard LemonSqueezy; bila tidak, harga normal dipakai & diskon hilang (di-warn).
+    let customPriceCents: number | undefined;
+    if (params.customPrice !== undefined) {
+      const conv = await convertIdrToCurrency(params.customPrice, "USD");
+      customPriceCents = Math.round(conv.convertedAmount * 100);
     }
 
     const response = await fetch(`${this.baseUrl}/checkouts`, {
@@ -40,12 +42,16 @@ export class LemonSqueezyAdapter implements PaymentProvider {
             checkout_data: {
               email: params.userEmail,
               custom: {
-                tenantId: params.tenantId // Menyimpan metadata internal
+                tenantId: params.tenantId,
+                planId: params.planId,
+                interval: params.interval,
+                couponCode: params.couponCode ?? null
               }
             },
             product_options: {
               redirect_url: params.successUrl
-            }
+            },
+            ...(customPriceCents ? { custom_price: customPriceCents } : {})
           },
           relationships: {
             store: {
@@ -75,7 +81,7 @@ export class LemonSqueezyAdapter implements PaymentProvider {
     const rawBody = await req.text();
     const signature = req.headers.get("x-signature") || "";
 
-    // Verifikasi keaslian hash HMAC SHA256 dari Lemon Squeezy
+    // Verifikasi HMAC SHA256 Lemon Squeezy
     const hmac = crypto.createHmac("sha256", process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "");
     const digest = hmac.update(rawBody).digest("hex");
 
@@ -84,12 +90,11 @@ export class LemonSqueezyAdapter implements PaymentProvider {
     }
 
     const payload = JSON.parse(rawBody);
-    const attributes = payload.data.attributes;
+    const attributes = payload.data?.attributes || {};
     const customData = payload.meta?.custom_data || {};
-    const tenantId = customData.tenantId || "";
 
-    let eventType: any = "subscription.updated";
-    const lemonEvent = payload.meta.event_name;
+    let eventType: UnifiedWebhookResult["eventType"] = "subscription.updated";
+    const lemonEvent = payload.meta?.event_name;
 
     if (lemonEvent === "subscription_created") eventType = "subscription.created";
     if (lemonEvent === "subscription_cancelled") eventType = "subscription.deleted";
@@ -97,13 +102,16 @@ export class LemonSqueezyAdapter implements PaymentProvider {
 
     return {
       eventType,
-      tenantId,
-      providerSubscriptionId: attributes.subscription_id?.toString() || payload.data.id,
+      tenantId: customData.tenantId || "",
+      planId: customData.planId || undefined,
+      interval: customData.interval as SubscriptionInterval | undefined,
+      couponCode: customData.couponCode || undefined,
+      providerSubscriptionId: attributes.subscription_id?.toString() || payload.data?.id,
       providerCustomerId: attributes.customer_id?.toString(),
       status: attributes.status || "active",
       amount: attributes.total ? attributes.total / 100 : undefined,
       currency: attributes.currency || "USD",
-      orderId: payload.data.id
+      orderId: payload.data?.id
     };
   }
 
