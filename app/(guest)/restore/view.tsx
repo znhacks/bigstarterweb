@@ -10,16 +10,14 @@ import { formatToUserTimezone } from "@/lib/date";
 import { restoreOwnAccount } from "@/app/(auth)/(superadmin)/superadmin/actions/account-moderation";
 
 export function RestoreView({ deletedAt }: { deletedAt: string | null }) {
-  const t = useTranslations("auth.restore");
+  const t = useTranslations("guest.restore");
   const locale = useLocale();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const tz =
-    typeof window !== "undefined"
-      ? Intl.DateTimeFormat().resolvedOptions().timeZone
-      : "UTC";
+    typeof window !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
 
   const handleRestore = async () => {
     setLoading(true);
