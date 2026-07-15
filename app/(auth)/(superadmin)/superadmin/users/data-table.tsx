@@ -82,9 +82,6 @@ import { formatToUserTimezone, formatRelativeTime } from "@/lib/date";
 import { supabase } from "@/lib/supabase";
 import { useTranslations, useLocale } from "next-intl";
 
-// Impor konfigurasi plans lokal (Full Supabase Code-defined Plans)
-import { plans } from "@/config/billing";
-
 // Moderasi akun (soft-delete / ban) + komponen dialog
 import {
   softDeleteUser,
@@ -363,6 +360,20 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   // Daftar role global (RBAC) untuk filter dropdown — DB-driven.
   const [roles, setRoles] = useState<{ value: string; label: string }[]>([]);
 
+  // Map id -> nama plan (DB-driven via /api/billing/plans) untuk refetch client-side.
+  const [planNameMap, setPlanNameMap] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    fetch("/api/billing/plans")
+      .then((r) => r.json())
+      .then((res) => {
+        const map = new Map<string, string>();
+        (res?.plans || []).forEach((p: any) => map.set(p.id, p.name));
+        setPlanNameMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
   // Mendapatkan zona waktu lokal pengguna di sisi klien
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -433,8 +444,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
         const tenant = firstMembership?.tenants;
         const firstSub = tenant?.subscriptions?.[0];
 
-        const localPlan = plans.find((p) => p.id === firstSub?.plan_id);
-        const planName = localPlan ? localPlan.name : "Free";
+        const planName = planNameMap.get(firstSub?.plan_id) || "Free";
 
         const statusVal = firstSub?.status === "active" ? "active" : "inactive";
 

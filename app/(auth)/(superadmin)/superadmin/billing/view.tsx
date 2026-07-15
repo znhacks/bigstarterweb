@@ -22,9 +22,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
-// Impor klien Supabase, Global Language Hook, dan Config Statis
+// Impor klien Supabase, Global Language Hook
 import { supabase } from "@/lib/supabase";
-import { plans as billingPlans } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
 import { formatCurrency, formatTransactionAmount } from "@/lib/i18n/currency";
 
@@ -75,6 +74,8 @@ export function SuperadminBillingDashboard() {
   const [transactions, setTransactions] = useState<SuperadminTransaction[]>([]);
   const [subscriptions, setSubscriptions] = useState<SuperadminSubscription[]>([]);
   const [refundRequests, setRefundRequests] = useState<SuperadminSubscription[]>([]);
+  // Daftar plan dari DB (/api/billing/plans) — menggantikan config/billing.ts
+  const [dbPlans, setDbPlans] = useState<any[]>([]);
 
   // State KPI Metrics
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -85,6 +86,15 @@ export function SuperadminBillingDashboard() {
   const [isProcessingAction, setIsProcessingAction] = useState<string | null>(null);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
 
+  const fetchDbPlans = async () => {
+    try {
+      const res = await fetch("/api/billing/plans").then((r) => r.json());
+      setDbPlans(res?.plans || []);
+    } catch (e) {
+      console.error("Gagal memuat daftar plan:", e);
+    }
+  };
+
   useEffect(() => {
     loadSuperadminData();
   }, []);
@@ -92,7 +102,7 @@ export function SuperadminBillingDashboard() {
   const loadSuperadminData = async () => {
     setIsLoading(true);
     try {
-      await Promise.all([fetchTransactions(), fetchSubscriptionsAndRefunds()]);
+      await Promise.all([fetchTransactions(), fetchSubscriptionsAndRefunds(), fetchDbPlans()]);
     } catch (e: any) {
       console.error("Gagal memuat data superadmin:", e);
     } finally {
@@ -128,11 +138,12 @@ export function SuperadminBillingDashboard() {
       setTransactions(txs);
 
       // Total pendapatan dihitung dalam IDR (amount_in_idr) agar konsisten lintas mata uang.
+      // Baris dgn amount_in_idr NULL dilewati (jangan campur dgn raw amount yg mungkin USD).
       // Status sukses pembayaran: "paid" (webhook) — fallback "completed" untuk data lama.
       const PAID = ["paid", "completed"];
       const total = txs
-        .filter((tx) => PAID.includes(tx.status?.toLowerCase()))
-        .reduce((sum, tx) => sum + (tx.amount_in_idr ?? tx.amount ?? 0), 0);
+        .filter((tx) => PAID.includes(tx.status?.toLowerCase()) && tx.amount_in_idr != null)
+        .reduce((sum, tx) => sum + (tx.amount_in_idr ?? 0), 0);
       setTotalRevenue(total);
     }
   };
@@ -155,9 +166,9 @@ export function SuperadminBillingDashboard() {
 
     if (data) {
       const mappedSubs: SuperadminSubscription[] = (data as any[]).map((sub) => {
-        const planConfig = billingPlans.find((p) => p.id === sub.plan_id);
-        // Tampilkan harga bulanan (plan disimpan di config/billing.ts, bukan DB)
-        const price = planConfig ? planConfig.prices.monthly.amount : 0;
+        const planConfig = dbPlans.find((p) => p.id === sub.plan_id);
+        // Harga bulanan dari DB (plan_prices via /api/billing/plans)
+        const price = planConfig ? planConfig.prices?.monthly?.amount ?? 0 : 0;
 
         return {
           id: sub.id,
@@ -373,7 +384,7 @@ export function SuperadminBillingDashboard() {
               <TabsTrigger
                 value="plans"
                 className="data-[state=active]:border-foreground text-muted-foreground rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 text-sm font-semibold shadow-none transition-all data-[state=active]:bg-transparent">
-                {t("tabs.plans") || "Plans"} ({billingPlans.length})
+                {t("tabs.plans") || "Plans"} ({dbPlans.length})
               </TabsTrigger>
             </TabsList>
 
@@ -574,11 +585,10 @@ export function SuperadminBillingDashboard() {
                 </div>
               </div>
 
-              {billingPlans.map((plan) => {
-                // Melakukan asersi tipe (type assertion) as any secara merata untuk menghindari error tipe objek Plan
-                const planConfig = plan as any;
-                const planFeatures = planConfig.features as string[] | undefined;
-                const maxUsers = planConfig.maxUsers as number | undefined;
+              {dbPlans.map((plan) => {
+                const planConfig = plan;
+                const planFeatures = planConfig.displayFeatures as string[] | undefined;
+                const maxUsers = planConfig.featureGates?.maxUsers as number | undefined;
 
                 return (
                   <div

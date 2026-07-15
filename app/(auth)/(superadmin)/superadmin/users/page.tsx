@@ -8,9 +8,6 @@ import UsersDataTable, { User } from "./data-table";
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
 
-// PERBAIKAN 1: Impor konfigurasi plans dari billing.ts lokal Anda
-import { plans } from "@/config/billing";
-
 export async function generateMetadata() {
   const t = await getTranslations("metadata.superadmin.users");
 
@@ -83,16 +80,18 @@ export default async function Page() {
     console.error("Gagal memuat data pengguna server-side:", error.message);
   }
 
-  // 3. Petakan hasil kueri ke tipe data User[] (PERBAIKAN 3: Memetakan menggunakan plans lokal)
+  // Ambil daftar plan dari DB (id -> name) untuk pemetaan nama plan (bukan config/billing.ts)
+  const { data: dbPlans } = await supabaseAdmin.from("plans").select("id, name");
+  const planNameMap = new Map<string, string>((dbPlans ?? []).map((p: any) => [p.id, p.name]));
+
+  // 3. Petakan hasil kueri ke tipe data User[]
   const formattedUsers: User[] = (profiles || []).map((prof: any, index: number) => {
     const fullName = prof.full_name || "Unknown User";
     const firstMembership = prof.memberships?.[0];
     const tenant = firstMembership?.tenants;
     const firstSub = tenant?.subscriptions?.[0];
 
-    // Temukan nama plan dari config/billing.ts lokal berdasarkan plan_id
-    const localPlan = plans.find((p) => p.id === firstSub?.plan_id);
-    const planName = localPlan ? localPlan.name : "Free";
+    const planName = planNameMap.get(firstSub?.plan_id) || "Free";
 
     const statusVal = firstSub?.status === "active" ? "active" : "inactive";
 

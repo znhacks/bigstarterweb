@@ -91,16 +91,14 @@ interface PlanRow extends DBPlan {
   yearlyAmount: number;
 }
 
-// Daftar provider yang dipetakan di plan_prices.provider_ids — dirender DINAMIS (semua 8).
+// Hanya provider yg MEMERLUIKAN plan/price/variant ID di sisi provider yg ditampilkan.
+// Mayar/Midtrans/Xendit = payment-only (charge amount langsung, tanpa plan provider) → tidak butuh ID.
+// Braintree = disabled. Stripe & PayPal juga mendukung payment-only (ID opsional).
 const PROVIDER_FIELDS: { key: string; label: string }[] = [
-  { key: "stripe", label: "Stripe Price ID" },
-  { key: "paypal", label: "PayPal Plan ID" },
-  { key: "paddle", label: "Paddle Price ID" },
-  { key: "lemonsqueezy", label: "LemonSqueezy Variant ID" },
-  { key: "midtrans", label: "Midtrans" },
-  { key: "xendit", label: "Xendit" },
-  { key: "mayar", label: "Mayar" },
-  { key: "braintree", label: "Braintree" }
+  { key: "stripe", label: "Stripe Price ID (opsional — payment-only jika kosong)" },
+  { key: "paypal", label: "PayPal Plan ID (opsional — payment-only jika kosong)" },
+  { key: "paddle", label: "Paddle Price ID (wajib)" },
+  { key: "lemonsqueezy", label: "LemonSqueezy Variant ID (wajib)" }
 ];
 
 type ProviderMap = Record<string, string>;
