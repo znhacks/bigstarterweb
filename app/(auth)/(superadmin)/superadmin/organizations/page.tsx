@@ -7,11 +7,10 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
 
-// Impor komponen klien, tipe data, serta config statis
+// Impor komponen klien, tipe data
 import { OrganizationsList, SuperadminOrganization } from "./organizations-list";
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
-import { plans as billingPlans } from "@/config/billing";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.superadmin.organizations");
@@ -70,24 +69,33 @@ export default async function SuperadminOrganizationsPage() {
     console.error("Gagal mengambil data organisasi di sisi server:", error.message);
   }
 
-  // Petakan hasil kueri mentah dengan mencocokkan konfigurasi paket statis
+  // Ambil plan + harga bulanan dari DB (bukan config/billing.ts)
+  const [{ data: dbPlans }, { data: dbPrices }] = await Promise.all([
+    supabaseAdmin.from("plans").select("id, name"),
+    supabaseAdmin.from("plan_prices").select("plan_id, interval, amount")
+  ]);
+  const planInfoMap = new Map<string, { name: string; monthly: number }>();
+  (dbPlans ?? []).forEach((p: any) => planInfoMap.set(p.id, { name: p.name, monthly: 0 }));
+  (dbPrices ?? []).forEach((pr: any) => {
+    const entry = planInfoMap.get(pr.plan_id);
+    if (entry && pr.interval === "monthly") entry.monthly = parseFloat(pr.amount);
+  });
+
+  // Petakan hasil kueri mentah dengan mencocokkan plan dari DB
   const formattedOrgs: SuperadminOrganization[] = (tenants || []).map((tenant: any) => {
     const firstSub = tenant.subscriptions?.[0];
 
-    // Cari detail paket berdasarkan plan_id statis dari billing.ts
-    const planConfig = billingPlans.find((p) => p.id === firstSub?.plan_id);
-    // Tampilkan harga bulanan (UI menampilkan "/mo")
-    const price = planConfig ? planConfig.prices.monthly.amount : 0;
+    const planInfo = planInfoMap.get(firstSub?.plan_id);
 
     return {
       id: tenant.id,
       name: tenant.name || "Unnamed Organization",
       created_at: tenant.created_at,
       memberCount: tenant.memberships ? tenant.memberships.length : 0,
-      planName: planConfig ? planConfig.name : firstSub?.plan_id || "Free",
+      planName: planInfo?.name ?? firstSub?.plan_id ?? "Free",
       planStatus: firstSub?.status || "inactive",
       endsAt: firstSub?.ends_at || null,
-      price: price
+      price: planInfo?.monthly ?? 0
     };
   });
 

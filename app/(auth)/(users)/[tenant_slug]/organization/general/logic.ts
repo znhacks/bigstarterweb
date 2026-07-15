@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { PERMISSIONS, hasPermission, type PermissionName } from "@/lib/rbac";
 import { useLocale, useTranslations } from "next-intl";
 import { tenantConfig } from "@/config/tenant"; // Pastikan path import ini sesuai
+import { updateTenantSchema } from "@/lib/validation/tenants";
 
 export interface AlertState {
   title: string;
@@ -22,6 +23,8 @@ export function useOrganizationGeneral() {
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
+  const [website, setWebsite] = useState("");
 
   // --- 1. STATE BARU UNTUK KONTAK, PAJAK, ALAMAT & i18n ---
   const [businessEmail, setBusinessEmail] = useState("");
@@ -79,7 +82,7 @@ export function useOrganizationGeneral() {
         supabase
           .from("tenants")
           .select(
-            "name, logo, address_line1, address_line2, city, state_province, postal_code, country_code, business_email, phone_number, tax_id, default_locale, timezone, currency"
+            "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, business_email, phone_number, tax_id, default_locale, timezone, currency"
           )
           .eq("id", orgId)
           .single(),
@@ -96,6 +99,8 @@ export function useOrganizationGeneral() {
       if (tenantRes.data) {
         setOrgName(tenantRes.data.name);
         setLogoPreview((tenantRes.data as any).logo || null);
+        setDescription((tenantRes.data as any).description || "");
+        setWebsite((tenantRes.data as any).website || "");
 
         // --- 3. POPULATE DATA BARU KE DALAM STATE ---
         setBusinessEmail((tenantRes.data as any).business_email || "");
@@ -233,6 +238,9 @@ export function useOrganizationGeneral() {
     try {
       const updatePayload: Record<string, any> = {};
 
+      updatePayload.description = description.trim() || null;
+      updatePayload.website = website.trim() || null;
+
       if (tenantConfig.features.enableRegionalSettings) {
         updatePayload.default_locale = defaultLocale;
         updatePayload.timezone = timezone;
@@ -255,6 +263,12 @@ export function useOrganizationGeneral() {
         updatePayload.state_province = stateProvince.trim() || null;
         updatePayload.postal_code = postalCode.trim() || null;
         updatePayload.country_code = countryCode || null;
+      }
+
+      // Validasi via zod sebelum tulis ke DB
+      const parsed = updateTenantSchema.safeParse(updatePayload);
+      if (!parsed.success) {
+        throw new Error(parsed.error.issues[0]?.message || "Validasi gagal.");
       }
 
       const { error } = await supabase.from("tenants").update(updatePayload).eq("id", activeOrgId);
@@ -321,6 +335,7 @@ export function useOrganizationGeneral() {
   return {
     t,
     tCommon,
+    locale,
     activeOrgId,
     orgName,
     setOrgName,
@@ -340,6 +355,10 @@ export function useOrganizationGeneral() {
     handleDeleteOrganization,
     isReadOnly,
     canDeleteOrg,
+    description,
+    setDescription,
+    website,
+    setWebsite,
 
     businessEmail,
     setBusinessEmail,

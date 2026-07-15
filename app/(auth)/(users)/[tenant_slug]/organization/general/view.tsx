@@ -4,15 +4,18 @@ import * as React from "react";
 import { Users, Upload, CheckCircle2, AlertCircle, X, Loader2, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
+import { AddressForm, AddressData } from "@/components/ui/address-form";
+import type { AddressField } from "@/config/i18n-culture";
 
 // 1. IMPOR KONFIGURASI DAN KOMPONEN BARU
 import { tenantConfig } from "@/config/tenant"; // Sesuaikan path-nya
 import { RegionalSettingsForm } from "./components/regionalsettings"; // Sesuaikan path-nya
-import { AddressContactSettingsForm } from "./components/addresscontactpage"; // Sesuaikan path-nya
 
 import { useOrganizationGeneral } from "./logic"; // Sesuaikan path-nya
 
@@ -20,6 +23,7 @@ export function OrganizationGeneralSettings() {
   const {
     t,
     tCommon,
+    locale: uiLocale,
     activeOrgId,
     orgName,
     setOrgName,
@@ -39,6 +43,10 @@ export function OrganizationGeneralSettings() {
     handleDeleteOrganization,
     isReadOnly,
     canDeleteOrg,
+    description,
+    setDescription,
+    website,
+    setWebsite,
     businessEmail,
     setBusinessEmail,
     phoneNumber,
@@ -65,6 +73,38 @@ export function OrganizationGeneralSettings() {
     setCurrency,
     handleSaveAdditionalDetails
   } = useOrganizationGeneral();
+
+  // Mapping antara AddressData (shared AddressForm) ↔ kolom tenant (penamaan tak berprefix)
+  const tenantAddress: AddressData = {
+    line1: addressLine1,
+    line2: addressLine2,
+    city,
+    region: stateProvince,
+    postalCode,
+    country: countryCode
+  };
+  const handleTenantAddressChange = (field: AddressField, value: string) => {
+    switch (field) {
+      case "line1":
+        setAddressLine1(value);
+        break;
+      case "line2":
+        setAddressLine2(value);
+        break;
+      case "city":
+        setCity(value);
+        break;
+      case "region":
+        setStateProvince(value);
+        break;
+      case "postalCode":
+        setPostalCode(value);
+        break;
+      case "country":
+        setCountryCode(value);
+        break;
+    }
+  };
 
   if (isLoading) {
     return (
@@ -209,34 +249,122 @@ export function OrganizationGeneralSettings() {
             />
           )}
 
-          {/* Section 4: Address & Contact (Pemasangan Komponen Baru 2 - Kondisional) */}
+          {/* Section 4: Description & Website */}
+          <div className="space-y-4 p-8">
+            <div className="space-y-1 md:max-w-md">
+              <h2 className="text-foreground text-base font-semibold">{t("description")}</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">{t("descriptionDesc")}</p>
+            </div>
+            <div className="w-full space-y-4">
+              <Textarea
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t("descriptionDesc")}
+                disabled={isReadOnly || isSaving}
+                className="border-border/80 focus-visible:ring-1"
+              />
+              <div className="space-y-1">
+                <Label className="text-sm font-medium">{t("website")}</Label>
+                <Input
+                  type="url"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder={t("websiteDesc")}
+                  disabled={isReadOnly || isSaving}
+                  className="border-border/80 h-10 w-full focus-visible:ring-1"
+                />
+              </div>
+            </div>
+            {!isReadOnly && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSaveAdditionalDetails}
+                  disabled={isSaving}
+                  variant="secondary"
+                  size="sm"
+                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
+                  {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {tCommon("save")}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Section 5: Address & Contact (shared AddressForm + contact) */}
           {(tenantConfig.features.enableAddress ||
             tenantConfig.features.enableTaxId ||
             tenantConfig.features.enableBusinessContact) && (
-            <AddressContactSettingsForm
-              isReadOnly={isReadOnly}
-              isSaving={isSaving}
-              businessEmail={businessEmail}
-              setBusinessEmail={setBusinessEmail}
-              phoneNumber={phoneNumber}
-              setPhoneNumber={setPhoneNumber}
-              taxId={taxId}
-              setTaxId={setTaxId}
-              addressLine1={addressLine1}
-              setAddressLine1={setAddressLine1}
-              addressLine2={addressLine2}
-              setAddressLine2={setAddressLine2}
-              city={city}
-              setCity={setCity}
-              stateProvince={stateProvince}
-              setStateProvince={setStateProvince}
-              postalCode={postalCode}
-              setPostalCode={setPostalCode}
-              countryCode={countryCode}
-              setCountryCode={setCountryCode}
-              onSave={handleSaveAdditionalDetails}
-              tCommon={tCommon}
-            />
+            <div className="space-y-6 p-8">
+              <div className="space-y-1">
+                <h2 className="text-foreground text-base font-semibold">{t("contactTitle")}</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">{t("contactDesc")}</p>
+              </div>
+
+              {/* Kontak bisnis */}
+              {tenantConfig.features.enableBusinessContact && (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">{t("businessEmail")}</Label>
+                    <Input
+                      type="email"
+                      value={businessEmail}
+                      onChange={(e) => setBusinessEmail(e.target.value)}
+                      disabled={isReadOnly || isSaving}
+                      className="border-border/80 h-10 focus-visible:ring-1"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">{t("phoneNumber")}</Label>
+                    <Input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      disabled={isReadOnly || isSaving}
+                      className="border-border/80 h-10 focus-visible:ring-1"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {tenantConfig.features.enableTaxId && (
+                <div className="space-y-1 md:max-w-md">
+                  <Label className="text-sm font-medium">{t("taxId")}</Label>
+                  <Input
+                    type="text"
+                    value={taxId}
+                    onChange={(e) => setTaxId(e.target.value)}
+                    disabled={isReadOnly || isSaving}
+                    className="border-border/80 h-10 focus-visible:ring-1"
+                  />
+                </div>
+              )}
+
+              {/* Alamat via shared AddressForm (ikut bahasa SISTEM) */}
+              {tenantConfig.features.enableAddress && (
+                <AddressForm
+                  locale={uiLocale}
+                  data={tenantAddress}
+                  errors={{}}
+                  onChange={handleTenantAddressChange}
+                  disabled={isReadOnly || isSaving}
+                />
+              )}
+
+              {!isReadOnly && (
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSaveAdditionalDetails}
+                    disabled={isSaving}
+                    variant="secondary"
+                    size="sm"
+                    className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
+                    {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+                    {tCommon("save")}
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Section 5: Delete Organization (Danger Zone) */}

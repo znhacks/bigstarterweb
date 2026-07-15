@@ -39,10 +39,12 @@ import {
 import { cn } from "@/lib/utils";
 import { getAllTimezones } from "@/lib/timezones";
 import { supabase } from "@/lib/supabase";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 import { AddressForm, AddressData } from "@/components/ui/address-form";
-import { getAddressConfig, AddressField } from "@/config/i18n-culture";
+import { getAddressConfig, AddressField, LOCALES, LOCALE_META } from "@/config/i18n-culture";
+import { Textarea } from "@/components/ui/textarea";
+import { updateProfileSchema } from "@/lib/validation/profiles";
 
 interface AlertState {
   title: string;
@@ -50,11 +52,8 @@ interface AlertState {
   variant?: "default" | "destructive";
 }
 
-const supportedLocales = [
-  { code: "en", label: "English" },
-  { code: "id", label: "Bahasa Indonesia" },
-  { code: "ar", label: "العربية" }
-] as const;
+// Daftar bahasa dari single source of truth (LOCALES i18n)
+const supportedLocales = LOCALES.map((code) => ({ code, label: LOCALE_META[code].label }));
 
 const supportedTimezones = getAllTimezones();
 
@@ -62,6 +61,8 @@ export function GeneralSettingsPage() {
   const router = useRouter();
   const t = useTranslations("settings.account-general");
   const tCommon = useTranslations("common");
+  // Bahasa SISTEM (UI) — form alamat & validasi ikut ini, BUKAN preferensi user
+  const uiLocale = useLocale();
 
   const [isLoading, setIsLoading] = useState(true);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
@@ -73,6 +74,8 @@ export function GeneralSettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [localLanguage, setLocalLanguage] = useState<string>("en");
   const [timezone, setTimezone] = useState<string>("UTC");
+  const [description, setDescription] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
 
   // Interaksi Loading States
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -80,6 +83,7 @@ export function GeneralSettingsPage() {
   const [isSavingTz, setIsSavingTz] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [isSavingBio, setIsSavingBio] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [cropperOpen, setCropperOpen] = useState(false);
@@ -114,7 +118,7 @@ export function GeneralSettingsPage() {
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select(
-            "full_name, avatar, preferred_language, timezone, address_line1, address_line2, address_city, address_region, address_postal_code, address_country"
+            "full_name, avatar, preferred_language, timezone, description, phone, address_line1, address_line2, address_city, address_region, address_postal_code, address_country"
           )
           .eq("id", user.id)
           .maybeSingle();
@@ -126,6 +130,8 @@ export function GeneralSettingsPage() {
           setAvatarUrl(profileData.avatar || null);
           setLocalLanguage(profileData.preferred_language || "en");
           setTimezone(profileData.timezone || "UTC");
+          setDescription(profileData.description || "");
+          setPhone(profileData.phone || "");
 
           // Sinkronkan alamat dari database ke local state
           setAddress({
@@ -177,8 +183,8 @@ export function GeneralSettingsPage() {
     setAddressErrors({});
     setAlertMessage(null);
 
-    // Jalankan validasi dinamis berdasarkan locale komunikasi yang dipilih saat ini
-    const config = getAddressConfig(localLanguage);
+    // Jalankan validasi dinamis berdasarkan locale SISTEM (UI), bukan preferensi user
+    const config = getAddressConfig(uiLocale);
     const errors: Partial<Record<AddressField, string>> = {};
 
     // 1. Validasi Kolom Wajib
@@ -236,6 +242,49 @@ export function GeneralSettingsPage() {
       });
     } finally {
       setIsSavingAddress(false);
+    }
+  };
+
+  const handleSaveBio = async () => {
+    if (!userId) return;
+    setAlertMessage(null);
+
+    // Validasi via zod
+    const parsed = updateProfileSchema.safeParse({ description, phone });
+    if (!parsed.success) {
+      setAlertMessage({
+        title: tCommon("error"),
+        description: parsed.error.issues[0]?.message || tCommon("error"),
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSavingBio(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          description: description.trim() || null,
+          phone: phone.trim() || null
+        })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      setAlertMessage({
+        title: tCommon("success"),
+        description: "Bio & telepon berhasil diperbarui.",
+        variant: "default"
+      });
+    } catch (error: any) {
+      setAlertMessage({
+        title: tCommon("error"),
+        description: error.message || tCommon("error"),
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingBio(false);
     }
   };
 
@@ -559,6 +608,46 @@ export function GeneralSettingsPage() {
             </div>
           </div>
 
+          {/* Section 3b: Bio & Phone */}
+          <div className="space-y-4 p-8">
+            <div className="space-y-1 md:max-w-md">
+              <h2 className="text-foreground text-base font-semibold">{t("description")}</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">{t("descriptionDesc")}</p>
+            </div>
+            <div className="w-full space-y-4">
+              <Textarea
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t("descriptionDesc")}
+                disabled={isSavingBio}
+                className="border-border/80 focus-visible:ring-1"
+              />
+              <div className="space-y-1">
+                <label className="text-foreground text-sm font-medium">{t("phone")}</label>
+                <Input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder={t("phoneDesc")}
+                  disabled={isSavingBio}
+                  className="border-border/80 h-10 w-full focus-visible:ring-1"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSaveBio}
+                disabled={isSavingBio}
+                variant="secondary"
+                size="sm"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
+                {isSavingBio && <Loader2 className="h-3 w-3 animate-spin" />}
+                {tCommon("save")}
+              </Button>
+            </div>
+          </div>
+
           {/* Section 4: Communication Language */}
           <div className="space-y-4 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
@@ -675,10 +764,15 @@ export function GeneralSettingsPage() {
               </div>
               <div className="w-full lg:max-w-xl">
                 <AddressForm
-                  locale={localLanguage}
+                  locale={uiLocale}
                   data={address}
                   errors={addressErrors}
                   onChange={handleAddressChange}
+                  onCountryDefaults={(d) => {
+                    // Suggest-if-empty: hanya isi bila masih default (tidak menimpa pilihan user)
+                    if (d.locale && localLanguage === "en") setLocalLanguage(d.locale);
+                    if (d.timezone && (timezone === "UTC" || !timezone)) setTimezone(d.timezone);
+                  }}
                   disabled={isSavingAddress}
                 />
               </div>

@@ -18,6 +18,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const isGeneralActive = pathname?.includes("/organization/general");
   const isMembersActive = pathname?.includes("/organization/member");
   const isBillingActive = pathname?.includes("/organization/billing");
+  const isHistoryBillingActive = pathname?.includes("/organization/history-billing");
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
@@ -70,6 +71,18 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 )}>
                 <CreditCard className="h-4 w-4 shrink-0" />
                 <span>{t("menu.billing")}</span>
+              </Link>
+
+              <Link
+                href={`/${tenantSlug}/organization/history-billing`}
+                className={cn(
+                  "flex w-full items-center justify-start gap-3 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                  isHistoryBillingActive
+                    ? "bg-secondary text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                )}>
+                <CreditCard className="h-4 w-4 shrink-0" />
+                <span>{t("menu.history-billing")}</span>
               </Link>
             </nav>
           </Card>

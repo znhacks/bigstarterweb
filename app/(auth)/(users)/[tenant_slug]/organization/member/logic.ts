@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { plans } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
 import { PERMISSIONS, hasPermission, canAssignRole, type PermissionName } from "@/lib/rbac";
 
@@ -268,28 +267,29 @@ export function useOrganizationMembers() {
 
   const fetchMaxUsersLimit = async (orgId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("subscriptions")
-        .select("plan_id, status, ends_at")
-        .eq("tenant_id", orgId)
-        .maybeSingle();
+      // Ambil paket aktif + daftar plan (DB-driven, featureGates sudah ter-decode) dari API publik
+      const [subResult, plansRes] = await Promise.all([
+        supabase
+          .from("subscriptions")
+          .select("plan_id, status, ends_at")
+          .eq("tenant_id", orgId)
+          .maybeSingle(),
+        fetch("/api/billing/plans").then((r) => r.json()).catch(() => ({}))
+      ]);
 
+      const { data, error } = subResult;
       if (error) throw error;
 
       const endsAt = data?.ends_at ? new Date(data.ends_at) : null;
       const isExpired = endsAt ? new Date() > endsAt : false;
 
       const activePlanId = data && data.status === "active" && !isExpired ? data.plan_id : "free";
-      const planConfig = plans.find((p) => p.id === activePlanId);
+      const planList = (plansRes?.plans as any[]) || [];
+      const activePlan = planList.find((p) => p.id === activePlanId);
 
-      if (planConfig) {
-        // Melakukan asersi as any secara inline untuk menghindari batasan tipe Plan
-        setMaxUsers((planConfig as any).maxUsers || 2);
-      } else {
-        setMaxUsers(2);
-      }
+      setMaxUsers(activePlan?.featureGates?.maxUsers ?? 2);
     } catch (error: any) {
-      console.error("Gagal memuat limit maksimal paket secara mendetail:", error?.message || error);
+      console.error("Gagal memuat limit maksimal paket:", error?.message || error);
       setMaxUsers(2);
     }
   };

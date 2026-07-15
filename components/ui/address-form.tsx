@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAddressConfig, AddressField } from "@/config/i18n-culture";
 import { getCountryList } from "@/lib/i18n/countries";
+import { getCountryDefaults, type CountryDefaults } from "@/lib/i18n/country-defaults";
 import {
   Select,
   SelectContent,
@@ -28,6 +29,8 @@ interface AddressFormProps {
   data: AddressData;
   errors: Partial<Record<AddressField, string>>;
   onChange: (field: AddressField, value: string) => void;
+  /** Dipanggil saat negara berubah, mengirim default i18n (currency/locale/timezone) utk auto-suggest. */
+  onCountryDefaults?: (defaults: CountryDefaults) => void;
   disabled?: boolean;
 }
 
@@ -36,6 +39,7 @@ export function AddressForm({
   data,
   errors,
   onChange,
+  onCountryDefaults,
   disabled = false
 }: AddressFormProps) {
   const config = getAddressConfig(locale);
@@ -94,7 +98,11 @@ export function AddressForm({
           </Label>
           <Select
             value={data.country}
-            onValueChange={(val) => onChange("country", val)}
+            onValueChange={(val) => {
+              onChange("country", val);
+              // Emit default i18n utk negara yg dipilih agar parent bisa auto-suggest
+              onCountryDefaults?.(getCountryDefaults(val));
+            }}
             disabled={disabled}>
             <SelectTrigger
               className={

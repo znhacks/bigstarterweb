@@ -21,6 +21,15 @@ export const updateTenantSchema = z.object({
     })
     .optional(),
 
+  // Deskripsi & website organisasi
+  description: z.string().max(1000).nullable().optional(),
+  website: z
+    .string()
+    .url({ message: "Website must be a valid URL" })
+    .nullable()
+    .optional()
+    .or(z.literal("")),
+
   // 1. Validasi Alamat (Hanya divalidasi jika fiturnya aktif di konfigurasi)
   address_line1: tenantConfig.features.enableAddress
     ? z.string().max(255).nullable().optional()

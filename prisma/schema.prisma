@@ -10,14 +10,28 @@ generator client {
 }
 
 model Tenant {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String    @db.VarChar(255)
-  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  logo      String?   @db.VarChar
-  slug      String?   @db.VarChar(255)
-  dbModel   String    @default("SHARED") @map("db_model")
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
-  status    String    @default("active")
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String    @db.VarChar(255)
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  logo          String?   @db.VarChar
+  slug          String?   @db.VarChar(255)
+  dbModel       String    @default("SHARED") @map("db_model")
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+  status        String    @default("active")
+  description   String?
+  website       String?
+  businessEmail String?   @map("business_email")
+  phoneNumber   String?   @map("phone_number")
+  taxId         String?   @map("tax_id")
+  defaultLocale String?   @map("default_locale")
+  timezone      String?
+  currency      String?
+  addressLine1  String?   @map("address_line1")
+  addressLine2  String?   @map("address_line2")
+  city          String?
+  stateProvince String?   @map("state_province")
+  postalCode    String?   @map("postal_code")
+  countryCode   String?   @map("country_code")
 
   // Relations
   tasks        Task[]
@@ -43,6 +57,14 @@ model Profile {
   status            String    @default("active")
   bannedUntil       DateTime? @map("banned_until") @db.Timestamptz
   bannedReason      String?   @map("banned_reason")
+  description       String?
+  phone             String?
+  addressLine1      String?   @map("address_line1")
+  addressLine2      String?   @map("address_line2")
+  addressCity       String?   @map("address_city")
+  addressRegion     String?   @map("address_region")
+  addressPostalCode String?   @map("address_postal_code")
+  addressCountry    String?   @map("address_country")
 
   // Relations
   memberships     Membership[]
@@ -182,8 +204,8 @@ model Plan {
   name            String
   description     String
   isActive        Boolean  @default(true) @map("is_active")
-  displayFeatures String[] @default(["{}"]) @map("display_features")
-  features        String[] @default(["{}"])
+  displayFeatures String[] @default([]) @map("display_features")
+  features        String[] @default([])
   createdAt       DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz
   updatedAt       DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("updated_at") @db.Timestamptz
 
