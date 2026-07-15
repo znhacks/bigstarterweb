@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { PlusCircle } from "lucide-react";
 import { Column } from "@tanstack/react-table";
+import { PlusCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ interface DataTableFacetedFilterProps<TData, TValue> {
   emptyText?: string;
 }
 
+// Usage: <DataTableFacetedFilter column={table.getColumn("status")} title="Status" options={[...]} />
+// Same call shape as shadcn's own data-table example — nothing hidden.
 export function DataTableFacetedFilter<TData, TValue>({
   column,
   title,

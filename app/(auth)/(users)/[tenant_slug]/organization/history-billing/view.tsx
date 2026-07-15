@@ -19,7 +19,10 @@ import {
 import { formatDateTime } from "@/lib/i18n/format";
 import { formatTransactionAmount } from "@/lib/i18n/currency";
 
+import { useDataTable } from "@/components/data-table/use-data-table";
 import { DataTable } from "@/components/data-table/data-table";
+import { DataTableSearch } from "@/components/data-table/data-table-search";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 
 import { useBillingHistory, Transaction } from "./logic";
@@ -39,84 +42,85 @@ export function BillingHistory() {
     setIsInvoiceOpen
   } = useBillingHistory();
 
-  const transactionColumns = React.useMemo<ColumnDef<Transaction, unknown>[]>(
-    () => [
-      {
-        accessorKey: "created_at",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("history.table.date")} />
-        ),
-        cell: ({ row }) => (
-          <span className="font-medium whitespace-nowrap">
-            {formatDateTime(row.getValue("created_at"), locale, { dateStyle: "long" })}
-          </span>
-        )
-      },
-      {
-        accessorKey: "order_id",
-        header: t("history.table.txId"),
-        cell: ({ row }) => (
-          <span className="font-mono text-xs whitespace-nowrap text-slate-500">
-            {row.getValue("order_id")}
-          </span>
-        )
-      },
-      {
-        accessorKey: "plan_name",
-        header: t("history.table.planName"),
-        cell: ({ row }) => (
-          <Badge variant="outline" className="border-slate-200 font-semibold capitalize">
-            {row.getValue("plan_name")}
-          </Badge>
-        )
-      },
-      {
-        accessorKey: "amount",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("history.table.amount")} />
-        ),
-        cell: ({ row }) => (
-          <span className="font-bold whitespace-nowrap">
-            {formatTransactionAmount(
-              row.original.amount,
-              row.original.currency,
-              row.original.amount_in_idr,
-              locale
-            )}
-          </span>
-        )
-      },
-      {
-        accessorKey: "status",
-        header: t("history.table.status"),
-        cell: ({ row }) => (
-          <Badge className="rounded-full border-emerald-500/10 bg-emerald-50 font-medium text-emerald-600 hover:bg-emerald-100/50">
-            {String(row.getValue("status")).toUpperCase()}
-          </Badge>
-        )
-      },
-      {
-        id: "actions",
-        header: () => <span className="block text-end">{t("history.table.action")}</span>,
-        enableHiding: false,
-        cell: ({ row }) => (
-          <div className="text-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedInvoice(row.original);
-                setIsInvoiceOpen(true);
-              }}
-              className="h-8 border-slate-200 text-xs font-semibold hover:bg-slate-50">
-              {t("history.table.viewInvoice")}
-            </Button>
-          </div>
-        )
-      }
-    ],
-    [t, locale, setSelectedInvoice, setIsInvoiceOpen]
-  );
+  // Columns are hardcoded for this feature — nothing generic about them.
+  const columns: ColumnDef<Transaction, unknown>[] = [
+    {
+      accessorKey: "created_at",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t("history.table.date")} />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium whitespace-nowrap">
+          {formatDateTime(row.getValue("created_at"), locale, { dateStyle: "long" })}
+        </span>
+      )
+    },
+    {
+      accessorKey: "order_id",
+      header: t("history.table.txId"),
+      cell: ({ row }) => (
+        <span className="font-mono text-xs whitespace-nowrap text-slate-500">
+          {row.getValue("order_id")}
+        </span>
+      )
+    },
+    {
+      accessorKey: "plan_name",
+      header: t("history.table.planName"),
+      cell: ({ row }) => (
+        <Badge variant="outline" className="border-slate-200 font-semibold capitalize">
+          {row.getValue("plan_name")}
+        </Badge>
+      )
+    },
+    {
+      accessorKey: "amount",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t("history.table.amount")} />
+      ),
+      cell: ({ row }) => (
+        <span className="font-bold whitespace-nowrap">
+          {formatTransactionAmount(
+            row.original.amount,
+            row.original.currency,
+            row.original.amount_in_idr,
+            locale
+          )}
+        </span>
+      )
+    },
+    {
+      accessorKey: "status",
+      header: t("history.table.status"),
+      cell: ({ row }) => (
+        <Badge className="rounded-full border-emerald-500/10 bg-emerald-50 font-medium text-emerald-600 hover:bg-emerald-100/50">
+          {String(row.getValue("status")).toUpperCase()}
+        </Badge>
+      )
+    },
+    {
+      id: "actions",
+      header: () => <span className="block text-end">{t("history.table.action")}</span>,
+      enableHiding: false,
+      cell: ({ row }) => (
+        <div className="text-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedInvoice(row.original);
+              setIsInvoiceOpen(true);
+            }}
+            className="h-8 border-slate-200 text-xs font-semibold hover:bg-slate-50">
+            {t("history.table.viewInvoice")}
+          </Button>
+        </div>
+      )
+    }
+  ];
+
+  // You own this instance — read/mutate it however this page needs.
+  const table = useDataTable({ columns, data: transactions });
 
   if (isLoading) {
     return (
@@ -148,15 +152,14 @@ export function BillingHistory() {
         </Alert>
       )}
 
-      <DataTable
-        columns={transactionColumns}
-        data={transactions}
-        searchColumnId="order_id"
-        labels={{
-          searchPlaceholder: t("history.table.txId"),
-          noResults: t("history.table.empty")
-        }}
-      />
+      {/* Toolbar is hardcoded here — free to add/remove/reorder anything. */}
+      <div className="flex flex-row flex-wrap items-center gap-2">
+        <DataTableSearch table={table} columnId="order_id" placeholder={t("history.table.txId")} />
+      </div>
+
+      <DataTable table={table} columns={columns} noResultsText={t("history.table.empty")} />
+
+      <DataTablePagination table={table} />
 
       {/* DIALOG MODAL DETAIL INVOICE */}
       <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
