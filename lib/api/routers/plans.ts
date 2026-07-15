@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { o } from "../context";
 import { supabaseAdmin } from "../supabase-server";
-import { planSchema, uuid } from "../schemas";
+import { planSchema } from "../schemas";
 import { notFound, dbError } from "../errors";
 
 /** Public — no authentication required. */
@@ -11,14 +11,15 @@ export const listPlans = o
     path: "/plans",
     tags: ["Plans"],
     summary: "List plans",
-    description: "Returns every subscription plan with pricing and limits."
+    description: "Returns every subscription plan. Pricing lives in plan_prices; feature limits encoded in features[]."
   })
   .output(z.array(planSchema))
   .handler(async () => {
     const { data, error } = await supabaseAdmin
       .from("plans")
       .select("*")
-      .order("price", { ascending: true });
+      .eq("is_active", true)
+      .order("name", { ascending: true });
     if (error) throw dbError(error);
     return data ?? [];
   });
@@ -31,7 +32,7 @@ export const getPlan = o
     tags: ["Plans"],
     summary: "Get a plan"
   })
-  .input(z.object({ id: uuid }))
+  .input(z.object({ id: z.string() }))
   .output(planSchema)
   .handler(async ({ input }) => {
     const { data, error } = await supabaseAdmin

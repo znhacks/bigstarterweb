@@ -112,7 +112,7 @@ export async function POST(req: Request) {
     if (prices?.monthly) {
       const { error: mPriceErr } = await supabaseAdmin.from("plan_prices").upsert(
         {
-          plan_id: id,
+          plan_id: normalizedId,
           interval: "monthly",
           amount: prices.monthly.amount,
           provider_ids: prices.monthly.providerIds || {}
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
     if (prices?.yearly) {
       const { error: yPriceErr } = await supabaseAdmin.from("plan_prices").upsert(
         {
-          plan_id: id,
+          plan_id: normalizedId,
           interval: "yearly",
           amount: prices.yearly.amount,
           provider_ids: prices.yearly.providerIds || {}
@@ -181,6 +181,9 @@ export async function DELETE(req: Request) {
       .eq("id", planId);
 
     if (deleteErr) throw deleteErr;
+
+    // Invalidasi cache gating (konsistensi, best-effort per-instance)
+    invalidatePlanCache(planId);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

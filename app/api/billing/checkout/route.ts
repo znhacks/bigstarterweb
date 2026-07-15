@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
+import { isTenantMember } from "@/lib/billing/tenant-auth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -27,6 +28,12 @@ export async function POST(req: Request) {
 
     if (authError || !user) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    // Cegah IDOR: pastikan user adalah anggota tenant yg dimanipulasi
+    const isMember = await isTenantMember(supabaseAdmin, user.id, tenantId);
+    if (!isMember) {
+      return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
     // 1. TARIK HARGA TARGET + ID PROVIDER DARI DATABASE (single source of truth)
@@ -137,15 +144,21 @@ export async function POST(req: Request) {
     // 4. Ambil adapter pembayaran yang sesuai
     const paymentProvider = PaymentFactory.getProvider(provider);
 
-    // 4b. CEGAH ORPHAN SUBSCRIPTION: bila ada langganan aktif lama di provider yg sama,
-    // batalkan di gateway (cancel = berhenti perpanjangan, siklus berjalan tetap sampai jatuh tempo).
-    // Pro-rata credit sudah mengkompensasi sisa waktu. Non-blocking: kegagalan cancel tidak membatalkan checkout.
-    if (oldProviderSubscriptionId && activeSub?.provider === provider) {
+    // 4b. CEGAH ORPHAN SUBSCRIPTION: bila ada langganan aktif lama, batalkan di gateway-nya.
+    // Cancel = berhenti perpanjangan; siklus berjalan tetap sampai jatuh tempo. Pro-rata credit
+    // sudah mengkompensasi sisa waktu. Non-blocking: kegagalan cancel tidak membatalkan checkout.
+    // Penting: gunakan adapter provider LAMA (bisa beda dgn provider baru) agar cross-provider
+    // switch (mis. PayPal -> Midtrans) tidak meninggalkan sub lama tetap menagih (double-charge).
+    if (oldProviderSubscriptionId && activeSub?.provider) {
       try {
-        await paymentProvider.cancelSubscription(oldProviderSubscriptionId);
+        const oldAdapter =
+          activeSub.provider === provider
+            ? paymentProvider
+            : PaymentFactory.getProvider(activeSub.provider);
+        await oldAdapter.cancelSubscription(oldProviderSubscriptionId);
       } catch (cancelErr) {
         console.warn(
-          `[checkout] Gagal membatalkan subscription lama (${oldProviderSubscriptionId}):`,
+          `[checkout] Gagal membatalkan subscription lama (${oldProviderSubscriptionId}, provider ${activeSub.provider}):`,
           cancelErr
         );
       }

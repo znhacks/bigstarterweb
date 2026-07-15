@@ -14,12 +14,12 @@ export const paginated = <T extends z.ZodTypeAny>(item: T) =>
   z.object({ data: z.array(item), total: z.number().int(), hasMore: z.boolean() });
 
 export const planSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().nullable(),
-  price: z.number().int().nullable(),
-  max_users: z.number().int().nullable(),
-  type: z.string().nullable(),
-  description: z.array(z.string())
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  is_active: z.boolean().nullable(),
+  display_features: z.array(z.string()).default([]),
+  features: z.array(z.string()).default([])
 });
 
 export const taskSchema = z.object({
@@ -71,10 +71,7 @@ export const subscriptionSchema = z.object({
   cancel_at_period_end: z.boolean().nullable(),
   plan: z
     .object({
-      name: z.string().nullable(),
-      price: z.number().int().nullable(),
-      max_users: z.number().int().nullable(),
-      type: z.string().nullable()
+      name: z.string().nullable()
     })
     .nullable()
 });
@@ -82,7 +79,7 @@ export const subscriptionSchema = z.object({
 export const transactionSchema = z.object({
   id: z.string().uuid(),
   tenant_id: z.string().uuid(),
-  amount: z.number().int(),
+  amount: z.number(),
   plan_name: z.string(),
   order_id: z.string(),
   status: z.string(),

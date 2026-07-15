@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
+import { isTenantMember } from "@/lib/billing/tenant-auth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -32,6 +33,12 @@ export async function POST(req: Request) {
     const { tenantId } = body;
     if (!tenantId) {
       return NextResponse.json({ error: "tenantId wajib diisi" }, { status: 400 });
+    }
+
+    // Cegah IDOR: pastikan user adalah anggota tenant
+    const isMember = await isTenantMember(supabaseAdmin, user.id, tenantId);
+    if (!isMember) {
+      return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
     // Ambil langganan aktif

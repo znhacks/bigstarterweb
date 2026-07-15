@@ -16,7 +16,7 @@ export const getSubscription = o
     const tenantId = getTenantId(context);
     const { data, error } = await supabaseAdmin
       .from("subscriptions")
-      .select("tenant_id, status, starts_at, ends_at, cancel_at_period_end, plans(name, price, max_users, type)")
+      .select("tenant_id, status, starts_at, ends_at, cancel_at_period_end, plans(name)")
       .eq("tenant_id", tenantId)
       .maybeSingle();
     if (error) throw dbError(error);

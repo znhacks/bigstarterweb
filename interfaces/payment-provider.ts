@@ -12,8 +12,11 @@ export interface CreateCheckoutSessionParams {
   cancelUrl: string;
   customPrice?: number;
   /**
-   * ID plan/price/variant di sisi provider (dari plan_prices.provider_ids[provider]).
-   * Mengganti lookup config/billing.ts di adapter. Wajib untuk adapter berbasis subscription (paypal/stripe/paddle/lemonsqueezy).
+   * ID plan/price/variant di sisi provider (dari plan_prices.provider_ids[provider]). OPSIONAL.
+   * - Jika ADA: gunakan langganan rekuren bawaan provider (auto-renew via provider).
+   * - Jika ABSEN: payment-only — adapter charge amount kita langsung tanpa plan provider.
+   *   Didukung: Mayar/Midtrans/Xendit (native), Stripe (inline price_data), PayPal (Orders API).
+   *   Paddle/LemonSqueezy butuh ID (tidak mendukung payment-only) → throw error jika kosong.
    */
   providerPriceId?: string;
   /** Nama plan untuk deskripsi invoice. */

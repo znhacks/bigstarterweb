@@ -4,7 +4,7 @@ export const tenantConfig = {
     enableAddress: true, // Aktifkan jika aplikasi membutuhkan alamat fisik tenant
     enableTaxId: true, // Aktifkan jika membutuhkan nomor NPWP/VAT untuk billing
     enableBusinessContact: true, // Aktifkan jika membutuhkan email & nomor telepon khusus bisnis
-    enableRegionalSettings: true // Aktifkan jika ingin tenant bisa mengatur timezone & mata uang sendiri
+    enableRegionalSettings: false // Aktifkan jika ingin tenant bisa mengatur timezone & mata uang sendiri
   },
 
   // 2. Pengaturan nilai default dan daftar pilihan yang didukung
@@ -18,7 +18,8 @@ export const tenantConfig = {
     // Daftar bahasa yang didukung oleh aplikasi Anda
     locales: [
       { code: "en", label: "English" },
-      { code: "id", label: "Bahasa Indonesia" }
+      { code: "id", label: "Bahasa Indonesia" },
+      { code: "ar", label: "العربية" }
     ],
     // Daftar mata uang yang didukung untuk transaksi/laporan
     currencies: [

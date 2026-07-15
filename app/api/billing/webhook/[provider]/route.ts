@@ -141,6 +141,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
           provider_subscription_id: providerSubscriptionId,
           provider_customer_id: providerCustomerId,
           interval: interval || null,
+          cancel_at_period_end: false, // re-subscribe setelah cancel: pastikan perpanjangan aktif lagi
           updated_at: new Date().toISOString(),
           pending_plan_id: null
         },
@@ -231,13 +232,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       }
 
       // === 3. Catat transaksi (kolom tax/net/fee kini ada; amount_in_idr/rate/api terisi) ===
+      // plan_name: simpan NAMA plan (bukan slug) utk tampilan history.
+      let resolvedPlanName = finalPlanId || "unknown";
+      if (finalPlanId) {
+        const { data: planRow } = await supabaseAdmin
+          .from("plans")
+          .select("name")
+          .eq("id", finalPlanId)
+          .maybeSingle();
+        if (planRow?.name) resolvedPlanName = planRow.name;
+      }
+
+      // order_id: deterministik agar replay webhook idempotent (jangan pakai Date.now()).
+      const resolvedOrderId =
+        orderId || `${providerName}-${providerSubscriptionId || tenantId}`;
+
       const { error: txError } = await supabaseAdmin.from("transactions").upsert(
         {
           tenant_id: tenantId,
           amount: grossAmount,
           currency: activeCurrency,
-          plan_name: finalPlanId || "unknown",
-          order_id: orderId || `TX-${Date.now()}`,
+          plan_name: resolvedPlanName,
+          order_id: resolvedOrderId,
           status: "paid",
           provider: providerName,
           tax_amount: parseFloat(calculatedTax.toFixed(2)),
@@ -261,14 +277,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       if (finalPlanId) {
         const { data: existingSub } = await supabaseAdmin
           .from("subscriptions")
-          .select("id, plan_id, provider_subscription_id")
+          .select("id, plan_id, provider_subscription_id, status, ends_at")
           .eq("tenant_id", tenantId)
           .maybeSingle();
+
+        // Re-grant bila: belum ada, plan berubah, tidak ada provider sub id,
+        // ATAU langganan sudah expired/kedaluwarsa (penting utk RENEWAL provider invoice
+        // mayar/midtrans/xendit yg hanya memancarkan payment.succeeded — tanpa ini,
+        // re-subscribe plan yg sama tidak perpanjang ends_at & user terkunci).
+        const isExpired = existingSub
+          ? existingSub.status === "expired" ||
+            (existingSub.ends_at ? new Date(existingSub.ends_at).getTime() < Date.now() : false)
+          : true;
 
         const needsGrant =
           !existingSub ||
           existingSub.plan_id !== finalPlanId ||
-          !existingSub.provider_subscription_id;
+          !existingSub.provider_subscription_id ||
+          isExpired;
 
         if (needsGrant) {
           const { error: subGrantError } = await supabaseAdmin.from("subscriptions").upsert(

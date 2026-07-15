@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
+import { isTenantMember } from "@/lib/billing/tenant-auth";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = createClient(
@@ -27,6 +28,12 @@ export async function POST(req: Request) {
 
     if (authError || !user) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    // Cegah IDOR: pastikan user adalah anggota tenant yg dimanipulasi
+    const isMember = await isTenantMember(supabaseAdmin, user.id, tenantId);
+    if (!isMember) {
+      return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
     // 2. Ambil data langganan aktif saat ini
