@@ -47,6 +47,10 @@
         "billing": {
           "title": "Kelola Paket Organisasi",
           "description": "Lihat detail paket Anda dan kelola penagihan."
+        },
+        "history-billing": {
+          "title": "Riwayat Pembayaran Organisasi",
+          "description": "Lihat riwayat pembayaran anda dan buat laporannya."
         }
       },
       "settings": {
@@ -336,7 +340,9 @@
       "users": "Pengguna",
       "roles": "Peran",
       "organization": "Organisasi",
-      "billing": "Penagihan"
+      "billing": "Penagihan",
+      "plans": "Langganan",
+      "coupons": "Kupon"
     }
   },
   "currency": {
@@ -489,7 +495,8 @@
     "menu": {
       "general": "Umum",
       "member": "Anggota",
-      "billing": "Tagihan"
+      "billing": "Tagihan",
+      "history-billing": "Riwayat Pembayaran"
     },
     "organization-general": {
       "readOnlyTitle": "Mode Baca Saja",
@@ -513,7 +520,24 @@
         "successName": "Nama organisasi berhasil diperbarui.",
         "successDelete": "Organisasi berhasil dihapus secara permanen.",
         "errorLoad": "Gagal memuat rincian dan hak akses organisasi."
-      }
+      },
+      "description": "Deskripsi",
+      "descriptionDesc": "Deskripsi singkat tentang organisasi Anda",
+      "website": "Situs Web",
+      "websiteDesc": "URL situs web organisasi (https://...)",
+      "contactTitle": "Alamat & Kontak",
+      "contactDesc": "Kontak bisnis & alamat penagihan.",
+      "businessEmail": "Email Bisnis",
+      "phoneNumber": "Nomor Telepon",
+      "taxId": "NPWP/Pajak",
+      "country": "Negara",
+      "addressLine1": "Alamat Baris 1",
+      "addressLine2": "Alamat Baris 2 (Opsional)",
+      "city": "Kota",
+      "stateProvince": "Provinsi",
+      "postalCode": "Kode Pos",
+      "saveAdditional": "Simpan Detail",
+      "successAdditional": "Detail organisasi diperbarui."
     },
     "organization-member": {
       "title": "Kelola Anggota",
@@ -667,7 +691,15 @@
       "deleteDesc": "Hapus akun Anda secara permanen. Setelah dihapus, data tidak dapat dikembalikan. Untuk konfirmasi, silakan klik tombol di samping:",
       "deleteButton": "Hapus akun",
       "dialogTitle": "Apakah Anda benar-benar yakin?",
-      "dialogDesc": "Tindakan ini akan menghapus akun Anda beserta seluruh profil dari database secara permanen. Tindakan ini tidak dapat dibatalkan."
+      "dialogDesc": "Tindakan ini akan menghapus akun Anda beserta seluruh profil dari database secara permanen. Tindakan ini tidak dapat dibatalkan.",
+      "description": "Bio",
+      "descriptionDesc": "Deskripsi singkat tentang diri Anda",
+      "phone": "Telepon",
+      "phoneDesc": "Nomor telepon untuk kontak",
+      "timezoneTitle": "Pengaturan Zona Waktu",
+      "timezoneDesc": "Tanggal & waktu tampil sesuai zona waktu Anda.",
+      "addressTitle": "Alamat Penagihan",
+      "addressDesc": "Digunakan untuk faktur & penagihan."
     },
     "account-security": {
       "title": "Pengaturan Keamanan",

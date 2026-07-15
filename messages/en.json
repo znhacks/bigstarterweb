@@ -47,6 +47,10 @@
         "billing": {
           "title": "Organization Billing Settings",
           "description": "View your plan details and manage billing."
+        },
+        "history-billing": {
+          "title": "Organization Billing History",
+          "description": "View your payment history and generate reports."
         }
       },
       "settings": {
@@ -336,7 +340,9 @@
       "users": "Users",
       "roles": "Roles",
       "organization": "Organizations",
-      "billing": "Billing"
+      "billing": "Billing",
+      "plans": "Plans",
+      "coupons": "Coupons"
     }
   },
   "currency": {
@@ -501,7 +507,8 @@
     "menu": {
       "general": "General",
       "member": "Members",
-      "billing": "Billing"
+      "billing": "Billing",
+      "history-billing": "Billing History"
     },
     "organization-general": {
       "readOnlyTitle": "Read-Only Mode",
@@ -525,7 +532,24 @@
         "successName": "Organization name successfully updated.",
         "successDelete": "Organization successfully deleted.",
         "errorLoad": "Failed to load organization details and permissions."
-      }
+      },
+      "description": "Description",
+      "descriptionDesc": "A short description about your organization",
+      "website": "Website",
+      "websiteDesc": "Your organization website URL (https://...)",
+      "contactTitle": "Address & Contact",
+      "contactDesc": "Business contact & billing address.",
+      "businessEmail": "Business Email",
+      "phoneNumber": "Phone Number",
+      "taxId": "Tax ID (NPWP/VAT)",
+      "country": "Country",
+      "addressLine1": "Address Line 1",
+      "addressLine2": "Address Line 2 (Optional)",
+      "city": "City",
+      "stateProvince": "State / Province",
+      "postalCode": "Postal / ZIP Code",
+      "saveAdditional": "Save Details",
+      "successAdditional": "Organization details updated."
     },
     "organization-member": {
       "title": "Manage members",
@@ -679,7 +703,15 @@
       "deleteDesc": "Permanently delete your account. Once you delete your account, there is no going back. To confirm, please enter your password below:",
       "deleteButton": "Delete account",
       "dialogTitle": "Are you absolutely sure?",
-      "dialogDesc": "This action will permanently delete your account and all associated profiles from our database. This action cannot be undone."
+      "dialogDesc": "This action will permanently delete your account and all associated profiles from our database. This action cannot be undone.",
+      "description": "Bio",
+      "descriptionDesc": "A short description about yourself",
+      "phone": "Phone",
+      "phoneDesc": "Your contact phone number",
+      "timezoneTitle": "Timezone Settings",
+      "timezoneDesc": "Dates & times display in your timezone.",
+      "addressTitle": "Billing Address",
+      "addressDesc": "Used for invoices & billing."
     },
     "account-security": {
       "title": "Security settings",
