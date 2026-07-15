@@ -2,9 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation"; 
+import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { plans, Plan, GatewayIds } from "@/config/billing";
 import { useLocale, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/i18n/currency";
 import { convertCurrency } from "@/actions/currency";
@@ -42,18 +41,23 @@ export interface ActiveSubscription {
   pendingPlanId?: string; 
 }
 
-export interface ConvertedPlan extends Omit<Plan, "prices"> {
+export interface ConvertedPlan {
+  id: string;
+  name: string;
+  description: string;
+  displayFeatures?: string[];
   features: string[];
+  featureGates?: any;
   prices: {
     monthly: {
       amount: number;
       convertedAmount: number;
-      providers?: GatewayIds;
+      providers?: Record<string, string>;
     };
     yearly: {
       amount: number;
       convertedAmount: number;
-      providers?: GatewayIds;
+      providers?: Record<string, string>;
     };
   };
 }
@@ -84,16 +88,7 @@ export function useOrganizationBilling() {
 
   const [enabledProviders, setEnabledProviders] = useState<string[]>([]);
 
-  const [convertedPlans, setConvertedPlans] = useState<ConvertedPlan[]>(() =>
-    plans.map((p) => ({
-      ...p,
-      features: p.displayFeatures || [],
-      prices: {
-        monthly: { ...p.prices.monthly, convertedAmount: p.prices.monthly.amount },
-        yearly: { ...p.prices.yearly, convertedAmount: p.prices.yearly.amount }
-      }
-    }))
-  );
+  const [convertedPlans, setConvertedPlans] = useState<ConvertedPlan[]>([]);
 
   const [selectedPlan, setSelectedPlan] = useState<ConvertedPlan | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -110,24 +105,30 @@ export function useOrganizationBilling() {
 
   const initializeConvertedPlans = async () => {
     try {
+      // Ambil plan dari DB (public /api/billing/plans) — bukan config/billing.ts
+      const res = await fetch("/api/billing/plans").then((r) => r.json());
+      const apiPlans: any[] = res?.plans || [];
+
       const updated = await Promise.all(
-        plans.map(async (plan) => {
-          const monthlyConv = await convertCurrency(plan.prices.monthly.amount, targetCurrency);
-          const yearlyConv = await convertCurrency(plan.prices.yearly.amount, targetCurrency);
+        apiPlans.map(async (plan) => {
+          const monthlyConv = await convertCurrency(plan.prices?.monthly?.amount ?? 0, targetCurrency);
+          const yearlyConv = await convertCurrency(plan.prices?.yearly?.amount ?? 0, targetCurrency);
           return {
             ...plan,
-            features: plan.displayFeatures || [],
+            features: plan.displayFeatures || plan.features || [],
             prices: {
               monthly: {
-                ...plan.prices.monthly,
+                amount: plan.prices?.monthly?.amount ?? 0,
+                providers: plan.prices?.monthly?.providers,
                 convertedAmount: monthlyConv.amount
               },
               yearly: {
-                ...plan.prices.yearly,
+                amount: plan.prices?.yearly?.amount ?? 0,
+                providers: plan.prices?.yearly?.providers,
                 convertedAmount: yearlyConv.amount
               }
             }
-          };
+          } as ConvertedPlan;
         })
       );
       setConvertedPlans(updated);
@@ -202,23 +203,27 @@ export function useOrganizationBilling() {
         return;
       }
 
-      const staticPlan = plans.find((p) => p.id === data.plan_id);
+      // Ambil nama plan dari DB (/api/billing/plans) — bukan config/billing.ts
+      let planName = data.plan_id || "Free";
+      try {
+        const res = await fetch("/api/billing/plans").then((r) => r.json());
+        const found = (res?.plans || []).find((p: any) => p.id === data.plan_id);
+        if (found?.name) planName = found.name;
+      } catch {}
 
-      if (staticPlan) {
-        setActiveSub({
-          id: data.id,
-          planId: data.plan_id,
-          planName: staticPlan.name,
-          price: 0,
-          startsAt: data.starts_at,
-          endsAt: data.ends_at,
-          status: data.status,
-          cancelAtPeriodEnd: !!data.cancel_at_period_end,
-          provider: data.provider || undefined,
-          pendingPlanId: data.pending_plan_id || undefined
-        });
-        return;
-      }
+      setActiveSub({
+        id: data.id,
+        planId: data.plan_id,
+        planName,
+        price: 0,
+        startsAt: data.starts_at,
+        endsAt: data.ends_at,
+        status: data.status,
+        cancelAtPeriodEnd: !!data.cancel_at_period_end,
+        provider: data.provider || undefined,
+        pendingPlanId: data.pending_plan_id || undefined
+      });
+      return;
     }
     setActiveSub(null);
   };

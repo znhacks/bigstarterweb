@@ -3,6 +3,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { ColumnDef } from "@tanstack/react-table";
 import { Check, X, CheckCircle2, AlertCircle, Loader2, ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,9 @@ import { formatDateTime } from "@/lib/i18n/format";
 import { formatTransactionAmount } from "@/lib/i18n/currency";
 import { Input } from "@/components/ui/input";
 
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+
 const PROVIDER_LABELS: Record<string, { title: string; subtitle: string; color: string }> = {
   stripe: { title: "Credit Card", subtitle: "Stripe Global Secure", color: "text-indigo-600" },
   paypal: { title: "PayPal Wallet", subtitle: "International Wallet", color: "text-amber-600" },
@@ -41,6 +45,19 @@ const PROVIDER_LABELS: Record<string, { title: string; subtitle: string; color: 
   xendit: { title: "Xendit", subtitle: "Virtual Account & Retail Outlets", color: "text-blue-600" },
   mayar: { title: "Mayar.id", subtitle: "Instant Local QRIS/Transfer", color: "text-emerald-600" },
   braintree: { title: "Braintree", subtitle: "PayPal Service Secure", color: "text-teal-600" }
+};
+
+type Transaction = {
+  id: string;
+  created_at: string;
+  order_id: string;
+  plan_name: string;
+  amount: number;
+  currency: string;
+  amount_in_idr?: number | null;
+  status: string;
+  provider?: string | null;
+  tenant_id: string;
 };
 
 export function OrganizationBilling() {
@@ -370,80 +387,6 @@ export function OrganizationBilling() {
             );
           })}
         </div>
-
-        {/* SECTION 3: TRANSACTION HISTORY */}
-        <div className="space-y-4 border-t border-slate-200/60 pt-8">
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold tracking-tight text-slate-950">
-              {t("history.title")}
-            </h2>
-            <p className="text-sm text-slate-500">{t("history.desc")}</p>
-          </div>
-
-          <Card className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-            <div className="w-full overflow-x-auto">
-              <table className="w-full min-w-[700px] border-collapse text-left text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200/60 bg-slate-50/70 text-xs font-semibold tracking-wider text-slate-500 uppercase">
-                    <th className="px-6 py-4">{t("history.table.date")}</th>
-                    <th className="px-6 py-4">{t("history.table.txId")}</th>
-                    <th className="px-6 py-4">{t("history.table.planName")}</th>
-                    <th className="px-6 py-4">{t("history.table.amount")}</th>
-                    <th className="px-6 py-4">{t("history.table.status")}</th>
-                    <th className="px-6 py-4 text-end">{t("history.table.action")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200/40 text-slate-800">
-                  {transactions.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-10 text-center text-slate-400">
-                        {t("history.table.empty")}
-                      </td>
-                    </tr>
-                  ) : (
-                    transactions.map((tx) => (
-                      <tr key={tx.id} className="transition-colors hover:bg-slate-50/50">
-                        <td className="px-6 py-4 font-medium whitespace-nowrap">
-                          {formatDateTime(tx.created_at, locale, { dateStyle: "long" })}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-xs whitespace-nowrap text-slate-500">
-                          {tx.order_id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge
-                            variant="outline"
-                            className="border-slate-200 font-semibold capitalize">
-                            {tx.plan_name}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 font-bold whitespace-nowrap">
-                          {formatTransactionAmount(tx.amount, tx.currency, tx.amount_in_idr, locale)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge className="rounded-full border-emerald-500/10 bg-emerald-50 font-medium text-emerald-600 hover:bg-emerald-100/50">
-                            {tx.status.toUpperCase()}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 text-end whitespace-nowrap">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedInvoice(tx);
-                              setIsInvoiceOpen(true);
-                            }}
-                            className="h-8 rounded-lg border-slate-200 text-xs font-semibold hover:bg-slate-50">
-                            {t("history.table.viewInvoice")}
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
       </div>
 
       {/* ACTIVE PLAN EXPIRY WARNING BANNER */}
@@ -533,11 +476,11 @@ export function OrganizationBilling() {
                         </td>
                         <td className="px-4 py-4 text-end text-sm font-bold text-slate-900">
                           {formatTransactionAmount(
-                      selectedInvoice.amount,
-                      selectedInvoice.currency,
-                      selectedInvoice.amount_in_idr,
-                      locale
-                    )}
+                            selectedInvoice.amount,
+                            selectedInvoice.currency,
+                            selectedInvoice.amount_in_idr,
+                            locale
+                          )}
                         </td>
                       </tr>
                     </tbody>
@@ -578,93 +521,6 @@ export function OrganizationBilling() {
               </DialogFooter>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* DIALOG MODAL CHECKOUT MULTI-PROVIDER */}
-      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-900">
-              {t("dialogPurchase.title")}
-            </DialogTitle>
-            <DialogDescription>{t("dialogPurchase.desc")}</DialogDescription>
-          </DialogHeader>
-
-          {selectedPlan &&
-            (() => {
-              const { finalPrice, creditUsed } = getUpgradePrice(selectedPlan);
-              const isUpgrade = getPlanActionType(selectedPlan.id) === "upgrade";
-              const selectedPlanLocalizedName =
-                tBilling(`plans.${selectedPlan.id}.name`) || selectedPlan.name;
-
-              return (
-                <div className="space-y-6 py-4">
-                  <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-700">
-                        {t("dialogPurchase.planCycle", {
-                          planName: selectedPlanLocalizedName,
-                          cycle: t(`cycles.${billingCycle}`)
-                        })}
-                      </span>
-                      <span className="font-semibold text-slate-950">
-                        {formatPrice(
-                          billingCycle === "yearly"
-                            ? selectedPlan.prices.yearly.convertedAmount
-                            : selectedPlan.prices.monthly.convertedAmount
-                        )}
-                      </span>
-                    </div>
-
-                    {isUpgrade && creditUsed > 0 && (
-                      <div className="flex items-center justify-between text-xs font-medium text-emerald-600">
-                        <span>{t("dialogPurchase.creditApplied")}</span>
-                        <span>-{formatPrice(creditUsed)}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between border-t border-slate-200/60 pt-2 text-base font-bold text-slate-900">
-                      <span>{t("dialogPurchase.amountToPay")}</span>
-                      <span>{formatPrice(finalPrice)}</span>
-                    </div>
-
-                    {billingCycle === "yearly" && (
-                      <div className="text-end text-[10px] text-slate-400 italic">
-                        {t("dialogPurchase.billedAnnually")}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Render Tombol Pilihan Payment Gateway Dinamis dari .env */}
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
-                      {t("dialogPurchase.selectPaymentMethod") || "Pilih Metode Pembayaran:"}
-                    </p>
-                    <div className="flex max-h-[220px] flex-col gap-2 overflow-y-auto pr-1">
-                      {enabledProviders.map((provider) => {
-                        const meta = PROVIDER_LABELS[provider] || {
-                          title: provider.toUpperCase(),
-                          subtitle: "Secure Payment Option",
-                          color: "text-slate-600"
-                        };
-
-                        return (
-                          <Button
-                            key={provider}
-                            variant="outline"
-                            onClick={() => handleInitiateCheckout(provider)}
-                            className="flex h-16 flex-col items-start justify-center gap-0.5 rounded-xl border border-slate-200 px-4 hover:border-slate-300 hover:bg-slate-50/50">
-                            <span className={`text-sm font-bold ${meta.color}`}>{meta.title}</span>
-                            <span className="text-[10px] text-slate-400">{meta.subtitle}</span>
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
         </DialogContent>
       </Dialog>
 
@@ -750,7 +606,7 @@ export function OrganizationBilling() {
                     </div>
                   </div>
 
-                  {/* FORM INPUT KODE KUPON (FITUR BARU) */}
+                  {/* FORM INPUT KODE KUPON */}
                   <div className="space-y-1.5 border-t border-slate-100 pt-3">
                     <Label
                       htmlFor="coupon-input"
