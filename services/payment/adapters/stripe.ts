@@ -25,28 +25,7 @@ export class StripeAdapter implements PaymentProvider {
 
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
     const stripePriceId = params.providerPriceId;
-    if (!stripePriceId) {
-      throw new Error(`Stripe Price ID is not configured for plan ${params.planId} (${params.interval})`);
-    }
-
-    // Ambil Price object agar tahu nominal & currency asli di sisi Stripe (akurat untuk diskon).
-    const price = await this.stripe.prices.retrieve(stripePriceId);
-    const priceCurrency = (price.currency || "usd").toUpperCase();
-    const priceUnitAmountCents = price.unit_amount ?? 0; // cents
-
-    // Siapkan diskon first-cycle bila ada customPrice (diskon/pro-rata) yg lebih kecil dari harga normal.
-    let discounts: Stripe.Checkout.SessionCreateParams.Discount[] = [];
-    if (params.customPrice !== undefined && params.baseAmount !== undefined && params.customPrice < params.baseAmount) {
-      // Konversi nominal charge final (IDR) ke currency Price Stripe
-      const customForeign = await convertIdrToCurrency(params.customPrice, priceCurrency);
-      const customCents = Math.round(customForeign.convertedAmount * 100);
-      const amountOffCents = priceUnitAmountCents - customCents;
-
-      if (amountOffCents > 0) {
-        const couponId = await this.getOrCreateCoupon(priceCurrency, amountOffCents);
-        discounts = [{ coupon: couponId }];
-      }
-    }
+    const interval = params.interval === "yearly" ? "year" : "month";
 
     const metadata: Stripe.MetadataParam = {
       tenantId: params.tenantId,
@@ -55,9 +34,50 @@ export class StripeAdapter implements PaymentProvider {
       couponCode: params.couponCode ?? ""
     };
 
+    let lineItems: Stripe.Checkout.SessionCreateParams.LineItem[];
+    let discounts: Stripe.Checkout.SessionCreateParams.Discount[] = [];
+
+    if (stripePriceId) {
+      // === Provider-managed recurring: pakai Price ID bawaan Stripe + Coupon utk diskon ===
+      const price = await this.stripe.prices.retrieve(stripePriceId);
+      const priceCurrency = (price.currency || "usd").toUpperCase();
+      const priceUnitAmountCents = price.unit_amount ?? 0;
+
+      lineItems = [{ price: stripePriceId, quantity: 1 }];
+
+      if (params.customPrice !== undefined && params.baseAmount !== undefined && params.customPrice < params.baseAmount) {
+        const customForeign = await convertIdrToCurrency(params.customPrice, priceCurrency);
+        const customCents = Math.round(customForeign.convertedAmount * 100);
+        const amountOffCents = priceUnitAmountCents - customCents;
+        if (amountOffCents > 0) {
+          const couponId = await this.getOrCreateCoupon(priceCurrency, amountOffCents);
+          discounts = [{ coupon: couponId }];
+        }
+      }
+    } else {
+      // === Payment-only: inline price_data (TANPA pre-create Price di Stripe) ===
+      // Plan milik kita; Stripe hanya alat pembayaran. Amount = customPrice (diskon langsung di unit_amount).
+      const chargeIdr = params.customPrice ?? params.baseAmount ?? 0;
+      if (!chargeIdr) throw new Error("Stripe: amount tidak boleh 0 (customPrice/baseAmount wajib)");
+      const conv = await convertIdrToCurrency(chargeIdr, "USD");
+      const unitAmountCents = Math.round(conv.convertedAmount * 100);
+
+      lineItems = [
+        {
+          quantity: 1,
+          price_data: {
+            currency: "usd",
+            product_data: { name: params.planName || params.planId },
+            unit_amount: unitAmountCents,
+            recurring: { interval }
+          }
+        }
+      ];
+    }
+
     const session = await this.stripe.checkout.sessions.create({
       payment_method_types: ["card"],
-      line_items: [{ price: stripePriceId, quantity: 1 }],
+      line_items: lineItems,
       mode: "subscription",
       customer_email: params.userEmail,
       client_reference_id: params.tenantId,
@@ -122,7 +142,7 @@ export class StripeAdapter implements PaymentProvider {
       providerCustomerId: obj.customer || undefined,
       status: obj.payment_status || "paid",
       amount: obj.amount_total ? obj.amount_total / 100 : undefined,
-      currency: obj.currency?.toUpperCase(),
+      currency: (obj.currency?.toUpperCase() || "USD"),
       orderId: obj.id
     };
   }

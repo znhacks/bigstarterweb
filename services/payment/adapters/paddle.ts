@@ -26,7 +26,12 @@ export class PaddleAdapter implements PaymentProvider {
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
     const paddlePriceId = params.providerPriceId;
     if (!paddlePriceId) {
-      throw new Error(`Paddle Price ID is not configured for plan ${params.planId} (${params.interval})`);
+      // Paddle Billing berbasis price object — tidak mendukung payment-only tanpa price.
+      // Untuk provider payment-only (tanpa setup plan provider), gunakan Mayar/Midtrans/Xendit/Stripe.
+      throw new Error(
+        `Paddle memerlukan Price ID (payment-only tanpa price tidak didukung Paddle Billing). ` +
+          `Konfigurasi provider_ids.paddle di plan_prices, atau gunakan provider lain.`
+      );
     }
 
     // Ambil Price object Paddle untuk mengetahui currency & nominal asli (akurat untuk diskon).
@@ -151,7 +156,7 @@ export class PaddleAdapter implements PaymentProvider {
       amount: data.details?.totals?.grand_total
         ? parseFloat(data.details.totals.grand_total) / 100
         : undefined,
-      currency: data.currency_code,
+      currency: data.currency_code || "USD",
       orderId: data.id
     };
   }

@@ -68,93 +68,113 @@ export class PayPalAdapter implements PaymentProvider {
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
     const token = await this.getAccessToken();
 
-    // ID plan PayPal di sisi provider — dari DB via params (bukan config/billing.ts)
+    // ID plan PayPal di sisi provider (OPSIONAL). Bila tidak ada → payment-only via Orders API.
     const paypalPlanId = params.providerPriceId;
-    if (!paypalPlanId) {
-      throw new Error(`PayPal Plan ID is not configured for plan ${params.planId} (${params.interval})`);
-    }
 
     // 1. Nominal IDR (diskon/pro-rata sudah terpotong di customPrice)
-    const amountInIdr =
-      params.customPrice !== undefined
-        ? params.customPrice
-        : params.baseAmount !== undefined
-          ? params.baseAmount
-          : 0;
+    const amountInIdr = params.customPrice ?? params.baseAmount ?? 0;
     if (!amountInIdr) {
       throw new Error("PayPal: amount tidak boleh 0 (customPrice/baseAmount wajib)");
     }
 
     // 2. Konversi nominal Rupiah ke USD secara real-time
     const exchange = await convertIdrToCurrency(amountInIdr, "USD");
-    const finalUsdAmount = exchange.convertedAmount;
+    const usdValue = exchange.convertedAmount.toFixed(2);
+    const customId = encodeCustomId(params.tenantId, params.planId, params.interval, params.couponCode);
 
-    const requestBody: any = {
-      plan_id: paypalPlanId,
-      subscriber: {
-        email_address: params.userEmail
-      },
-      application_context: {
-        user_action: "SUBSCRIBE_NOW",
-        shipping_preference: "NO_SHIPPING",
-        return_url: params.successUrl,
-        cancel_url: params.cancelUrl
-      },
-      // Sematkan context penuh agar webhook bisa recover tenantId/planId/interval/couponCode
-      custom_id: encodeCustomId(params.tenantId, params.planId, params.interval, params.couponCode)
-    };
+    let approveUrl = "";
+    let sessionId = "";
 
-    // LOGIKA PENIMPAAN HARGA SIKLUS PERTAMA (diskon kupon / sisa kredit pro-rata)
-    if (params.customPrice !== undefined) {
-      requestBody.plan = {
-        billing_cycles: [
-          {
-            sequence: 1,
-            total_cycles: 1,
-            pricing_scheme: {
-              fixed_price: {
-                value: finalUsdAmount.toString(),
-                currency_code: "USD"
-              }
-            }
-          }
-        ]
+    if (paypalPlanId) {
+      // === Provider-managed recurring: subscription dgn plan_id + pricing_scheme override ===
+      const requestBody: any = {
+        plan_id: paypalPlanId,
+        subscriber: { email_address: params.userEmail },
+        application_context: {
+          user_action: "SUBSCRIBE_NOW",
+          shipping_preference: "NO_SHIPPING",
+          return_url: params.successUrl,
+          cancel_url: params.cancelUrl
+        },
+        // Sematkan context penuh agar webhook bisa recover tenantId/planId/interval/couponCode
+        custom_id: customId
       };
-    }
 
-    const response = await fetch(`${this.baseUrl}/v1/billing/subscriptions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-      const err = await response.json();
-
-      if (err.details && Array.isArray(err.details)) {
-        const detailMessages = err.details
-          .map((d: any) => `[Field: ${d.field}] Issue: ${d.issue} - ${d.description}`)
-          .join(", ");
-        throw new Error(`PayPal Subscription failed: ${err.message}. Details: ${detailMessages}`);
+      // Penimpaan harga siklus pertama (diskon kupon / sisa kredit pro-rata)
+      if (params.customPrice !== undefined) {
+        requestBody.plan = {
+          billing_cycles: [
+            {
+              sequence: 1,
+              total_cycles: 1,
+              pricing_scheme: { fixed_price: { value: usdValue, currency_code: "USD" } }
+            }
+          ]
+        };
       }
 
-      throw new Error(`PayPal Subscription failed: ${err.message || response.statusText}`);
-    }
+      const response = await fetch(`${this.baseUrl}/v1/billing/subscriptions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-    const data = await response.json();
-    const approveLink = data.links.find((l: any) => l.rel === "approve");
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(`PayPal Subscription failed: ${err.message || response.statusText}`);
+      }
 
-    if (!approveLink) {
-      throw new Error("PayPal did not return an approval link");
+      const data = await response.json();
+      const approveLink = data.links?.find((l: any) => l.rel === "approve");
+      if (!approveLink) throw new Error("PayPal did not return an approval link");
+      approveUrl = approveLink.href;
+      sessionId = data.id;
+    } else {
+      // === Payment-only: Orders API one-time (TANPA plan PayPal). Plan milik kita, PayPal = alat bayar. ===
+      const orderBody = {
+        intent: "CAPTURE",
+        purchase_units: [
+          {
+            amount: { currency_code: "USD", value: usdValue },
+            description: `${params.planName || params.planId} - ${params.interval}`,
+            custom_id: customId
+          }
+        ],
+        application_context: {
+          shipping_preference: "NO_SHIPPING",
+          return_url: params.successUrl,
+          cancel_url: params.cancelUrl
+        }
+      };
+
+      const response = await fetch(`${this.baseUrl}/v2/checkout/orders`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(orderBody)
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(`PayPal Order failed: ${err.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      const approveLink = data.links?.find((l: any) => l.rel === "approve");
+      if (!approveLink) throw new Error("PayPal did not return an approval link");
+      approveUrl = approveLink.href;
+      sessionId = data.id;
     }
 
     return {
-      checkoutUrl: approveLink.href,
-      sessionId: data.id
+      checkoutUrl: approveUrl,
+      sessionId
     };
   }
 
@@ -234,16 +254,16 @@ export class PayPalAdapter implements PaymentProvider {
       paypalEvent === "BILLING.SUBSCRIPTION.EXPIRED"
     ) {
       eventType = "subscription.deleted";
-    } else if (paypalEvent === "PAYMENT.SALE.COMPLETED") {
+    } else if (paypalEvent === "PAYMENT.SALE.COMPLETED" || paypalEvent === "PAYMENT.CAPTURE.COMPLETED") {
       eventType = "payment.succeeded";
     }
 
     const endsAt = payload.resource?.billing_info?.next_billing_time || undefined;
 
-    // Amount: coba beberapa bentuk payload (subscription vs sale)
+    // Amount: coba beberapa bentuk payload (subscription vs sale vs capture order)
     let amount: number | undefined;
-    const amtTotal = payload.resource?.amount?.total;
-    const amtValue = payload.resource?.value;
+    const amtTotal = payload.resource?.amount?.total; // SALE
+    const amtValue = payload.resource?.value || payload.resource?.amount?.value; // capture order
     const lastPayment = payload.resource?.billing_info?.last_payment_amount?.value;
     if (amtTotal) amount = parseFloat(amtTotal);
     else if (amtValue) amount = parseFloat(amtValue);
@@ -251,6 +271,7 @@ export class PayPalAdapter implements PaymentProvider {
 
     const currency =
       payload.resource?.amount?.currency_code ||
+      payload.resource?.amount?.currency?.code ||
       payload.resource?.billing_info?.last_payment_amount?.currency_code ||
       "USD"; // PayPal kita selalu charge dalam USD (hasil konversi IDR->USD di checkout)
 

@@ -17,13 +17,23 @@ export class LemonSqueezyAdapter implements PaymentProvider {
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
     const variantId = params.providerPriceId;
     if (!variantId) {
-      throw new Error(`Lemon Squeezy Variant ID is not configured for plan ${params.planId} (${params.interval})`);
+      // LemonSqueezy berbasis variant — tidak mendukung payment-only tanpa variant.
+      // Untuk provider payment-only (tanpa setup plan provider), gunakan Mayar/Midtrans/Xendit/Stripe.
+      throw new Error(
+        `LemonSqueezy memerlukan Variant ID (payment-only tanpa variant tidak didukung). ` +
+          `Konfigurasi provider_ids.lemonsqueezy di plan_prices, atau gunakan provider lain.`
+      );
     }
 
-    // Diskon first-cycle via custom_price (cents). Catatan: variant harus mengizinkan custom price
-    // di dashboard LemonSqueezy; bila tidak, harga normal dipakai & diskon hilang (di-warn).
+    // Diskon first-cycle via custom_price (cents) — hanya bila benar ada diskon (customPrice < baseAmount).
+    // Catatan: variant harus mengizinkan custom price di dashboard LemonSqueezy; bila tidak,
+    // harga normal dipakai & diskon hilang (di-warn).
     let customPriceCents: number | undefined;
-    if (params.customPrice !== undefined) {
+    if (
+      params.customPrice !== undefined &&
+      params.baseAmount !== undefined &&
+      params.customPrice < params.baseAmount
+    ) {
       const conv = await convertIdrToCurrency(params.customPrice, "USD");
       customPriceCents = Math.round(conv.convertedAmount * 100);
     }
