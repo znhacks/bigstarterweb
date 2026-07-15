@@ -115,7 +115,7 @@ export function DataTable<TData, TValue>({
     searchPlaceholder = "Search...",
     columnsLabel = "Columns",
     noResults = "No results.",
-    selectedOf = (selected, total) => `${selected} of ${total} row(s) selected.`,
+    selectedOf = (selected: number, total: number) => `${selected} of ${total} row(s) selected.`,
     rowsPerPage = "Rows per page:"
   } = labels || {};
 
