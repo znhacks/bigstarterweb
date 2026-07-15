@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getFeatureLimitInArray, hasFeatureInArray } from "@/config/feature-definitions";
+import { decodeFeatureGates } from "@/config/feature-definitions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -36,14 +36,7 @@ export async function GET() {
       );
 
       // Dekompilasi array ['limit:maxTasks:2000'] menjadi objek terstruktur FeatureGates untuk dibaca sistem
-      const compiledFeatureGates = {
-        maxUsers: getFeatureLimitInArray(plan.features, "maxUsers", 5),
-        maxTasks: getFeatureLimitInArray(plan.features, "maxTasks", 20),
-        allowPdfFormat: hasFeatureInArray(plan.features, "allowPdfFormat"),
-        chooseIpLocation: hasFeatureInArray(plan.features, "chooseIpLocation"),
-        removeAttribution: hasFeatureInArray(plan.features, "removeAttribution"),
-        prioritySupport: hasFeatureInArray(plan.features, "prioritySupport")
-      };
+      const compiledFeatureGates = decodeFeatureGates(plan.features);
 
       return {
         id: plan.id,

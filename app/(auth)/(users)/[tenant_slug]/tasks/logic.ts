@@ -9,6 +9,7 @@ import type { Task, MemberOption, AlertState, TaskInput } from "./types";
 import { compareStrings } from "@/lib/i18n/collator";
 import { fetchTasksAction, createTaskAction, updateTaskAction, deleteTaskAction } from "./actions";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
+import type { FeatureGates } from "@/config/feature-definitions";
 
 interface UseTasksArgs {
   tenantSlug: string;
@@ -17,12 +18,13 @@ interface UseTasksArgs {
 }
 
 interface Props {
-  activePlanId: string; // Kita hanya membutuhkan activePlanId dari parent sekarang
+  featureGates: FeatureGates; // Ter-decode di server (getTenantPlan), diteruskan ke client
+  planName?: string;
 }
 
 export function useTasks(
   { tenantSlug, tenantId, tenantName }: UseTasksArgs,
-  { activePlanId }: Props
+  { featureGates, planName }: Props
 ) {
   const locale = useLocale();
   const t = useTranslations("tasks");
@@ -38,7 +40,7 @@ export function useTasks(
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-  const { canUse, getLimit, planName } = useFeatureGate({ activePlanId });
+  const { canUse, getLimit } = useFeatureGate({ featureGates, planName });
 
   /**
    * PENGHITUNGAN KUOTA DINAMIS (REAL-TIME)

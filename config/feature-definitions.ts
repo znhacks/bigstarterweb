@@ -62,6 +62,38 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
 export type FeatureGateKeys = (typeof FEATURE_DEFINITIONS)[number]["key"];
 
 /**
+ * Objek feature gates terstruktur (hasil decode dari array DB plans.features).
+ */
+export interface FeatureGates {
+  maxUsers: number;
+  maxTasks: number;
+  allowPdfFormat: boolean;
+  chooseIpLocation: boolean;
+  removeAttribution: boolean;
+  prioritySupport: boolean;
+}
+
+/**
+ * Decode array teks DB (mis. ['allowPdfFormat','limit:maxTasks:2000']) menjadi
+ * objek FeatureGates terstruktur. Nilai default diambil dari FEATURE_DEFINITIONS.
+ * Ini adalah Single Source of Truth untuk menerjemahkan DB -> logic gating.
+ */
+export function decodeFeatureGates(features: string[] | null | undefined): FeatureGates {
+  const arr = Array.isArray(features) ? features : [];
+  const gates = {} as Record<string, number | boolean>;
+
+  for (const def of FEATURE_DEFINITIONS) {
+    if (def.type === "number") {
+      gates[def.key] = getFeatureLimitInArray(arr, def.key, def.defaultValue);
+    } else {
+      gates[def.key] = hasFeatureInArray(arr, def.key) || def.defaultValue === true;
+    }
+  }
+
+  return gates as unknown as FeatureGates;
+}
+
+/**
  * =========================================================================
  * UTILLITAS HELPER PENERJEMAH ARRAY TEKS (DATABASE-TO-LOGIC)
  * =========================================================================

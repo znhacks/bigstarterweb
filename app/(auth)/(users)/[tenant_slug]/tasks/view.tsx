@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { Loader2, CreditCard } from "lucide-react";
+import type { FeatureGates } from "@/config/feature-definitions";
 import { useTasks } from "./logic";
 import type { Task } from "./types";
 import { TasksDataTable } from "./data-table";
@@ -56,13 +57,14 @@ interface TasksViewProps {
   tenantSlug: string;
   tenantId: string;
   tenantName: string;
-  activePlanId: string;
+  featureGates: FeatureGates;
+  planName?: string;
   // currentUsageCount TELAH DIHAPUS dari props karena dihitung real-time di logic.ts
 }
 
-export function TasksView({ tenantSlug, tenantId, tenantName, activePlanId }: TasksViewProps) {
+export function TasksView({ tenantSlug, tenantId, tenantName, featureGates, planName }: TasksViewProps) {
   // Panggil hook tanpa mengirim currentUsageCount
-  const h = useTasks({ tenantSlug, tenantId, tenantName }, { activePlanId });
+  const h = useTasks({ tenantSlug, tenantId, tenantName }, { featureGates, planName });
   const { t, locale, timeZone, currentUsageCount } = h;
 
   const meta = getLocaleMeta(locale);

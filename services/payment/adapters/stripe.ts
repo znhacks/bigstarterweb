@@ -50,6 +50,7 @@ export class StripeAdapter implements PaymentProvider {
 
     const metadata: Stripe.MetadataParam = {
       tenantId: params.tenantId,
+      planId: params.planId,
       interval: params.interval,
       couponCode: params.couponCode ?? ""
     };

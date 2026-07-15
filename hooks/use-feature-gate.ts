@@ -1,35 +1,33 @@
 // hooks/use-feature-gate.ts
+//
+// Client-side feature gate helper. Kini DB-driven: menerima objek featureGates
+// (hasil decode plans.features[] di server via getTenantPlan) alih-alih lookup config.
 
-import { plans, FeatureGates } from "../config/billing";
+import type { FeatureGates } from "@/config/feature-definitions";
 
 interface UseFeatureGateParams {
-  activePlanId: string; // Dikirim dari Server Component / Context Session saat layout dimuat
+  featureGates: FeatureGates; // Ter-decode di server, diteruskan ke client
+  planName?: string;
 }
 
-export function useFeatureGate({ activePlanId }: UseFeatureGateParams) {
-  // Ambil data plan aktif berdasarkan ID, fallback ke paket 'free'
-  const currentPlan =
-    plans.find((p) => p.id === activePlanId) || plans.find((p) => p.id === "free")!;
-
+export function useFeatureGate({ featureGates, planName }: UseFeatureGateParams) {
   /**
-   * Cek apakah fitur boolean diizinkan
-   * Contoh: canUse('allowPdfFormat')
+   * Cek apakah fitur boolean diizinkan. Contoh: canUse('allowPdfFormat')
    */
   const canUse = (featureKey: keyof Omit<FeatureGates, "maxUsers" | "maxTasks">): boolean => {
-    return currentPlan.featureGates[featureKey] === true;
+    return featureGates[featureKey] === true;
   };
 
   /**
-   * Cek batas limit numerik fitur
-   * Contoh: getLimit('maxTasks')
+   * Cek batas limit numerik fitur. Contoh: getLimit('maxTasks')
    */
   const getLimit = (limitKey: "maxUsers" | "maxTasks"): number => {
-    return currentPlan.featureGates[limitKey];
+    return featureGates[limitKey] ?? 0;
   };
 
   return {
-    planName: currentPlan.name,
-    featureGates: currentPlan.featureGates,
+    planName: planName ?? "",
+    featureGates,
     canUse,
     getLimit
   };

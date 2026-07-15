@@ -168,4 +168,18 @@ export class PaddleAdapter implements PaymentProvider {
 
     return response.ok;
   }
+
+  async reactivateSubscription(providerSubscriptionId: string): Promise<boolean> {
+    // Undo scheduled cancellation: hapus scheduled_change (Paddle Billing update subscription)
+    const response = await fetch(`${this.baseUrl}/subscriptions/${providerSubscriptionId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ scheduled_change: null })
+    });
+
+    return response.ok;
+  }
 }

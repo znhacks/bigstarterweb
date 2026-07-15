@@ -116,13 +116,42 @@ export class LemonSqueezyAdapter implements PaymentProvider {
   }
 
   async cancelSubscription(providerSubscriptionId: string): Promise<boolean> {
+    // PATCH cancelled:true = batalkan di akhir periode (bukan DELETE immediate), agar bisa di-resume
     const response = await fetch(`${this.baseUrl}/subscriptions/${providerSubscriptionId}`, {
-      method: "DELETE",
+      method: "PATCH",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/vnd.api+json",
         Accept: "application/vnd.api+json"
-      }
+      },
+      body: JSON.stringify({
+        data: {
+          type: "subscriptions",
+          id: providerSubscriptionId,
+          attributes: { cancelled: true }
+        }
+      })
+    });
+
+    return response.ok;
+  }
+
+  async reactivateSubscription(providerSubscriptionId: string): Promise<boolean> {
+    // Resume: set cancelled kembali ke false
+    const response = await fetch(`${this.baseUrl}/subscriptions/${providerSubscriptionId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/vnd.api+json",
+        Accept: "application/vnd.api+json"
+      },
+      body: JSON.stringify({
+        data: {
+          type: "subscriptions",
+          id: providerSubscriptionId,
+          attributes: { cancelled: false }
+        }
+      })
     });
 
     return response.ok;

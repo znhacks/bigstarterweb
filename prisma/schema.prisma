@@ -142,6 +142,9 @@ model Subscription {
   providerSubscriptionId String?   @map("provider_subscription_id")
   providerCustomerId     String?   @map("provider_customer_id")
   updatedAt              DateTime  @default(dbgenerated("timezone('utc'::text, now())")) @map("updated_at") @db.Timestamptz
+  provider               String?
+  pendingPlanId          String?   @map("pending_plan_id")
+  interval               String?
 
   // Relations
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -151,19 +154,89 @@ model Subscription {
 }
 
 model Transaction {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  amount    Decimal  @db.Decimal(10, 2)
-  currency  String?  @default("USD")
-  planName  String   @map("plan_name")
-  orderId   String   @unique @map("order_id")
-  status    String
-  createdAt DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String?  @default("USD")
+  planName        String   @map("plan_name")
+  orderId         String   @unique @map("order_id")
+  status          String
+  createdAt       DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz
+  provider        String?
+  amountInIdr     Decimal? @map("amount_in_idr") @db.Decimal(10, 2)
+  exchangeRate    Decimal? @map("exchange_rate") @db.Decimal(10, 4)
+  exchangeApiUsed String?  @map("exchange_api_used")
+  taxAmount       Decimal? @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  netAmount       Decimal? @default(0) @map("net_amount") @db.Decimal(10, 2)
+  feeAmount       Decimal? @default(0) @map("fee_amount") @db.Decimal(10, 2)
 
   // Relations
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("transactions")
+  @@schema("public")
+}
+
+model Plan {
+  id              String   @id
+  name            String
+  description     String
+  isActive        Boolean  @default(true) @map("is_active")
+  displayFeatures String[] @default(["{}"]) @map("display_features")
+  features        String[] @default(["{}"])
+  createdAt       DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("updated_at") @db.Timestamptz
+
+  prices PlanPrice[]
+
+  @@index([isActive])
+  @@map("plans")
+  @@schema("public")
+}
+
+model PlanPrice {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId      String   @map("plan_id")
+  interval    String
+  amount      Decimal  @db.Decimal(10, 2)
+  providerIds Json     @default("{}") @map("provider_ids")
+  createdAt   DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("updated_at") @db.Timestamptz
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, interval])
+  @@index([planId])
+  @@map("plan_prices")
+  @@schema("public")
+}
+
+model Coupon {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code           String   @unique
+  discountType   String   @map("discount_type")
+  discountValue  Decimal  @map("discount_value") @db.Decimal(10, 2)
+  validUntil     DateTime? @map("valid_until") @db.Timestamptz
+  maxRedemptions Int?     @map("max_redemptions")
+  redeemedCount  Int      @default(0) @map("redeemed_count")
+  createdAt      DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz
+
+  redemptions CouponRedemption[]
+
+  @@map("coupons")
+  @@schema("public")
+}
+
+model CouponRedemption {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  couponId  String   @map("coupon_id") @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  redeemedAt DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("redeemed_at") @db.Timestamptz
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, tenantId])
+  @@map("coupon_redemptions")
   @@schema("public")
 }
 

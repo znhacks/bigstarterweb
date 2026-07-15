@@ -374,7 +374,6 @@
     "logout": "Keluar akun",
     "credits": "Kredit"
   },
-
   "tasks": {
     "title": "Tugas",
     "subtitle": "Buat, tugaskan, dan lacak tugas di seluruh organisasi Anda.",
@@ -871,6 +870,112 @@
         "cancel": "Batal",
         "delete": "Hapus",
         "confirmDelete": "Yakin ingin menghapus role ini?"
+      }
+    },
+    "coupons": {
+      "title": "Manajemen Kupon & Diskon",
+      "subTitle": "Kelola kupon promosi, diskon persentase/flat rupiah, kuota penebusan, dan masa berlaku.",
+      "buttons": {
+        "create": "Tambah Kupon",
+        "cancel": "Batal",
+        "save": "Simpan",
+        "delete": "Hapus",
+        "confirmDelete": "Hapus Kupon"
+      },
+      "table": {
+        "code": "Kode Kupon",
+        "discount": "Besaran Diskon",
+        "expiry": "Batas Kedaluwarsa",
+        "quota": "Kuota Penukaran",
+        "actions": "Aksi",
+        "redeemed": "terpakai",
+        "limit": "batas",
+        "unlimited": "Tanpa Batas",
+        "noExpiry": "Tanpa Kadaluarsa",
+        "noData": "Belum ada kupon promosi aktif.",
+        "search": "Cari kode...",
+        "rowsPerPage": "Baris per halaman",
+        "page": "Halaman",
+        "of": "dari"
+      },
+      "form": {
+        "title": "Buat Kupon Promosi Baru",
+        "desc": "Kontrol penuh atas tipe diskon, kuota, dan masa berlaku.",
+        "codeLabel": "Kode Kupon",
+        "codePlaceholder": "Contoh: DISKON20, 割引50, atau خصم10",
+        "typeLabel": "Tipe Potongan",
+        "percentage": "Persentase (%)",
+        "fixedAmount": "Rupiah Flat (Rp)",
+        "valueLabel": "Nilai Potongan",
+        "quotaLabel": "Kuota Penggunaan",
+        "quotaPlaceholder": "Kosongkan jika tanpa batas",
+        "expiryLabel": "Batas Kedaluwarsa (Tanggal & Waktu)"
+      },
+      "alerts": {
+        "createSuccess": "Kupon promosi baru berhasil dibuat.",
+        "deleteSuccess": "Kupon \"{code}\" berhasil dihapus.",
+        "deleteTitle": "Hapus Kupon",
+        "deleteDesc": "Tindakan ini akan menghapus permanen kupon \"{code}\". Tidak dapat dibatalkan.",
+        "error": "Terjadi kesalahan.",
+        "required": "Kode, tipe, dan nilai kupon wajib diisi."
+      }
+    },
+    "plans": {
+      "title": "Manajemen Paket",
+      "subTitle": "Buat, ubah, atau nonaktifkan skema harga paket dan pemetaan gateway.",
+      "buttons": {
+        "create": "Tambah Paket",
+        "edit": "Edit",
+        "deactivate": "Nonaktifkan",
+        "cancel": "Batal",
+        "save": "Simpan Paket",
+        "back": "Kembali",
+        "confirmDeactivate": "Nonaktifkan Paket"
+      },
+      "table": {
+        "name": "Paket",
+        "monthly": "Bulanan",
+        "yearly": "Tahunan",
+        "status": "Status",
+        "actions": "Aksi",
+        "active": "Aktif",
+        "inactive": "Nonaktif",
+        "noData": "Belum ada paket terdaftar.",
+        "search": "Cari paket...",
+        "rowsPerPage": "Baris per halaman",
+        "page": "Halaman",
+        "of": "dari"
+      },
+      "form": {
+        "titleCreate": "Tambah Paket Baru",
+        "titleEdit": "Edit Paket Penagihan",
+        "desc": "Isi detail paket, batasan fitur (RBAC), dan pemetaan ID Gateway.",
+        "sectionInfo": "1. Informasi Dasar",
+        "sectionFeatures": "2. Konfigurasi Fitur & Batasan (RBAC)",
+        "sectionBilling": "3. Penagihan & ID Gateway",
+        "planId": "ID Paket (Kunci Sistem)",
+        "planIdPlaceholder": "contoh: starter, pro, enterprise",
+        "planName": "Nama Paket (Tampilan UI)",
+        "planNamePlaceholder": "contoh: Pro Plan",
+        "description": "Deskripsi Paket",
+        "descriptionPlaceholder": "Penjelasan singkat keunggulan paket",
+        "displayFeatures": "Fitur Pemasaran (satu per baris)",
+        "displayFeaturesPlaceholder": "contoh:\n10.000 Tasks per bulan\nDukungan Prioritas",
+        "dynamic": "Dinamis",
+        "gateActive": "AKTIF",
+        "gateInactive": "NON-AKTIF",
+        "monthlyCycle": "Siklus Bulanan",
+        "yearlyCycle": "Siklus Tahunan",
+        "basePricePlaceholder": "Harga dasar IDR",
+        "gatewayIds": "ID Gateway",
+        "required": "ID, nama, dan deskripsi wajib diisi."
+      },
+      "alerts": {
+        "saveSuccess": "Paket berhasil disimpan.",
+        "deactivateSuccess": "Paket berhasil dinonaktifkan.",
+        "deactivateTitle": "Nonaktifkan Paket",
+        "deactivateDesc": "Nonaktifkan paket \"{name}\"? Tidak tersedia untuk langganan baru.",
+        "error": "Terjadi kesalahan."
       }
     }
   },

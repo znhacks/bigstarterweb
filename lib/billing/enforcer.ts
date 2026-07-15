@@ -1,6 +1,11 @@
 // lib/billing/enforcer.ts
-import { plans } from "@/config/billing";
+//
+// Enforcer batas seat & usage — kini DB-driven via getTenantPlan (decode plans.features).
+// FIX BUG sebelumnya: membaca planConfig.maxUsers/maxTasks dari root plan (undefined) sehingga
+// selalu fallback ke default (2 seat, 100 task). Sekarang membaca featureGates.maxUsers/maxTasks.
+
 import { supabaseAdmin } from "@/lib/api/supabase-server";
+import { getTenantPlan } from "@/services/payment/billing/gating";
 
 interface LimitCheckResult {
   allowed: boolean;
@@ -10,21 +15,7 @@ interface LimitCheckResult {
 }
 
 export async function checkSeatLimit(tenantId: string): Promise<LimitCheckResult> {
-  const { data: sub } = await supabaseAdmin
-    .from("subscriptions")
-    .select("plan_id, status, ends_at")
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-
-  const isExpired = sub?.ends_at ? new Date() > new Date(sub.ends_at) : false;
-  const activePlanId = sub && sub.status === "active" && !isExpired ? sub.plan_id : "free";
-
-  // Melakukan asersi as any untuk membaca properti maxUsers secara dinamis
-  const planConfig = plans.find((p) => p.id === activePlanId) as any;
-
-  if (!planConfig) {
-    throw new Error(`Konfigurasi paket untuk ID "${activePlanId}" tidak ditemukan.`);
-  }
+  const plan = await getTenantPlan(tenantId);
 
   const { count, error } = await supabaseAdmin
     .from("memberships")
@@ -34,37 +25,23 @@ export async function checkSeatLimit(tenantId: string): Promise<LimitCheckResult
   if (error) throw error;
 
   const currentSeats = count || 0;
-  const maxSeats = planConfig.maxUsers || 2; // Memberikan nilai fallback aman
+  const maxSeats = plan.featureGates.maxUsers ?? 2;
 
   return {
     allowed: currentSeats < maxSeats,
     current: currentSeats,
     max: maxSeats,
-    planName: planConfig.name
+    planName: plan.name
   };
 }
 
 export async function checkUsageLimit(tenantId: string): Promise<LimitCheckResult> {
-  const { data: sub } = await supabaseAdmin
-    .from("subscriptions")
-    .select("plan_id, status, ends_at")
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
+  const plan = await getTenantPlan(tenantId);
 
-  const isExpired = sub?.ends_at ? new Date() > new Date(sub.ends_at) : false;
-  const activePlanId = sub && sub.status === "active" && !isExpired ? sub.plan_id : "free";
-
-  // Melakukan asersi as any untuk membaca properti maxTasks secara dinamis
-  const planConfig = plans.find((p) => p.id === activePlanId) as any;
-
-  if (!planConfig) {
-    throw new Error(`Konfigurasi paket untuk ID "${activePlanId}" tidak ditemukan.`);
-  }
-
-  // B. Hitung penggunaan screenshot di bulan kalender berjalan saat ini
+  // Hitung penggunaan fitur di bulan kalender berjalan saat ini
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
-  // Catatan: Ganti 'screenshot_logs' dengan tabel pencatatan aktivitas fitur Anda
+  // Catatan: 'screenshot_logs' adalah tabel pencatatan aktivitas fitur (usage metering).
   const { count, error } = await supabaseAdmin
     .from("screenshot_logs")
     .select("*", { count: "exact", head: true })
@@ -74,12 +51,12 @@ export async function checkUsageLimit(tenantId: string): Promise<LimitCheckResul
   if (error) throw error;
 
   const currentUsage = count || 0;
-  const maxUsage = planConfig.maxTasks || 100; // Memberikan nilai fallback aman
+  const maxUsage = plan.featureGates.maxTasks ?? 100;
 
   return {
     allowed: currentUsage < maxUsage,
     current: currentUsage,
     max: maxUsage,
-    planName: planConfig.name
+    planName: plan.name
   };
 }

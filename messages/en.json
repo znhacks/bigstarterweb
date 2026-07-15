@@ -883,6 +883,112 @@
         "delete": "Delete",
         "confirmDelete": "Are you sure you want to delete this role?"
       }
+    },
+    "coupons": {
+      "title": "Coupon & Discount Management",
+      "subTitle": "Manage promo coupons, percentage/flat discounts, redemption quota, and validity.",
+      "buttons": {
+        "create": "Add Coupon",
+        "cancel": "Cancel",
+        "save": "Save",
+        "delete": "Delete",
+        "confirmDelete": "Delete Coupon"
+      },
+      "table": {
+        "code": "Coupon Code",
+        "discount": "Discount",
+        "expiry": "Expires",
+        "quota": "Quota",
+        "actions": "Actions",
+        "redeemed": "used",
+        "limit": "limit",
+        "unlimited": "Unlimited",
+        "noExpiry": "No expiry",
+        "noData": "No active coupons yet.",
+        "search": "Search code...",
+        "rowsPerPage": "Rows per page",
+        "page": "Page",
+        "of": "of"
+      },
+      "form": {
+        "title": "Create Promo Coupon",
+        "desc": "Full control over discount type, quota, and validity.",
+        "codeLabel": "Coupon Code",
+        "codePlaceholder": "e.g. DISCOUNT20, 割引50, or خصم10",
+        "typeLabel": "Discount Type",
+        "percentage": "Percentage (%)",
+        "fixedAmount": "Flat Amount (Rp)",
+        "valueLabel": "Discount Value",
+        "quotaLabel": "Usage Quota",
+        "quotaPlaceholder": "Empty = unlimited",
+        "expiryLabel": "Expiry (Date & Time)"
+      },
+      "alerts": {
+        "createSuccess": "Coupon created successfully.",
+        "deleteSuccess": "Coupon \"{code}\" deleted.",
+        "deleteTitle": "Delete Coupon",
+        "deleteDesc": "This permanently deletes coupon \"{code}\". This action cannot be undone.",
+        "error": "Something went wrong.",
+        "required": "Code, type, and value are required."
+      }
+    },
+    "plans": {
+      "title": "Plan Management",
+      "subTitle": "Create, edit, or deactivate pricing plans and gateway mappings.",
+      "buttons": {
+        "create": "Add Plan",
+        "edit": "Edit",
+        "deactivate": "Deactivate",
+        "cancel": "Cancel",
+        "save": "Save Plan",
+        "back": "Back",
+        "confirmDeactivate": "Deactivate Plan"
+      },
+      "table": {
+        "name": "Plan",
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "status": "Status",
+        "actions": "Actions",
+        "active": "Active",
+        "inactive": "Inactive",
+        "noData": "No plans registered yet.",
+        "search": "Search plan...",
+        "rowsPerPage": "Rows per page",
+        "page": "Page",
+        "of": "of"
+      },
+      "form": {
+        "titleCreate": "Add New Plan",
+        "titleEdit": "Edit Plan",
+        "desc": "Fill plan details, feature limits (RBAC), and gateway ID mappings.",
+        "sectionInfo": "1. Basic Information",
+        "sectionFeatures": "2. Feature Configuration (RBAC)",
+        "sectionBilling": "3. Billing & Gateway IDs",
+        "planId": "Plan ID (system key)",
+        "planIdPlaceholder": "e.g. starter, pro, enterprise",
+        "planName": "Plan Name (UI display)",
+        "planNamePlaceholder": "e.g. Pro Plan",
+        "description": "Plan Description",
+        "descriptionPlaceholder": "Short description of plan benefits",
+        "displayFeatures": "Marketing Features (one per line)",
+        "displayFeaturesPlaceholder": "e.g:\n10,000 Tasks per month\nPriority Support",
+        "dynamic": "Dynamic",
+        "gateActive": "ENABLED",
+        "gateInactive": "DISABLED",
+        "monthlyCycle": "Monthly Cycle",
+        "yearlyCycle": "Yearly Cycle",
+        "basePricePlaceholder": "Base price (IDR)",
+        "gatewayIds": "Gateway IDs",
+        "required": "ID, name, and description are required."
+      },
+      "alerts": {
+        "saveSuccess": "Plan saved successfully.",
+        "deactivateSuccess": "Plan deactivated.",
+        "deactivateTitle": "Deactivate Plan",
+        "deactivateDesc": "Deactivate plan \"{name}\"? It will no longer be available for new subscriptions.",
+        "error": "Something went wrong."
+      }
     }
   },
   "moderation": {

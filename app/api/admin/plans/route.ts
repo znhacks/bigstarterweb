@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { invalidatePlanCache } from "@/services/payment/billing/gating";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -91,8 +92,9 @@ export async function POST(req: Request) {
     }
 
     // A. Upsert ke tabel 'plans'
+    const normalizedId = id.toLowerCase().trim();
     const { error: planErr } = await supabaseAdmin.from("plans").upsert({
-      id: id.toLowerCase().trim(),
+      id: normalizedId,
       name,
       description,
       is_active: isActive !== undefined ? isActive : true,
@@ -102,6 +104,9 @@ export async function POST(req: Request) {
     });
 
     if (planErr) throw planErr;
+
+    // Invalidasi cache gating agar perubahan fitur langsung efektif (best-effort, per-instance)
+    invalidatePlanCache(normalizedId);
 
     // B. Upsert harga Bulanan (monthly) ke tabel 'plan_prices'
     if (prices?.monthly) {

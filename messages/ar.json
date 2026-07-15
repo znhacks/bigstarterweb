@@ -883,6 +883,112 @@
         "delete": "حذف",
         "confirmDelete": "هل أنت متأكد من حذف هذا الدور؟"
       }
+    },
+    "coupons": {
+      "title": "إدارة القسائم والخصومات",
+      "subTitle": "إدارة قسائم ترويجية وخصومات نسبية/مقطوعة وحصص الاستخدام والصلاحية.",
+      "buttons": {
+        "create": "إضافة قسيمة",
+        "cancel": "إلغاء",
+        "save": "حفظ",
+        "delete": "حذف",
+        "confirmDelete": "حذف القسيمة"
+      },
+      "table": {
+        "code": "رمز القسيمة",
+        "discount": "قيمة الخصم",
+        "expiry": "تاريخ الانتهاء",
+        "quota": "الحصة",
+        "actions": "إجراءات",
+        "redeemed": "مُستخدمة",
+        "limit": "حد",
+        "unlimited": "غير محدود",
+        "noExpiry": "بلا انتهاء",
+        "noData": "لا توجد قسائم نشطة بعد.",
+        "search": "ابحث عن رمز...",
+        "rowsPerPage": "صفوف لكل صفحة",
+        "page": "صفحة",
+        "of": "من"
+      },
+      "form": {
+        "title": "إنشاء قسيمة ترويجية",
+        "desc": "تحكم كامل بنوع الخصم والحصة والصلاحية.",
+        "codeLabel": "رمز القسيمة",
+        "codePlaceholder": "مثال: DISKON20 أو خصم10",
+        "typeLabel": "نوع الخصم",
+        "percentage": "نسبة (%)",
+        "fixedAmount": "مبلغ ثابت (Rp)",
+        "valueLabel": "قيمة الخصم",
+        "quotaLabel": "حصة الاستخدام",
+        "quotaPlaceholder": "اتركه فارغًا لغير المحدود",
+        "expiryLabel": "تاريخ الانتهاء (التاريخ والوقت)"
+      },
+      "alerts": {
+        "createSuccess": "تم إنشاء القسيمة بنجاح.",
+        "deleteSuccess": "تم حذف القسيمة \"{code}\".",
+        "deleteTitle": "حذف القسيمة",
+        "deleteDesc": "سيؤدي هذا إلى حذف القسيمة \"{code}\" نهائيًا. لا يمكن التراجع.",
+        "error": "حدث خطأ.",
+        "required": "الرمز والنوع والقيمة مطلوبة."
+      }
+    },
+    "plans": {
+      "title": "إدارة الباقات",
+      "subTitle": "إنشاء أو تعديل أو إلغاء باقات التسعير وربط بوابات الدفع.",
+      "buttons": {
+        "create": "إضافة باقة",
+        "edit": "تعديل",
+        "deactivate": "إلغاء التفعيل",
+        "cancel": "إلغاء",
+        "save": "حفظ الباقة",
+        "back": "رجوع",
+        "confirmDeactivate": "إلغاء تفعيل الباقة"
+      },
+      "table": {
+        "name": "الباقة",
+        "monthly": "شهري",
+        "yearly": "سنوي",
+        "status": "الحالة",
+        "actions": "إجراءات",
+        "active": "مفعّل",
+        "inactive": "غير مفعّل",
+        "noData": "لا توجد باقات مسجلة بعد.",
+        "search": "ابحث عن باقة...",
+        "rowsPerPage": "صفوف لكل صفحة",
+        "page": "صفحة",
+        "of": "من"
+      },
+      "form": {
+        "titleCreate": "إضافة باقة جديدة",
+        "titleEdit": "تعديل الباقة",
+        "desc": "املأ تفاصيل الباقة وحدود الميزات (RBAC) وربط معرّفات البوابة.",
+        "sectionInfo": "١. المعلومات الأساسية",
+        "sectionFeatures": "٢. تكوين الميزات والحدود (RBAC)",
+        "sectionBilling": "٣. الفوترة ومعرّفات البوابة",
+        "planId": "معرّف الباقة (مفتاح النظام)",
+        "planIdPlaceholder": "مثال: starter أو pro أو enterprise",
+        "planName": "اسم الباقة (للواجهة)",
+        "planNamePlaceholder": "مثال: Pro Plan",
+        "description": "وصف الباقة",
+        "descriptionPlaceholder": "وصف موجز لمزايا الباقة",
+        "displayFeatures": "ميزات التسويق (واحدة لكل سطر)",
+        "displayFeaturesPlaceholder": "مثال:\n١٠٬٠٠٠ مهمة شهريًا\nدعم ذو أولوية",
+        "dynamic": "ديناميكي",
+        "gateActive": "مفعّل",
+        "gateInactive": "غير مفعّل",
+        "monthlyCycle": "دورة شهرية",
+        "yearlyCycle": "دورة سنوية",
+        "basePricePlaceholder": "السعر الأساسي (IDR)",
+        "gatewayIds": "معرّفات البوابة",
+        "required": "المعرّف والاسم والوصف مطلوبة."
+      },
+      "alerts": {
+        "saveSuccess": "تم حفظ الباقة بنجاح.",
+        "deactivateSuccess": "تم إلغاء تفعيل الباقة.",
+        "deactivateTitle": "إلغاء تفعيل الباقة",
+        "deactivateDesc": "إلغاء تفعيل الباقة \"{name}\"؟ لن تكون متاحة للاشتراكات الجديدة.",
+        "error": "حدث خطأ."
+      }
     }
   },
   "moderation": {

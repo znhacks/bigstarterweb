@@ -7,7 +7,6 @@ import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { plans } from "@/config/billing"; // Import konfigurasi statis
 import { useTranslations } from "next-intl";
 
 interface PaywallGateProps {
@@ -59,15 +58,13 @@ export function PaywallGate({ children, allowedPlans, fallback }: PaywallGatePro
             });
         }
 
-        // Cari konfigurasi paket di file statis
         // Jika statusnya sudah expired, paksa gunakan limit paket "free"
         const resolvedPlanId =
           subscriptionStatus === "expired" || isExpired ? "free" : activePlanId;
-        const planConfig = plans.find((p) => p.id === resolvedPlanId);
 
+        // DB-driven: cukup cek keanggotaan plan di allowedPlans (tanpa lookup config)
         const isAuthorized =
-          planConfig &&
-          allowedPlans.includes(planConfig.id) &&
+          allowedPlans.includes(resolvedPlanId) &&
           subscriptionStatus === "active" &&
           !isExpired;
 
