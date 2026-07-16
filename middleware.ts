@@ -83,12 +83,13 @@ export async function middleware(request: NextRequest) {
   // meski deleted/banned).
   const { data: profile } = await supabase
     .from("profiles")
-    .select("status, banned_until, banned_reason")
+    .select("status, banned_until, banned_reason, address_country")
     .eq("id", user.id)
     .maybeSingle();
 
   const status = (profile as any)?.status ?? "active";
   const bannedUntil = (profile as any)?.banned_until ?? null;
+  const hasCountry = !!(profile as any)?.address_country;
 
   // (a) SOFT-DELETED → arahkan ke /restore (kecuali route publik/restore/login).
   if (status === "deleted") {
@@ -127,6 +128,21 @@ export async function middleware(request: NextRequest) {
     url.pathname = DEFAULT_REDIRECT_ROUTE;
     url.search = "";
     return NextResponse.redirect(url);
+  }
+
+  // ONBOARDING GATE: user aktif tapi belum pilih negara → paksa ke /onboarding
+  // (kecuali sedang di onboarding/auth/logout agar tidak loop).
+  if (!hasCountry) {
+    const onboardingAllowed =
+      path.startsWith("/onboarding") ||
+      path.startsWith("/auth") ||
+      path.startsWith("/logout");
+    if (!onboardingAllowed) {
+      const nextTarget = encodeURIComponent(`${url.pathname}${url.search}`);
+      url.pathname = "/onboarding";
+      url.search = `?next=${nextTarget}`;
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;

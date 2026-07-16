@@ -24,6 +24,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
 import { formatDateTime } from "@/lib/i18n/format";
+import { OtpLoginForm } from "@/components/auth/otp-login";
 
 export function LoginForm() {
   const router = useRouter();
@@ -100,7 +101,7 @@ export function LoginForm() {
       if (data.user) {
         setSuccessMsg(t("logsucces"));
         setTimeout(() => {
-          handleRedirect(data.user);
+          handleRedirect963178(data.user);
         }, 1000);
       }
     } catch (err: any) {
@@ -283,7 +284,17 @@ export function LoginForm() {
             className="data-[state=active]:border-b-foreground rounded-none border-b-2 border-b-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:shadow-none">
             {t("magiclink")}
           </TabsTrigger>
+          <TabsTrigger
+            value="otp"
+            className="data-[state=active]:border-b-foreground rounded-none border-b-2 border-b-transparent px-1 pb-2 text-sm font-medium shadow-none transition-all data-[state=active]:shadow-none">
+            {t("otp")}
+          </TabsTrigger>
         </TabsList>
+
+        {/* TAB: OTP LOGIN */}
+        <TabsContent value="otp" className="mt-0 focus-visible:outline-none">
+          <OtpLoginForm />
+        </TabsContent>
 
         {/* TAB 1 CONTENT: PASSWORD */}
         <TabsContent value="password" className="mt-0 focus-visible:outline-none">
