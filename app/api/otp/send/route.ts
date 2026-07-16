@@ -1,0 +1,18 @@
+// app/api/otp/send/route.ts
+import { NextResponse } from "next/server";
+import { issueOtp } from "@/lib/otp/service";
+
+export async function POST(req: Request) {
+  try {
+    const { target, channel, purpose } = await req.json();
+    if (!target || !channel || !purpose) {
+      return NextResponse.json({ ok: false, error: "target, channel, purpose wajib diisi." }, { status: 400 });
+    }
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || null;
+    const res = await issueOtp(target, channel, purpose, ip);
+    return NextResponse.json(res, { status: res.ok ? 200 : 400 });
+  } catch (e: any) {
+    console.error("OTP send error:", e);
+    return NextResponse.json({ ok: false, error: "Internal error." }, { status: 500 });
+  }
+}
