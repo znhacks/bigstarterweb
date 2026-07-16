@@ -7,8 +7,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface DataTableColumnHeaderProps<TData, TValue>
-  extends React.HTMLAttributes<HTMLDivElement> {
+interface DataTableColumnHeaderProps<TData, TValue> extends React.HTMLAttributes<HTMLDivElement> {
   column: Column<TData, TValue>;
   title: string;
 }
@@ -27,7 +26,10 @@ export function DataTableColumnHeader<TData, TValue>({
   return (
     <Button
       variant="ghost"
-      className={cn("-ms-3 text-xs", className)}
+      className={cn(
+        "-ms-3 text-xs hover:bg-transparent hover:text-current focus-visible:bg-transparent active:bg-transparent",
+        className
+      )}
       onClick={() => column.toggleSorting(isSorted === "asc")}>
       {title}
       {isSorted === "asc" ? (

@@ -26,7 +26,7 @@ export function DataTable<TData>({
   noResultsText = "No results."
 }: DataTableProps<TData>) {
   return (
-    <div className="border-border/80 bg-card overflow-hidden rounded-xl border shadow-sm">
+    <div className="border-border/80 bg-card overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (

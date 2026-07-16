@@ -81,8 +81,8 @@ import { useLocale, useTranslations } from "next-intl";
 
 // SOLUSI: Mengambil tipe murni dari `./types` bukan dari `./logic`
 import type { Task, MemberOption, TaskProfile } from "./types";
-import type { SelectOption } from "./components/editable-cell";
-import { EditableCell, ReadonlyCell } from "./components/editable-cell";
+import type { SelectOption } from "../../../../../components/data-table/editable-cell";
+import { EditableCell, ReadonlyCell } from "../../../../../components/data-table/editable-cell";
 import { exportTasksToExcel } from "./export-tasks";
 
 const STATUS_VALUES = ["todo", "in_progress", "done", "cancelled"] as const;
