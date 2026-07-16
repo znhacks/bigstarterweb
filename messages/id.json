@@ -71,19 +71,27 @@
       },
       "users": {
         "title": "Pengguna Superadmin",
-        "description": "Kelola, lihat, dan awasi semua profil pengguna terdaftar dan keanggotaan organisasi.",
-        "organizations": {
-          "title": "Organisasi Superadmin",
-          "description": "Kelola dan awasi semua organisasi yang terdaftar, paket yang aktif, jumlah anggota, serta metadata."
-        },
-        "billing": {
-          "title": "Keuangan Superadmin",
-          "description": "Ikhtisar global transaksi, langganan aktif, dan permintaan pengembalian dana."
-        },
-        "roles": {
-          "title": "Role & Permission",
-          "description": "Kelola role RBAC dan permission yang diberikan."
-        }
+        "description": "Kelola, lihat, dan awasi semua profil pengguna terdaftar dan keanggotaan organisasi."
+      },
+      "organizations": {
+        "title": "Organisasi Superadmin",
+        "description": "Kelola dan awasi semua organisasi yang terdaftar, paket yang aktif, jumlah anggota, serta metadata."
+      },
+      "billing": {
+        "title": "Keuangan Superadmin",
+        "description": "Ikhtisar global transaksi, langganan aktif, dan permintaan pengembalian dana."
+      },
+      "roles": {
+        "title": "Role & Permission",
+        "description": "Kelola role RBAC dan permission yang diberikan."
+      },
+      "coupons": {
+        "title": "Kupon",
+        "description": "Kelola kupon diskon untuk promosi dan langganan."
+      },
+      "plans": {
+        "title": "Paket",
+        "description": "Kelola paket langganan yang tersedia untuk pelanggan."
       }
     }
   },
@@ -162,7 +170,8 @@
         "desc": "Akun anda telah ditangguh kan oleh pihak administrasi.",
         "reason": "Reason: {{reason}}",
         "until": "Until: {{date}}"
-      }
+      },
+      "otp": "OTP"
     },
     "register": {
       "title": "Buat Akun Baru",
@@ -185,7 +194,10 @@
       "github": "GitHub",
       "successText": "Akun sukses dibuat! Kami telah mengirimkan link verifikasi ke email Anda. Silakan buka kotak masuk email Anda dan klik link tersebut untuk langsung bergabung ke organisasi.",
       "errorGoogle": "Gagal masuk menggunakan Google.",
-      "errorDefault": "Terjadi kesalahan."
+      "errorDefault": "Terjadi kesalahan.",
+      "country": "Negara",
+      "selectCountry": "Pilih negara Anda",
+      "countryNotFound": "Negara tidak ditemukan."
     },
     "create-tenant": {
       "title": "Satu langkah lagi!",
@@ -367,7 +379,7 @@
     "organization": "Organisasi",
     "general": "Umum",
     "member": "Anggota",
-    "billing": "Tagihan",
+    "billing": "Berlangganan",
     "newOrg": "Organisasi Baru",
     "noOrg": "Tidak ada organisasi",
     "loadingOrg": "Memuat org..."
@@ -375,7 +387,7 @@
   "userMenu": {
     "upgrade": "Upgrade ke Pro",
     "account": "Akun",
-    "billing": "Tagihan",
+    "billing": "Berlangganan",
     "notifications": "Notifikasi",
     "logout": "Keluar akun",
     "credits": "Kredit"
@@ -495,23 +507,23 @@
     "menu": {
       "general": "Umum",
       "member": "Anggota",
-      "billing": "Tagihan",
+      "billing": "Berlangganan",
       "history-billing": "Riwayat Pembayaran"
     },
     "organization-general": {
       "readOnlyTitle": "Mode Baca Saja",
       "readOnlyDesc": "Anda masuk sebagai anggota (**Member**). Anda hanya diizinkan untuk melihat pengaturan organisasi dan tidak memiliki hak akses untuk memodifikasinya.",
       "logo": {
-        "title": "Logo organisasi",
+        "title": "Logo Organisasi",
         "desc": "Unggah logo untuk organisasi Anda."
       },
       "name": {
-        "title": "Nama organisasi"
+        "title": "Nama Organisasi"
       },
       "delete": {
         "title": "Hapus organisasi",
-        "desc": "Hapus organisasi Anda secara permanen. Setelah dihapus, data tidak dapat dikembalikan. Untuk konfirmasi, silakan klik tombol di samping:",
-        "btn": "Hapus organisasi",
+        "desc": "Hapus organisasi Anda secara permanen. Setelah dihapus, data tidak dapat dikembalikan.",
+        "btn": "Hapus",
         "dialogTitle": "Apakah Anda benar-benar yakin?",
         "dialogDesc": "Tindakan ini akan menghapus organisasi {orgName} beserta seluruh data relasi keanggotaan dan paket berlangganannya. Tindakan ini tidak dapat dibatalkan."
       },
@@ -687,9 +699,9 @@
       "name": "Nama",
       "email": "Email",
       "emailDesc": "Untuk mengubah email Anda, masukkan email baru lalu klik simpan. Anda harus mengonfirmasi email baru sebelum email tersebut aktif.",
-      "delete": "Hapus akun",
-      "deleteDesc": "Hapus akun Anda secara permanen. Setelah dihapus, data tidak dapat dikembalikan. Untuk konfirmasi, silakan klik tombol di samping:",
-      "deleteButton": "Hapus akun",
+      "delete": "Hapus Akun",
+      "deleteDesc": "Hapus akun Anda secara permanen. Setelah dihapus, data tidak dapat dikembalikan.",
+      "deleteButton": "Hapus",
       "dialogTitle": "Apakah Anda benar-benar yakin?",
       "dialogDesc": "Tindakan ini akan menghapus akun Anda beserta seluruh profil dari database secara permanen. Tindakan ini tidak dapat dibatalkan.",
       "description": "Bio",
@@ -801,7 +813,7 @@
         },
         "buttons": {
           "cancel": "Batal",
-          "delete": "Hapus Organisasi",
+          "delete": "Hapus",
           "trash": "Sampah"
         },
         "dialogDelete": {
@@ -912,7 +924,7 @@
         "cancel": "Batal",
         "save": "Simpan",
         "delete": "Hapus",
-        "confirmDelete": "Hapus Kupon"
+        "confirmDelete": "Hapus"
       },
       "table": {
         "code": "Kode Kupon",
@@ -1026,5 +1038,42 @@
         "permanent": "Permanen"
       }
     }
+  },
+  "address": {
+    "line1": "Alamat Baris 1",
+    "line2": "Alamat Baris 2 (Opsional)",
+    "country": "Negara",
+    "region": "Provinsi",
+    "city": "Kota / Kabupaten",
+    "kecamatan": "Kecamatan",
+    "desa": "Desa / Kelurahan",
+    "postalCode": "Kode Pos",
+    "searchCountry": "Cari negara...",
+    "searchState": "Cari provinsi...",
+    "searchCity": "Cari kota / kabupaten...",
+    "searchKecamatan": "Cari kecamatan...",
+    "searchDesa": "Cari desa...",
+    "noResults": "Tidak ditemukan.",
+    "autoFromDesa": "Otomatis dari desa",
+    "autoFromDesaDesc": "Kode pos terisi otomatis dari desa terpilih."
+  },
+  "onboarding": {
+    "title": "Pilih negara Anda",
+    "desc": "Ini mengatur bahasa, mata uang, dan zona waktu default. Dapat diubah nanti di pengaturan.",
+    "selectCountry": "Pilih negara Anda",
+    "searchCountry": "Cari negara...",
+    "noResults": "Tidak ditemukan.",
+    "continue": "Lanjutkan",
+    "error": "Terjadi kesalahan. Silakan coba lagi."
+  },
+  "otp": {
+    "email": "Email",
+    "sendCode": "Kirim kode",
+    "codeSent": "Kami mengirim kode 6 digit ke {email}.",
+    "verify": "Verifikasi & masuk",
+    "resend": "Kirim ulang kode",
+    "sendError": "Gagal mengirim kode.",
+    "verifyError": "Verifikasi gagal.",
+    "error": "Error"
   }
 }

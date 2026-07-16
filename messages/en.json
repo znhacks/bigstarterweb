@@ -84,6 +84,14 @@
       "roles": {
         "title": "Roles & Permissions",
         "description": "Manage RBAC roles and their granted permissions."
+      },
+      "coupons": {
+        "title": "Coupons",
+        "description": "Manage discount coupons for promotions and subscriptions."
+      },
+      "plans": {
+        "title": "Plans",
+        "description": "Manage subscription plans available to your customers."
       }
     }
   },
@@ -162,7 +170,8 @@
         "desc": "Your account has been suspended by the administrator.",
         "reason": "Reason: {{reason}}",
         "until": "Until: {{date}}"
-      }
+      },
+      "otp": "OTP"
     },
     "register": {
       "title": "Create a New Account",
@@ -185,7 +194,10 @@
       "github": "GitHub",
       "successText": "Your account has been created successfully! We've sent a verification link to your email. Please check your inbox and click the link to join your organization.",
       "errorGoogle": "Failed to sign in with Google.",
-      "errorDefault": "An error occurred."
+      "errorDefault": "An error occurred.",
+      "country": "Country",
+      "selectCountry": "Select your country",
+      "countryNotFound": "Country not found."
     },
     "create-tenant": {
       "title": "One More Step!",
@@ -1038,5 +1050,42 @@
         "permanent": "Permanent"
       }
     }
+  },
+  "address": {
+    "line1": "Address Line 1",
+    "line2": "Address Line 2 (Optional)",
+    "country": "Country",
+    "region": "State / Province",
+    "city": "City / Regency",
+    "kecamatan": "Subdistrict (Kecamatan)",
+    "desa": "Village (Desa/Kelurahan)",
+    "postalCode": "Postal Code",
+    "searchCountry": "Search country...",
+    "searchState": "Search state / province...",
+    "searchCity": "Search city / regency...",
+    "searchKecamatan": "Search subdistrict...",
+    "searchDesa": "Search village...",
+    "noResults": "Not found.",
+    "autoFromDesa": "Auto from village",
+    "autoFromDesaDesc": "Postal code is filled automatically from the selected village."
+  },
+  "onboarding": {
+    "title": "Choose your country",
+    "desc": "This sets your default language, currency, and timezone. You can change these later in settings.",
+    "selectCountry": "Select your country",
+    "searchCountry": "Search country...",
+    "noResults": "Not found.",
+    "continue": "Continue",
+    "error": "Something went wrong. Please try again."
+  },
+  "otp": {
+    "email": "Email",
+    "sendCode": "Send code",
+    "codeSent": "We sent a 6-digit code to {email}.",
+    "verify": "Verify & log in",
+    "resend": "Resend code",
+    "sendError": "Failed to send code.",
+    "verifyError": "Verification failed.",
+    "error": "Error"
   }
 }
