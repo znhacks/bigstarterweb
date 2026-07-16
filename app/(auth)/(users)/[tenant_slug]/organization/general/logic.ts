@@ -36,6 +36,8 @@ export function useOrganizationGeneral() {
   const [stateProvince, setStateProvince] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [countryCode, setCountryCode] = useState("");
+  const [kecamatan, setKecamatan] = useState("");
+  const [desa, setDesa] = useState("");
   const [defaultLocale, setDefaultLocale] = useState(tenantConfig.defaults.locale);
   const [timezone, setTimezone] = useState(tenantConfig.defaults.timezone);
   const [currency, setCurrency] = useState(tenantConfig.defaults.currency);
@@ -82,7 +84,7 @@ export function useOrganizationGeneral() {
         supabase
           .from("tenants")
           .select(
-            "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, business_email, phone_number, tax_id, default_locale, timezone, currency"
+            "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, kecamatan, desa, business_email, phone_number, tax_id, default_locale, timezone, currency"
           )
           .eq("id", orgId)
           .single(),
@@ -112,6 +114,8 @@ export function useOrganizationGeneral() {
         setStateProvince((tenantRes.data as any).state_province || "");
         setPostalCode((tenantRes.data as any).postal_code || "");
         setCountryCode((tenantRes.data as any).country_code || "");
+        setKecamatan((tenantRes.data as any).kecamatan || "");
+        setDesa((tenantRes.data as any).desa || "");
         setDefaultLocale((tenantRes.data as any).default_locale || tenantConfig.defaults.locale);
         setTimezone((tenantRes.data as any).timezone || tenantConfig.defaults.timezone);
         setCurrency((tenantRes.data as any).currency || tenantConfig.defaults.currency);
@@ -263,6 +267,8 @@ export function useOrganizationGeneral() {
         updatePayload.state_province = stateProvince.trim() || null;
         updatePayload.postal_code = postalCode.trim() || null;
         updatePayload.country_code = countryCode || null;
+        updatePayload.kecamatan = kecamatan.trim() || null;
+        updatePayload.desa = desa.trim() || null;
       }
 
       // Validasi via zod sebelum tulis ke DB
@@ -378,6 +384,10 @@ export function useOrganizationGeneral() {
     setPostalCode,
     countryCode,
     setCountryCode,
+    kecamatan,
+    setKecamatan,
+    desa,
+    setDesa,
     defaultLocale,
     setDefaultLocale,
     timezone,

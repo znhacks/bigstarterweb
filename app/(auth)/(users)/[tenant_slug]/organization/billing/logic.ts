@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/i18n/currency";
 import { convertCurrency } from "@/actions/currency";
-import { getDisplayCurrency } from "@/config/i18n-culture";
+import { getUserCurrencyClient } from "@/lib/i18n/user-currency";
 
 export interface AlertState {
   title: string;
@@ -68,7 +68,7 @@ export function useOrganizationBilling() {
   const tenantSlug = (routeParams?.tenant_slug as string) || "";
 
   const t = useTranslations("organization.organization-billing");
-  const targetCurrency = getDisplayCurrency(locale);
+  const targetCurrency = getUserCurrencyClient(locale);
 
   const formatPrice = (price: number, currencyCode?: string) => {
     const activeCurrency = currencyCode ?? targetCurrency;
