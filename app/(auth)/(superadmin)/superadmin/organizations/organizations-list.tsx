@@ -3,21 +3,8 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Building2,
-  Users,
-  Calendar,
-  CreditCard,
-  Trash2,
-  Search,
-  CheckCircle2,
-  AlertCircle,
-  X,
-  Loader2,
-  Building
-} from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { ColumnDef } from "@tanstack/react-table";
+import { Building2, Trash2, CheckCircle2, AlertCircle, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -25,8 +12,17 @@ import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { RestoreDialog } from "@/components/restore-dialog";
 import { softDeleteTenant } from "@/app/(auth)/(superadmin)/superadmin/actions/account-moderation";
 
-// Impor hook i18n
-import { useLocale, useTranslations } from "next-intl";
+import { useDataTable } from "@/components/data-table/use-data-table";
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTableSearch } from "@/components/data-table/data-table-search";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { createSelectColumn } from "@/components/data-table/data-table-select-column";
+import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
+
+import { useTranslations } from "next-intl";
 
 export interface SuperadminOrganization {
   id: string;
@@ -47,8 +43,6 @@ interface AlertState {
 
 export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) {
   const router = useRouter();
-  // Formatter harga lokal (sebelumnya dari useLanguage, tetapi
-  // LanguageProvider tidak lagi membungkus tree setelah migrasi next-intl).
   const formatPrice = (amount: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -58,8 +52,8 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
   const t = useTranslations("superadmin.organizations.list");
 
   const [orgs, setOrgs] = useState<SuperadminOrganization[]>(data);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [orgToDelete, setOrgToDelete] = useState<SuperadminOrganization | null>(null);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
@@ -84,8 +78,6 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
     }
   }, [alertMessage]);
 
-  // Soft-delete organisasi (tandai deleted_at + status). Data anak
-  // (memberships/subscriptions/transactions) dipertahankan agar bisa direstore.
   const handleConfirmDeleteOrg = async () => {
     if (!orgToDelete) return;
     setIsDeletingId(orgToDelete.id);
@@ -115,35 +107,218 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
     }
   };
 
-  // Filter pencarian berdasarkan nama organisasi
-  const filteredOrgs = orgs.filter((o) => o.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Columns are hardcoded for this feature, one real column per field.
+  const columns: ColumnDef<SuperadminOrganization, unknown>[] = [
+    createSelectColumn<SuperadminOrganization>(),
+    {
+      accessorKey: "name",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Organization" />,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 border-primary/20 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border">
+            <Building2 className="text-primary h-4 w-4" />
+          </div>
+          <span className="text-foreground truncate font-semibold">{row.getValue("name")}</span>
+        </div>
+      )
+    },
+    {
+      accessorKey: "memberCount",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t("placeholders.members")} />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-xs">{row.getValue("memberCount")}</span>
+      )
+    },
+    {
+      accessorKey: "created_at",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t("placeholders.createdOn")} />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-xs whitespace-nowrap">
+          {new Date(row.getValue("created_at")).toLocaleDateString("id-ID")}
+        </span>
+      )
+    },
+    {
+      accessorKey: "planName",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Plan" />,
+      filterFn: multiSelectFilterFn,
+      cell: ({ row }) => {
+        const org = row.original;
+        const isActivePremium = org.planStatus === "active" && org.planName !== "Free";
+        return (
+          <Badge
+            className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
+              isActivePremium
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
+                : "bg-muted text-muted-foreground border-border/60"
+            }`}>
+            {org.planName.toUpperCase()} {t("placeholders.plan")}
+          </Badge>
+        );
+      }
+    },
+    // Not rendered as its own visible column (hidden by default below) —
+    // exists purely so the Status faceted filter has a column to filter on.
+    {
+      id: "planStatus",
+      accessorFn: (row) => row.planStatus,
+      header: "Status",
+      filterFn: multiSelectFilterFn,
+      cell: ({ row }) => <span className="capitalize">{row.original.planStatus}</span>
+    },
+    {
+      accessorKey: "price",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Price" />,
+      cell: ({ row }) => {
+        const org = row.original;
+        const isActivePremium = org.planStatus === "active" && org.planName !== "Free";
+        return (
+          <span className="text-muted-foreground text-xs whitespace-nowrap">
+            {isActivePremium ? `${formatPrice(org.price)}/mo` : t("placeholders.freeAccess")}
+          </span>
+        );
+      }
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const org = row.original;
+        return (
+          <div className="flex justify-end">
+            <Button
+              onClick={() => setOrgToDelete(org)}
+              disabled={isDeletingId !== null || isBulkDeleting}
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive h-9 w-9 rounded-lg"
+              title={t("buttons.delete")}>
+              {isDeletingId === org.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        );
+      }
+    }
+  ];
+
+  // You own this instance — read/mutate it however this page needs.
+  // planStatus starts hidden: it only exists to back the Status filter.
+  const table = useDataTable({
+    columns,
+    data: orgs,
+    initialColumnVisibility: { planStatus: false }
+  });
+
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+
+  const handleBulkDelete = async () => {
+    if (selectedRows.length === 0) return;
+    if (
+      !confirm(
+        `Hapus ${selectedRows.length} organisasi terpilih? Tindakan ini bisa dipulihkan lewat Trash.`
+      )
+    ) {
+      return;
+    }
+
+    setIsBulkDeleting(true);
+    setAlertMessage(null);
+
+    try {
+      const targets = selectedRows.map((r) => r.original);
+      const results = await Promise.all(targets.map((o) => softDeleteTenant(o.id)));
+      const failed = results.filter((r) => r.error);
+
+      const deletedIds = new Set(targets.filter((_, i) => !results[i].error).map((o) => o.id));
+      setOrgs((prev) => prev.filter((o) => !deletedIds.has(o.id)));
+      table.resetRowSelection();
+
+      if (failed.length > 0) {
+        setAlertMessage({
+          title: t("alerts.failedTitle"),
+          description: `${deletedIds.size} berhasil dihapus, ${failed.length} gagal.`,
+          variant: "destructive"
+        });
+      } else {
+        setAlertMessage({
+          title: t("alerts.deletedTitle"),
+          description: `${deletedIds.size} organisasi berhasil dihapus.`,
+          variant: "default"
+        });
+      }
+
+      router.refresh();
+    } catch (e: any) {
+      setAlertMessage({
+        title: t("alerts.failedTitle"),
+        description: e.message || t("alerts.failedDesc"),
+        variant: "destructive"
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const planOptions = [
+    { value: "Free", label: "Free" },
+    { value: "Starter", label: "Starter" },
+    { value: "Pro", label: "Pro" },
+    { value: "Enterprise", label: "Enterprise" }
+  ];
+
+  const statusOptions = [
+    { value: "active", label: "Active" },
+    { value: "expired", label: "Expired" },
+    { value: "refund_requested", label: "Refund Requested" }
+  ];
 
   return (
     <div className="space-y-8">
-      {/* SEARCH BAR + TRASH */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex w-full max-w-md items-center">
-          <Search className="text-muted-foreground/60 absolute start-3.5 h-4 w-4" />
-          <Input
-            type="text"
-            placeholder={t("searchPlaceholder")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="border-border/80 h-10 rounded-xl ps-10"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="text-muted-foreground hover:text-foreground absolute end-3.5">
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+      {/* Toolbar — hardcoded here, free to add/remove/reorder anything. */}
+      <div className="flex flex-row flex-wrap items-center gap-2">
+        <DataTableSearch table={table} columnId="name" placeholder={t("searchPlaceholder")} />
 
-        <Button variant="outline" className="h-10 shrink-0" onClick={() => setRestoreOpen(true)}>
+        <DataTableFacetedFilter
+          column={table.getColumn("planName")}
+          title="Plan"
+          options={planOptions}
+        />
+
+        <DataTableFacetedFilter
+          column={table.getColumn("planStatus")}
+          title="Status"
+          options={statusOptions}
+        />
+
+        {selectedRows.length > 0 && (
+          <Button
+            variant="destructive"
+            className="h-9 text-xs"
+            onClick={handleBulkDelete}
+            disabled={isBulkDeleting}>
+            {isBulkDeleting ? (
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="me-2 h-4 w-4" />
+            )}
+            Hapus {selectedRows.length} terpilih
+          </Button>
+        )}
+
+        <Button variant="outline" className="h-9 text-xs" onClick={() => setRestoreOpen(true)}>
           <Trash2 className="me-2 h-4 w-4" />
           <span className="hidden sm:inline">{t("buttons.trash")}</span>
         </Button>
+
+        <DataTableViewOptions table={table} className="md:ms-auto" />
       </div>
 
       {/* NOTIFICATION ALERT */}
@@ -170,84 +345,12 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
         </Alert>
       )}
 
-      {/* ORGANIZATIONS LIST */}
-      <Card className="border-border/80 bg-card overflow-hidden rounded-2xl border shadow-sm">
-        <CardContent className="p-0">
-          <div className="divide-border/60 divide-y">
-            {filteredOrgs.length === 0 ? (
-              <div className="text-muted-foreground py-12 text-center text-sm">
-                {t("placeholders.noOrgs")}
-              </div>
-            ) : (
-              filteredOrgs.map((org) => (
-                <div
-                  key={org.id}
-                  className="hover:bg-accent/5 flex flex-col justify-between gap-6 p-6 transition-colors md:flex-row md:items-center">
-                  {/* Left: Icon, Name, Members & Date */}
-                  <div className="flex min-w-0 items-start gap-4">
-                    <div className="bg-primary/10 border-primary/20 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
-                      <Building2 className="text-primary h-5 w-5" />
-                    </div>
-                    <div className="flex min-w-0 flex-col space-y-1">
-                      <span className="text-foreground truncate text-base font-bold">
-                        {org.name}
-                      </span>
-                      <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                        <span className="inline-flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" /> {org.memberCount}{" "}
-                          {t("placeholders.members")}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5" /> {t("placeholders.createdOn")}{" "}
-                          {new Date(org.created_at).toLocaleDateString("id-ID")}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+      {/* ORGANIZATIONS TABLE */}
+      <DataTable table={table} columns={columns} noResultsText={t("placeholders.noOrgs")} />
 
-                  {/* Middle: Active Plan & Badge */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge
-                        className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${
-                          org.planStatus === "active" && org.planName !== "Free"
-                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
-                            : "bg-muted text-muted-foreground border-border/60"
-                        }`}>
-                        {org.planName.toUpperCase()} {t("placeholders.plan")}
-                      </Badge>
-                      <span className="text-muted-foreground text-[10px]">
-                        {org.planStatus === "active" && org.planName !== "Free"
-                          ? `${formatPrice(org.price)}/mo`
-                          : t("placeholders.freeAccess")}
-                      </span>
-                    </div>
-                  </div>
+      <DataTablePagination table={table} />
 
-                  {/* Right: Delete Action Button */}
-                  <div className="flex shrink-0 items-center">
-                    <Button
-                      onClick={() => setOrgToDelete(org)}
-                      disabled={isDeletingId !== null}
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive h-9 w-9 rounded-lg"
-                      title={t("buttons.delete")}>
-                      {isDeletingId === org.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* DIALOG TYPE-TO-CONFIRM HAPUS ORGANISASI */}
+      {/* DIALOG TYPE-TO-CONFIRM HAPUS ORGANISASI (single row) */}
       <ConfirmDeleteDialog
         open={!!orgToDelete}
         onOpenChange={(open) => !open && setOrgToDelete(null)}
