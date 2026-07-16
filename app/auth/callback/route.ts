@@ -2,6 +2,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { ensureProfile } from "@/lib/auth";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -48,9 +49,13 @@ export async function GET(request: Request) {
       const {
         data: { user }
       } = await supabase.auth.getUser();
+
+      // Pastikan profile row ada (OAuth/magic-link tak buat profile di client).
+      if (user) await ensureProfile(user);
+
       const { data: profile } = await supabase
         .from("profiles")
-        .select("status, banned_until")
+        .select("status, banned_until, address_country")
         .eq("id", user?.id ?? "")
         .maybeSingle();
       const status = (profile as any)?.status ?? "active";
@@ -61,6 +66,11 @@ export async function GET(request: Request) {
       if (status === "banned") {
         await supabase.auth.signOut();
         return NextResponse.redirect(`${origin}/login?reason=banned`);
+      }
+      // Onboarding: bila belum pilih negara → ke halaman onboarding (sebelum masuk app).
+      if (!(profile as any)?.address_country) {
+        const safeNext = next || "/";
+        return NextResponse.redirect(`${origin}/onboarding?next=${encodeURIComponent(safeNext)}`);
       }
       return NextResponse.redirect(`${origin}${next}`);
     }
