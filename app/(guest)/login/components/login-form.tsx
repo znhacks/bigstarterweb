@@ -101,7 +101,7 @@ export function LoginForm() {
       if (data.user) {
         setSuccessMsg(t("logsucces"));
         setTimeout(() => {
-          handleRedirect963178(data.user);
+          handleRedirect(data.user);
         }, 1000);
       }
     } catch (err: any) {
