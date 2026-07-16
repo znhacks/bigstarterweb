@@ -1,4 +1,3 @@
-// app/(auth)/(users)/[tenant_slug]/tasks/view.tsx
 "use client";
 
 import { useState } from "react";
@@ -39,18 +38,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/i18n/format";
 import { getLocaleMeta } from "@/config/i18n-culture";
+// Import komponen DateTimePicker baru
+import { DateTimePicker } from "@/components/date-time-picker";
 
 const STATUS_VALUES = ["todo", "in_progress", "done", "cancelled"] as const;
 const PRIORITY_VALUES = ["low", "medium", "high", "urgent"] as const;
 const NONE = "__none__";
 
+// Menyesuaikan due_date menggunakan tipe Date | undefined
 const EMPTY_FORM = {
   title: "",
   description: "",
   status: "todo",
   priority: "medium",
   assignee_id: "" as string,
-  due_date: "" as string
+  due_date: undefined as Date | undefined
 };
 
 interface TasksViewProps {
@@ -59,11 +61,15 @@ interface TasksViewProps {
   tenantName: string;
   featureGates: FeatureGates;
   planName?: string;
-  // currentUsageCount TELAH DIHAPUS dari props karena dihitung real-time di logic.ts
 }
 
-export function TasksView({ tenantSlug, tenantId, tenantName, featureGates, planName }: TasksViewProps) {
-  // Panggil hook tanpa mengirim currentUsageCount
+export function TasksView({
+  tenantSlug,
+  tenantId,
+  tenantName,
+  featureGates,
+  planName
+}: TasksViewProps) {
   const h = useTasks({ tenantSlug, tenantId, tenantName }, { featureGates, planName });
   const { t, locale, timeZone, currentUsageCount } = h;
 
@@ -100,7 +106,8 @@ export function TasksView({ tenantSlug, tenantId, tenantName, featureGates, plan
       status: form.status,
       priority: form.priority,
       assignee_id: form.assignee_id || null,
-      due_date: form.due_date ? `${form.due_date}T00:00:00.000Z` : null
+      // Mengubah objek Date menjadi format string ISO untuk payload API
+      due_date: form.due_date ? form.due_date.toISOString() : null
     });
     setCreateOpen(false);
   };
@@ -242,7 +249,6 @@ export function TasksView({ tenantSlug, tenantId, tenantName, featureGates, plan
       {/* DIALOG: Create task */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-130" dir={meta.dir}>
-          {/* ... Sisa komponen dialog pembuatan task Anda tetap sama ... */}
           <DialogHeader>
             <DialogTitle>{t("form.createTitle")}</DialogTitle>
           </DialogHeader>
@@ -327,14 +333,13 @@ export function TasksView({ tenantSlug, tenantId, tenantName, featureGates, plan
                 </Select>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="tk-due">{t("form.fields.dueDate")}</Label>
-                <Input
-                  id="tk-due"
-                  type="date"
-                  value={form.due_date}
-                  onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
-                  className="h-9"
+              {/* INPUT TANGGAL YANG DIPERBARUI DENGAN DateTimePicker */}
+              <div className="flex flex-col justify-end space-y-1.5">
+                <Label className="mb-0.5">{t("form.fields.dueDate")}</Label>
+                <DateTimePicker
+                  date={form.due_date}
+                  showTime={false}
+                  setDate={(date) => setForm((f) => ({ ...f, due_date: date }))}
                 />
               </div>
             </div>
