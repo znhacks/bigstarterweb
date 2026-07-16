@@ -4,156 +4,337 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getAddressConfig, AddressField } from "@/config/i18n-culture";
-import { getCountryList } from "@/lib/i18n/countries";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { supabase } from "@/lib/supabase";
 import { getCountryDefaults, type CountryDefaults } from "@/lib/i18n/country-defaults";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
+import { useTranslations } from "next-intl";
 
 export interface AddressData {
   line1: string;
   line2: string;
-  city: string;
-  region: string;
+  city: string; // city/kabupaten name
+  region: string; // state/province name
   postalCode: string;
-  country: string;
+  country: string; // ISO alpha-2
+  kecamatan?: string;
+  desa?: string;
 }
+
+type GeoOption = { value: string; label: string };
+type CountryRow = { id: number; name: string; iso2: string; currency: string | null; timezones: string | null };
+type DesaRow = { value: string; label: string; kode_pos: string | null };
 
 interface AddressFormProps {
   locale: string;
   data: AddressData;
-  errors: Partial<Record<AddressField, string>>;
-  onChange: (field: AddressField, value: string) => void;
-  /** Dipanggil saat negara berubah, mengirim default i18n (currency/locale/timezone) utk auto-suggest. */
+  errors?: Partial<Record<string, string>>;
+  onChange: (field: keyof AddressData, value: string) => void;
+  /** Dipanggil saat negara berubah, mengirim default i18n (currency/timezone/locale). */
   onCountryDefaults?: (defaults: CountryDefaults) => void;
   disabled?: boolean;
 }
 
+const LIMIT = 500;
+
 export function AddressForm({
   locale,
   data,
-  errors,
+  errors = {},
   onChange,
   onCountryDefaults,
   disabled = false
 }: AddressFormProps) {
-  const config = getAddressConfig(locale);
-  const countries = getCountryList(locale);
+  const t = useTranslations("address");
 
-  // Label Penerjemahan Dinamis Lokal (Fallback jika dictionary JSON belum dimuat)
-  const getFieldLabels = (field: AddressField): string => {
-    const labels: Record<AddressField, Record<string, string>> = {
-      line1: {
-        en: "Address Line 1",
-        id: "Alamat Baris 1",
-        ar: "العنوان السطر 1"
-      },
-      line2: {
-        en: "Address Line 2 (Optional)",
-        id: "Alamat Baris 2 (Opsional)",
-        ar: "العنوان السطر 2 (اختياري)"
-      },
-      city: {
-        en: "City",
-        id: "Kota / Kabupaten",
-        ar: "المدينة"
-      },
-      region: {
-        en: "State / Province",
-        id: "Provinsi",
-        ar: "المنطقة / الولاية"
-      },
-      postalCode: {
-        en: "ZIP Code",
-        id: "Kode Pos",
-        ar: "الرمز البريدي"
-      },
-      country: {
-        en: "Country",
-        id: "Negara",
-        ar: "البلد"
+  const [countries, setCountries] = React.useState<CountryRow[]>([]);
+  const [states, setStates] = React.useState<GeoOption[]>([]);
+  const [cities, setCities] = React.useState<GeoOption[]>([]);
+  const [kecamatans, setKecamatans] = React.useState<GeoOption[]>([]);
+  const [desas, setDesas] = React.useState<DesaRow[]>([]);
+
+  // id terpilih per level (transien — tidak dipersist)
+  const [countryId, setCountryId] = React.useState<number | null>(null);
+  const [stateId, setStateId] = React.useState<number | null>(null);
+  const [cityId, setCityId] = React.useState<number | null>(null);
+  const [kecamatanId, setKecamatanId] = React.useState<number | null>(null);
+
+  const isID = data.country === "ID";
+  const didInit = React.useRef(false);
+
+  // --- Load countries sekali ---
+  React.useEffect(() => {
+    (async () => {
+      const { data: rows } = await supabase
+        .from("countries")
+        .select("id, name, iso2, currency, timezones")
+        .order("name", { ascending: true });
+      if (rows) setCountries(rows as unknown as CountryRow[]);
+    })();
+  }, []);
+
+  const countryOpts: GeoOption[] = countries.map((c) => ({ value: c.iso2, label: c.name }));
+
+  // --- Fetch helpers ---
+  const fetchStates = React.useCallback(async (cId: number) => {
+    const { data: rows } = await supabase
+      .from("states")
+      .select("id, name")
+      .eq("country_id", cId)
+      .order("name", { ascending: true })
+      .limit(LIMIT);
+    setStates((rows || []).map((r: any) => ({ value: String(r.id), label: r.name })));
+  }, []);
+
+  const fetchCities = React.useCallback(async (sId: number) => {
+    const { data: rows } = await supabase
+      .from("cities")
+      .select("id, name")
+      .eq("state_id", sId)
+      .order("name", { ascending: true })
+      .limit(LIMIT);
+    setCities((rows || []).map((r: any) => ({ value: String(r.id), label: r.name })));
+  }, []);
+
+  const fetchKecamatan = React.useCallback(async (kabId: number) => {
+    const { data: rows } = await supabase
+      .from("kecamatan")
+      .select("id, nama_kecamatan")
+      .eq("id_kab_kota", kabId)
+      .order("nama_kecamatan", { ascending: true })
+      .limit(LIMIT);
+    setKecamatans((rows || []).map((r: any) => ({ value: String(r.id), label: r.nama_kecamatan })));
+  }, []);
+
+  const fetchDesa = React.useCallback(async (kecId: number) => {
+    const { data: rows } = await supabase
+      .from("desa")
+      .select("id, nama_desa_kelurahan, kode_pos")
+      .eq("id_kecamatan", kecId)
+      .order("nama_desa_kelurahan", { ascending: true })
+      .limit(LIMIT);
+    setDesas(
+      (rows || []).map((r: any) => ({
+        value: String(r.id),
+        label: r.nama_desa_kelurahan,
+        kode_pos: r.kode_pos
+      }))
+    );
+  }, []);
+
+  // --- Resolve data masuk (names → ids) saat countries siap (sekali) ---
+  React.useEffect(() => {
+    if (didInit.current || countries.length === 0 || !data.country) return;
+    didInit.current = true;
+
+    (async () => {
+      const c = countries.find((x) => x.iso2 === data.country);
+      if (!c) return;
+      setCountryId(c.id);
+      await fetchStates(c.id);
+
+      if (data.region) {
+        const s = statesRef.current.find((o) => o.label === data.region);
+        if (s) {
+          const sId = Number(s.value);
+          setStateId(sId);
+          await fetchCities(sId);
+          if (data.city) {
+            const ci = citiesRef.current.find((o) => o.label === data.city);
+            if (ci) {
+              const cId = Number(ci.value);
+              setCityId(cId);
+              if (c.iso2 === "ID") {
+                await fetchKecamatan(cId);
+                if (data.kecamatan) {
+                  const k = kecamatansRef.current.find((o) => o.label === data.kecamatan);
+                  if (k) {
+                    const kId = Number(k.value);
+                    setKecamatanId(kId);
+                    await fetchDesa(kId);
+                  }
+                }
+              }
+            }
+          }
+        }
       }
-    };
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countries, data.country]);
 
-    const currentLabels = labels[field];
-    return currentLabels[locale] ?? currentLabels["en"];
+  // refs utk akses list terbaru dlm resolve async
+  const statesRef = React.useRef<GeoOption[]>([]);
+  const citiesRef = React.useRef<GeoOption[]>([]);
+  const kecamatansRef = React.useRef<GeoOption[]>([]);
+  React.useEffect(() => { statesRef.current = states; }, [states]);
+  React.useEffect(() => { citiesRef.current = cities; }, [cities]);
+  React.useEffect(() => { kecamatansRef.current = kecamatans; }, [kecamatans]);
+
+  // --- Handlers (user selection) ---
+  const onCountry = (iso2: string) => {
+    const c = countries.find((x) => x.iso2 === iso2);
+    setCountryId(c?.id ?? null);
+    setStates([]); setCities([]); setKecamatans([]); setDesas([]);
+    setStateId(null); setCityId(null); setKecamatanId(null);
+    onChange("country", iso2);
+    onChange("region", ""); onChange("city", ""); onChange("kecamatan", ""); onChange("desa", ""); onChange("postalCode", "");
+    if (c && onCountryDefaults) {
+      // Default dari DB countries (currency/timezones) + locale fallback statis
+      let tz: string | undefined;
+      try {
+        const tzRaw = c.timezones ? JSON.parse(c.timezones) : null;
+        tz = Array.isArray(tzRaw) && tzRaw[0]?.zoneName ? tzRaw[0].zoneName : Array.isArray(tzRaw) ? tzRaw[0] : undefined;
+      } catch {}
+      const fallback = getCountryDefaults(iso2);
+      onCountryDefaults({ currency: c.currency || fallback.currency, timezone: tz || fallback.timezone, locale: fallback.locale });
+    }
+    if (c && c.iso2 === "ID") fetchStates(c.id);
+    else if (c) fetchStates(c.id);
   };
 
-  const isRequired = (field: AddressField) => config.required.includes(field);
+  const onState = (val: string) => {
+    const sId = Number(val);
+    setStateId(sId);
+    setCities([]); setKecamatans([]); setDesas([]);
+    setCityId(null); setKecamatanId(null);
+    const opt = states.find((o) => o.value === val);
+    onChange("region", opt?.label || "");
+    onChange("city", ""); onChange("kecamatan", ""); onChange("desa", ""); onChange("postalCode", "");
+    if (sId) fetchCities(sId);
+  };
 
-  const renderField = (field: AddressField) => {
-    const labelText = getFieldLabels(field);
-    const hasError = !!errors[field];
+  const onCity = (val: string) => {
+    const cId = Number(val);
+    setCityId(cId);
+    setKecamatans([]); setDesas([]); setKecamatanId(null);
+    const opt = cities.find((o) => o.value === val);
+    onChange("city", opt?.label || "");
+    onChange("kecamatan", ""); onChange("desa", ""); onChange("postalCode", "");
+    if (isID && cId) fetchKecamatan(cId);
+  };
 
-    if (field === "country") {
-      return (
-        <div key={field} className="space-y-1.5">
-          <Label className="text-sm font-medium">
-            {labelText} {isRequired(field) && <span className="text-destructive">*</span>}
-          </Label>
-          <Select
-            value={data.country}
-            onValueChange={(val) => {
-              onChange("country", val);
-              // Emit default i18n utk negara yg dipilih agar parent bisa auto-suggest
-              onCountryDefaults?.(getCountryDefaults(val));
-            }}
-            disabled={disabled}>
-            <SelectTrigger
-              className={
-                hasError ? "border-destructive focus-visible:ring-destructive" : "border-border/80"
-              }>
-              <SelectValue placeholder="Select country..." />
-            </SelectTrigger>
-            <SelectContent>
-              {countries.map((c) => (
-                <SelectItem key={c.code} value={c.code}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {hasError && <p className="text-destructive text-xs">{errors[field]}</p>}
-        </div>
-      );
-    }
+  const onKecamatan = (val: string) => {
+    const kId = Number(val);
+    setKecamatanId(kId);
+    setDesas([]);
+    const opt = kecamatans.find((o) => o.value === val);
+    onChange("kecamatan", opt?.label || "");
+    onChange("desa", ""); onChange("postalCode", "");
+    if (kId) fetchDesa(kId);
+  };
 
-    return (
-      <div key={field} className="space-y-1.5">
-        <Label className="text-sm font-medium">
-          {labelText} {isRequired(field) && <span className="text-destructive">*</span>}
-        </Label>
-        <Input
-          type="text"
-          value={data[field]}
-          onChange={(e) => onChange(field, e.target.value)}
-          disabled={disabled}
-          placeholder={field === "postalCode" ? config.postalPlaceholder : undefined}
-          className={
-            hasError ? "border-destructive focus-visible:ring-destructive" : "border-border/80"
-          }
-        />
-        {hasError && <p className="text-destructive text-xs">{errors[field]}</p>}
-      </div>
-    );
+  const onDesa = (val: string) => {
+    const opt = desas.find((o) => o.value === val);
+    onChange("desa", opt?.label || "");
+    if (opt?.kode_pos) onChange("postalCode", opt.kode_pos);
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      {config.order.map((field) => {
-        // Rentangkan input Line 1 & Line 2 agar memakan lebar penuh (full span)
-        const isFullWidth = field === "line1" || field === "line2";
-        return (
-          <div key={field} className={isFullWidth ? "md:col-span-2" : ""}>
-            {renderField(field)}
+    <div className="space-y-4">
+      {/* Line 1 & 2 */}
+      <div className="space-y-1.5">
+        <Label className="text-sm font-medium">{t("line1")}</Label>
+        <Input value={data.line1} onChange={(e) => onChange("line1", e.target.value)} disabled={disabled} className="border-border/80" />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-sm font-medium">{t("line2")}</Label>
+        <Input value={data.line2} onChange={(e) => onChange("line2", e.target.value)} disabled={disabled} className="border-border/80" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Country */}
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">{t("country")}</Label>
+          <SearchableSelect
+            options={countryOpts}
+            value={data.country}
+            onChange={onCountry}
+            placeholder={t("searchCountry")}
+            searchPlaceholder={t("searchCountry")}
+            emptyText={t("noResults")}
+            disabled={disabled || countries.length === 0}
+          />
+        </div>
+
+        {/* State / Province */}
+        {data.country && (
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">{t("region")}</Label>
+            <SearchableSelect
+              options={states}
+              value={stateId ? String(stateId) : ""}
+              onChange={onState}
+              placeholder={t("searchState")}
+              searchPlaceholder={t("searchState")}
+              emptyText={t("noResults")}
+              disabled={disabled}
+            />
           </div>
-        );
-      })}
+        )}
+
+        {/* City */}
+        {stateId && (
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">{t("city")}</Label>
+            <SearchableSelect
+              options={cities}
+              value={cityId ? String(cityId) : ""}
+              onChange={onCity}
+              placeholder={t("searchCity")}
+              searchPlaceholder={t("searchCity")}
+              emptyText={t("noResults")}
+              disabled={disabled}
+            />
+          </div>
+        )}
+
+        {/* Kecamatan (ID only) */}
+        {isID && cityId && (
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">{t("kecamatan")}</Label>
+            <SearchableSelect
+              options={kecamatans}
+              value={kecamatanId ? String(kecamatanId) : ""}
+              onChange={onKecamatan}
+              placeholder={t("searchKecamatan")}
+              searchPlaceholder={t("searchKecamatan")}
+              emptyText={t("noResults")}
+              disabled={disabled}
+            />
+          </div>
+        )}
+
+        {/* Desa (ID only) */}
+        {isID && kecamatanId && (
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">{t("desa")}</Label>
+            <SearchableSelect
+              options={desas}
+              value={data.desa ? String(desas.find((d) => d.label === data.desa)?.value || "") : ""}
+              onChange={onDesa}
+              placeholder={t("searchDesa")}
+              searchPlaceholder={t("searchDesa")}
+              emptyText={t("noResults")}
+              disabled={disabled}
+            />
+          </div>
+        )}
+
+        {/* Postal Code */}
+        {(isID ? kecamatanId || cityId : cityId) && (
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">{t("postalCode")}</Label>
+            <Input
+              value={data.postalCode}
+              onChange={(e) => onChange("postalCode", e.target.value)}
+              disabled={disabled || isID}
+              placeholder={isID ? t("autoFromDesa") : t("postalCode")}
+              className="border-border/80"
+            />
+            {isID && <p className="text-muted-foreground text-[10px]">{t("autoFromDesaDesc")}</p>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

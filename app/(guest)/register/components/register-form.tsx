@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,14 @@ import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { getCountryDefaults } from "@/lib/i18n/country-defaults";
+import { LOCALE_COOKIE } from "@/i18n/routing";
+
+const COOKIE_OPTS = "path=/;max-age=31536000;SameSite=Lax";
+const setCookie = (name: string, value: string) => {
+  document.cookie = `${name}=${value};${COOKIE_OPTS}`;
+};
 
 export function RegisterForm() {
   const router = useRouter();
@@ -24,11 +32,25 @@ export function RegisterForm() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [country, setCountry] = useState<string>("");
 
+  const [countries, setCountries] = useState<
+    { id: number; name: string; iso2: string; currency: string | null; timezones: string | null }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [alreadyExists, setAlreadyExists] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("countries")
+        .select("id, name, iso2, currency, timezones")
+        .order("name", { ascending: true });
+      if (data) setCountries(data as any);
+    })();
+  }, []);
 
   // Registrasi Menggunakan Email & Password
   const handleRegister = async (e: React.FormEvent) => {
@@ -59,10 +81,36 @@ export function RegisterForm() {
       if (authError) throw authError;
 
       if (data.user) {
+        // Resolve default i18n dari negara (currency/timezone dari DB countries; locale dari map)
+        const row = countries.find((c) => c.iso2 === country);
+        const defaults = getCountryDefaults(country);
+        const currency = row?.currency || defaults.currency || "USD";
+        let timezone = defaults.timezone || "UTC";
+        try {
+          const tzRaw = row?.timezones ? JSON.parse(row.timezones) : null;
+          const first = Array.isArray(tzRaw) ? tzRaw[0] : null;
+          timezone =
+            (first?.zoneName as string) ||
+            (typeof first === "string" ? first : timezone) ||
+            timezone;
+        } catch {}
+        const locale = defaults.locale || "en";
+
         await supabase.from("profiles").insert({
           id: data.user.id,
-          full_name: fullName
+          full_name: fullName,
+          address_country: country || null,
+          preferred_language: locale,
+          timezone,
+          currency
         });
+
+        // Set cookie i18n + currency agar UI ikut negara saat redirect post-verifikasi
+        if (country) {
+          setCookie(LOCALE_COOKIE, locale);
+          setCookie("USER_CURRENCY", currency);
+          setCookie("USER_TIMEZONE", timezone);
+        }
 
         // Tampilkan pesan sukses dan instruksi verifikasi dari translasi
         setSuccessMsg(t("successText"));
@@ -141,18 +189,6 @@ export function RegisterForm() {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="last_name">{t("lastName")}</Label>
-          <Input
-            id="last_name"
-            type="text"
-            required
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            placeholder={t("lastName")}
-            disabled={isLoading}
-          />
-        </div>
-        <div className="grid gap-2">
           <Label htmlFor="email">{t("email")}</Label>
           <Input
             id="email"
@@ -173,6 +209,19 @@ export function RegisterForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={isLoading}
+          />
+        </div>
+
+        <div className="grid gap-2">
+          <Label>{t("country")}</Label>
+          <SearchableSelect
+            options={countries.map((c) => ({ value: c.iso2, label: c.name }))}
+            value={country}
+            onChange={setCountry}
+            placeholder={t("selectCountry")}
+            searchPlaceholder={t("selectCountry")}
+            emptyText={t("countryNotFound")}
+            disabled={isLoading || countries.length === 0}
           />
         </div>
 
