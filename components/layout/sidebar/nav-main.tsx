@@ -24,7 +24,9 @@ import {
   Users,
   Building2,
   ShieldCheck,
-  ListTodo
+  ListTodo,
+  TicketPercent,
+  Package
 } from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -140,12 +142,12 @@ export const navItems: NavGroup[] = [
       {
         title: "superadmin.plans",
         href: "/superadmin/plans",
-        icon: CreditCardIcon
+        icon: Package
       },
       {
         title: "superadmin.coupons",
         href: "/superadmin/coupons",
-        icon: CreditCardIcon
+        icon: TicketPercent
       },
       {
         title: "superadmin.billing",
