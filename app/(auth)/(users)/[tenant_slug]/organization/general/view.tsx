@@ -11,7 +11,6 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 import { AddressForm, AddressData } from "@/components/ui/address-form";
-import type { AddressField } from "@/config/i18n-culture";
 
 // 1. IMPOR KONFIGURASI DAN KOMPONEN BARU
 import { tenantConfig } from "@/config/tenant"; // Sesuaikan path-nya
@@ -65,6 +64,10 @@ export function OrganizationGeneralSettings() {
     setPostalCode,
     countryCode,
     setCountryCode,
+    kecamatan,
+    setKecamatan,
+    desa,
+    setDesa,
     defaultLocale,
     setDefaultLocale,
     timezone,
@@ -81,9 +84,11 @@ export function OrganizationGeneralSettings() {
     city,
     region: stateProvince,
     postalCode,
-    country: countryCode
+    country: countryCode,
+    kecamatan,
+    desa
   };
-  const handleTenantAddressChange = (field: AddressField, value: string) => {
+  const handleTenantAddressChange = (field: keyof AddressData, value: string) => {
     switch (field) {
       case "line1":
         setAddressLine1(value);
@@ -102,6 +107,12 @@ export function OrganizationGeneralSettings() {
         break;
       case "country":
         setCountryCode(value);
+        break;
+      case "kecamatan":
+        setKecamatan(value);
+        break;
+      case "desa":
+        setDesa(value);
         break;
     }
   };

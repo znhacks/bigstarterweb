@@ -30,7 +30,9 @@ export const updateProfileSchema = z.object({
     .string()
     .length(2, { message: "Must be a valid 2-character country code" })
     .nullable()
-    .optional()
+    .optional(),
+  address_kecamatan: z.string().max(100).nullable().optional(),
+  address_desa: z.string().max(100).nullable().optional()
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

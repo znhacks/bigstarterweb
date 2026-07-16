@@ -53,6 +53,8 @@ export const updateTenantSchema = z.object({
         .nullable()
         .optional()
     : z.any().optional(),
+  kecamatan: tenantConfig.features.enableAddress ? z.string().max(100).nullable().optional() : z.any().optional(),
+  desa: tenantConfig.features.enableAddress ? z.string().max(100).nullable().optional() : z.any().optional(),
 
   // 2. Validasi Kontak Bisnis & Pajak
   business_email: tenantConfig.features.enableBusinessContact

@@ -106,6 +106,42 @@ export async function requireAnyPermission(
 }
 
 /**
+ * Memastikan profile row ada untuk user (penting utk OAuth/magic-link signup
+ * yg tidak membuat profile di sisi client). Idempoten: insert hanya bila belum ada.
+ * Pakai service-role (bypass RLS). Dipanggil di auth callback & middleware.
+ */
+export async function ensureProfile(user: {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown> | null;
+}) {
+  const { supabaseAdmin } = await import("@/lib/api/supabase-server");
+
+  const { data: existing } = await supabaseAdmin
+    .from("profiles")
+    .select("id, address_country")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (existing) return existing;
+
+  const meta = (user.user_metadata ?? {}) as Record<string, any>;
+  const fullName =
+    meta.full_name || meta.name || user.email?.split("@")[0] || "User";
+
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .insert({ id: user.id, full_name: fullName, status: "active" })
+    .select("id, address_country")
+    .maybeSingle();
+
+  if (error) {
+    console.error("ensureProfile insert failed:", error.message);
+    return null;
+  }
+  return data;
+}
+
+/**
  * Gate untuk area Superadmin. Jalur ini SENDIRI terpisah dari sistem
  * role/permission membership — superadmin dideteksi lewat auth metadata
  * ATAU kolom `profiles.is_superadmin` (sumber kebenaran yang dipakai

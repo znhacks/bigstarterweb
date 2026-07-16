@@ -42,7 +42,7 @@ import { supabase } from "@/lib/supabase";
 import { useTranslations, useLocale } from "next-intl";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 import { AddressForm, AddressData } from "@/components/ui/address-form";
-import { getAddressConfig, AddressField, LOCALES, LOCALE_META } from "@/config/i18n-culture";
+import { getAddressConfig, LOCALES, LOCALE_META } from "@/config/i18n-culture";
 import { Textarea } from "@/components/ui/textarea";
 import { updateProfileSchema } from "@/lib/validation/profiles";
 
@@ -94,9 +94,11 @@ export function GeneralSettingsPage() {
     city: "",
     region: "",
     postalCode: "",
-    country: "US"
+    country: "US",
+    kecamatan: "",
+    desa: ""
   });
-  const [addressErrors, setAddressErrors] = useState<Partial<Record<AddressField, string>>>({});
+  const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof AddressData, string>>>({});
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   useEffect(() => {
@@ -118,7 +120,7 @@ export function GeneralSettingsPage() {
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select(
-            "full_name, avatar, preferred_language, timezone, description, phone, address_line1, address_line2, address_city, address_region, address_postal_code, address_country"
+            "full_name, avatar, preferred_language, timezone, description, phone, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, address_kecamatan, address_desa"
           )
           .eq("id", user.id)
           .maybeSingle();
@@ -140,7 +142,9 @@ export function GeneralSettingsPage() {
             city: profileData.address_city || "",
             region: profileData.address_region || "",
             postalCode: profileData.address_postal_code || "",
-            country: profileData.address_country || "US"
+            country: profileData.address_country || "US",
+            kecamatan: profileData.address_kecamatan || "",
+            desa: profileData.address_desa || ""
           });
         }
       } catch (error: any) {
@@ -167,7 +171,7 @@ export function GeneralSettingsPage() {
     }
   }, [alertMessage]);
 
-  const handleAddressChange = (field: AddressField, value: string) => {
+  const handleAddressChange = (field: keyof AddressData, value: string) => {
     setAddress((prev) => ({ ...prev, [field]: value }));
     if (addressErrors[field]) {
       setAddressErrors((prev) => {
@@ -185,7 +189,7 @@ export function GeneralSettingsPage() {
 
     // Jalankan validasi dinamis berdasarkan locale SISTEM (UI), bukan preferensi user
     const config = getAddressConfig(uiLocale);
-    const errors: Partial<Record<AddressField, string>> = {};
+    const errors: Partial<Record<keyof AddressData, string>> = {};
 
     // 1. Validasi Kolom Wajib
     config.required.forEach((field) => {
@@ -223,7 +227,9 @@ export function GeneralSettingsPage() {
           address_city: address.city.trim(),
           address_region: address.region.trim(),
           address_postal_code: address.postalCode.trim(),
-          address_country: address.country
+          address_country: address.country,
+          address_kecamatan: address.kecamatan?.trim() || null,
+          address_desa: address.desa?.trim() || null
         })
         .eq("id", userId);
 
