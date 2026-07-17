@@ -21,7 +21,13 @@ export interface AddressData {
 }
 
 type GeoOption = { value: string; label: string };
-type CountryRow = { id: number; name: string; iso2: string; currency: string | null; timezones: string | null };
+type CountryRow = {
+  id: number;
+  name: string;
+  iso2: string;
+  currency: string | null;
+  timezones: string | null;
+};
 type DesaRow = { value: string; label: string; kode_pos: string | null };
 
 interface AddressFormProps {
@@ -75,50 +81,61 @@ export function AddressForm({
   const countryOpts: GeoOption[] = countries.map((c) => ({ value: c.iso2, label: c.name }));
 
   // --- Fetch helpers ---
-  const fetchStates = React.useCallback(async (cId: number) => {
+  // Semua helper ini MENGEMBALIKAN data hasil fetch (bukan hanya set state),
+  // supaya alur resolve (name -> id) di bawah bisa langsung memakai hasilnya
+  // tanpa bergantung pada state React yang ter-update secara asinkron
+  // (sumber bug: data tersimpan sudah benar, tapi setelah reload gagal
+  // ter-resolve karena race condition antara setState dan pembacaan state).
+  const fetchStates = React.useCallback(async (cId: number): Promise<GeoOption[]> => {
     const { data: rows } = await supabase
       .from("states")
       .select("id, name")
       .eq("country_id", cId)
       .order("name", { ascending: true })
       .limit(LIMIT);
-    setStates((rows || []).map((r: any) => ({ value: String(r.id), label: r.name })));
+    const opts = (rows || []).map((r: any) => ({ value: String(r.id), label: r.name }));
+    setStates(opts);
+    return opts;
   }, []);
 
-  const fetchCities = React.useCallback(async (sId: number) => {
+  const fetchCities = React.useCallback(async (sId: number): Promise<GeoOption[]> => {
     const { data: rows } = await supabase
       .from("cities")
       .select("id, name")
       .eq("state_id", sId)
       .order("name", { ascending: true })
       .limit(LIMIT);
-    setCities((rows || []).map((r: any) => ({ value: String(r.id), label: r.name })));
+    const opts = (rows || []).map((r: any) => ({ value: String(r.id), label: r.name }));
+    setCities(opts);
+    return opts;
   }, []);
 
-  const fetchKecamatan = React.useCallback(async (kabId: number) => {
+  const fetchKecamatan = React.useCallback(async (kabId: number): Promise<GeoOption[]> => {
     const { data: rows } = await supabase
       .from("kecamatan")
       .select("id, nama_kecamatan")
       .eq("id_kab_kota", kabId)
       .order("nama_kecamatan", { ascending: true })
       .limit(LIMIT);
-    setKecamatans((rows || []).map((r: any) => ({ value: String(r.id), label: r.nama_kecamatan })));
+    const opts = (rows || []).map((r: any) => ({ value: String(r.id), label: r.nama_kecamatan }));
+    setKecamatans(opts);
+    return opts;
   }, []);
 
-  const fetchDesa = React.useCallback(async (kecId: number) => {
+  const fetchDesa = React.useCallback(async (kecId: number): Promise<DesaRow[]> => {
     const { data: rows } = await supabase
       .from("desa")
       .select("id, nama_desa_kelurahan, kode_pos")
       .eq("id_kecamatan", kecId)
       .order("nama_desa_kelurahan", { ascending: true })
       .limit(LIMIT);
-    setDesas(
-      (rows || []).map((r: any) => ({
-        value: String(r.id),
-        label: r.nama_desa_kelurahan,
-        kode_pos: r.kode_pos
-      }))
-    );
+    const opts = (rows || []).map((r: any) => ({
+      value: String(r.id),
+      label: r.nama_desa_kelurahan,
+      kode_pos: r.kode_pos
+    }));
+    setDesas(opts);
+    return opts;
   }, []);
 
   // --- Resolve data masuk (names → ids) saat countries siap (sekali) ---
@@ -130,86 +147,105 @@ export function AddressForm({
       const c = countries.find((x) => x.iso2 === data.country);
       if (!c) return;
       setCountryId(c.id);
-      await fetchStates(c.id);
 
-      if (data.region) {
-        const s = statesRef.current.find((o) => o.label === data.region);
-        if (s) {
-          const sId = Number(s.value);
-          setStateId(sId);
-          await fetchCities(sId);
-          if (data.city) {
-            const ci = citiesRef.current.find((o) => o.label === data.city);
-            if (ci) {
-              const cId = Number(ci.value);
-              setCityId(cId);
-              if (c.iso2 === "ID") {
-                await fetchKecamatan(cId);
-                if (data.kecamatan) {
-                  const k = kecamatansRef.current.find((o) => o.label === data.kecamatan);
-                  if (k) {
-                    const kId = Number(k.value);
-                    setKecamatanId(kId);
-                    await fetchDesa(kId);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+      const stateOpts = await fetchStates(c.id);
+      if (!data.region) return;
+
+      const s = stateOpts.find((o) => o.label === data.region);
+      if (!s) return;
+      const sId = Number(s.value);
+      setStateId(sId);
+
+      const cityOpts = await fetchCities(sId);
+      if (!data.city) return;
+
+      const ci = cityOpts.find((o) => o.label === data.city);
+      if (!ci) return;
+      const cId = Number(ci.value);
+      setCityId(cId);
+
+      if (c.iso2 !== "ID") return;
+
+      const kecamatanOpts = await fetchKecamatan(cId);
+      if (!data.kecamatan) return;
+
+      const k = kecamatanOpts.find((o) => o.label === data.kecamatan);
+      if (!k) return;
+      const kId = Number(k.value);
+      setKecamatanId(kId);
+
+      await fetchDesa(kId);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countries, data.country]);
-
-  // refs utk akses list terbaru dlm resolve async
-  const statesRef = React.useRef<GeoOption[]>([]);
-  const citiesRef = React.useRef<GeoOption[]>([]);
-  const kecamatansRef = React.useRef<GeoOption[]>([]);
-  React.useEffect(() => { statesRef.current = states; }, [states]);
-  React.useEffect(() => { citiesRef.current = cities; }, [cities]);
-  React.useEffect(() => { kecamatansRef.current = kecamatans; }, [kecamatans]);
 
   // --- Handlers (user selection) ---
   const onCountry = (iso2: string) => {
     const c = countries.find((x) => x.iso2 === iso2);
     setCountryId(c?.id ?? null);
-    setStates([]); setCities([]); setKecamatans([]); setDesas([]);
-    setStateId(null); setCityId(null); setKecamatanId(null);
+    setStates([]);
+    setCities([]);
+    setKecamatans([]);
+    setDesas([]);
+    setStateId(null);
+    setCityId(null);
+    setKecamatanId(null);
     onChange("country", iso2);
-    onChange("region", ""); onChange("city", ""); onChange("kecamatan", ""); onChange("desa", ""); onChange("postalCode", "");
+    onChange("region", "");
+    onChange("city", "");
+    onChange("kecamatan", "");
+    onChange("desa", "");
+    onChange("postalCode", "");
     if (c && onCountryDefaults) {
       // Default dari DB countries (currency/timezones) + locale fallback statis
       let tz: string | undefined;
       try {
         const tzRaw = c.timezones ? JSON.parse(c.timezones) : null;
-        tz = Array.isArray(tzRaw) && tzRaw[0]?.zoneName ? tzRaw[0].zoneName : Array.isArray(tzRaw) ? tzRaw[0] : undefined;
+        tz =
+          Array.isArray(tzRaw) && tzRaw[0]?.zoneName
+            ? tzRaw[0].zoneName
+            : Array.isArray(tzRaw)
+              ? tzRaw[0]
+              : undefined;
       } catch {}
       const fallback = getCountryDefaults(iso2);
-      onCountryDefaults({ currency: c.currency || fallback.currency, timezone: tz || fallback.timezone, locale: fallback.locale });
+      onCountryDefaults({
+        currency: c.currency || fallback.currency,
+        timezone: tz || fallback.timezone,
+        locale: fallback.locale
+      });
     }
-    if (c && c.iso2 === "ID") fetchStates(c.id);
-    else if (c) fetchStates(c.id);
+    if (c) fetchStates(c.id);
   };
 
   const onState = (val: string) => {
     const sId = Number(val);
     setStateId(sId);
-    setCities([]); setKecamatans([]); setDesas([]);
-    setCityId(null); setKecamatanId(null);
+    setCities([]);
+    setKecamatans([]);
+    setDesas([]);
+    setCityId(null);
+    setKecamatanId(null);
     const opt = states.find((o) => o.value === val);
     onChange("region", opt?.label || "");
-    onChange("city", ""); onChange("kecamatan", ""); onChange("desa", ""); onChange("postalCode", "");
+    onChange("city", "");
+    onChange("kecamatan", "");
+    onChange("desa", "");
+    onChange("postalCode", "");
     if (sId) fetchCities(sId);
   };
 
   const onCity = (val: string) => {
     const cId = Number(val);
     setCityId(cId);
-    setKecamatans([]); setDesas([]); setKecamatanId(null);
+    setKecamatans([]);
+    setDesas([]);
+    setKecamatanId(null);
     const opt = cities.find((o) => o.value === val);
     onChange("city", opt?.label || "");
-    onChange("kecamatan", ""); onChange("desa", ""); onChange("postalCode", "");
+    onChange("kecamatan", "");
+    onChange("desa", "");
+    onChange("postalCode", "");
     if (isID && cId) fetchKecamatan(cId);
   };
 
@@ -219,7 +255,8 @@ export function AddressForm({
     setDesas([]);
     const opt = kecamatans.find((o) => o.value === val);
     onChange("kecamatan", opt?.label || "");
-    onChange("desa", ""); onChange("postalCode", "");
+    onChange("desa", "");
+    onChange("postalCode", "");
     if (kId) fetchDesa(kId);
   };
 
@@ -234,11 +271,21 @@ export function AddressForm({
       {/* Line 1 & 2 */}
       <div className="space-y-1.5">
         <Label className="text-sm font-medium">{t("line1")}</Label>
-        <Input value={data.line1} onChange={(e) => onChange("line1", e.target.value)} disabled={disabled} className="border-border/80" />
+        <Input
+          value={data.line1}
+          onChange={(e) => onChange("line1", e.target.value)}
+          disabled={disabled}
+          className="border-border/80"
+        />
       </div>
       <div className="space-y-1.5">
         <Label className="text-sm font-medium">{t("line2")}</Label>
-        <Input value={data.line2} onChange={(e) => onChange("line2", e.target.value)} disabled={disabled} className="border-border/80" />
+        <Input
+          value={data.line2}
+          onChange={(e) => onChange("line2", e.target.value)}
+          disabled={disabled}
+          className="border-border/80"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

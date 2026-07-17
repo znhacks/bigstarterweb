@@ -1,7 +1,7 @@
-// scripts/sync-rbac.ts
+// sync-rbac.ts
 import { createClient } from "@supabase/supabase-js";
-import { syncRbacToDb } from "../config/rbac"; // Sesuaikan path ke config rbac Anda
 import * as dotenv from "dotenv";
+import { syncRbacToDb } from "./config/rbac";
 
 // Load environment variables dari file .env lokal
 dotenv.config();

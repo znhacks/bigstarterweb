@@ -29,6 +29,12 @@ export interface RoleDefinition {
   color?: string;
 }
 
+/** Tipe data pengembalian untuk skrip pengeksekusi CLI */
+export interface SyncResult {
+  success: boolean;
+  error?: string;
+}
+
 /**
  * Daftar role default. Developer dapat add role baru di sini.
  * HIRARKI: 10 (Member) < 50 (Admin) < 100 (Owner).
@@ -119,44 +125,62 @@ export function getDefaultGrants(roleName: string): PermissionName[] {
  * import { supabaseAdmin } from "@/lib/api/supabase-server";
  * await syncRbacToDb(supabaseAdmin);
  */
-export async function syncRbacToDb(supabaseAdmin: any) {
-  // 1. Upsert roles
-  for (const role of ROLE_DEFINITIONS) {
-    await supabaseAdmin
-      .from("roles")
-      .upsert({ name: role.name, hierarchy_level: role.hierarchy }, { onConflict: "name" });
-  }
-
-  // 2. Ensure all permissions exist (from permissions.ts catalog)
-  for (const perm of ALL_PERMISSIONS) {
-    await supabaseAdmin
-      .from("permissions")
-      .upsert({ name: perm }, { onConflict: "name" });
-  }
-
-  // 3. Sync grants (role_permissions)
-  for (const [roleName, perms] of Object.entries(DEFAULT_GRANTS)) {
-    const { data: role } = await supabaseAdmin
-      .from("roles")
-      .select("id")
-      .eq("name", roleName)
-      .maybeSingle();
-    if (!role) continue;
-
-    for (const permName of perms) {
-      const { data: perm } = await supabaseAdmin
-        .from("permissions")
-        .select("id")
-        .eq("name", permName)
-        .maybeSingle();
-      if (!perm) continue;
-
-      await supabaseAdmin.from("role_permissions").upsert(
-        { role_id: role.id, permission_id: perm.id },
-        { onConflict: "role_id,permission_id" }
-      );
+export async function syncRbacToDb(supabaseAdmin: any): Promise<SyncResult> {
+  try {
+    // 1. Upsert roles
+    for (const role of ROLE_DEFINITIONS) {
+      const { error: roleError } = await supabaseAdmin
+        .from("roles")
+        .upsert({ name: role.name, hierarchy_level: role.hierarchy }, { onConflict: "name" });
+      
+      if (roleError) throw roleError;
     }
-  }
 
-  console.log("[RBAC] Sync selesai:", ROLE_DEFINITIONS.length, "roles,", ALL_PERMISSIONS.length, "permissions.");
+    // 2. Ensure all permissions exist (from permissions.ts catalog)
+    for (const perm of ALL_PERMISSIONS) {
+      const { error: permError } = await supabaseAdmin
+        .from("permissions")
+        .upsert({ name: perm }, { onConflict: "name" });
+
+      if (permError) throw permError;
+    }
+
+    // 3. Sync grants (role_permissions)
+    for (const [roleName, perms] of Object.entries(DEFAULT_GRANTS)) {
+      const { data: role, error: fetchRoleError } = await supabaseAdmin
+        .from("roles")
+        .select("id")
+        .eq("name", roleName)
+        .maybeSingle();
+      
+      if (fetchRoleError) throw fetchRoleError;
+      if (!role) continue;
+
+      for (const permName of perms) {
+        const { data: perm, error: fetchPermError } = await supabaseAdmin
+          .from("permissions")
+          .select("id")
+          .eq("name", permName)
+          .maybeSingle();
+        
+        if (fetchPermError) throw fetchPermError;
+        if (!perm) continue;
+
+        const { error: rpError } = await supabaseAdmin
+          .from("role_permissions")
+          .upsert(
+            { role_id: role.id, permission_id: perm.id },
+            { onConflict: "role_id,permission_id" }
+          );
+
+        if (rpError) throw rpError;
+      }
+    }
+
+    console.log("[RBAC] Sync selesai:", ROLE_DEFINITIONS.length, "roles,", ALL_PERMISSIONS.length, "permissions.");
+    return { success: true };
+  } catch (err: any) {
+    console.error("[RBAC] Sync gagal:", err);
+    return { success: false, error: err.message || "Unknown error occurred" };
+  }
 }

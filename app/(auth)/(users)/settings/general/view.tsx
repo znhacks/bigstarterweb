@@ -761,7 +761,7 @@ export function GeneralSettingsPage() {
             <div className="flex flex-col items-start justify-between gap-4 lg:flex-row">
               <div className="space-y-1 md:max-w-md">
                 <h2 className="text-foreground text-base font-semibold">
-                  Alamat Penagihan (Billing Address)
+                  Alamat
                 </h2>
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   Konfigurasi alamat Anda disesuaikan secara dinamis untuk pencetakan faktur dan
