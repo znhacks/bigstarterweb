@@ -79,7 +79,19 @@
       },
       "billing": {
         "title": "Billings",
-        "description": "Global overview of transactions, active subscriptions, and refund requests."
+        "description": "Global overview of transactions, active subscriptions, and refund requests.",
+        "billing-dashboard": {
+          "title": "Subscription Dashboard",
+          "description": "Monitor and manage user subscriptions from a centralized dashboard."
+        },
+        "subscriptions": {
+          "title": "Subscriptions",
+          "description": "Manage subscription data and status for all users."
+        },
+        "history-transactions": {
+          "title": "Transaction History",
+          "description": "View the complete payment transaction history of your users."
+        }
       },
       "roles": {
         "title": "Roles & Permissions",
@@ -354,7 +366,10 @@
       "organization": "Organizations",
       "billing": "Billing",
       "plans": "Plans",
-      "coupons": "Coupons"
+      "coupons": "Coupons",
+      "billing-dashboard": "Billing Dashboard",
+      "subscriptions": "Subscriptions",
+      "history-transactions": "Transaction History"
     }
   },
   "currency": {

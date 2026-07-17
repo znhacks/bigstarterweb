@@ -26,7 +26,10 @@ import {
   ShieldCheck,
   ListTodo,
   TicketPercent,
-  Package
+  Package,
+  ReceiptText,
+  LayoutDashboard,
+  BadgeCheck
 } from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -152,7 +155,21 @@ export const navItems: NavGroup[] = [
       {
         title: "superadmin.billing",
         href: "/superadmin/billing",
-        icon: CreditCardIcon
+        icon: CreditCardIcon,
+        items: [
+          {
+            title: "superadmin.billing-dashboard",
+            href: "/superadmin/billing/dashboard"
+          },
+          {
+            title: "superadmin.subscriptions",
+            href: "/superadmin/billing/subscriptions"
+          },
+          {
+            title: "superadmin.history-transactions",
+            href: "/superadmin/billing/histories"
+          }
+        ]
       }
     ]
   }

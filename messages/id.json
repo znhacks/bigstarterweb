@@ -79,7 +79,19 @@
       },
       "billing": {
         "title": "Keuangan Superadmin",
-        "description": "Ikhtisar global transaksi, langganan aktif, dan permintaan pengembalian dana."
+        "description": "Ikhtisar global transaksi, langganan aktif, dan permintaan pengembalian dana.",
+        "billing-dashboard": {
+          "title": "Dasbor Langganan",
+          "description": "Pantau dan kelola langganan pengguna melalui satu dasbor terpusat."
+        },
+        "subscriptions": {
+          "title": "Langganan",
+          "description": "Kelola data dan status langganan seluruh pengguna."
+        },
+        "history-transactions": {
+          "title": "Riwayat Transaksi",
+          "description": "Lihat seluruh riwayat transaksi pembayaran pengguna."
+        }
       },
       "roles": {
         "title": "Role & Permission",
@@ -354,7 +366,10 @@
       "organization": "Organisasi",
       "billing": "Penagihan",
       "plans": "Langganan",
-      "coupons": "Kupon"
+      "coupons": "Kupon",
+      "billing-dashboard": "Dasbor Keuangan",
+      "subscriptions": "Berlangganan",
+      "history-transactions": "Riwayat Transaksi"
     }
   },
   "currency": {
