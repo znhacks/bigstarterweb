@@ -1,7 +1,11 @@
+// components/data-table/data-table-pagination.tsx
 "use client";
 
 import * as React from "react";
 import { Table as TanstackTable } from "@tanstack/react-table";
+import { useLocale } from "next-intl"; // IMPORT: Hook Bahasa Aktif
+import { formatNumber } from "@/lib/i18n/format"; // IMPORT: Helper Angka Kultur
+
 import {
   Select,
   SelectContent,
@@ -22,7 +26,8 @@ import {
 interface DataTablePaginationProps<TData> {
   table: TanstackTable<TData>;
   pageSizeOptions?: number[];
-  selectedLabel?: (selected: number, total: number) => string;
+  // SOLUSI: Mengubah parameter selected dan total menjadi string hasil format lokal
+  selectedLabel?: (selected: string, total: string) => string;
   rowsPerPageLabel?: string;
 }
 
@@ -32,6 +37,8 @@ export function DataTablePagination<TData>({
   selectedLabel = (selected, total) => `${selected} of ${total} row(s) selected.`,
   rowsPerPageLabel = "Rows per page:"
 }: DataTablePaginationProps<TData>) {
+  const locale = useLocale();
+
   const renderPaginationItems = () => {
     const totalPages = table.getPageCount();
     const currentPage = table.getState().pagination.pageIndex;
@@ -43,7 +50,8 @@ export function DataTablePagination<TData>({
           isActive={currentPage === pageIndex}
           onClick={() => table.setPageIndex(pageIndex)}
           className="cursor-pointer">
-          {pageIndex + 1}
+          {/* SOLUSI: Mengubah angka nomor halaman menjadi peka-kultur */}
+          {formatNumber(pageIndex + 1, locale)}
         </PaginationLink>
       </PaginationItem>
     );
@@ -83,9 +91,10 @@ export function DataTablePagination<TData>({
   return (
     <div className="flex flex-col items-center justify-between gap-4 pt-4 md:flex-row">
       <div className="text-muted-foreground order-2 text-xs md:order-1">
+        {/* SOLUSI: Oper string angka terformat lokal ke dalam fungsi label ringkasan baris */}
         {selectedLabel(
-          table.getFilteredSelectedRowModel().rows.length,
-          table.getFilteredRowModel().rows.length
+          formatNumber(table.getFilteredSelectedRowModel().rows.length, locale),
+          formatNumber(table.getFilteredRowModel().rows.length, locale)
         )}
       </div>
 
@@ -98,12 +107,16 @@ export function DataTablePagination<TData>({
             value={`${table.getState().pagination.pageSize}`}
             onValueChange={(val) => table.setPageSize(Number(val))}>
             <SelectTrigger className="border-border/80 h-8 w-[70px] rounded-lg text-xs">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectValue
+                // SOLUSI: Tampilkan angka ukuran halaman terformat lokal pada placeholder utama
+                placeholder={formatNumber(table.getState().pagination.pageSize, locale)}
+              />
             </SelectTrigger>
             <SelectContent>
               {pageSizeOptions.map((size) => (
                 <SelectItem key={size} value={`${size}`} className="text-xs">
-                  {size}
+                  {/* SOLUSI: Tampilkan pilihan angka ukuran halaman secara peka-kultur */}
+                  {formatNumber(size, locale)}
                 </SelectItem>
               ))}
             </SelectContent>
