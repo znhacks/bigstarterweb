@@ -1,3 +1,4 @@
+// app/(auth)/(superadmin)/superadmin/billing/subscriptions/view.tsx
 "use client";
 
 import * as React from "react";
@@ -14,7 +15,12 @@ import { formatCurrency } from "@/lib/i18n/currency";
 // Reusable Table Components
 import { useDataTable } from "@/components/data-table/use-data-table";
 import { DataTable } from "@/components/data-table/data-table";
+import { DataTableSearch } from "@/components/data-table/data-table-search";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
 
 interface SuperadminSubscription {
   id: string;
@@ -31,13 +37,23 @@ interface SuperadminSubscription {
   } | null;
 }
 
+const containsFilterFn = (row: any, columnId: string, filterValue: string) => {
+  if (!filterValue) return true;
+  return String(row.getValue(columnId)).toLowerCase().includes(filterValue.toLowerCase());
+};
+
 export function SuperadminSubscriptionsPage() {
   const locale = useLocale();
-  const t = useTranslations("superadmin.billing");
+  const t = useTranslations("superadmin.billing.subscriptions");
+  const ttable = useTranslations("data-table");
 
   const [subscriptions, setSubscriptions] = useState<SuperadminSubscription[]>([]);
   const [dbPlans, setDbPlans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const renewalOptions = [
+    { value: "on", label: t("table.auto-renew") },
+    { value: "off", label: t("table.renew-off") }
+  ];
 
   const formatPrice = (amount: number, currency?: string) =>
     formatCurrency(amount, locale, { currencyCode: currency ?? "IDR" });
@@ -49,7 +65,6 @@ export function SuperadminSubscriptionsPage() {
   const loadSubscriptionData = async () => {
     setIsLoading(true);
     try {
-      // Dapatkan data plans terlebih dahulu agar mapping id plan akurat
       const plansRes = await fetch("/api/billing/plans").then((r) => r.json());
       const currentPlans = plansRes?.plans || [];
       setDbPlans(currentPlans);
@@ -87,7 +102,6 @@ export function SuperadminSubscriptionsPage() {
           };
         });
 
-        // Tampilkan langganan dengan status "active"
         setSubscriptions(mappedSubs.filter((sub) => sub.status === "active"));
       }
     } catch (e) {
@@ -97,13 +111,25 @@ export function SuperadminSubscriptionsPage() {
     }
   };
 
+  const planOptions = useMemo(() => {
+    const unique = Array.from(
+      new Set(subscriptions.map((sub) => sub.plans?.name).filter(Boolean) as string[])
+    );
+    return unique.map((name) => ({ value: name, label: name }));
+  }, [subscriptions]);
+
   const columns = useMemo<ColumnDef<SuperadminSubscription, unknown>[]>(
     () => [
       {
         accessorKey: "tenants.name",
+        id: "tenants_name", // SOLUSI: Berikan ID eksplisit tanpa titik desimal
+        meta: {
+          label: t("table.tenant")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.tenant") || "Tenant"} />
         ),
+        filterFn: containsFilterFn,
         cell: ({ row }) => {
           const sub = row.original;
           return (
@@ -118,20 +144,29 @@ export function SuperadminSubscriptionsPage() {
       },
       {
         accessorKey: "plans.name",
+        id: "plans_name", // SOLUSI: Berikan ID eksplisit tanpa titik desimal
+        meta: {
+          label: t("table.plan")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.plan") || "Plan"} />
         ),
+        filterFn: multiSelectFilterFn,
         cell: ({ row }) => {
           const sub = row.original;
           return (
             <Badge variant="secondary" className="rounded-full text-[10px] font-bold">
-              {sub.plans?.name || "Free"} Plan
+              {sub.plans?.name || "Free"} {t("table.plan")}
             </Badge>
           );
         }
       },
       {
         accessorKey: "plans.price",
+        id: "plans_price", // SOLUSI: Berikan ID eksplisit tanpa titik desimal
+        meta: {
+          label: t("table.price")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.price") || "Price"} />
         ),
@@ -142,13 +177,15 @@ export function SuperadminSubscriptionsPage() {
               <span className="text-foreground font-bold">
                 {formatPrice(sub.plans?.price || 0)}
               </span>
-              <span className="text-muted-foreground text-xs">/mo</span>
             </div>
           );
         }
       },
       {
         accessorKey: "ends_at",
+        meta: {
+          label: t("table.expiry")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.expiry") || "Expiry / Renewal"} />
         ),
@@ -171,7 +208,21 @@ export function SuperadminSubscriptionsPage() {
         }
       },
       {
+        id: "renewalStatus",
+        meta: {
+          label: t("table.renewal")
+        },
+        accessorFn: (row) => (row.cancel_at_period_end ? "off" : "on"),
+        header: t("table.renewal"),
+        filterFn: multiSelectFilterFn,
+        cell: ({ row }) =>
+          row.original.cancel_at_period_end ? t("table.renew-off") : t("table.auto-renew")
+      },
+      {
         accessorKey: "status",
+        meta: {
+          label: t("table.status")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.status") || "Status"} />
         ),
@@ -179,7 +230,9 @@ export function SuperadminSubscriptionsPage() {
           const sub = row.original;
           return (
             <Badge className="rounded-full border border-emerald-500/20 bg-emerald-500/10 text-[10px] font-bold text-emerald-600 uppercase hover:bg-emerald-500/10">
-              {sub.status}
+              {t.has(`table.statuses.${sub.status}`)
+                ? t(`table.statuses.${sub.status}`)
+                : sub.status}
             </Badge>
           );
         }
@@ -190,7 +243,8 @@ export function SuperadminSubscriptionsPage() {
 
   const table = useDataTable({
     columns,
-    data: subscriptions
+    data: subscriptions,
+    initialColumnVisibility: { renewalStatus: false }
   });
 
   if (isLoading) {
@@ -204,19 +258,50 @@ export function SuperadminSubscriptionsPage() {
   return (
     <div className="mx-auto w-full space-y-6 px-4 py-10">
       <div className="space-y-1">
-        <h1 className="text-foreground text-2xl font-bold tracking-tight">
-          Daftar Langganan Aktif
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Menampilkan daftar penyewa (tenant) yang saat ini memiliki paket berlangganan aktif.
-        </p>
+        <h1 className="text-foreground text-2xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("description")}</p>
       </div>
 
-      <div className="border-border/80 bg-card rounded-2xl border p-6 shadow-sm">
+      <div className="space-y-4">
+        <div className="flex flex-row flex-wrap items-center gap-2">
+          {/* SOLUSI: Mengubah pencarian merujuk ke ID kolom "tenants_name" */}
+          <DataTableSearch
+            table={table}
+            columnId="tenants_name"
+            placeholder={t("table.search") || "Cari tenant..."}
+          />
+
+          {/* SOLUSI: Mengubah filter merujuk ke ID kolom "plans_name" */}
+          <DataTableFacetedFilter
+            column={table.getColumn("plans_name")}
+            title={t("table.plan") || "Plan"}
+            options={planOptions}
+          />
+
+          <DataTableFacetedFilter
+            column={table.getColumn("renewalStatus")}
+            title={t("table.renewal")}
+            options={renewalOptions}
+          />
+
+          <DataTableViewOptions table={table} className="md:ms-auto" />
+        </div>
+
         <DataTable
           table={table}
           columns={columns}
           noResultsText={t("placeholders.noSubscriptions") || "No active subscriptions found."}
+        />
+
+        <DataTablePagination
+          table={table}
+          selectedLabel={(selected, total) =>
+            ttable("pagination.selecteddata", {
+              selected,
+              total
+            })
+          }
+          rowsPerPageLabel={ttable("pagination.rowsPerPage")}
         />
       </div>
     </div>

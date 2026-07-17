@@ -14,7 +14,12 @@ import { formatTransactionAmount } from "@/lib/i18n/currency";
 // Reusable Table Components
 import { useDataTable } from "@/components/data-table/use-data-table";
 import { DataTable } from "@/components/data-table/data-table";
+import { DataTableSearch } from "@/components/data-table/data-table-search";
+import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
 
 interface SuperadminTransaction {
   id: string;
@@ -29,6 +34,20 @@ interface SuperadminTransaction {
     name: string;
   } | null;
 }
+
+// Same case-insensitive contains match used across the other admin tables.
+const containsFilterFn = (row: any, columnId: string, filterValue: string) => {
+  if (!filterValue) return true;
+  return String(row.getValue(columnId)).toLowerCase().includes(filterValue.toLowerCase());
+};
+
+const STATUS_OPTIONS = [
+  { value: "paid", label: "Paid" },
+  { value: "completed", label: "Completed" },
+  { value: "pending", label: "Pending" },
+  { value: "failed", label: "Failed" },
+  { value: "refunded", label: "Refunded" }
+];
 
 export function SuperadminTransactionsPage() {
   const locale = useLocale();
@@ -75,6 +94,14 @@ export function SuperadminTransactionsPage() {
     }
   };
 
+  // Plan list is DB-driven, so facet options come straight from the loaded
+  // rows rather than a static config — same idea as the Role filter on
+  // the Users table.
+  const planOptions = useMemo(() => {
+    const unique = Array.from(new Set(transactions.map((tx) => tx.plan_name).filter(Boolean)));
+    return unique.map((name) => ({ value: name, label: name }));
+  }, [transactions]);
+
   const columns = useMemo<ColumnDef<SuperadminTransaction, unknown>[]>(
     () => [
       {
@@ -82,6 +109,7 @@ export function SuperadminTransactionsPage() {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.tenant") || "Tenant"} />
         ),
+        filterFn: containsFilterFn,
         cell: ({ row }) => {
           const tx = row.original;
           return (
@@ -99,6 +127,7 @@ export function SuperadminTransactionsPage() {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.plan") || "Plan"} />
         ),
+        filterFn: multiSelectFilterFn,
         cell: ({ row }) => row.original.plan_name
       },
       {
@@ -133,6 +162,7 @@ export function SuperadminTransactionsPage() {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.status") || "Status"} />
         ),
+        filterFn: multiSelectFilterFn,
         cell: ({ row }) => {
           const tx = row.original;
           const isRefunded = tx.status === "refunded";
@@ -152,10 +182,8 @@ export function SuperadminTransactionsPage() {
     [locale, t]
   );
 
-  const table = useDataTable({
-    columns,
-    data: transactions
-  });
+  // You own this instance — read/mutate it however this page needs.
+  const table = useDataTable({ columns, data: transactions });
 
   if (isLoading) {
     return (
@@ -174,12 +202,37 @@ export function SuperadminTransactionsPage() {
         </p>
       </div>
 
-      <div className="border-border/80 bg-card rounded-2xl border p-6 shadow-sm">
+      <div className="border-border/80 bg-card space-y-4 rounded-2xl border p-6 shadow-sm">
+        {/* Toolbar — hardcoded here, same Enter/button search + facet filters as the other admin tables. */}
+        <div className="flex flex-row flex-wrap items-center gap-2">
+          <DataTableSearch
+            table={table}
+            columnId="tenants.name"
+            placeholder={t("table.search") || "Cari tenant..."}
+          />
+
+          <DataTableFacetedFilter
+            column={table.getColumn("status")}
+            title={t("table.status") || "Status"}
+            options={STATUS_OPTIONS}
+          />
+
+          <DataTableFacetedFilter
+            column={table.getColumn("plan_name")}
+            title={t("table.plan") || "Plan"}
+            options={planOptions}
+          />
+
+          <DataTableViewOptions table={table} className="md:ms-auto" />
+        </div>
+
         <DataTable
           table={table}
           columns={columns}
           noResultsText={t("placeholders.noTransactions")}
         />
+
+        <DataTablePagination table={table} />
       </div>
     </div>
   );
