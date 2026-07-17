@@ -856,56 +856,65 @@
       }
     },
     "billing": {
-      "title": "Superadmin Billing",
-      "subTitle": "Global overview of transactions, active subscriptions, and refund requests.",
-      "kpis": {
-        "revenue": "Total Revenue",
-        "active": "Active Subscriptions",
-        "refunds": "Pending Refunds"
+      "dashboard": {
+        "title": "Billing Dashboard",
+        "subTitle": "Visualize billing metrics, revenue, and subscription health.",
+        "kpis": {
+          "revenue": "Total Revenue",
+          "active": "Active Subscriptions"
+        },
+        "tabs": {
+          "subscriptions": "Subscriptions",
+          "history": "Transaction History"
+        },
+        "table": {
+          "tenant": "Tenant",
+          "plan": "Plan",
+          "price": "Price",
+          "expiry": "Expiry / Renewal",
+          "status": "Status",
+          "date": "Date",
+          "amount": "Amount",
+          "search": "Search tenant..."
+        },
+        "placeholders": {
+          "unlimited": "Unlimited",
+          "renewOff": "Renewal Off",
+          "noSubscriptions": "No active subscriptions found.",
+          "noTransactions": "No transaction history found."
+        }
       },
-      "tabs": {
-        "refunds": "Refund Requests",
-        "active": "Active Subscriptions",
-        "history": "Transaction History",
-        "plans": "Manage Plans"
-      },
-      "placeholders": {
-        "noRefunds": "No pending refund requests found.",
-        "noActive": "No active subscriptions found.",
-        "noTransactions": "No transactions found.",
-        "noPlans": "No subscription plans configured in the database yet.",
-        "refundAmount": "Refund amount",
-        "expiry": "Expiry date",
-        "renewOff": "(Auto-renew off)",
-        "unlimited": "Unlimited",
-        "purchasedOn": "Purchased {planName} on {date}",
-        "maxUsers": "Max Users",
-        "features": "Features (comma-separated)",
-        "featuresPlaceholder": "e.g. 5.000 screenshots, Caching, S3 upload"
-      },
-      "buttons": {
-        "reject": "Reject Refund",
-        "approve": "Approve & Terminate",
-        "createPlan": "Create New Plan",
-        "savePlan": "Save Plan",
-        "cancel": "Cancel"
-      },
-      "dialogPlan": {
-        "titleCreate": "Create Subscription Plan",
-        "titleEdit": "Update Subscription Plan",
-        "desc": "Configure the parameters, pricing, and feature list for this subscription package.",
-        "labelName": "Plan Name",
-        "labelPrice": "Price (USD)",
-        "labelMaxUsers": "Maximum Users",
-        "labelType": "Billing Cycle"
-      },
-      "alerts": {
-        "approveTitle": "Refund Approved",
-        "approveDesc": "Refund claim approved. The associated organization account has been automatically downgraded to the Free Plan.",
-        "rejectTitle": "Refund Rejected",
-        "rejectDesc": "Refund request rejected. The organization's premium access has been reactivated.",
-        "failed": "Action Failed",
-        "successPlan": "Plan configurations successfully synchronized with database."
+      "subscriptions": {
+        "title": "Active Subscriptions",
+        "description": "View all tenants that currently have an active subscription plan.",
+        "table": {
+          "tenant": "Tenant",
+          "plan": "Plan",
+          "price": "Price",
+          "expiry": "Expiry / Renewal",
+          "status": "Status",
+          "renewal": "Renewal",
+          "auto-renew": "Auto Renew",
+          "renew-off": "Renewal Disabled",
+          "search": "Search tenants...",
+          "statuses": {
+            "active": "Active",
+            "inactive": "Inactive",
+            "pending": "Pending",
+            "cancelled": "Cancelled",
+            "expired": "Expired"
+          }
+        },
+        "placeholders": {
+          "unknownTenant": "Unknown Tenant",
+          "freePlan": "Free",
+          "planSuffix": "Plan",
+          "perMonth": "/mo",
+          "unlimited": "Unlimited",
+          "renewOn": "Auto-renew",
+          "renewOff": "Renewal Off",
+          "noSubscriptions": "No active subscriptions found."
+        }
       }
     },
     "roles": {
@@ -1102,5 +1111,11 @@
     "sendError": "Failed to send code.",
     "verifyError": "Verification failed.",
     "error": "Error"
+  },
+  "data-table": {
+    "pagination": {
+      "selecteddata": "{selected} of {total} row(s) selected.",
+      "rowsPerPage": "Rows per page:"
+    }
   }
 }

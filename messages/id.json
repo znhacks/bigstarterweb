@@ -844,56 +844,65 @@
       }
     },
     "billing": {
-      "title": "Keuangan Superadmin",
-      "subTitle": "Ikhtisar global transaksi, langganan aktif, dan permintaan pengembalian dana.",
-      "kpis": {
-        "revenue": "Total Pendapatan",
-        "active": "Langganan Aktif",
-        "refunds": "Pending Refund"
+      "dashboard": {
+        "title": "Dashboard Billing",
+        "subTitle": "Visualisasi metrik billing, pendapatan, dan kesehatan langganan.",
+        "kpis": {
+          "revenue": "Total Pendapatan",
+          "active": "Langganan Aktif"
+        },
+        "tabs": {
+          "subscriptions": "Langganan",
+          "history": "Riwayat Transaksi"
+        },
+        "table": {
+          "tenant": "Penyewa",
+          "plan": "Paket",
+          "price": "Harga",
+          "expiry": "Kedaluwarsa / Perpanjangan",
+          "status": "Status",
+          "date": "Tanggal",
+          "amount": "Jumlah",
+          "search": "Cari tenant..."
+        },
+        "placeholders": {
+          "unlimited": "Tanpa Batas",
+          "renewOff": "Perpanjangan Mati",
+          "noSubscriptions": "Tidak ada langganan aktif yang ditemukan.",
+          "noTransactions": "Tidak ada riwayat transaksi yang ditemukan."
+        }
       },
-      "tabs": {
-        "refunds": "Permintaan Refund",
-        "active": "Langganan Aktif",
-        "history": "Riwayat Transaksi",
-        "plans": "Kelola Paket"
-      },
-      "placeholders": {
-        "noRefunds": "Tidak ada permintaan refund tertunda.",
-        "noActive": "Tidak ada langganan aktif ditemukan.",
-        "noTransactions": "Tidak ada transaksi ditemukan.",
-        "noPlans": "Belum ada paket berlangganan yang terdaftar di database.",
-        "refundAmount": "Nominal refund",
-        "expiry": "Tanggal kadaluarsa",
-        "renewOff": "(Perpanjangan otomatis mati)",
-        "unlimited": "Tidak terbatas",
-        "purchasedOn": "Membeli paket {planName} pada tanggal {date}",
-        "maxUsers": "Batas Pengguna",
-        "features": "Daftar Fitur (pisahkan dengan koma)",
-        "featuresPlaceholder": "misal: 5.000 screenshots, Caching, S3 upload"
-      },
-      "buttons": {
-        "reject": "Tolak Refund",
-        "approve": "Setujui & Hentikan",
-        "createPlan": "Buat Paket Baru",
-        "savePlan": "Simpan Paket",
-        "cancel": "Batal"
-      },
-      "dialogPlan": {
-        "titleCreate": "Buat Paket Berlangganan",
-        "titleEdit": "Perbarui Paket Berlangganan",
-        "desc": "Konfigurasikan parameter, harga, dan daftar fitur utama untuk paket berlangganan ini.",
-        "labelName": "Nama Paket",
-        "labelPrice": "Harga (USD)",
-        "labelMaxUsers": "Maksimal Anggota",
-        "labelType": "Siklus Penagihan"
-      },
-      "alerts": {
-        "approveTitle": "Refund Disetujui",
-        "approveDesc": "Pengajuan refund disetujui. Akun organisasi terkait otomatis diturunkan kembali ke Paket Free.",
-        "rejectTitle": "Refund Ditolak",
-        "rejectDesc": "Pengajuan refund ditolak. Akses premium organisasi tersebut telah diaktifkan kembali.",
-        "failed": "Tindakan Gagal",
-        "successPlan": "Konfigurasi paket berhasil disinkronkan ke database."
+      "subscriptions": {
+        "title": "Daftar Langganan Aktif",
+        "description": "Menampilkan daftar penyewa (tenant) yang saat ini memiliki paket berlangganan aktif.",
+        "table": {
+          "tenant": "Tenant",
+          "plan": "Paket",
+          "price": "Harga",
+          "expiry": "Masa Berlaku / Perpanjangan",
+          "status": "Status",
+          "renewal": "Perpanjangan",
+          "auto-renew": "Otomatis Perpanjang",
+          "renew-off": "Pepanjang Nonaktif",
+          "search": "Cari tenant...",
+          "statuses": {
+            "active": "Aktif",
+            "inactive": "Tidak Aktif",
+            "pending": "Menunggu",
+            "cancelled": "Dibatalkan",
+            "expired": "Kedaluwarsa"
+          }
+        },
+        "placeholders": {
+          "unknownTenant": "Tenant Tidak Diketahui",
+          "freePlan": "Gratis",
+          "planSuffix": "Paket",
+          "perMonth": "/bln",
+          "unlimited": "Tidak Terbatas",
+          "renewOn": "Perpanjangan Otomatis",
+          "renewOff": "Perpanjangan Nonaktif",
+          "noSubscriptions": "Tidak ada langganan aktif."
+        }
       }
     },
     "roles": {
@@ -1090,5 +1099,11 @@
     "sendError": "Gagal mengirim kode.",
     "verifyError": "Verifikasi gagal.",
     "error": "Error"
+  },
+  "data-table": {
+    "pagination": {
+      "selecteddata": "{selected} dari {total} baris dipilih.",
+      "rowsPerPage": "Baris per halaman:"
+    }
   }
 }
