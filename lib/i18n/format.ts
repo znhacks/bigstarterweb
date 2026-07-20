@@ -1,3 +1,4 @@
+// /lib/i18n/format.ts
 import { getLocaleMeta } from "@/config/i18n-culture";
 
 export function formatNumber(
@@ -7,7 +8,10 @@ export function formatNumber(
 ): string {
   const meta = getLocaleMeta(locale);
   try {
-    return new Intl.NumberFormat(meta.bcp47, options).format(value);
+    return new Intl.NumberFormat(meta.bcp47, {
+      numberingSystem: meta.numberingSystem, // SOLUSI: Ambil murni dari metadata
+      ...options
+    }).format(value);
   } catch {
     return value.toString();
   }
@@ -47,25 +51,41 @@ export function formatDateTime(
   const meta = getLocaleMeta(locale);
   const d = typeof date === "string" || typeof date === "number" ? new Date(date) : date;
 
+  const hasIndividualFields =
+    options &&
+    ("year" in options ||
+      "month" in options ||
+      "day" in options ||
+      "hour" in options ||
+      "minute" in options ||
+      "second" in options);
+
+  const defaultOptions: Intl.DateTimeFormatOptions = hasIndividualFields
+    ? {}
+    : { dateStyle: "medium" };
+
   try {
     return new Intl.DateTimeFormat(meta.bcp47, {
-      dateStyle: "medium",
+      ...defaultOptions,
+      numberingSystem: meta.numberingSystem, // SOLUSI: Ambil murni dari metadata
       ...options
     }).format(d);
   } catch {
-    return d.toDateString();
+    // Fallback otomatis menggunakan format locale bawaan yang aman
+    return d.toLocaleDateString(meta.bcp47, {
+      numberingSystem: meta.numberingSystem
+    });
   }
 }
 
 export function formatRelativeTime(
   dateStr: string | Date,
   locale: string,
-  timeZone?: string // Tambahkan parameter kontrol zona waktu
+  timeZone?: string
 ): string {
   const date = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
   const now = new Date();
 
-  // Selisih milidetik Epoch UTC bersifat absolut & sama di seluruh dunia
   const diffInMs = date.getTime() - now.getTime();
   const sign = Math.sign(diffInMs);
   const absMs = Math.abs(diffInMs);
@@ -77,9 +97,11 @@ export function formatRelativeTime(
 
   const meta = getLocaleMeta(locale);
   try {
-    const rtf = new Intl.RelativeTimeFormat(meta.bcp47, { numeric: "auto" });
+    const rtf = new Intl.RelativeTimeFormat(meta.bcp47, {
+      numeric: "auto",
+      numberingSystem: meta.numberingSystem // SOLUSI: Ambil murni dari metadata
+    } as any);
 
-    // 1. Rentang waktu di bawah 24 jam penuh (Relatif)
     if (absHours < 24) {
       if (absSeconds < 60) {
         return rtf.format(absSeconds * sign, "second");
@@ -90,31 +112,34 @@ export function formatRelativeTime(
       return rtf.format(absHours * sign, "hour");
     }
 
-    // 2. Tepat 1 hari (kemarin atau besok)
     if (absDays === 1) {
       return rtf.format(1 * sign, "day");
     }
 
-    // 3. Rentang WhatsApp: Nama Hari (Rabu, Senin, dsb) dikonversi sesuai Timezone pengguna
     if (sign === -1 && absDays < 7) {
       const weekdayFormatter = new Intl.DateTimeFormat(meta.bcp47, {
         weekday: "long",
-        timeZone // SOLUSI: Konversi batas penanggalan ke zona waktu lokal pengguna
+        timeZone,
+        numberingSystem: meta.numberingSystem // SOLUSI: Ambil murni dari metadata
       });
       return weekdayFormatter.format(date);
     }
 
-    // 4. Di atas 7 hari -> Kalender absolut disesuaikan Timezone pengguna
     if (sign === -1 || absDays >= 7) {
       const dateFormatter = new Intl.DateTimeFormat(meta.bcp47, {
         dateStyle: "medium",
-        timeZone // SOLUSI: Konversi batas penanggalan ke zona waktu lokal pengguna
+        timeZone,
+        numberingSystem: meta.numberingSystem // SOLUSI: Ambil murni dari metadata
       });
       return dateFormatter.format(date);
     }
 
     return rtf.format(absDays * sign, "day");
   } catch {
-    return date.toLocaleDateString(meta.bcp47, { timeZone });
+    const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+    return d.toLocaleDateString(meta.bcp47, {
+      timeZone,
+      numberingSystem: meta.numberingSystem
+    });
   }
 }

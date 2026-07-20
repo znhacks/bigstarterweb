@@ -12,10 +12,11 @@ export interface LocaleMeta {
   dir: Direction;
   bcp47: string;
   dateFnsLocale: "enUS" | "id" | "ar";
-  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Minggu, 1 = Senin, 6 = Sabtu
+  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   measurementSystem: MeasurementSystem;
   phoneCountry: string;
   font: string;
+  numberingSystem?: string; // SOLUSI: Tempatkan sistem penomoran opsional di sini!
 }
 
 export const LOCALE_META: Record<LocaleCode, LocaleMeta> = {
@@ -28,6 +29,7 @@ export const LOCALE_META: Record<LocaleCode, LocaleMeta> = {
     measurementSystem: "imperial",
     phoneCountry: "US",
     font: "inter"
+    // numberingSystem dibiarkan kosong (otomatis menggunakan angka latin barat)
   },
   id: {
     label: "Bahasa Indonesia",
@@ -38,6 +40,7 @@ export const LOCALE_META: Record<LocaleCode, LocaleMeta> = {
     measurementSystem: "metric",
     phoneCountry: "ID",
     font: "inter"
+    // numberingSystem dibiarkan kosong (otomatis menggunakan angka latin barat)
   },
   ar: {
     label: "العربية",
@@ -47,7 +50,8 @@ export const LOCALE_META: Record<LocaleCode, LocaleMeta> = {
     weekStartsOn: 6,
     measurementSystem: "metric",
     phoneCountry: "SA",
-    font: "arabic"
+    font: "arabic",
+    numberingSystem: "arab" // SOLUSI: Nyatakan sistem penomoran Arab di sini
   }
 };
 

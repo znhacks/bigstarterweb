@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getDateFnsLocale, getWeekStartsOn } from "@/lib/i18n/weekStart";
 import { getLocaleMeta } from "@/config/i18n-culture";
+import { formatDateTime, formatNumber } from "@/lib/i18n/format";
 
 function Calendar({
   className,
@@ -45,7 +46,14 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       formatters={{
-        formatMonthDropdown: (date) => date.toLocaleString(meta.bcp47, { month: "short" }),
+        // SOLUSI: Mengubah teks Tahun dan Bulan di Header atas kalender menjadi angka Arab-Indik
+        formatCaption: (date) => formatDateTime(date, locale, { month: "long", year: "numeric" }),
+        // SOLUSI: Mengubah dropdown bulan (jika layout dropdown aktif)
+        formatMonthDropdown: (date) => formatDateTime(date, locale, { month: "long" }),
+        // SOLUSI: Mengubah dropdown tahun (jika layout dropdown aktif)
+        formatYearDropdown: (date) => formatDateTime(date, locale, { year: "numeric" }),
+        // SOLUSI: Mengubah seluruh angka tanggal grid kalender bawah menjadi angka Arab-Indik
+        formatDay: (date) => formatNumber(date.getDate(), locale),
         ...formatters
       }}
       classNames={{

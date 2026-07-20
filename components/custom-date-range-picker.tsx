@@ -32,6 +32,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getDateFnsLocale } from "@/lib/i18n/weekStart";
 import { formatDateTime } from "@/lib/i18n/format";
+import { getLocaleMeta } from "@/config/i18n-culture";
 
 const dateFilterPresets = [
   { name: "Today", value: "today" },
@@ -44,20 +45,38 @@ const dateFilterPresets = [
   { name: "This Year", value: "thisYear" }
 ];
 
+interface CalendarDateRangePickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  date: DateRange | undefined;
+  setDate: (date: DateRange | undefined) => void;
+}
+
 export default function CalendarDateRangePicker({
-  className
-}: React.HTMLAttributes<HTMLDivElement>) {
+  className,
+  date,
+  setDate
+}: CalendarDateRangePickerProps) {
   const isMobile = useIsMobile();
   const locale = useLocale();
-  const today = new Date();
-  const twentyEightDaysAgo = startOfDay(subDays(today, 27));
-
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: twentyEightDaysAgo,
-    to: endOfDay(today)
-  });
   const [open, setOpen] = React.useState(false);
   const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date());
+
+  // Membaca metadata arah layout (RTL / LTR)
+  const meta = getLocaleMeta(locale);
+
+  // Menerjemahkan nama menu preset secara dinamis peka-kultur
+  const getPresetLabel = (value: string, defaultName: string) => {
+    const labels: Record<string, Record<string, string>> = {
+      today: { en: "Today", id: "Hari Ini", ar: "اليوم" },
+      yesterday: { en: "Yesterday", id: "Kemarin", ar: "أمس" },
+      thisWeek: { en: "This Week", id: "Minggu Ini", ar: "هذا الأسبوع" },
+      last7Days: { en: "Last 7 Days", id: "7 Hari Terakhir", ar: "آخر ٧ أيام" },
+      last28Days: { en: "Last 28 Days", id: "28 Hari Terakhir", ar: "آخر ٢٨ يومًا" },
+      thisMonth: { en: "This Month", id: "Bulan Ini", ar: "هذا الشهر" },
+      lastMonth: { en: "Last Month", id: "Bulan Lalu", ar: "الشهر الماضي" },
+      thisYear: { en: "This Year", id: "Tahun Ini", ar: "هذه السنة" }
+    };
+    return labels[value]?.[locale] ?? defaultName;
+  };
 
   const handleQuickSelect = (from: Date, to: Date) => {
     setDate({ from, to });
@@ -77,7 +96,6 @@ export default function CalendarDateRangePicker({
         handleQuickSelect(startOfDay(yesterday), endOfDay(yesterday));
         break;
       case "thisWeek":
-        // Menentukan awal minggu sesuai dengan kalender lokal aktif
         const startOfCurrentWeek = startOfWeek(today, { locale: dateFnsLocale });
         handleQuickSelect(startOfDay(startOfCurrentWeek), endOfDay(today));
         break;
@@ -104,20 +122,33 @@ export default function CalendarDateRangePicker({
   };
 
   const renderFormattedRange = (range: DateRange | undefined) => {
-    if (!range?.from) return <span>Select date range</span>;
+    if (!range?.from) {
+      const placeholders: Record<string, string> = {
+        en: "Select date range",
+        id: "Pilih rentang tanggal",
+        ar: "اختر نطاق التاريخ"
+      };
+      return <span>{placeholders[locale] ?? placeholders["en"]}</span>;
+    }
 
-    const fromStr = formatDateTime(range.from, locale, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    });
+    // SOLUSI: Menggunakan formatDateTime standard BCP-47 peka-kultur kita
+    const formatCleanDate = (d: Date) => {
+      return formatDateTime(d, locale, {
+        day: "numeric",
+        month: "short",
+        year: "numeric"
+      });
+    };
+
+    const fromStr = formatCleanDate(range.from);
     if (!range.to) return fromStr;
 
-    const toStr = formatDateTime(range.to, locale, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    });
+    const toStr = formatCleanDate(range.to);
+
+    if (fromStr === toStr) {
+      return fromStr;
+    }
+
     return `${fromStr} - ${toStr}`;
   };
 
@@ -140,7 +171,7 @@ export default function CalendarDateRangePicker({
                       <CalendarIcon />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{renderFormattedRange(date)}</TooltipContent>
+                  <TooltipContent dir={meta.dir}>{renderFormattedRange(date)}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
@@ -149,7 +180,7 @@ export default function CalendarDateRangePicker({
               id="date"
               variant={"outline"}
               className={cn(
-                "justify-start text-start font-normal",
+                "w-full justify-start text-start font-normal",
                 !date && "text-muted-foreground"
               )}>
               <CalendarIcon className="me-2 h-4 w-4" />
@@ -157,40 +188,48 @@ export default function CalendarDateRangePicker({
             </Button>
           )}
         </PopoverTrigger>
-        <PopoverContent className="w-auto" align="end">
+        {/* SOLUSI: Suntikkan arah dir (RTL/LTR) murni dari metadata bahasa aktif */}
+        <PopoverContent className="w-auto" align="end" dir={meta.dir}>
           <div className="flex flex-col lg:flex-row">
             <div className="me-0 lg:me-4">
               <ToggleGroup
                 type="single"
                 defaultValue="last28Days"
-                className="hidden w-28 flex-col lg:block">
-                {dateFilterPresets.map((item, key) => (
+                className="hidden w-36 flex-col lg:block">
+                {dateFilterPresets.map((item, key: number) => (
                   <ToggleGroupItem
                     key={key}
-                    className="text-muted-foreground w-full"
+                    className="text-muted-foreground hover:bg-muted w-full justify-start rounded-md"
                     value={item.value}
                     onClick={() => changeHandle(item.value)}
                     asChild>
-                    <Button className="justify-start rounded-md">{item.name}</Button>
+                    <Button variant="ghost" className="w-full justify-start font-normal">
+                      {/* SOLUSI: Menerjemahkan label samping secara peka-kultur */}
+                      {getPresetLabel(item.value, item.name)}
+                    </Button>
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
-              <Select defaultValue="last28Days" onValueChange={(value) => changeHandle(value)}>
+              <Select
+                defaultValue="last28Days"
+                onValueChange={(value: string) => changeHandle(value)}>
                 <SelectTrigger
                   className="mb-4 flex w-full lg:hidden"
                   size="sm"
                   aria-label="Select a value">
-                  <SelectValue placeholder="Last 28 Days" />
+                  {/* SOLUSI: Menerjemahkan placeholder mobile select secara peka-kultur */}
+                  <SelectValue placeholder={getPresetLabel("last28Days", "Last 28 Days")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {dateFilterPresets.map((item, key) => (
+                  {dateFilterPresets.map((item, key: number) => (
                     <SelectItem key={key} value={item.value}>
-                      {item.name}
+                      {getPresetLabel(item.value, item.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            {/* Kalender otomatis beradaptasi penuh terhadap layout RTL dan awal hari pekan lokal */}
             <Calendar
               className="border-s-0 py-0! ps-0! pe-0! lg:border-s lg:ps-4!"
               mode="range"
