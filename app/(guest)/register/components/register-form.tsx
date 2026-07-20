@@ -105,6 +105,26 @@ export function RegisterForm() {
           currency
         });
 
+        try {
+          const welcomeResponse = await fetch("/api/welcome-mail", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              email,
+              fullName
+            })
+          });
+
+          if (!welcomeResponse.ok) {
+            const errorText = await welcomeResponse.text();
+            console.warn("Welcome email failed:", errorText);
+          }
+        } catch (welcomeError) {
+          console.warn("Welcome email failed:", welcomeError);
+        }
+
         // Set cookie i18n + currency agar UI ikut negara saat redirect post-verifikasi
         if (country) {
           setCookie(LOCALE_COOKIE, locale);
