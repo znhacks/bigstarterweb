@@ -3,26 +3,25 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useLocale } from "next-intl";
+import type { DateRange } from "react-day-picker";
+import { startOfDay, endOfDay, subDays } from "date-fns";
 
 export function useSuperadminBilling() {
   const locale = useLocale();
 
+  // State Data Master
   const [transactions, setTransactions] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [planPrices, setPlanPrices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [dateRange, setDateRange] = useState<string>("30days");
-  const [customStartDate, setCustomStartDate] = useState<string>("");
-  const [customEndDate, setCustomEndDate] = useState<string>("");
-  const [gatewayFilter, setGatewayFilter] = useState<string>("all");
-  const [currencyFilter, setCurrencyFilter] = useState<string>("all");
-  const [planFilter, setPlanFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  // State Tanggal Terintegrasi
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: startOfDay(subDays(new Date(), 27)),
+    to: endOfDay(new Date())
+  });
 
-  const [uniqueGateways, setUniqueGateways] = useState<string[]>([]);
-  const [uniqueCurrencies, setUniqueCurrencies] = useState<string[]>([]);
   const [revenueChartInterval, setRevenueChartInterval] = useState<"day" | "month" | "year">("day");
 
   useEffect(() => {
@@ -44,13 +43,6 @@ export function useSuperadminBilling() {
       if (txsError) throw txsError;
       setTransactions(txsData || []);
 
-      const gateways = Array.from(new Set((txsData || []).map((t) => t.provider).filter(Boolean)));
-      const currencies = Array.from(
-        new Set((txsData || []).map((t) => t.currency).filter(Boolean))
-      );
-      setUniqueGateways(gateways);
-      setUniqueCurrencies(currencies);
-
       const { data: subsData, error: subsError } = await supabase
         .from("subscriptions")
         .select("*, tenants(name)");
@@ -63,69 +55,25 @@ export function useSuperadminBilling() {
     }
   };
 
+  // --- LOGIK FILTER DATA ---
   const filteredData = useMemo(() => {
     const txs = transactions.filter((tx) => {
       const txDate = new Date(tx.created_at);
-      const now = new Date();
       let matchDate = true;
 
-      if (dateRange === "today") {
-        matchDate = txDate.toDateString() === now.toDateString();
-      } else if (dateRange === "7days") {
-        const diffTime = Math.abs(now.getTime() - txDate.getTime());
-        matchDate = diffTime / (1000 * 60 * 60 * 24) <= 7;
-      } else if (dateRange === "30days") {
-        const diffTime = Math.abs(now.getTime() - txDate.getTime());
-        matchDate = diffTime / (1000 * 60 * 60 * 24) <= 30;
-      } else if (dateRange === "this_month") {
-        matchDate =
-          txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
-      } else if (dateRange === "this_year") {
-        matchDate = txDate.getFullYear() === now.getFullYear();
-      } else if (dateRange === "custom" && customStartDate && customEndDate) {
-        const start = new Date(customStartDate);
-        const end = new Date(customEndDate);
-        end.setHours(23, 59, 59, 999);
+      if (date?.from) {
+        const start = startOfDay(date.from);
+        const end = endOfDay(date.to ?? date.from);
         matchDate = txDate >= start && txDate <= end;
       }
 
-      const matchGateway =
-        gatewayFilter === "all" || tx.provider?.toLowerCase() === gatewayFilter.toLowerCase();
-      const matchCurrency =
-        currencyFilter === "all" || tx.currency?.toLowerCase() === currencyFilter.toLowerCase();
-      const matchPlan =
-        planFilter === "all" || tx.plan_name?.toLowerCase() === planFilter.toLowerCase();
-      const matchStatus =
-        statusFilter === "all" || tx.status?.toLowerCase() === statusFilter.toLowerCase();
-
-      return matchDate && matchGateway && matchCurrency && matchPlan && matchStatus;
+      return matchDate;
     });
 
-    const subs = subscriptions.filter((sub) => {
-      const matchPlan =
-        planFilter === "all" || sub.plan_id?.toLowerCase() === planFilter.toLowerCase();
-      const matchGateway =
-        gatewayFilter === "all" || sub.provider?.toLowerCase() === gatewayFilter.toLowerCase();
-      let matchStatus = true;
-      if (statusFilter !== "all") {
-        matchStatus = sub.status?.toLowerCase() === statusFilter.toLowerCase();
-      }
-      return matchPlan && matchGateway && matchStatus;
-    });
+    return { txs, subs: subscriptions };
+  }, [transactions, subscriptions, date]);
 
-    return { txs, subs };
-  }, [
-    transactions,
-    subscriptions,
-    dateRange,
-    customStartDate,
-    customEndDate,
-    gatewayFilter,
-    currencyFilter,
-    planFilter,
-    statusFilter
-  ]);
-
+  // Metrik KPI Esensial
   const metrics = useMemo(() => {
     const txs = filteredData.txs;
     const subs = filteredData.subs;
@@ -149,38 +97,15 @@ export function useSuperadminBilling() {
         sub.interval === "year" || sub.interval === "yearly" ? valInIdr / 12 : valInIdr;
     });
 
-    const calculatedARR = calculatedMRR * 12;
-    const expiredSubsCount = subs.filter((sub) => sub.status === "expired").length;
     const canceledSubsCount = subs.filter((sub) => sub.status === "canceled").length;
     const failedPaymentsCount = txs.filter((tx) => tx.status === "failed").length;
-    const couponsUsedCount = txs.filter((tx) => Number(tx.fee_amount) < 0).length;
-    const uniqueUsersCount = Array.from(new Set(txs.map((tx) => tx.tenant_id))).length;
-    const arpu = uniqueUsersCount > 0 ? totalRev / uniqueUsersCount : 0;
-
-    const refundedTxs = txs.filter((tx) => tx.status?.toLowerCase() === "refunded");
-    const refundCount = refundedTxs.length;
-    const refundAmount = refundedTxs.reduce(
-      (sum, tx) => sum + Math.abs(Number(tx.amount_in_idr || 0)),
-      0
-    );
-    const successCount = txs.filter((tx) =>
-      PAID_STATUSES.includes(tx.status?.toLowerCase())
-    ).length;
-    const refundRate = successCount > 0 ? (refundCount / successCount) * 100 : 0;
 
     return {
       totalRev,
       mrr: calculatedMRR,
-      arr: calculatedARR,
       activeSubsCount: activeSubs.length,
-      expiredSubsCount,
       canceledSubsCount,
-      failedPaymentsCount,
-      couponsUsedCount,
-      arpu,
-      refundCount,
-      refundAmount,
-      refundRate
+      failedPaymentsCount
     };
   }, [filteredData, planPrices]);
 
@@ -191,20 +116,20 @@ export function useSuperadminBilling() {
     const groups: { [key: string]: number } = {};
 
     txs.forEach((tx) => {
-      const date = new Date(tx.created_at);
+      const dateVal = new Date(tx.created_at);
       let key = "";
       if (revenueChartInterval === "day") {
-        key = date.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
+        key = dateVal.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
           month: "short",
           day: "numeric"
         });
       } else if (revenueChartInterval === "month") {
-        key = date.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
+        key = dateVal.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
           year: "2-digit",
           month: "short"
         });
       } else {
-        key = date.getFullYear().toString();
+        key = dateVal.getFullYear().toString();
       }
       groups[key] = (groups[key] || 0) + Number(tx.amount_in_idr || 0);
     });
@@ -215,8 +140,8 @@ export function useSuperadminBilling() {
   const subscriptionAnalyticsData = useMemo(() => {
     const groups: { [key: string]: any } = {};
     filteredData.subs.forEach((sub) => {
-      const date = new Date(sub.starts_at || sub.updated_at);
-      const key = date.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
+      const dateVal = new Date(sub.starts_at || sub.updated_at);
+      const key = dateVal.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
         month: "short",
         day: "numeric"
       });
@@ -304,22 +229,8 @@ export function useSuperadminBilling() {
   return {
     locale,
     isLoading,
-    dateRange,
-    setDateRange,
-    customStartDate,
-    setCustomStartDate,
-    customEndDate,
-    setCustomEndDate,
-    gatewayFilter,
-    setGatewayFilter,
-    currencyFilter,
-    setCurrencyFilter,
-    planFilter,
-    setPlanFilter,
-    statusFilter,
-    setStatusFilter,
-    uniqueGateways,
-    uniqueCurrencies,
+    date,
+    setDate,
     revenueChartInterval,
     setRevenueChartInterval,
     plans,
