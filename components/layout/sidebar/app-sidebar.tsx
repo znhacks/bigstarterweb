@@ -260,13 +260,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton className="hover:text-foreground h-10 group-data-[collapsible=icon]:px-0!">
                     {activeOrg?.logo ? (
-                      <div className="rounded-full object-cover">
-                        <img
-                          src={activeOrg.logo}
-                          alt={activeOrg.name}
-                          className="size-6 shrink-0 rounded-md object-cover"
-                        />
-                      </div>
+                      <img
+                        src={activeOrg.logo}
+                        alt={activeOrg.name}
+                        className="me-1 size-8 rounded-[5px] transition-all group-data-collapsible:size-6 group-data-[collapsible=icon]:size-8"
+                      />
                     ) : (
                       <Logo />
                     )}
@@ -314,8 +312,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             <Building2 className="text-muted-foreground size-4" />
                           )}
                         </div>
-                        <div className="flex flex-1 flex-col">
-                          <span className="text-sm font-medium">{org.name}</span>
+                        <div className="flex min-w-0 flex-1 flex-col">
+                          <span className="text-muted-foreground truncate text-sm font-medium">
+                            {org.name}
+                          </span>
                           <span
                             className={`text-xs ${
                               activeOrg?.id === org.id

@@ -26,7 +26,7 @@ export function SiteHeader() {
         <Search />
 
         <div className="ms-auto flex items-center gap-2">
-          <Notifications />
+          {/* <Notifications /> */}
           <ThemeSwitch />
           <LanguageSwitcher />
           <ThemeCustomizerPanel />

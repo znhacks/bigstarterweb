@@ -100,20 +100,19 @@ export const navItems: NavGroup[] = [
         items: [
           {
             title: "users.account",
-            href: "/settings/general",
-            permissions: [PERMISSIONS.settingsView]
+            href: "/settings/general"
           },
           {
             title: "users.organization",
             href: "/organization/general",
             tenantScoped: true,
             permissions: [PERMISSIONS.organizationRead]
-          },
-          // Tambahkan baris rute ini di dalam array navigasi sidebar Anda:
-          {
-            title: "users.i18n-culture",
-            href: "/settings/i18n-culture"
           }
+          // Tambahkan baris rute ini di dalam array navigasi sidebar Anda:
+            // {
+            //   title: "users.i18n-culture",
+            //   href: "/settings/i18n-culture"
+            // }
         ]
       }
     ]
