@@ -3,7 +3,6 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { ColumnDef } from "@tanstack/react-table";
 import { Check, X, CheckCircle2, AlertCircle, Loader2, ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,9 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { formatDateTime } from "@/lib/i18n/format";
 import { formatTransactionAmount } from "@/lib/i18n/currency";
 import { Input } from "@/components/ui/input";
-
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { getLocaleMeta } from "@/config/i18n-culture";
 
 const PROVIDER_LABELS: Record<string, { title: string; subtitle: string; color: string }> = {
   stripe: { title: "Credit Card", subtitle: "Stripe Global Secure", color: "text-indigo-600" },
@@ -45,19 +42,6 @@ const PROVIDER_LABELS: Record<string, { title: string; subtitle: string; color: 
   xendit: { title: "Xendit", subtitle: "Virtual Account & Retail Outlets", color: "text-blue-600" },
   mayar: { title: "Mayar.id", subtitle: "Instant Local QRIS/Transfer", color: "text-emerald-600" },
   braintree: { title: "Braintree", subtitle: "PayPal Service Secure", color: "text-teal-600" }
-};
-
-type Transaction = {
-  id: string;
-  created_at: string;
-  order_id: string;
-  plan_name: string;
-  amount: number;
-  currency: string;
-  amount_in_idr?: number | null;
-  status: string;
-  provider?: string | null;
-  tenant_id: string;
 };
 
 export function OrganizationBilling() {
@@ -107,6 +91,8 @@ export function OrganizationBilling() {
     handleApplyCoupon
   } = useOrganizationBilling();
 
+  const meta = getLocaleMeta(locale);
+
   if (isLoading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -117,7 +103,7 @@ export function OrganizationBilling() {
 
   if (!activeOrgId) {
     return (
-      <div className="mx-auto w-full max-w-5xl px-4 py-10">
+      <div className="mx-auto w-full max-w-5xl px-4 py-10" dir={meta.dir}>
         <Alert variant="destructive" className="rounded-2xl">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>{t("alert.title")}</AlertTitle>
@@ -127,12 +113,10 @@ export function OrganizationBilling() {
     );
   }
 
-  const activeSubLocalizedName = activeSub?.planId
-    ? tBilling(`plans.${activeSub.planId}.name`) || activeSub.planName
-    : activeSub?.planName || "";
+  const activeSubLocalizedName = activeSub?.planName || "";
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-10 px-4">
+    <div className="mx-auto w-full max-w-5xl space-y-10 px-4" dir={meta.dir}>
       {isVerifyingPayment && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
           <Loader2 className="h-10 w-10 animate-spin text-white" />
@@ -217,19 +201,10 @@ export function OrganizationBilling() {
                 ? plan.prices.yearly.convertedAmount
                 : plan.prices.monthly.convertedAmount;
 
-            const localizedName = tBilling(`plans.${plan.id}.name`) || plan.name;
-            const localizedDescription =
-              tBilling(`plans.${plan.id}.description`) || plan.description;
-
-            let localizedFeatures = plan.features || [];
-            try {
-              const rawFeatures = tBilling.raw(`plans.${plan.id}.features`);
-              if (Array.isArray(rawFeatures)) {
-                localizedFeatures = rawFeatures;
-              }
-            } catch (e) {
-              // Fallback
-            }
+            // SOLUSI: Seluruh penamaan, deskripsi, dan fitur diambil murni hasil resolusi Supabase dinamis
+            const localizedName = plan.name;
+            const localizedDescription = plan.description;
+            const localizedFeatures = plan.features || [];
 
             return (
               <Card
@@ -244,7 +219,6 @@ export function OrganizationBilling() {
                         </h3>
                         {billingCycle === "yearly" && plan.id !== "free" && (
                           <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-500/30 bg-emerald-50/50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                            {/* Menghitung persentase secara otomatis & dinamis */}
                             Save {getYearlyDiscountPercent(plan)}%
                           </span>
                         )}
@@ -279,15 +253,13 @@ export function OrganizationBilling() {
 
                   <div className="shrink-0 pt-4">
                     <div className="shrink-0 pt-4">
-                      {/* 1. KONDISI: Jika Plan ini adalah tujuan downgrade yang dijadwalkan */}
                       {activeSub && activeSub.pendingPlanId === plan.id ? (
                         <Button
                           disabled
                           className="w-full cursor-default border border-amber-500/20 bg-amber-500/10 py-5 font-semibold text-amber-600 hover:bg-amber-500/10">
                           Scheduled Downgrade
                         </Button>
-                      ) : // 2. KONDISI (SOLUSI): Mengecualikan 'upgrade_cycle' DAN 'downgrade_cycle' dari tombol kunci Active Plan
-                      isThisPlanActive &&
+                      ) : isThisPlanActive &&
                         getPlanActionType(plan.id) !== "upgrade_cycle" &&
                         getPlanActionType(plan.id) !== "downgrade_cycle" ? (
                         <div className="w-full space-y-2">
@@ -306,8 +278,7 @@ export function OrganizationBilling() {
                             </p>
                           )}
                         </div>
-                      ) : // 3. KONDISI: Jika pengguna memilih Switch ke Tahunan (Monthly -> Yearly)
-                      getPlanActionType(plan.id) === "upgrade_cycle" ? (
+                      ) : getPlanActionType(plan.id) === "upgrade_cycle" ? (
                         <Button
                           onClick={() => handleChoosePlan(plan)}
                           disabled={isDisabled}
@@ -315,8 +286,7 @@ export function OrganizationBilling() {
                           <ArrowUpRight className="h-4 w-4 shrink-0" />
                           <span>Switch to Yearly</span>
                         </Button>
-                      ) : // 4. KONDISI (SEKARANG AKAN TERPANGGIL): Jika pengguna memilih Switch ke Bulanan (Yearly -> Monthly)
-                      getPlanActionType(plan.id) === "downgrade_cycle" ? (
+                      ) : getPlanActionType(plan.id) === "downgrade_cycle" ? (
                         <div className="w-full space-y-2">
                           <Button
                             onClick={() => {
@@ -339,8 +309,7 @@ export function OrganizationBilling() {
                             beralih ke bulanan.
                           </p>
                         </div>
-                      ) : // 5. KONDISI: Jika tombol upgrade paket ditekan (misal: Starter ke Pro)
-                      actionType === "upgrade" && isSubActive ? (
+                      ) : actionType === "upgrade" && isSubActive ? (
                         <Button
                           onClick={() => handleChoosePlan(plan)}
                           disabled={isDisabled}
@@ -348,8 +317,7 @@ export function OrganizationBilling() {
                           <ArrowUpRight className="h-4 w-4 shrink-0" />
                           <span className="truncate">{t("buttons.upgrade")}</span>
                         </Button>
-                      ) : // 4. KONDISI: Jika tombol downgrade ditekan
-                      actionType === "downgrade" && isSubActive ? (
+                      ) : actionType === "downgrade" && isSubActive ? (
                         <div className="w-full space-y-2">
                           <Button
                             onClick={() => {
@@ -372,7 +340,6 @@ export function OrganizationBilling() {
                           </p>
                         </div>
                       ) : (
-                        // 5. KONDISI DEFAULT: Tombol pilih paket biasa
                         <Button
                           onClick={() => handleChoosePlan(plan)}
                           disabled={isDisabled}
@@ -404,7 +371,9 @@ export function OrganizationBilling() {
 
       {/* DIALOG MODAL DETAIL INVOICE */}
       <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
-        <DialogContent className="max-h-[90vh] w-[95vw] max-w-[550px] overflow-y-auto rounded-2xl border border-slate-200 p-6 sm:p-8">
+        <DialogContent
+          className="max-h-[90vh] w-[95vw] max-w-[550px] overflow-y-auto rounded-2xl border border-slate-200 p-6 sm:p-8"
+          dir={meta.dir}>
           {selectedInvoice && (
             <div className="space-y-6">
               <div id="printable-invoice" className="space-y-6 print:p-0">
@@ -464,11 +433,7 @@ export function OrganizationBilling() {
                       <tr>
                         <td className="px-4 py-4">
                           <p className="font-bold text-slate-900 capitalize">
-                            {t("invoice.table.itemTitle", {
-                              planName:
-                                tBilling(`plans.${selectedInvoice.plan_name}.name`) ||
-                                selectedInvoice.plan_name
-                            })}
+                            {selectedInvoice.plan_name}
                           </p>
                           <p className="mt-1 text-[11px] text-slate-400">
                             {t("invoice.table.itemDesc")}
@@ -530,11 +495,13 @@ export function OrganizationBilling() {
         onOpenChange={(open) => {
           setIsCheckoutOpen(open);
           if (!open) {
-            setAppliedCoupon(null); // Reset kupon jika modal ditutup
+            setAppliedCoupon(null);
             setCouponCodeInput("");
           }
         }}>
-        <DialogContent className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8">
+        <DialogContent
+          className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8"
+          dir={meta.dir}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-slate-900">
               {t("dialogPurchase.title")}
@@ -548,10 +515,8 @@ export function OrganizationBilling() {
               const isUpgrade =
                 getPlanActionType(selectedPlan.id) === "upgrade" ||
                 getPlanActionType(selectedPlan.id) === "upgrade_cycle";
-              const selectedPlanLocalizedName =
-                tBilling(`plans.${selectedPlan.id}.name`) || selectedPlan.name;
+              const selectedPlanLocalizedName = selectedPlan.name;
 
-              // 1. KALKULASI NOMINAL DISKON KUPON DI SISI FRONTEND (INTERAKTIF)
               let couponDiscountValue = 0;
               if (appliedCoupon) {
                 if (appliedCoupon.type === "percentage") {
@@ -592,7 +557,6 @@ export function OrganizationBilling() {
                       </div>
                     )}
 
-                    {/* Rincian Potongan Kupon Diskon Aktif */}
                     {appliedCoupon && (
                       <div className="flex items-center justify-between text-xs font-medium text-blue-600">
                         <span>Diskon Kupon ({appliedCoupon.code})</span>
@@ -606,7 +570,6 @@ export function OrganizationBilling() {
                     </div>
                   </div>
 
-                  {/* FORM INPUT KODE KUPON */}
                   <div className="space-y-1.5 border-t border-slate-100 pt-3">
                     <Label
                       htmlFor="coupon-input"
@@ -646,7 +609,6 @@ export function OrganizationBilling() {
                     )}
                   </div>
 
-                  {/* Render Tombol Pilihan Payment Gateway */}
                   <div className="space-y-2 border-t border-slate-100 pt-3">
                     <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
                       {t("dialogPurchase.selectPaymentMethod") || "Pilih Metode Pembayaran:"}
@@ -680,7 +642,9 @@ export function OrganizationBilling() {
 
       {/* DIALOG MODAL REFUND */}
       <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8">
+        <DialogContent
+          className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8"
+          dir={meta.dir}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-slate-900">
               {t("dialogRefund.title")}

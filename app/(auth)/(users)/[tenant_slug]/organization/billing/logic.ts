@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/i18n/currency";
 import { convertCurrency } from "@/actions/currency";
 import { getUserCurrencyClient } from "@/lib/i18n/user-currency";
+import { CURRENCY } from "@/config/i18n-culture";
 
 export interface AlertState {
   title: string;
@@ -38,7 +39,7 @@ export interface ActiveSubscription {
   status: string;
   cancelAtPeriodEnd: boolean;
   provider?: string;
-  pendingPlanId?: string; 
+  pendingPlanId?: string;
 }
 
 export interface ConvertedPlan {
@@ -62,9 +63,21 @@ export interface ConvertedPlan {
   };
 }
 
+export function getLocalizedValue<T>(
+  field: Record<string, T> | T,
+  locale: string,
+  fallback = "en"
+): T {
+  if (field && typeof field === "object" && !Array.isArray(field)) {
+    const val = (field as Record<string, T>)[locale] ?? (field as Record<string, T>)[fallback];
+    return val !== undefined ? val : (field as any);
+  }
+  return field as T;
+}
+
 export function useOrganizationBilling() {
   const locale = useLocale();
-  const routeParams = useParams(); 
+  const routeParams = useParams();
   const tenantSlug = (routeParams?.tenant_slug as string) || "";
 
   const t = useTranslations("organization.organization-billing");
@@ -88,6 +101,8 @@ export function useOrganizationBilling() {
 
   const [enabledProviders, setEnabledProviders] = useState<string[]>([]);
 
+  // SOLUSI CACHING STATE: Pisahkan antara data mentah database (raw) dan data tersaring (converted)
+  const [rawPlans, setRawPlans] = useState<any[]>([]);
   const [convertedPlans, setConvertedPlans] = useState<ConvertedPlan[]>([]);
 
   const [selectedPlan, setSelectedPlan] = useState<ConvertedPlan | null>(null);
@@ -99,43 +114,95 @@ export function useOrganizationBilling() {
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [isDowngrading, setIsDowngrading] = useState(false);
   const [couponCodeInput, setCouponCodeInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; type: string; value: number } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    type: string;
+    value: number;
+  } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
-  const initializeConvertedPlans = async () => {
+  // 1. TAHAP AMBIL DATA (Hanya Dipanggil Sekali Saat Mount): Tanpa request ulang API
+  const fetchRawPlansFromDB = async () => {
     try {
-      // Ambil plan dari DB (public /api/billing/plans) — bukan config/billing.ts
       const res = await fetch("/api/billing/plans").then((r) => r.json());
-      const apiPlans: any[] = res?.plans || [];
+      setRawPlans(res?.plans || []);
+    } catch (err) {
+      console.error("Gagal mengunduh plans mentah dari DB:", err);
+    }
+  };
 
-      const updated = await Promise.all(
-        apiPlans.map(async (plan) => {
-          const monthlyConv = await convertCurrency(plan.prices?.monthly?.amount ?? 0, targetCurrency);
-          const yearlyConv = await convertCurrency(plan.prices?.yearly?.amount ?? 0, targetCurrency);
+  // 2. TAHAP RESOLUSI LOKAL (Dipanggil Otomatis Setiap Kali Bahasa / Mata Uang Berubah): Tanpa Reload
+  useEffect(() => {
+    if (rawPlans.length === 0) return;
+
+    let isMounted = true;
+
+    const resolvePlansAndPricesLocally = async () => {
+      try {
+        const rateResult = await convertCurrency(1, targetCurrency, CURRENCY.base);
+        const rate = rateResult.rate ?? 1;
+
+        const updated = rawPlans.map((plan) => {
+          const monthlyAmount = plan.prices?.monthly?.amount ?? 0;
+          const yearlyAmount = plan.prices?.yearly?.amount ?? 0;
+
           return {
             ...plan,
-            features: plan.displayFeatures || plan.features || [],
+            name: getLocalizedValue(plan.name, locale),
+            description: getLocalizedValue(plan.description, locale),
+            features: getLocalizedValue(plan.displayFeatures || plan.features || [], locale),
             prices: {
               monthly: {
-                amount: plan.prices?.monthly?.amount ?? 0,
+                amount: monthlyAmount,
                 providers: plan.prices?.monthly?.providers,
-                convertedAmount: monthlyConv.amount
+                convertedAmount: monthlyAmount * rate
               },
               yearly: {
-                amount: plan.prices?.yearly?.amount ?? 0,
+                amount: yearlyAmount,
                 providers: plan.prices?.yearly?.providers,
-                convertedAmount: yearlyConv.amount
+                convertedAmount: yearlyAmount * rate
               }
             }
           } as ConvertedPlan;
-        })
-      );
-      setConvertedPlans(updated);
-    } catch (err) {
-      console.error("Gagal mengonversi harga paket:", err);
-    }
-  };
+        });
+
+        if (isMounted) {
+          setConvertedPlans(updated);
+        }
+      } catch (error) {
+        console.error("Gagal memproses harga paket billing:", error);
+        if (isMounted) {
+          setConvertedPlans(
+            rawPlans.map((plan) => ({
+              ...plan,
+              name: getLocalizedValue(plan.name, locale),
+              description: getLocalizedValue(plan.description, locale),
+              features: getLocalizedValue(plan.displayFeatures || plan.features || [], locale),
+              prices: {
+                monthly: {
+                  amount: plan.prices?.monthly?.amount ?? 0,
+                  providers: plan.prices?.monthly?.providers,
+                  convertedAmount: plan.prices?.monthly?.amount ?? 0
+                },
+                yearly: {
+                  amount: plan.prices?.yearly?.amount ?? 0,
+                  providers: plan.prices?.yearly?.providers,
+                  convertedAmount: plan.prices?.yearly?.amount ?? 0
+                }
+              }
+            }))
+          );
+        }
+      }
+    };
+
+    resolvePlansAndPricesLocally();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [rawPlans, locale, targetCurrency]);
 
   const loadBillingData = async (orgId: string) => {
     setIsLoading(true);
@@ -143,16 +210,10 @@ export function useOrganizationBilling() {
       await Promise.all([
         fetchActiveSubscription(orgId),
         fetchTransactionHistory(orgId),
-        initializeConvertedPlans()
+        fetchRawPlansFromDB() // Tarik rencana mentah
       ]);
     } catch (e: any) {
-      console.error("================ BILLING ERROR ================");
-      console.error("Message :", e?.message || e);
-      if (e?.code) console.error("Code    :", e.code);
-      if (e?.details) console.error("Details :", e.details);
-      if (e?.hint) console.error("Hint    :", e.hint);
-      if (e?.stack) console.error("Stack   :", e.stack);
-      console.error("===============================================");
+      console.error("Gagal memuat data billing:", e);
     } finally {
       setIsLoading(false);
     }
@@ -203,12 +264,13 @@ export function useOrganizationBilling() {
         return;
       }
 
-      // Ambil nama plan dari DB (/api/billing/plans) — bukan config/billing.ts
       let planName = data.plan_id || "Free";
       try {
         const res = await fetch("/api/billing/plans").then((r) => r.json());
         const found = (res?.plans || []).find((p: any) => p.id === data.plan_id);
-        if (found?.name) planName = found.name;
+        if (found?.name) {
+          planName = getLocalizedValue(found.name, locale);
+        }
       } catch {}
 
       setActiveSub({
@@ -295,13 +357,14 @@ export function useOrganizationBilling() {
     setIsCheckoutOpen(true);
   };
 
-  // FUNGSI UNIFIED CHECKOUT: Sudah disatukan penuh & menyertakan appliedCoupon (Bebas Duplikasi)
   const handleInitiateCheckout = async (provider: string) => {
     if (!activeOrgId || !selectedPlan || !tenantSlug) return;
     setIsVerifyingPayment(true);
 
     try {
-      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const {
+        data: { session: authSession }
+      } = await supabase.auth.getSession();
       if (!authSession) throw new Error("Silakan masuk terlebih dahulu");
 
       const billingRedirectPath = `/${tenantSlug}/organization/billing`;
@@ -317,7 +380,7 @@ export function useOrganizationBilling() {
           interval: billingCycle,
           provider: provider,
           tenantId: activeOrgId,
-          couponCode: appliedCoupon?.code || undefined, // Mengirimkan kupon diskon aktif
+          couponCode: appliedCoupon?.code || undefined,
           successUrl: `${window.location.origin}${billingRedirectPath}?success=true`,
           cancelUrl: `${window.location.origin}${billingRedirectPath}?canceled=true`
         })
@@ -348,7 +411,9 @@ export function useOrganizationBilling() {
     if (!activeSub || !activeOrgId) return;
     setIsUpdatingSub(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
       if (!session) throw new Error("Silakan masuk terlebih dahulu");
 
       const response = await fetch(`/api/billing/cancel-subscription`, {
@@ -389,7 +454,9 @@ export function useOrganizationBilling() {
     if (!activeSub || !activeOrgId) return;
     setIsUpdatingSub(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
       if (!session) throw new Error("Silakan masuk terlebih dahulu");
 
       const response = await fetch(`/api/billing/resume-subscription`, {
@@ -500,9 +567,9 @@ export function useOrganizationBilling() {
     setCouponError(null);
 
     try {
-      const response = await fetch('/api/billing/validate-coupon', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/billing/validate-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: couponCodeInput,
           tenantId: activeOrgId
@@ -517,7 +584,7 @@ export function useOrganizationBilling() {
         type: data.discountType,
         value: data.discountValue
       });
-      setCouponCodeInput(""); 
+      setCouponCodeInput("");
     } catch (err: any) {
       setCouponError(err.message || "Kupon tidak dikenal");
       setAppliedCoupon(null);
@@ -562,7 +629,7 @@ export function useOrganizationBilling() {
         return "upgrade_cycle";
       }
       if (currentInterval === "yearly" && billingCycle === "monthly") {
-        return "downgrade_cycle"; 
+        return "downgrade_cycle";
       }
       return "active";
     }
@@ -587,8 +654,6 @@ export function useOrganizationBilling() {
     const isCycleUpgrade = actionType === "upgrade_cycle";
     const isCycleDowngrade = actionType === "downgrade_cycle";
 
-    // Kredit pro-rata diberikan untuk upgrade, switch monthly->yearly, DAN switch yearly->monthly
-    // agar tampilan konsisten dgn perhitungan server (yg mengkompensasi sisa waktu interval lama).
     if (!isUpgrade && !isCycleUpgrade && !isCycleDowngrade) {
       return { finalPrice: targetPrice, creditUsed: 0 };
     }
@@ -629,7 +694,7 @@ export function useOrganizationBilling() {
     const start = new Date(activeSub.startsAt).getTime();
     const end = new Date(activeSub.endsAt).getTime();
     const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    return diffDays > 45 ? "yearly" : "monthly"; 
+    return diffDays > 45 ? "yearly" : "monthly";
   };
 
   const getYearlyDiscountPercent = (plan: ConvertedPlan): number => {
@@ -681,7 +746,7 @@ export function useOrganizationBilling() {
     currentActivePrice,
     handleDowngrade,
     isDowngrading,
-    getYearlyDiscountPercent, 
+    getYearlyDiscountPercent,
     getActiveSubscriptionInterval,
     couponCodeInput,
     setCouponCodeInput,
@@ -690,6 +755,6 @@ export function useOrganizationBilling() {
     couponError,
     setCouponError,
     isValidatingCoupon,
-    handleApplyCoupon,
+    handleApplyCoupon
   };
 }

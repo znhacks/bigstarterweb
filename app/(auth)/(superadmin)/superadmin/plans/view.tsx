@@ -36,11 +36,13 @@ import { DataTableSearch } from "@/components/data-table/data-table-search";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 
-import { useAdminPlans, PROVIDER_FIELDS } from "./logic";
+// SOLUSI: Mengimpor getLocalizedValue dari logic
+import { useAdminPlans, PROVIDER_FIELDS, getLocalizedValue } from "./logic";
 
 export function AdminPlansPage() {
   const {
     t,
+    locale, // SOLUSI: Tangkap variabel locale dari dekonstruksi hook
     isLoading,
     isSaving,
     errorMsg,
@@ -72,7 +74,9 @@ export function AdminPlansPage() {
     handleOpenCreate,
     handleSavePlan,
     confirmDeactivate,
-    handleBulkDeactivate
+    handleBulkDeactivate,
+    activeFormTab,
+    setActiveFormTab
   } = useAdminPlans();
 
   return (
@@ -148,6 +152,30 @@ export function AdminPlansPage() {
           </DialogHeader>
 
           <div className="space-y-8 py-4">
+            {/* INTERAKTIF TABS SWITCHER: Menukar input bahasa formulir */}
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+                Bahasa Pengisian Konten Pemasaran Paket
+              </Label>
+              <div className="border-border flex flex-wrap gap-2 border-b pb-3">
+                {(["en", "id", "ar"] as const).map((lang) => (
+                  <Button
+                    key={lang}
+                    type="button"
+                    variant={activeFormTab === lang ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveFormTab(lang)}
+                    className="text-xs font-semibold uppercase">
+                    {lang === "en"
+                      ? "English (EN)"
+                      : lang === "id"
+                        ? "Indonesia (ID)"
+                        : "العربية (AR)"}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             {/* 1. INFORMASI DASAR */}
             <div className="border-border/60 space-y-4 border-b pb-6">
               <h3 className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
@@ -165,32 +193,58 @@ export function AdminPlansPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="plan-name">{t("form.planName")}</Label>
+                  <Label htmlFor="plan-name">
+                    {t("form.planName")} ({activeFormTab.toUpperCase()}){" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="plan-name"
-                    value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    placeholder={t("form.planNamePlaceholder")}
+                    value={form.name[activeFormTab] || ""}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        name: { ...f.name, [activeFormTab]: e.target.value }
+                      }))
+                    }
+                    placeholder={`Nama dalam bahasa ${activeFormTab === "en" ? "Inggris" : activeFormTab === "id" ? "Indonesia" : "Arab"}...`}
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="plan-desc">{t("form.description")}</Label>
+                <Label htmlFor="plan-desc">
+                  {t("form.description")} ({activeFormTab.toUpperCase()}){" "}
+                  <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="plan-desc"
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder={t("form.descriptionPlaceholder")}
+                  value={form.description[activeFormTab] || ""}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      description: { ...f.description, [activeFormTab]: e.target.value }
+                    }))
+                  }
+                  placeholder={`Deskripsi pemasaran (${activeFormTab.toUpperCase()})...`}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="plan-display">{t("form.displayFeatures")}</Label>
+                <Label htmlFor="plan-display">
+                  {t("form.displayFeatures")} ({activeFormTab.toUpperCase()})
+                </Label>
                 <Textarea
                   id="plan-display"
                   rows={3}
-                  value={form.displayFeaturesRaw}
-                  onChange={(e) => setForm((f) => ({ ...f, displayFeaturesRaw: e.target.value }))}
-                  placeholder={t("form.displayFeaturesPlaceholder")}
+                  value={form.displayFeaturesRaw[activeFormTab] || ""}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      displayFeaturesRaw: {
+                        ...f.displayFeaturesRaw,
+                        [activeFormTab]: e.target.value
+                      }
+                    }))
+                  }
+                  placeholder={`Fitur baris demi baris (${activeFormTab.toUpperCase()})...`}
                 />
               </div>
             </div>
@@ -479,7 +533,10 @@ export function AdminPlansPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("alerts.deactivateTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("alerts.deactivateDesc", { name: deactivateTarget?.name ?? "" })}
+              {/* SOLUSI: Mengurai nama paket kustom menggunakan getLocalizedValue penentu multi-bahasa */}
+              {t("alerts.deactivateDesc", {
+                name: deactivateTarget ? getLocalizedValue(deactivateTarget.name, locale) : ""
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

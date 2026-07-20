@@ -1,3 +1,4 @@
+// app/(auth)/(superadmin)/superadmin/plans/logic.ts
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
@@ -9,20 +10,16 @@ import { formatCurrency } from "@/lib/i18n/currency";
 import { useDataTable } from "@/components/data-table/use-data-table";
 import { createSelectColumn } from "@/components/data-table/data-table-select-column";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import {
-  FEATURE_DEFINITIONS,
-  FeatureDefinition,
-  decodeFeatureGates
-} from "@/config/feature-definitions";
+import { FEATURE_DEFINITIONS, decodeFeatureGates } from "@/config/feature-definitions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export interface DBPlan {
   id: string;
-  name: string;
-  description: string;
+  name: Record<string, string> | string; // Mengakomodasi JSONB Objek
+  description: Record<string, string> | string; // Mengakomodasi JSONB Objek
   is_active: boolean;
-  display_features: string[];
+  display_features: Record<string, string[]> | string[]; // Mengakomodasi JSONB Objek
   features: string[];
 }
 
@@ -68,17 +65,33 @@ export const emptyProviderMap = (): ProviderMap =>
     return acc;
   }, {} as ProviderMap);
 
+// SOLUSI: Mengubah penampung struktur dasar formulir menjadi tipe objek multilingual
 export const EMPTY_FORM = {
   id: "",
-  name: "",
-  description: "",
+  name: { en: "", id: "", ar: "" } as Record<string, string>,
+  description: { en: "", id: "", ar: "" } as Record<string, string>,
   isActive: true,
-  displayFeaturesRaw: "",
+  displayFeaturesRaw: { en: "", id: "", ar: "" } as Record<string, string>,
   monthlyAmount: 0,
   yearlyAmount: 0,
   monthlyProviders: emptyProviderMap(),
   yearlyProviders: emptyProviderMap()
 };
+
+/**
+ * Helper untuk menyaring terjemahan objek JSONB murni secara fleksibel
+ */
+export function getLocalizedValue<T>(
+  field: Record<string, T> | T,
+  locale: string,
+  fallback = "en"
+): T {
+  if (field && typeof field === "object" && !Array.isArray(field)) {
+    const val = (field as Record<string, T>)[locale] ?? (field as Record<string, T>)[fallback];
+    return val !== undefined ? val : (field as any);
+  }
+  return field as T;
+}
 
 const containsFilterFn = (row: any, columnId: string, filterValue: string) => {
   if (!filterValue) return true;
@@ -103,6 +116,9 @@ export function useAdminPlans() {
   const [deactivateTarget, setDeactivateTarget] = useState<DBPlan | null>(null);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [isBulkDeactivating, setIsBulkDeactivating] = useState(false);
+
+  // Tab aktif formulir multibahasa superadmin
+  const [activeFormTab, setActiveFormTab] = useState<"en" | "id" | "ar">("en");
 
   const [isMonthlyEnabled, setIsMonthlyEnabled] = useState(false);
   const [isYearlyEnabled, setIsYearlyEnabled] = useState(false);
@@ -199,12 +215,35 @@ export function useAdminPlans() {
         return m;
       };
 
+      // Helper untuk merapikan pembacaan JSONB database saat di-edit
+      const getLangObject = (val: any): Record<string, string> => {
+        if (val && typeof val === "object" && !Array.isArray(val)) {
+          return {
+            en: val.en || "",
+            id: val.id || "",
+            ar: val.ar || ""
+          };
+        }
+        return { en: String(val || ""), id: "", ar: "" };
+      };
+
+      const getLangArrayRaw = (val: any): Record<string, string> => {
+        if (val && typeof val === "object" && !Array.isArray(val)) {
+          return {
+            en: Array.isArray(val.en) ? val.en.join("\n") : "",
+            id: Array.isArray(val.id) ? val.id.join("\n") : "",
+            ar: Array.isArray(val.ar) ? val.ar.join("\n") : ""
+          };
+        }
+        return { en: Array.isArray(val) ? val.join("\n") : "", id: "", ar: "" };
+      };
+
       setForm({
         id: plan.id,
-        name: plan.name,
-        description: plan.description,
+        name: getLangObject(plan.name),
+        description: getLangObject(plan.description),
         isActive: plan.is_active,
-        displayFeaturesRaw: plan.display_features.join("\n"),
+        displayFeaturesRaw: getLangArrayRaw(plan.display_features),
         monthlyAmount: mPrice ? parseFloat(String(mPrice.amount)) : 0,
         yearlyAmount: yPrice ? parseFloat(String(yPrice.amount)) : 0,
         monthlyProviders: toMap(mPrice),
@@ -225,12 +264,16 @@ export function useAdminPlans() {
         accessorKey: "name",
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.name")} />,
         filterFn: containsFilterFn,
-        cell: ({ row }) => (
-          <div>
-            <p className="font-bold">{row.original.name}</p>
-            <p className="text-muted-foreground font-mono text-xs">{row.original.id}</p>
-          </div>
-        )
+        cell: ({ row }) => {
+          // Filter nama murni secara dinamis di level tabel admin
+          const nameStr = getLocalizedValue(row.original.name, locale);
+          return (
+            <div>
+              <p className="font-bold">{nameStr}</p>
+              <p className="text-muted-foreground font-mono text-xs">{row.original.id}</p>
+            </div>
+          );
+        }
       },
       {
         accessorKey: "monthlyAmount",
@@ -284,7 +327,7 @@ export function useAdminPlans() {
         )
       }
     ],
-    [t, fmtIDR, handleOpenEdit]
+    [t, fmtIDR, handleOpenEdit, locale]
   );
 
   const table = useDataTable({ columns, data: rows });
@@ -357,7 +400,8 @@ export function useAdminPlans() {
   };
 
   const handleSavePlan = async () => {
-    if (!form.id || !form.name || !form.description) {
+    // Validasi murni memastikan input terisi minimal untuk bahasa Inggris (en)
+    if (!form.id || !form.name.en || !form.description.en) {
       showAlert("error", t("form.required"));
       return;
     }
@@ -391,15 +435,28 @@ export function useAdminPlans() {
         }
       });
 
-      const payload = {
-        id: form.id,
-        name: form.name,
-        description: form.description,
-        isActive: form.isActive,
-        displayFeatures: form.displayFeaturesRaw
+      // Pecah raw features per baris untuk masing-masing bahasa
+      const displayFeaturesCompiled = {
+        en: form.displayFeaturesRaw.en
           .split("\n")
           .map((f) => f.trim())
           .filter(Boolean),
+        id: form.displayFeaturesRaw.id
+          .split("\n")
+          .map((f) => f.trim())
+          .filter(Boolean),
+        ar: form.displayFeaturesRaw.ar
+          .split("\n")
+          .map((f) => f.trim())
+          .filter(Boolean)
+      };
+
+      const payload = {
+        id: form.id,
+        name: form.name, // Dikirim langsung berupa objek JSONB {"en", "id", "ar"}
+        description: form.description, // Dikirim langsung berupa objek JSONB {"en", "id", "ar"}
+        isActive: form.isActive,
+        displayFeatures: displayFeaturesCompiled, // Objek JSONB array fitur
         features: compiledFeatures,
         prices: {
           monthly: {
@@ -460,6 +517,7 @@ export function useAdminPlans() {
 
   return {
     t,
+    locale,
     isLoading,
     isSaving,
     errorMsg,
@@ -491,6 +549,8 @@ export function useAdminPlans() {
     handleOpenCreate,
     handleSavePlan,
     confirmDeactivate,
-    handleBulkDeactivate
+    handleBulkDeactivate,
+    activeFormTab, // Ekspor tab aktif untuk UI view
+    setActiveFormTab // Ekspor setter tab untuk UI view
   };
 }

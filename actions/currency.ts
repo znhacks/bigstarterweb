@@ -44,19 +44,21 @@ async function fetchRatesWithCache(base: string): Promise<CurrencyRates> {
 
 export async function convertCurrency(
   amount: number,
-  targetCurrency: string
+  targetCurrency: string,
+  sourceCurrency?: string
 ): Promise<{ amount: number; rate: number }> {
-  const baseCurrency = CURRENCY.base;
+  const normalizedTarget = targetCurrency.toUpperCase();
+  const normalizedSource = (sourceCurrency || CURRENCY.base).toUpperCase();
 
-  if (baseCurrency === targetCurrency) {
+  if (normalizedSource === normalizedTarget) {
     return { amount, rate: 1 };
   }
 
-  const rateData = await fetchRatesWithCache(baseCurrency);
-  const rate = rateData.rates[targetCurrency];
+  const rateData = await fetchRatesWithCache(normalizedSource);
+  const rate = rateData.rates[normalizedTarget];
 
   if (!rate) {
-    console.warn(`Kurs tidak ditemukan untuk target: ${targetCurrency}. Menggunakan nilai 1.`);
+    console.warn(`Kurs tidak ditemukan untuk target: ${normalizedTarget}. Menggunakan nilai 1.`);
     return { amount, rate: 1 };
   }
 
