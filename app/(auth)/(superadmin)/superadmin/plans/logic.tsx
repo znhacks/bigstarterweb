@@ -14,12 +14,15 @@ import { FEATURE_DEFINITIONS, decodeFeatureGates } from "@/config/feature-defini
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+// MENGIMPOR KONFIGURASI ROUTING BAHASA YANG SUDAH ADA
+import { routing } from "@/i18n/routing";
+
 export interface DBPlan {
   id: string;
-  name: Record<string, string> | string; // Mengakomodasi JSONB Objek
-  description: Record<string, string> | string; // Mengakomodasi JSONB Objek
+  name: Record<string, string> | string;
+  description: Record<string, string> | string;
   is_active: boolean;
-  display_features: Record<string, string[]> | string[]; // Mengakomodasi JSONB Objek
+  display_features: Record<string, string[]> | string[];
   features: string[];
 }
 
@@ -34,6 +37,26 @@ export interface PlanRow extends DBPlan {
   monthlyAmount: number;
   yearlyAmount: number;
 }
+
+// Metadata opsional untuk visualisasi label & placeholder di form
+const LOCALE_METADATA: Record<string, { label: string; placeholder: string }> = {
+  en: { label: "English (EN)", placeholder: "Inggris" },
+  id: { label: "Indonesia (ID)", placeholder: "Indonesia" },
+  ar: { label: "العربية (AR)", placeholder: "Arab" },
+  ja: { label: "日本語 (JA)", placeholder: "Jepang" }
+};
+
+// MEMBUAT SUPPORTED_LOCALES DINAMIS BERDASARKAN FILE i18n/routing.ts
+export const SUPPORTED_LOCALES = routing.locales.map((code) => {
+  const meta = LOCALE_METADATA[code as keyof typeof LOCALE_METADATA];
+  return {
+    code,
+    label: meta?.label || `${code.toUpperCase()} (${code.toUpperCase()})`,
+    placeholder: meta?.placeholder || code.toUpperCase()
+  };
+});
+
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]["code"];
 
 export const ALL_PROVIDER_FIELDS = [
   { key: "stripe", label: "Stripe Price ID (opsional — payment-only jika kosong)" },
@@ -65,13 +88,20 @@ export const emptyProviderMap = (): ProviderMap =>
     return acc;
   }, {} as ProviderMap);
 
-// SOLUSI: Mengubah penampung struktur dasar formulir menjadi tipe objek multilingual
+const createEmptyMultilingualField = (): Record<string, string> => {
+  const fields: Record<string, string> = {};
+  SUPPORTED_LOCALES.forEach((locale) => {
+    fields[locale.code] = "";
+  });
+  return fields;
+};
+
 export const EMPTY_FORM = {
   id: "",
-  name: { en: "", id: "", ar: "" } as Record<string, string>,
-  description: { en: "", id: "", ar: "" } as Record<string, string>,
+  name: createEmptyMultilingualField(),
+  description: createEmptyMultilingualField(),
   isActive: true,
-  displayFeaturesRaw: { en: "", id: "", ar: "" } as Record<string, string>,
+  displayFeaturesRaw: createEmptyMultilingualField(),
   monthlyAmount: 0,
   yearlyAmount: 0,
   monthlyProviders: emptyProviderMap(),
@@ -117,8 +147,10 @@ export function useAdminPlans() {
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [isBulkDeactivating, setIsBulkDeactivating] = useState(false);
 
-  // Tab aktif formulir multibahasa superadmin
-  const [activeFormTab, setActiveFormTab] = useState<"en" | "id" | "ar">("en");
+  // Menggunakan locale pertama dari config routing secara dinamis
+  const [activeFormTab, setActiveFormTab] = useState<SupportedLocale>(
+    SUPPORTED_LOCALES[0]?.code || "en"
+  );
 
   const [isMonthlyEnabled, setIsMonthlyEnabled] = useState(false);
   const [isYearlyEnabled, setIsYearlyEnabled] = useState(false);
@@ -215,27 +247,41 @@ export function useAdminPlans() {
         return m;
       };
 
-      // Helper untuk merapikan pembacaan JSONB database saat di-edit
       const getLangObject = (val: any): Record<string, string> => {
+        const obj: Record<string, string> = {};
+        SUPPORTED_LOCALES.forEach((locale) => {
+          obj[locale.code] = "";
+        });
+
         if (val && typeof val === "object" && !Array.isArray(val)) {
-          return {
-            en: val.en || "",
-            id: val.id || "",
-            ar: val.ar || ""
-          };
+          SUPPORTED_LOCALES.forEach((locale) => {
+            obj[locale.code] = val[locale.code] || "";
+          });
+          return obj;
         }
-        return { en: String(val || ""), id: "", ar: "" };
+
+        const primaryLocale = SUPPORTED_LOCALES[0]?.code || "en";
+        obj[primaryLocale] = String(val || "");
+        return obj;
       };
 
       const getLangArrayRaw = (val: any): Record<string, string> => {
+        const obj: Record<string, string> = {};
+        SUPPORTED_LOCALES.forEach((locale) => {
+          obj[locale.code] = "";
+        });
+
         if (val && typeof val === "object" && !Array.isArray(val)) {
-          return {
-            en: Array.isArray(val.en) ? val.en.join("\n") : "",
-            id: Array.isArray(val.id) ? val.id.join("\n") : "",
-            ar: Array.isArray(val.ar) ? val.ar.join("\n") : ""
-          };
+          SUPPORTED_LOCALES.forEach((locale) => {
+            const content = val[locale.code];
+            obj[locale.code] = Array.isArray(content) ? content.join("\n") : "";
+          });
+          return obj;
         }
-        return { en: Array.isArray(val) ? val.join("\n") : "", id: "", ar: "" };
+
+        const primaryLocale = SUPPORTED_LOCALES[0]?.code || "en";
+        obj[primaryLocale] = Array.isArray(val) ? val.join("\n") : "";
+        return obj;
       };
 
       setForm({
@@ -265,7 +311,6 @@ export function useAdminPlans() {
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.name")} />,
         filterFn: containsFilterFn,
         cell: ({ row }) => {
-          // Filter nama murni secara dinamis di level tabel admin
           const nameStr = getLocalizedValue(row.original.name, locale);
           return (
             <div>
@@ -400,8 +445,8 @@ export function useAdminPlans() {
   };
 
   const handleSavePlan = async () => {
-    // Validasi murni memastikan input terisi minimal untuk bahasa Inggris (en)
-    if (!form.id || !form.name.en || !form.description.en) {
+    const primaryLocale = SUPPORTED_LOCALES[0]?.code || "en";
+    if (!form.id || !form.name[primaryLocale] || !form.description[primaryLocale]) {
       showAlert("error", t("form.required"));
       return;
     }
@@ -435,28 +480,21 @@ export function useAdminPlans() {
         }
       });
 
-      // Pecah raw features per baris untuk masing-masing bahasa
-      const displayFeaturesCompiled = {
-        en: form.displayFeaturesRaw.en
+      const displayFeaturesCompiled: Record<string, string[]> = {};
+      SUPPORTED_LOCALES.forEach((locale) => {
+        const rawContent = form.displayFeaturesRaw[locale.code] || "";
+        displayFeaturesCompiled[locale.code] = rawContent
           .split("\n")
           .map((f) => f.trim())
-          .filter(Boolean),
-        id: form.displayFeaturesRaw.id
-          .split("\n")
-          .map((f) => f.trim())
-          .filter(Boolean),
-        ar: form.displayFeaturesRaw.ar
-          .split("\n")
-          .map((f) => f.trim())
-          .filter(Boolean)
-      };
+          .filter(Boolean);
+      });
 
       const payload = {
         id: form.id,
-        name: form.name, // Dikirim langsung berupa objek JSONB {"en", "id", "ar"}
-        description: form.description, // Dikirim langsung berupa objek JSONB {"en", "id", "ar"}
+        name: form.name,
+        description: form.description,
         isActive: form.isActive,
-        displayFeatures: displayFeaturesCompiled, // Objek JSONB array fitur
+        displayFeatures: displayFeaturesCompiled,
         features: compiledFeatures,
         prices: {
           monthly: {
@@ -550,7 +588,7 @@ export function useAdminPlans() {
     handleSavePlan,
     confirmDeactivate,
     handleBulkDeactivate,
-    activeFormTab, // Ekspor tab aktif untuk UI view
-    setActiveFormTab // Ekspor setter tab untuk UI view
+    activeFormTab,
+    setActiveFormTab
   };
 }
