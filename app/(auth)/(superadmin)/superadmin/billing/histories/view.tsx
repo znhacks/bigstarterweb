@@ -1,3 +1,4 @@
+// app/(auth)/(superadmin)/superadmin/billing/transactions/view.tsx
 "use client";
 
 import * as React from "react";
@@ -10,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
 import { formatTransactionAmount } from "@/lib/i18n/currency";
+import { formatDateTime } from "@/lib/i18n/format";
+import { getLocaleMeta } from "@/config/i18n-culture";
 
 // Reusable Table Components
 import { useDataTable } from "@/components/data-table/use-data-table";
@@ -35,23 +38,18 @@ interface SuperadminTransaction {
   } | null;
 }
 
-// Same case-insensitive contains match used across the other admin tables.
 const containsFilterFn = (row: any, columnId: string, filterValue: string) => {
   if (!filterValue) return true;
   return String(row.getValue(columnId)).toLowerCase().includes(filterValue.toLowerCase());
 };
 
-const STATUS_OPTIONS = [
-  { value: "paid", label: "Paid" },
-  { value: "completed", label: "Completed" },
-  { value: "pending", label: "Pending" },
-  { value: "failed", label: "Failed" },
-  { value: "refunded", label: "Refunded" }
-];
-
 export function SuperadminTransactionsPage() {
   const locale = useLocale();
-  const t = useTranslations("superadmin.billing");
+  const t = useTranslations("superadmin.billing.histories");
+  const ttable = useTranslations("data-table");
+
+  // Ambil metadata arah layout dinamis
+  const meta = getLocaleMeta(locale);
 
   const [transactions, setTransactions] = useState<SuperadminTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,9 +92,17 @@ export function SuperadminTransactionsPage() {
     }
   };
 
-  // Plan list is DB-driven, so facet options come straight from the loaded
-  // rows rather than a static config — same idea as the Role filter on
-  // the Users table.
+  // Penerjemahan Opsi Filter Dropdown Status secara dinamis peka-kultur
+  const statusOptions = useMemo(() => {
+    return [
+      { value: "paid", label: t("statuses.paid") || "Paid" },
+      { value: "completed", label: t("statuses.completed") || "Completed" },
+      { value: "pending", label: t("statuses.pending") || "Pending" },
+      { value: "failed", label: t("statuses.failed") || "Failed" },
+      { value: "refunded", label: t("statuses.refunded") || "Refunded" }
+    ];
+  }, [t]);
+
   const planOptions = useMemo(() => {
     const unique = Array.from(new Set(transactions.map((tx) => tx.plan_name).filter(Boolean)));
     return unique.map((name) => ({ value: name, label: name }));
@@ -106,6 +112,10 @@ export function SuperadminTransactionsPage() {
     () => [
       {
         accessorKey: "tenants.name",
+        meta: {
+          label: t("table.tenant")
+        },
+        id: "tenants_name", // SOLUSI: ID Kolom Eksplisit untuk meredam crash TanStack
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.tenant") || "Tenant"} />
         ),
@@ -124,6 +134,9 @@ export function SuperadminTransactionsPage() {
       },
       {
         accessorKey: "plan_name",
+        meta: {
+          label: t("table.plan")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.plan") || "Plan"} />
         ),
@@ -132,17 +145,22 @@ export function SuperadminTransactionsPage() {
       },
       {
         accessorKey: "created_at",
+        meta: {
+          label: t("table.created_at")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.date") || "Date"} />
         ),
         cell: ({ row }) => {
-          return new Date(row.original.created_at).toLocaleDateString(
-            locale === "id" ? "id-ID" : "en-US"
-          );
+          // SOLUSI: Menggunakan formatDateTime standard BCP-47 peka-kultur
+          return formatDateTime(row.original.created_at, locale, { dateStyle: "medium" });
         }
       },
       {
         accessorKey: "amount",
+        meta: {
+          label: t("table.amount")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.amount") || "Amount"} />
         ),
@@ -159,6 +177,9 @@ export function SuperadminTransactionsPage() {
       },
       {
         accessorKey: "status",
+        meta: {
+          label: t("table.status")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.status") || "Status"} />
         ),
@@ -173,7 +194,8 @@ export function SuperadminTransactionsPage() {
                   ? "border border-red-500/20 bg-red-500/10 text-red-600"
                   : "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
               }`}>
-              {tx.status}
+              {/* SOLUSI: Melokalisasi cetakan nama badge status */}
+              {t.has(`statuses.${tx.status}`) ? t(`statuses.${tx.status}`) : tx.status}
             </Badge>
           );
         }
@@ -182,7 +204,6 @@ export function SuperadminTransactionsPage() {
     [locale, t]
   );
 
-  // You own this instance — read/mutate it however this page needs.
   const table = useDataTable({ columns, data: transactions });
 
   if (isLoading) {
@@ -194,27 +215,25 @@ export function SuperadminTransactionsPage() {
   }
 
   return (
-    <div className="mx-auto w-full space-y-6 px-4 py-10">
+    <div className="mx-auto w-full space-y-6 px-4 py-10" dir={meta.dir}>
       <div className="space-y-1">
-        <h1 className="text-foreground text-2xl font-bold tracking-tight">Riwayat Transaksi</h1>
-        <p className="text-muted-foreground text-sm">
-          Menampilkan catatan seluruh mutasi pembayaran dan riwayat invoice masuk secara global.
-        </p>
+        <h1 className="text-foreground text-2xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("description")}</p>
       </div>
 
-      <div className="border-border/80 bg-card space-y-4 rounded-2xl border p-6 shadow-sm">
-        {/* Toolbar — hardcoded here, same Enter/button search + facet filters as the other admin tables. */}
+      <div className="space-y-4">
         <div className="flex flex-row flex-wrap items-center gap-2">
+          {/* SOLUSI: Cari tenants_name */}
           <DataTableSearch
             table={table}
-            columnId="tenants.name"
+            columnId="tenants_name"
             placeholder={t("table.search") || "Cari tenant..."}
           />
 
           <DataTableFacetedFilter
             column={table.getColumn("status")}
             title={t("table.status") || "Status"}
-            options={STATUS_OPTIONS}
+            options={statusOptions} // Gunakan opsi terjemahan dinamis
           />
 
           <DataTableFacetedFilter
@@ -223,7 +242,7 @@ export function SuperadminTransactionsPage() {
             options={planOptions}
           />
 
-          <DataTableViewOptions table={table} className="md:ms-auto" />
+          <DataTableViewOptions table={table} className="md:ms-auto" label={t("filters.columns")} />
         </div>
 
         <DataTable
@@ -232,7 +251,18 @@ export function SuperadminTransactionsPage() {
           noResultsText={t("placeholders.noTransactions")}
         />
 
-        <DataTablePagination table={table} />
+        <DataTablePagination
+          table={table}
+          selectedLabel={(selected, total) =>
+            ttable("pagination.selecteddata", {
+              selected,
+              total
+            })
+          }
+          rowsPerPageLabel={ttable("pagination.rowsPerPage")}
+          previousLabel={ttable("pagination.previous")} // Dikirim dinamis
+          nextLabel={ttable("pagination.next")}
+        />
       </div>
     </div>
   );

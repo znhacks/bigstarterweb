@@ -36,7 +36,7 @@ export function ImageCropperDialog({
   const cropperRef = useRef<ReactCropperElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // State Manajemen Pemuatan Berkas (menggunakan ?? null untuk mengantisipasi nilai undefined)
+  // State Manajemen Pemuatan Berkas
   const [imageSrc, setImageSrc] = useState<string | null>(initialImageSrc ?? null);
   const [urlInput, setUrlInput] = useState("");
   const [urlPreview, setUrlPreview] = useState<string | null>(null);
@@ -45,8 +45,8 @@ export function ImageCropperDialog({
 
   // State Sliders Kontrol
   const [zoom, setZoom] = useState(1);
-  const [minZoom, setMinZoom] = useState(0.1); // Batas terkecil dinamis (berdasarkan kotak hijau)
-  const [maxZoom, setMaxZoom] = useState(3); // Batas terbesar dinamis
+  const [minZoom, setMinZoom] = useState(0.1);
+  const [maxZoom, setMaxZoom] = useState(3);
 
   const [rotation, setRotation] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -63,7 +63,6 @@ export function ImageCropperDialog({
       setRotation(0);
       setIsDragging(false);
     } else {
-      // Mengonversi undefined ke null jika initialImageSrc kosong saat modal dibuka
       setImageSrc(initialImageSrc ?? null);
     }
   }, [open, initialImageSrc]);
@@ -89,7 +88,7 @@ export function ImageCropperDialog({
     return () => window.removeEventListener("paste", handleGlobalPaste);
   }, [open]);
 
-  // KUNCI UTAMA: Menghitung rasio zoom minimal agar gambar tidak lebih kecil dari KOTAK HIJAU (crop box)
+  // Menghitung rasio zoom minimal agar gambar tidak lebih kecil dari KOTAK HIJAU
   const getMinRatioLimit = (): number => {
     const cropper = cropperRef.current?.cropper;
     if (!cropper) return 0.1;
@@ -97,7 +96,6 @@ export function ImageCropperDialog({
     const cropBoxData = cropper.getCropBoxData();
     const imageData = cropper.getImageData();
 
-    // Mencari rasio terbesar agar gambar selalu menutupi kotak hijau secara penuh
     return Math.max(
       cropBoxData.width / imageData.naturalWidth,
       cropBoxData.height / imageData.naturalHeight
@@ -110,11 +108,11 @@ export function ImageCropperDialog({
     if (cropper) {
       const minLimit = getMinRatioLimit();
 
-      setMinZoom(minLimit); // Kunci slider paling kiri di batas kotak hijau
-      setZoom(minLimit); // Atur posisi awal slider pas di batas kotak hijau
-      setMaxZoom(minLimit * 4); // Batas maksimal zoom hingga 4x
+      setMinZoom(minLimit);
+      setZoom(minLimit);
+      setMaxZoom(minLimit * 4);
 
-      cropper.zoomTo(minLimit); // Paksa gambar pas di batas minimal kotak hijau
+      cropper.zoomTo(minLimit);
     }
   };
 
@@ -178,17 +176,16 @@ export function ImageCropperDialog({
     }
   };
 
-  // KUNCI KEAMANAN: Membatalkan aksi perkecil (zoom-out) jika pengguna melewati batas minimal KOTAK HIJAU
+  // Batalkan aksi perkecil jika melewati batas minimal
   const handleZoomEvent = (e: CustomEvent<any>) => {
     const cropper = cropperRef.current?.cropper;
     if (!cropper) return;
 
     const minLimit = getMinRatioLimit();
 
-    // Jika rasio baru di bawah batas kotak hijau, gagalkan aksi perkecil & kunci di batas minimal
     if (e.detail.ratio < minLimit) {
-      e.preventDefault(); // Batalkan aksi perkecil bawaan CropperJS
-      cropper.zoomTo(minLimit); // Kunci paksa ke batas minimal kotak hijau
+      e.preventDefault();
+      cropper.zoomTo(minLimit);
       setZoom(minLimit);
     } else {
       setZoom(e.detail.ratio);
@@ -213,8 +210,8 @@ export function ImageCropperDialog({
     setIsProcessing(true);
 
     const canvas = cropper.getCroppedCanvas({
-      width: 300, // Dikunci ke ukuran 300px
-      height: 300, // Dikunci ke ukuran 300px
+      width: 300,
+      height: 300,
       imageSmoothingQuality: "high"
     });
 
@@ -238,6 +235,46 @@ export function ImageCropperDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* Gaya CSS Khusus untuk menampilkan kotak luar dan lingkaran transparan di dalam */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        /* Tetap tampilkan garis luar persegi berwarna hijau */
+        .circular-cropper .cropper-view-box {
+          outline: 2px solid #22c55e !important;
+          outline-offset: -1px;
+          position: relative;
+        }
+
+        /* Buat area lingkaran di dalam persegi dengan sudut luar setengah transparan */
+        .circular-cropper .cropper-view-box::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          /* Bayangan hitam menyebar ke luar lingkaran untuk menggelapkan sudut persegi */
+          box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5) !important; 
+          pointer-events: none;
+          z-index: 1;
+          /* Garis bantu lingkaran tipis */
+          border: 1px dashed rgba(255, 255, 255, 0.4);
+        }
+
+        /* Pastikan elemen garis bantu (petak penolong) bawaan cropper tetap terlihat */
+        .circular-cropper .cropper-dashed {
+          opacity: 0.4 !important;
+        }
+        .circular-cropper .cropper-line {
+          background-color: #22c55e !important;
+          opacity: 0.6;
+        }
+      `
+        }}
+      />
+
       <DialogContent className="border-border/80 overflow-hidden rounded-2xl border p-6 sm:max-w-[480px]">
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div className="space-y-1">
@@ -248,7 +285,7 @@ export function ImageCropperDialog({
                   size="icon"
                   onClick={() => setImageSrc(null)}
                   className="text-muted-foreground hover:text-foreground -ms-1 h-8 w-8 rounded-lg">
-                  <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" />
+                  <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
               Update Profile Photo
@@ -366,21 +403,22 @@ export function ImageCropperDialog({
               <Cropper
                 ref={cropperRef}
                 src={imageSrc}
+                className="circular-cropper"
                 style={{ height: 280, width: "100%" }}
                 initialAspectRatio={1}
-                aspectRatio={1} // Mengunci rasio pemotongan agar tetap KOTAK (1:1)
+                aspectRatio={1}
                 guides={true}
-                viewMode={1} // PERBAIKAN: Menggunakan viewMode 1 agar gambar dibatasi oleh KOTAK HIJAU (crop box), bukan kotak merah (canvas)
+                viewMode={1}
                 dragMode="move"
                 background={false}
                 responsive={true}
-                autoCropArea={1.0} // Otomatis seleksi penuh dari dimensi terkecil gambar
+                autoCropArea={1.0}
                 checkOrientation={false}
-                cropBoxMovable={false} // Kunci Posisi Box Seleksi agar tidak bisa digeser
-                cropBoxResizable={false} // Kunci Ukuran Box Seleksi agar tidak bisa ditarik ujungnya
+                cropBoxMovable={false}
+                cropBoxResizable={false}
                 toggleDragModeOnDblclick={false}
-                ready={handleCropperReady} // Ambil rasio zoom minimal aman saat gambar selesai dimuat
-                zoom={handleZoomEvent} // INTERSEPSI FILTER: Kunci penggeser agar tidak bisa memperkecil melewati KOTAK HIJAU (crop box)
+                ready={handleCropperReady}
+                zoom={handleZoomEvent}
               />
             </div>
 
@@ -397,16 +435,16 @@ export function ImageCropperDialog({
                 <input
                   type="range"
                   value={zoom}
-                  min={minZoom} // Nilai paling kiri slider dikunci tepat di batas minimal rasio aman gambar terhadap KOTAK HIJAU
+                  min={minZoom}
                   max={maxZoom}
-                  step={0.001} // Langkah sangat tipis agar pergeseran sangat mulus
+                  step={0.001}
                   aria-label="Zoom"
                   onChange={handleZoomSlider}
                   className="bg-muted analytics-accent-foreground h-1 w-full cursor-pointer appearance-none rounded-lg"
                 />
               </div>
 
-              {/* Slider 2: Rotasi (0° - 360°) */}
+              {/* Slider 2: Rotasi */}
               <div className="space-y-1">
                 <div className="text-muted-foreground flex items-center justify-between text-xs font-semibold">
                   <span className="flex items-center gap-1.5">

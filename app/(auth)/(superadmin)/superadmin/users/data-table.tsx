@@ -78,6 +78,7 @@ export type User = {
 export default function UsersDataTable({ data: initialData }: { data?: User[] }) {
   const t = useTranslations("superadmin.users.data-table");
   const tMod = useTranslations("moderation");
+  const ttable = useTranslations("data-table");
   const locale = useLocale();
 
   const [users, setUsers] = useState<User[]>(initialData || []);
@@ -272,6 +273,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     {
       accessorKey: "name",
       header: t("headers.name"),
+      meta: {
+        label: t("headers.name")
+      },
       cell: ({ row }) => {
         const acc = row.original.accountStatus;
         return (
@@ -296,12 +300,18 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     },
     {
       accessorKey: "role",
+      meta: {
+        label: t("headers.role")
+      },
       header: ({ column }) => <DataTableColumnHeader column={column} title={t("headers.role")} />,
       cell: ({ row }) => <span className="capitalize">{row.getValue("role")}</span>,
       filterFn: multiSelectFilterFn
     },
     {
       accessorKey: "plan_name",
+      meta: {
+        label: t("headers.plan")
+      },
       header: ({ column }) => <DataTableColumnHeader column={column} title={t("headers.plan")} />,
       cell: ({ row }) => (
         <Badge variant="outline" className="font-semibold">
@@ -312,6 +322,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     },
     {
       accessorKey: "email",
+      meta: {
+        label: t("headers.email")
+      },
       header: ({ column }) => <DataTableColumnHeader column={column} title={t("headers.email")} />,
       cell: ({ row }) => (
         <span className="text-muted-foreground text-xs">{row.getValue("email")}</span>
@@ -319,6 +332,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     },
     {
       accessorKey: "country",
+      meta: {
+        label: t("headers.country")
+      },
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={t("headers.country")} />
       ),
@@ -326,6 +342,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     },
     {
       accessorKey: "status",
+      meta: {
+        label: t("headers.status")
+      },
       header: ({ column }) => <DataTableColumnHeader column={column} title={t("headers.status")} />,
       cell: ({ row }) => {
         const status = row.original.status;
@@ -345,6 +364,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     },
     {
       accessorKey: "lastSignIn",
+      meta: {
+        label: t("headers.lastSignIn")
+      },
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={t("headers.lastSignIn")} />
       ),
@@ -363,6 +385,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     },
     {
       accessorKey: "created_at",
+      meta: {
+        label: t("headers.createdAt")
+      },
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={t("headers.createdAt")} />
       ),
@@ -378,6 +403,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     },
     {
       accessorKey: "updated_at",
+      meta: {
+        label: t("headers.updatedAt")
+      },
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={t("headers.updatedAt")} />
       ),
@@ -490,6 +518,8 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
       <DataTablePagination
         table={table}
         selectedLabel={(selected, total) => t("footer.selected", { selected, total })}
+        previousLabel={ttable("pagination.previous")} // Dikirim dinamis
+        nextLabel={ttable("pagination.next")}
       />
 
       {/* Soft-delete user — type-to-confirm */}

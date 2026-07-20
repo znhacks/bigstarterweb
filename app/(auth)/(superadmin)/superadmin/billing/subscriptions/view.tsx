@@ -284,7 +284,7 @@ export function SuperadminSubscriptionsPage() {
             options={renewalOptions}
           />
 
-          <DataTableViewOptions table={table} className="md:ms-auto" />
+          <DataTableViewOptions table={table} className="md:ms-auto" label={t("filters.columns")} />
         </div>
 
         <DataTable
@@ -302,6 +302,8 @@ export function SuperadminSubscriptionsPage() {
             })
           }
           rowsPerPageLabel={ttable("pagination.rowsPerPage")}
+          previousLabel={ttable("pagination.previous")} // Dikirim dinamis
+          nextLabel={ttable("pagination.next")}
         />
       </div>
     </div>

@@ -905,6 +905,16 @@
             "expired": "Expired"
           }
         },
+        "filters": {
+          "search": "Search users...",
+          "status": "Status",
+          "plan": "Plan",
+          "role": "Role",
+          "columns": "Columns",
+          "noStatus": "No status found.",
+          "noPlan": "No plan found.",
+          "noRole": "No role found."
+        },
         "placeholders": {
           "unknownTenant": "Unknown Tenant",
           "freePlan": "Free",
@@ -914,6 +924,39 @@
           "renewOn": "Auto-renew",
           "renewOff": "Renewal Off",
           "noSubscriptions": "No active subscriptions found."
+        }
+      },
+      "histories": {
+        "title": "Transaction History",
+        "description": "Displaying global records of all payment mutations and incoming invoice histories.",
+        "table": {
+          "tenant": "Tenant",
+          "plan": "Plan",
+          "created_at": "Created At",
+          "date": "Date",
+          "amount": "Amount",
+          "status": "Status",
+          "search": "Search tenant..."
+        },
+        "filters": {
+          "search": "Search users...",
+          "status": "Status",
+          "plan": "Plan",
+          "role": "Role",
+          "columns": "Columns",
+          "noStatus": "No status found.",
+          "noPlan": "No plan found.",
+          "noRole": "No role found."
+        },
+        "placeholders": {
+          "noTransactions": "No active transactions found."
+        },
+        "statuses": {
+          "paid": "Paid",
+          "completed": "Completed",
+          "pending": "Pending",
+          "failed": "Failed",
+          "refunded": "Refunded"
         }
       }
     },
@@ -1115,7 +1158,9 @@
   "data-table": {
     "pagination": {
       "selecteddata": "{selected} of {total} row(s) selected.",
-      "rowsPerPage": "Rows per page:"
+      "rowsPerPage": "Rows per page:",
+      "previous": "Previous",
+      "next": "Next"
     }
   }
 }

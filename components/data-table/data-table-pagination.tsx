@@ -5,6 +5,7 @@ import * as React from "react";
 import { Table as TanstackTable } from "@tanstack/react-table";
 import { useLocale } from "next-intl"; // IMPORT: Hook Bahasa Aktif
 import { formatNumber } from "@/lib/i18n/format"; // IMPORT: Helper Angka Kultur
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"; // IMPORT: Ikon Panah
 
 import {
   Select,
@@ -18,24 +19,26 @@ import {
   PaginationContent,
   PaginationEllipsis,
   PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious
+  PaginationLink
 } from "@/components/ui/pagination";
+import { cn } from "@/lib/utils";
 
 interface DataTablePaginationProps<TData> {
   table: TanstackTable<TData>;
   pageSizeOptions?: number[];
-  // SOLUSI: Mengubah parameter selected dan total menjadi string hasil format lokal
   selectedLabel?: (selected: string, total: string) => string;
   rowsPerPageLabel?: string;
+  previousLabel?: string; // SOLUSI: Label tombol Sebelumnya dinamis
+  nextLabel?: string; // SOLUSI: Label tombol Berikutnya dinamis
 }
 
 export function DataTablePagination<TData>({
   table,
   pageSizeOptions = [10, 20, 50, 100],
   selectedLabel = (selected, total) => `${selected} of ${total} row(s) selected.`,
-  rowsPerPageLabel = "Rows per page:"
+  rowsPerPageLabel = "Rows per page:",
+  previousLabel = "Previous", // Fallback default bahasa Inggris jika tidak dioper
+  nextLabel = "Next" // Fallback default bahasa Inggris jika tidak dioper
 }: DataTablePaginationProps<TData>) {
   const locale = useLocale();
 
@@ -50,7 +53,6 @@ export function DataTablePagination<TData>({
           isActive={currentPage === pageIndex}
           onClick={() => table.setPageIndex(pageIndex)}
           className="cursor-pointer">
-          {/* SOLUSI: Mengubah angka nomor halaman menjadi peka-kultur */}
           {formatNumber(pageIndex + 1, locale)}
         </PaginationLink>
       </PaginationItem>
@@ -91,7 +93,6 @@ export function DataTablePagination<TData>({
   return (
     <div className="flex flex-col items-center justify-between gap-4 pt-4 md:flex-row">
       <div className="text-muted-foreground order-2 text-xs md:order-1">
-        {/* SOLUSI: Oper string angka terformat lokal ke dalam fungsi label ringkasan baris */}
         {selectedLabel(
           formatNumber(table.getFilteredSelectedRowModel().rows.length, locale),
           formatNumber(table.getFilteredRowModel().rows.length, locale)
@@ -108,14 +109,12 @@ export function DataTablePagination<TData>({
             onValueChange={(val) => table.setPageSize(Number(val))}>
             <SelectTrigger className="border-border/80 h-8 w-[70px] rounded-lg text-xs">
               <SelectValue
-                // SOLUSI: Tampilkan angka ukuran halaman terformat lokal pada placeholder utama
                 placeholder={formatNumber(table.getState().pagination.pageSize, locale)}
               />
             </SelectTrigger>
             <SelectContent>
               {pageSizeOptions.map((size) => (
                 <SelectItem key={size} value={`${size}`} className="text-xs">
-                  {/* SOLUSI: Tampilkan pilihan angka ukuran halaman secara peka-kultur */}
                   {formatNumber(size, locale)}
                 </SelectItem>
               ))}
@@ -126,24 +125,36 @@ export function DataTablePagination<TData>({
         {table.getPageCount() > 1 && (
           <Pagination>
             <PaginationContent className="flex-wrap gap-1">
+              {/* Tombol SEBELUMNYA - Murni mencetak properti previousLabel dinamis */}
               <PaginationItem>
-                <PaginationPrevious
-                  className={`cursor-pointer rounded-lg px-2 py-1 text-xs ${
+                <PaginationLink
+                  aria-label="Go to previous page"
+                  size="default"
+                  className={cn(
+                    "cursor-pointer gap-1 rounded-lg px-2.5 text-xs sm:ps-2.5",
                     !table.getCanPreviousPage() && "pointer-events-none opacity-50"
-                  }`}
-                  onClick={() => table.previousPage()}
-                />
+                  )}
+                  onClick={() => table.previousPage()}>
+                  <ChevronLeftIcon className="h-4 w-4 rtl:-scale-x-100" />
+                  <span className="hidden sm:block">{previousLabel}</span>
+                </PaginationLink>
               </PaginationItem>
 
               {renderPaginationItems()}
 
+              {/* Tombol BERIKUTNYA - Murni mencetak properti nextLabel dinamis */}
               <PaginationItem>
-                <PaginationNext
-                  className={`cursor-pointer rounded-lg px-2 py-1 text-xs ${
+                <PaginationLink
+                  aria-label="Go to next page"
+                  size="default"
+                  className={cn(
+                    "cursor-pointer gap-1 rounded-lg px-2.5 text-xs sm:pe-2.5",
                     !table.getCanNextPage() && "pointer-events-none opacity-50"
-                  }`}
-                  onClick={() => table.nextPage()}
-                />
+                  )}
+                  onClick={() => table.nextPage()}>
+                  <span className="hidden sm:block">{nextLabel}</span>
+                  <ChevronRightIcon className="h-4 w-4 rtl:-scale-x-100" />
+                </PaginationLink>
               </PaginationItem>
             </PaginationContent>
           </Pagination>

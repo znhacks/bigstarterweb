@@ -777,6 +777,7 @@
           "createdAt": "Dibuat Pada",
           "updatedAt": "Diperbarui Pada"
         },
+        "table": {},
         "actions": {
           "view": "Lihat pengguna",
           "delete": "Hapus",
@@ -893,6 +894,16 @@
             "expired": "Kedaluwarsa"
           }
         },
+        "filters": {
+          "search": "Cari pengguna...",
+          "status": "Status",
+          "plan": "Paket",
+          "role": "Peran",
+          "columns": "Kolom",
+          "noStatus": "Status tidak ditemukan.",
+          "noPlan": "Paket tidak ditemukan.",
+          "noRole": "Peran tidak ditemukan."
+        },
         "placeholders": {
           "unknownTenant": "Tenant Tidak Diketahui",
           "freePlan": "Gratis",
@@ -902,6 +913,39 @@
           "renewOn": "Perpanjangan Otomatis",
           "renewOff": "Perpanjangan Nonaktif",
           "noSubscriptions": "Tidak ada langganan aktif."
+        }
+      },
+      "histories": {
+        "title": "Riwayat Transaksi",
+        "description": "Menampilkan catatan seluruh mutasi pembayaran dan riwayat invoice masuk secara global.",
+        "table": {
+          "tenant": "Penyewa (Tenant)",
+          "plan": "Paket",
+          "created_at": "Dibuat",
+          "date": "Tanggal",
+          "amount": "Nominal",
+          "status": "Status",
+          "search": "Cari tenant..."
+        },
+        "filters": {
+          "search": "Cari pengguna...",
+          "status": "Status",
+          "plan": "Paket",
+          "role": "Peran",
+          "columns": "Kolom",
+          "noStatus": "Status tidak ditemukan.",
+          "noPlan": "Paket tidak ditemukan.",
+          "noRole": "Peran tidak ditemukan."
+        },
+        "placeholders": {
+          "noTransactions": "Tidak ada riwayat transaksi aktif yang ditemukan."
+        },
+        "statuses": {
+          "paid": "Lunas",
+          "completed": "Selesai",
+          "pending": "Menunggu",
+          "failed": "Gagal",
+          "refunded": "Dikembalikan (Refund)"
         }
       }
     },
@@ -1103,7 +1147,9 @@
   "data-table": {
     "pagination": {
       "selecteddata": "{selected} dari {total} baris dipilih.",
-      "rowsPerPage": "Baris per halaman:"
+      "rowsPerPage": "Baris per halaman:",
+      "previous": "Sebelumnya",
+      "next": "Berikutnya"
     }
   }
 }
