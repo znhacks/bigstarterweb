@@ -157,7 +157,7 @@ export function AdminPlansPage() {
       {/* 1. Backdrop Overlay */}
       {dialogOpen && (
         <div
-          className="animate-in fade-in fixed inset-0 z-50 bg-black/40 transition-opacity duration-300"
+          className="animate-in fade-in fixed inset-0 z-50 min-h-full bg-black/40 transition-opacity duration-300"
           onClick={() => setDialogOpen(false)}
         />
       )}
@@ -193,11 +193,11 @@ export function AdminPlansPage() {
         {/* Scrollable Content (Sesuai Struktur Dropdown Accordion) */}
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
           {/* ACCORDION: GENERAL */}
-          <div className="border-border bg-background overflow-hidden rounded-xl border">
+          <div className="\ bg-background overflow-hidden rounded-xl">
             <button
               type="button"
               onClick={() => toggleSection("general")}
-              className="bg-muted/20 hover:bg-muted/40 border-border/40 flex w-full items-center justify-between border-b p-4 text-left transition-colors">
+              className="hover:bg-muted/40 border-border bg-background flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
               <span className="text-foreground text-sm font-semibold">General</span>
               {openSections.general ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />
@@ -294,11 +294,11 @@ export function AdminPlansPage() {
           </div>
 
           {/* ACCORDION: KONFIGURASI FITUR */}
-          <div className="border-border bg-background overflow-hidden rounded-xl border">
+          <div className="overflow-hidden rounded-xl">
             <button
               type="button"
               onClick={() => toggleSection("features")}
-              className="bg-muted/20 hover:bg-muted/40 border-border/40 flex w-full items-center justify-between border-b p-4 text-left transition-colors">
+              className="hover:bg-muted/40 border-border bg-background flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
               <span className="text-foreground text-sm font-semibold">Konfigurasi Fitur</span>
               {openSections.features ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />
@@ -360,11 +360,11 @@ export function AdminPlansPage() {
           </div>
 
           {/* ACCORDION: GATEWAY PEMBAYARAN */}
-          <div className="border-border bg-background overflow-hidden rounded-xl border">
+          <div className="overflow-hidden rounded-xl">
             <button
               type="button"
               onClick={() => toggleSection("billing")}
-              className="bg-muted/20 hover:bg-muted/40 border-border/40 flex w-full items-center justify-between border-b p-4 text-left transition-colors">
+              className="bg-background hover:bg-muted/40 border-border flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
               <span className="text-foreground text-sm font-semibold">Gateway Pembayaran</span>
               {openSections.billing ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />

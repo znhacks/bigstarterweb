@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 
 // MENGIMPOR KONFIGURASI ROUTING BAHASA YANG SUDAH ADA
 import { routing } from "@/i18n/routing";
+import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
 export interface DBPlan {
   id: string;
@@ -213,7 +214,7 @@ export function useAdminPlans() {
   }, [plans, prices]);
 
   const fmtIDR = useCallback(
-    (amt: number) => formatCurrency(amt, locale, { currencyCode: "IDR" }),
+    (amt: number) => formatCurrency(amt, locale, { currencyCode: APP_BASE_CURRENCY }),
     [locale]
   );
 
