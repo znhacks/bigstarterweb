@@ -8,80 +8,138 @@ const supportedCurrencies = tenantConfig.supported.currencies.map((c) => c.code)
   ...string[]
 ];
 
-export const updateTenantSchema = z.object({
-  // Identitas dasar (selalu wajib)
-  name: z.string().min(1, { message: "Name is required" }).max(255),
-  logo: z.string().url().nullable().optional(),
-  slug: z
-    .string()
-    .min(3)
-    .max(255)
-    .regex(/^[a-z0-9-]+$/, {
-      message: "Slug can only contain lowercase letters, numbers, and hyphens"
-    })
-    .optional(),
+function normalizeOptionalText(value: unknown) {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
 
-  // Deskripsi & website organisasi
-  description: z.string().max(1000).nullable().optional(),
-  website: z
-    .string()
-    .url({ message: "Website must be a valid URL" })
-    .nullable()
-    .optional()
-    .or(z.literal("")),
+  return value ?? null;
+}
 
-  // 1. Validasi Alamat (Hanya divalidasi jika fiturnya aktif di konfigurasi)
-  address_line1: tenantConfig.features.enableAddress
-    ? z.string().max(255).nullable().optional()
-    : z.any().optional(),
-  address_line2: tenantConfig.features.enableAddress
-    ? z.string().max(255).nullable().optional()
-    : z.any().optional(),
-  city: tenantConfig.features.enableAddress
-    ? z.string().max(100).nullable().optional()
-    : z.any().optional(),
-  state_province: tenantConfig.features.enableAddress
-    ? z.string().max(100).nullable().optional()
-    : z.any().optional(),
-  postal_code: tenantConfig.features.enableAddress
-    ? z.string().max(20).nullable().optional()
-    : z.any().optional(),
-  country_code: tenantConfig.features.enableAddress
-    ? z
-        .string()
-        .length(2, { message: "Must be a valid 2-character country code" })
-        .nullable()
-        .optional()
-    : z.any().optional(),
-  kecamatan: tenantConfig.features.enableAddress ? z.string().max(100).nullable().optional() : z.any().optional(),
-  desa: tenantConfig.features.enableAddress ? z.string().max(100).nullable().optional() : z.any().optional(),
+function normalizeRequiredString(value: unknown, fallback: string) {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+  }
 
-  // 2. Validasi Kontak Bisnis & Pajak
-  business_email: tenantConfig.features.enableBusinessContact
-    ? z.string().email({ message: "Invalid email address" }).nullable().optional().or(z.literal(""))
-    : z.any().optional(),
-  phone_number: tenantConfig.features.enableBusinessContact
-    ? z.string().max(50).nullable().optional()
-    : z.any().optional(),
-  tax_id: tenantConfig.features.enableTaxId
-    ? z.string().max(100).nullable().optional()
-    : z.any().optional(),
+  return fallback;
+}
 
-  // 3. Validasi Internasionalisasi (i18n)
-  default_locale: tenantConfig.features.enableRegionalSettings
-    ? z.string().refine((val) => tenantConfig.supported.locales.some((l) => l.code === val), {
-        message: "Unsupported language locale"
+export function normalizeTenantUpdatePayload(payload: Record<string, any>) {
+  const normalized: Record<string, any> = { ...payload };
+
+  if (tenantConfig.features.enableRegionalSettings) {
+    normalized.default_locale = normalizeRequiredString(
+      payload.default_locale,
+      tenantConfig.defaults.locale
+    );
+    normalized.currency = normalizeRequiredString(payload.currency, tenantConfig.defaults.currency);
+    normalized.timezone = normalizeRequiredString(payload.timezone, tenantConfig.defaults.timezone);
+  }
+
+  normalized.description = normalizeOptionalText(payload.description);
+  normalized.website = normalizeOptionalText(payload.website);
+  normalized.business_email = normalizeOptionalText(payload.business_email);
+  normalized.phone_number = normalizeOptionalText(payload.phone_number);
+  normalized.tax_id = normalizeOptionalText(payload.tax_id);
+  normalized.address_line1 = normalizeOptionalText(payload.address_line1);
+  normalized.address_line2 = normalizeOptionalText(payload.address_line2);
+  normalized.city = normalizeOptionalText(payload.city);
+  normalized.state_province = normalizeOptionalText(payload.state_province);
+  normalized.postal_code = normalizeOptionalText(payload.postal_code);
+  normalized.country_code = normalizeOptionalText(payload.country_code);
+  normalized.kecamatan = normalizeOptionalText(payload.kecamatan);
+  normalized.desa = normalizeOptionalText(payload.desa);
+
+  return normalized;
+}
+
+export const updateTenantSchema = z
+  .object({
+    // Identitas dasar (selalu wajib)
+    name: z.string().min(1, { message: "Name is required" }).max(255),
+    logo: z.string().url().nullable().optional(),
+    slug: z
+      .string()
+      .min(3)
+      .max(255)
+      .regex(/^[a-z0-9-]+$/, {
+        message: "Slug can only contain lowercase letters, numbers, and hyphens"
       })
-    : z.string().optional(),
+      .optional(),
 
-  currency: tenantConfig.features.enableRegionalSettings
-    ? z.string().refine((val) => tenantConfig.supported.currencies.some((c) => c.code === val), {
-        message: "Unsupported currency"
-      })
-    : z.string().optional(),
-  timezone: tenantConfig.features.enableRegionalSettings
-    ? z.string().min(1, { message: "Timezone is required" }) // Validasi nama zona waktu IANA dasar
-    : z.string().optional()
-});
+    // Deskripsi & website organisasi
+    description: z.string().max(1000).nullable().optional(),
+    website: z
+      .string()
+      .url({ message: "Website must be a valid URL" })
+      .nullable()
+      .optional()
+      .or(z.literal("")),
+
+    // 1. Validasi Alamat (Hanya divalidasi jika fiturnya aktif di konfigurasi)
+    address_line1: tenantConfig.features.enableAddress
+      ? z.string().max(255).nullable().optional()
+      : z.any().optional(),
+    address_line2: tenantConfig.features.enableAddress
+      ? z.string().max(255).nullable().optional()
+      : z.any().optional(),
+    city: tenantConfig.features.enableAddress
+      ? z.string().max(100).nullable().optional()
+      : z.any().optional(),
+    state_province: tenantConfig.features.enableAddress
+      ? z.string().max(100).nullable().optional()
+      : z.any().optional(),
+    postal_code: tenantConfig.features.enableAddress
+      ? z.string().max(20).nullable().optional()
+      : z.any().optional(),
+    country_code: tenantConfig.features.enableAddress
+      ? z
+          .string()
+          .length(2, { message: "Must be a valid 2-character country code" })
+          .nullable()
+          .optional()
+      : z.any().optional(),
+    kecamatan: tenantConfig.features.enableAddress
+      ? z.string().max(100).nullable().optional()
+      : z.any().optional(),
+    desa: tenantConfig.features.enableAddress
+      ? z.string().max(100).nullable().optional()
+      : z.any().optional(),
+
+    // 2. Validasi Kontak Bisnis & Pajak
+    business_email: tenantConfig.features.enableBusinessContact
+      ? z
+          .string()
+          .email({ message: "Invalid email address" })
+          .nullable()
+          .optional()
+          .or(z.literal(""))
+      : z.any().optional(),
+    phone_number: tenantConfig.features.enableBusinessContact
+      ? z.string().max(50).nullable().optional()
+      : z.any().optional(),
+    tax_id: tenantConfig.features.enableTaxId
+      ? z.string().max(100).nullable().optional()
+      : z.any().optional(),
+
+    // 3. Validasi Internasionalisasi (i18n)
+    default_locale: tenantConfig.features.enableRegionalSettings
+      ? z.string().refine((val) => tenantConfig.supported.locales.some((l) => l.code === val), {
+          message: "Unsupported language locale"
+        })
+      : z.string().optional(),
+
+    currency: tenantConfig.features.enableRegionalSettings
+      ? z.string().refine((val) => tenantConfig.supported.currencies.some((c) => c.code === val), {
+          message: "Unsupported currency"
+        })
+      : z.string().optional(),
+    timezone: tenantConfig.features.enableRegionalSettings
+      ? z.string().min(1, { message: "Timezone is required" }) // Validasi nama zona waktu IANA dasar
+      : z.string().optional()
+  })
+  .partial();
 
 export type UpdateTenantInput = z.infer<typeof updateTenantSchema>;

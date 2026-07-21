@@ -1,7 +1,9 @@
 "use client";
 
-import { ReactNode, createContext, useContext, useEffect, useState } from "react";
+import { ReactNode, createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { DEFAULT_THEME, ThemeType } from "@/lib/themes";
+import { supabase } from "@/lib/supabase";
 
 function setThemeCookie(key: string, value: string | null) {
   if (typeof window === "undefined") return;
@@ -16,6 +18,13 @@ function setThemeCookie(key: string, value: string | null) {
 type ThemeContextType = {
   theme: ThemeType;
   setTheme: (theme: ThemeType) => void;
+  /** Reset: hapus profile.theme ({}) → tenant/default mewarisi. */
+  resetTheme: () => void;
+  /** Save eksplisit: persist theme saat ini ke profiles.theme. */
+  saveTheme: () => Promise<void>;
+  isSaving: boolean;
+  /** Source of the current theme: "user" | "tenant" | "default". */
+  themeSource: string;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -27,25 +36,81 @@ export function ActiveThemeProvider({
   children: ReactNode;
   initialTheme?: ThemeType;
 }) {
-  const [theme, setTheme] = useState<ThemeType>(() =>
+  const [theme, setThemeState] = useState<ThemeType>(() =>
     initialTheme ? initialTheme : DEFAULT_THEME
   );
+  const [themeSource, setThemeSource] = useState<string>("default");
+  const [isSaving, setIsSaving] = useState(false);
 
+  // --- Fetch DB-resolved theme (user > tenant > default) ---
+  const applyDbTheme = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Extract tenant_slug dari URL — lebih reliable daripada localStorage active_org_id
+      // yg bisa stale saat pindah tenant via navigasi.
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      const tenantSlug = pathParts[0] || "";
+      const tenantId = localStorage.getItem("active_org_id") || "";
+
+      const res = await fetch("/api/theme", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "x-tenant-slug": tenantSlug,
+          "x-tenant-id": tenantId
+        }
+      }).then((r) => r.json()).catch(() => null);
+
+      if (res?.theme && res.theme.preset !== undefined) {
+        setThemeState(res.theme as ThemeType);
+        setThemeSource(res.source || "default");
+      }
+    } catch {
+      // Silent fail → keep current theme.
+    }
+  }, []);
+
+  // Re-fetch theme saat path berubah (pindah tenant = URL berubah).
+  // Debounced: mount = immediate; navigasi = delay 300ms.
+  const pathname = usePathname();
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      applyDbTheme();
+      return;
+    }
+    const timer = setTimeout(() => applyDbTheme(), 300);
+    return () => clearTimeout(timer);
+  }, [pathname, applyDbTheme]);
+
+  // Juga dengarkan event "storage" utk perubahan programmatic (e.g. org switch tanpa navigasi).
+  useEffect(() => {
+    const handler = () => applyDbTheme();
+    window.addEventListener("storage", handler);
+    window.addEventListener("active-org-changed", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("active-org-changed", handler);
+    };
+  }, [applyDbTheme]);
+
+  // --- Apply theme to body + cookies (SSR-consistent) ---
   useEffect(() => {
     const body = document.body;
 
     setThemeCookie("theme_radius", theme.radius);
     body.setAttribute("data-theme-radius", theme.radius);
 
-    if (theme.radius != "default") {
-      setThemeCookie("theme_preset", theme.radius);
+    if (theme.radius !== "default") {
       body.setAttribute("data-theme-radius", theme.radius);
     } else {
-      setThemeCookie("theme_preset", null);
       body.removeAttribute("data-theme-radius");
     }
 
-    if (theme.preset != "default") {
+    if (theme.preset !== "default") {
       setThemeCookie("theme_preset", theme.preset);
       body.setAttribute("data-theme-preset", theme.preset);
     } else {
@@ -56,7 +121,7 @@ export function ActiveThemeProvider({
     setThemeCookie("theme_content_layout", theme.contentLayout);
     body.setAttribute("data-theme-content-layout", theme.contentLayout);
 
-    if (theme.scale != "none") {
+    if (theme.scale !== "none") {
       setThemeCookie("theme_scale", theme.scale);
       body.setAttribute("data-theme-scale", theme.scale);
     } else {
@@ -65,7 +130,35 @@ export function ActiveThemeProvider({
     }
   }, [theme.preset, theme.radius, theme.scale, theme.contentLayout]);
 
-  return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
+  // --- setTheme: LOCAL PREVIEW ONLY (cookies + body attributes) ---
+  // TIDAK auto-save ke DB. Hanya Save eksplisit (appearance page) yg persist.
+  // Ini mencegah profiles.theme terisi secara tak sengaja → menutupi tenant theme.
+  const setTheme = (next: ThemeType) => {
+    setThemeState(next);
+  };
+
+  // --- resetTheme: hapus profile.theme ({}) → tenant/default mewarisi ---
+  const resetTheme = async () => {
+    setThemeState({ ...DEFAULT_THEME });
+    setThemeSource("default");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch("/api/theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ theme: {}, scope: "user" })
+      });
+      // Re-fetch utk apply tenant/default theme
+      setTimeout(() => applyDbTheme(), 300);
+    } catch {}
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme, resetTheme, themeSource }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
 export function useThemeConfig() {
