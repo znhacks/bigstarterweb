@@ -225,7 +225,7 @@ export default function Search() {
 
                 return (
                   <React.Fragment key={route.title}>
-                    <CommandGroup heading={route.title}>
+                    <CommandGroup heading={tmenu(`${route.title}`)}>
                       {flatGroupItems.map((item, key) => (
                         <CommandItem
                           key={key}
@@ -234,12 +234,11 @@ export default function Search() {
                             router.push(item.href);
                           }}>
                           {item.icon && <item.icon className="me-2 h-4 w-4" />}
-                          {/* Menggunakan displayTitle agar menampilkan nama induk */}
+
                           <span>
                             {(item.displayTitle || item.title)
                               .split(" › ")
                               .map((key) => {
-                                // Menghapus prefix "menu." jika ada, karena tmenu kemungkinan sudah menggunakan namespace "menu"
                                 const cleanKey = key.startsWith("menu.")
                                   ? key.replace("menu.", "")
                                   : key;

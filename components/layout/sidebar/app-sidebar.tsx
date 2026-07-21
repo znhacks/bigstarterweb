@@ -139,7 +139,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     loadUserAndOrganizations();
   }, []);
 
-  // 2. Menentukan & Mensinkronkan Organisasi Aktif jika URL / Cookie Berubah
   useEffect(() => {
     if (organizations.length === 0) return;
 
@@ -274,7 +273,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       ) : activeOrg ? (
                         activeOrg.name
                       ) : (
-                        "No organization"
+                        t("common.notenant")
                       )}
                     </span>
                     <ChevronsUpDown className="ms-auto group-data-[collapsible=icon]:hidden" />
