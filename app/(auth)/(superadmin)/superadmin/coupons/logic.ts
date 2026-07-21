@@ -5,6 +5,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/i18n/currency";
+import { APP_BASE_CURRENCY } from "@/config/billing-rates";
+import { getCouponRedemptions } from "./action";
 
 export interface DBCoupon {
   id: string;
@@ -15,6 +17,12 @@ export interface DBCoupon {
   max_redemptions: number | null;
   redeemed_count: number;
   created_at: string;
+}
+
+export interface CouponRedemption {
+  id: string;
+  redeemed_at: string;
+  tenant_name: string;
 }
 
 export const EMPTY_COUPON_FORM = {
@@ -42,6 +50,10 @@ export function useAdminCoupons() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_COUPON_FORM });
+
+  const [selectedCoupon, setSelectedCoupon] = useState<DBCoupon | null>(null);
+  const [redemptions, setRedemptions] = useState<CouponRedemption[]>([]);
+  const [isLoadingRedemptions, setIsLoadingRedemptions] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<DBCoupon | null>(null);
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
@@ -90,7 +102,9 @@ export function useAdminCoupons() {
     (c: DBCoupon) =>
       c.discount_type === "percentage"
         ? `${parseFloat(String(c.discount_value))}%`
-        : formatCurrency(parseFloat(String(c.discount_value)), locale, { currencyCode: "IDR" }),
+        : formatCurrency(parseFloat(String(c.discount_value)), locale, {
+            currencyCode: APP_BASE_CURRENCY
+          }),
     [locale]
   );
 
@@ -135,8 +149,30 @@ export function useAdminCoupons() {
   };
 
   const handleOpenCreate = () => {
+    setSelectedCoupon(null);
     setForm({ ...EMPTY_COUPON_FORM });
     setDialogOpen(true);
+  };
+
+  // Diperbarui: Memanggil data asinkron via Server Action agar RLS Terlewati
+  const handleOpenView = async (coupon: DBCoupon) => {
+    setSelectedCoupon(coupon);
+    setRedemptions([]);
+    setDialogOpen(true);
+    setIsLoadingRedemptions(true);
+
+    try {
+      const res = await getCouponRedemptions(coupon.id);
+      if (res.success && res.redemptions) {
+        setRedemptions(res.redemptions);
+      } else if (!res.success) {
+        console.error("Gagal memuat riwayat kupon:", res.error);
+      }
+    } catch (err: any) {
+      console.error("Gagal memuat riwayat kupon:", err.message);
+    } finally {
+      setIsLoadingRedemptions(false);
+    }
   };
 
   const handleSaveCoupon = async () => {
@@ -215,6 +251,10 @@ export function useAdminCoupons() {
     setDialogOpen,
     form,
     setForm,
+    selectedCoupon,
+    setSelectedCoupon,
+    redemptions,
+    isLoadingRedemptions,
     deleteTarget,
     setDeleteTarget,
     bulkConfirmOpen,
@@ -223,6 +263,7 @@ export function useAdminCoupons() {
     formatDiscount,
     handleBulkDelete,
     handleOpenCreate,
+    handleOpenView,
     handleSaveCoupon,
     confirmDelete
   };

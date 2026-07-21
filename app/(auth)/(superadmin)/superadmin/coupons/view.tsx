@@ -3,21 +3,25 @@
 
 import React, { useMemo } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Loader2, Plus, Trash2, ShieldAlert, Check, Ticket, Calendar, Users } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  ShieldAlert,
+  Check,
+  Ticket,
+  Calendar,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  X
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -48,6 +52,9 @@ import { DataTableViewOptions } from "@/components/data-table/data-table-view-op
 import { createSelectColumn } from "@/components/data-table/data-table-select-column";
 import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
 
+// MENGIMPOR DATETIME PICKER KUSTOM
+import { DateTimePicker } from "@/components/date-time-picker";
+
 import { useAdminCoupons, getExpiryStatus, DBCoupon } from "./logic";
 
 const containsFilterFn = (row: any, columnId: string, filterValue: string) => {
@@ -68,6 +75,9 @@ export function AdminCouponsPage() {
     setDialogOpen,
     form,
     setForm,
+    selectedCoupon,
+    redemptions,
+    isLoadingRedemptions,
     deleteTarget,
     setDeleteTarget,
     bulkConfirmOpen,
@@ -76,9 +86,27 @@ export function AdminCouponsPage() {
     formatDiscount,
     handleBulkDelete,
     handleOpenCreate,
+    handleOpenView,
     handleSaveCoupon,
     confirmDelete
   } = useAdminCoupons();
+
+  const isRtl = locale === "ar";
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // State untuk mengontrol Accordion pada Detail Tampilan Kupon
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
+    details: true,
+    redemptionsList: true
+  });
+
+  const toggleSection = (section: string) => {
+    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
 
   const columns: ColumnDef<DBCoupon, unknown>[] = useMemo(
     () => [
@@ -88,10 +116,14 @@ export function AdminCouponsPage() {
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.code")} />,
         filterFn: containsFilterFn,
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleOpenView(row.original)}
+            className="flex items-center gap-2 text-left select-none focus:outline-none">
             <Ticket className="text-muted-foreground h-4 w-4" />
-            <span className="font-mono font-bold tracking-wider">{row.original.code}</span>
-          </div>
+            <span className="text-primary font-mono font-bold tracking-wider">
+              {row.original.code}
+            </span>
+          </button>
         )
       },
       {
@@ -101,11 +133,13 @@ export function AdminCouponsPage() {
         ),
         filterFn: multiSelectFilterFn,
         cell: ({ row }) => (
-          <Badge variant="outline" className="capitalize">
-            {row.original.discount_type === "percentage"
-              ? t("form.percentage")
-              : t("form.fixedAmount")}
-          </Badge>
+          <div onClick={() => handleOpenView(row.original)} className="cursor-pointer select-none">
+            <Badge variant="outline" className="capitalize">
+              {row.original.discount_type === "percentage"
+                ? t("form.percentage")
+                : t("form.fixedAmount")}
+            </Badge>
+          </div>
         )
       },
       {
@@ -113,23 +147,35 @@ export function AdminCouponsPage() {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.discount")} />
         ),
-        cell: ({ row }) => <span className="font-semibold">{formatDiscount(row.original)}</span>
+        cell: ({ row }) => (
+          <div
+            onClick={() => handleOpenView(row.original)}
+            className="cursor-pointer font-semibold select-none">
+            {formatDiscount(row.original)}
+          </div>
+        )
       },
       {
         accessorKey: "valid_until",
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.expiry")} />,
         cell: ({ row }) => {
           const c = row.original;
-          if (!c.valid_until)
-            return <span className="text-muted-foreground text-xs">— {t("table.noExpiry")} —</span>;
           const isExpired = getExpiryStatus(c) === "expired";
           return (
-            <div className="flex items-center gap-1.5 text-xs">
-              <Calendar className="text-muted-foreground h-3.5 w-3.5" />
-              <span
-                className={isExpired ? "text-destructive font-semibold" : "text-muted-foreground"}>
-                {formatDateTime(c.valid_until, locale)}
-              </span>
+            <div onClick={() => handleOpenView(c)} className="cursor-pointer select-none">
+              {!c.valid_until ? (
+                <span className="text-muted-foreground text-xs">— {t("table.noExpiry")} —</span>
+              ) : (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Calendar className="text-muted-foreground h-3.5 w-3.5" />
+                  <span
+                    className={
+                      isExpired ? "text-destructive font-semibold" : "text-muted-foreground"
+                    }>
+                    {formatDateTime(c.valid_until, locale)}
+                  </span>
+                </div>
+              )}
             </div>
           );
         }
@@ -150,7 +196,9 @@ export function AdminCouponsPage() {
             ? Math.min(100, (c.redeemed_count / c.max_redemptions) * 100)
             : 0;
           return (
-            <div className="max-w-[200px] space-y-1">
+            <div
+              onClick={() => handleOpenView(c)}
+              className="max-w-[200px] cursor-pointer space-y-1 select-none">
               <div className="text-muted-foreground flex items-center justify-between text-xs font-medium">
                 <span className="flex items-center gap-1">
                   <Users className="h-3.5 w-3.5" /> {c.redeemed_count} {t("table.redeemed")}
@@ -173,13 +221,13 @@ export function AdminCouponsPage() {
         header: () => <div className="text-end">{t("table.actions")}</div>,
         enableHiding: false,
         cell: ({ row }) => (
-          <div className="text-end">
+          <div className="flex justify-end gap-1.5">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setDeleteTarget(row.original)}
               className="text-destructive hover:bg-destructive/10 hover:text-destructive">
-              <Trash2 className="me-1 h-4 w-4" /> {t("buttons.delete")}
+              <Trash2 className="me-1 h-4 w-4" />
             </Button>
           </div>
         )
@@ -259,7 +307,7 @@ export function AdminCouponsPage() {
             className="h-9 text-xs"
             onClick={() => setBulkConfirmOpen(true)}>
             <Trash2 className="me-2 h-4 w-4" />
-            {t("buttons.delete")} {selectedRows.length} terpilih
+            {t("buttons.delete")} {selectedRows.length}
           </Button>
         )}
 
@@ -282,88 +330,259 @@ export function AdminCouponsPage() {
         </>
       )}
 
-      {/* DIALOG: CREATE COUPON */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-[480px] rounded-2xl p-6 sm:p-8">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">{t("form.title")}</DialogTitle>
-            <DialogDescription>{t("form.desc")}</DialogDescription>
-          </DialogHeader>
+      {/* PANEL INPUT SAMPING (SLIDE-OVER / SHEET) */}
+      {/* 1. Backdrop Overlay */}
+      {dialogOpen && (
+        <div
+          className="animate-in fade-in fixed inset-0 z-50 min-h-full bg-black/40 transition-opacity duration-300"
+          onClick={() => setDialogOpen(false)}
+        />
+      )}
 
-          <div className="space-y-4 py-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="coupon-code">{t("form.codeLabel")}</Label>
-              <Input
-                id="coupon-code"
-                value={form.code}
-                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-                placeholder={t("form.codePlaceholder")}
-                className="font-mono tracking-wider"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>{t("form.typeLabel")}</Label>
-                <Select
-                  value={form.discountType}
-                  onValueChange={(v: any) => setForm((f) => ({ ...f, discountType: v }))}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="percentage">{t("form.percentage")}</SelectItem>
-                    <SelectItem value="fixed_amount">{t("form.fixedAmount")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="discount-value">{t("form.valueLabel")}</Label>
-                <Input
-                  id="discount-value"
-                  type="number"
-                  value={form.discountValue || ""}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, discountValue: parseFloat(e.target.value) || 0 }))
-                  }
-                  placeholder={form.discountType === "percentage" ? "20" : "50000"}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="max-redemptions">{t("form.quotaLabel")}</Label>
-                <Input
-                  id="max-redemptions"
-                  type="number"
-                  value={form.maxRedemptions}
-                  onChange={(e) => setForm((f) => ({ ...f, maxRedemptions: e.target.value }))}
-                  placeholder={t("form.quotaPlaceholder")}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="valid-until">{t("form.expiryLabel")}</Label>
-                <Input
-                  id="valid-until"
-                  type="datetime-local"
-                  value={form.validUntil}
-                  onChange={(e) => setForm((f) => ({ ...f, validUntil: e.target.value }))}
-                />
-              </div>
-            </div>
+      {/* 2. Container Panel Geser (Mendukung Arah RTL / LTR dan Animasi Sempurna) */}
+      <div
+        className={`border-border bg-background fixed inset-y-0 z-50 flex h-full w-full flex-col shadow-2xl transition-[transform,opacity] duration-300 ease-in-out sm:max-w-lg md:max-w-xl ${
+          isRtl ? "left-0 border-r" : "right-0 border-l"
+        } ${
+          dialogOpen
+            ? "pointer-events-auto translate-x-0 opacity-100"
+            : isRtl
+              ? "pointer-events-none -translate-x-full opacity-0"
+              : "pointer-events-none translate-x-full opacity-0"
+        }`}>
+        {/* Header Panel */}
+        <div className="border-border flex items-center justify-between border-b p-6">
+          <div className="space-y-1.5">
+            <h2 className="text-foreground text-xl font-bold">
+              {selectedCoupon ? `${t("detail")} ${selectedCoupon.code}` : t("form.title")}
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              {selectedCoupon
+                ? "Informasi rincian kupon dan riwayat penebusan tenant"
+                : t("form.desc")}
+            </p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full"
+            onClick={() => setDialogOpen(false)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
-          <DialogFooter className="border-border/60 border-t pt-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>
-              {t("buttons.cancel")}
-            </Button>
+        {/* Scrollable Content (Dinamis: Mode Create atau Mode View) */}
+        <div className="flex-1 space-y-4 overflow-y-auto p-6">
+          {!selectedCoupon ? (
+            // MODE TAMBAH DATA (CREATE NEW COUPON)
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="coupon-code">{t("form.codeLabel")}</Label>
+                <Input
+                  id="coupon-code"
+                  value={form.code}
+                  onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                  placeholder={t("form.codePlaceholder")}
+                  className="font-mono tracking-wider"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>{t("form.typeLabel")}</Label>
+                  <Select
+                    value={form.discountType}
+                    onValueChange={(v: any) => setForm((f) => ({ ...f, discountType: v }))}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">{t("form.percentage")}</SelectItem>
+                      <SelectItem value="fixed_amount">{t("form.fixedAmount")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="discount-value">{t("form.valueLabel")}</Label>
+                  <Input
+                    id="discount-value"
+                    type="number"
+                    value={form.discountValue || ""}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, discountValue: parseFloat(e.target.value) || 0 }))
+                    }
+                    placeholder={form.discountType === "percentage" ? "20" : "50000"}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="max-redemptions">{t("form.quotaLabel")}</Label>
+                  <Input
+                    id="max-redemptions"
+                    type="number"
+                    value={form.maxRedemptions}
+                    onChange={(e) => setForm((f) => ({ ...f, maxRedemptions: e.target.value }))}
+                    placeholder={t("form.quotaPlaceholder")}
+                  />
+                </div>
+                {/* MODIFIKASI: MENGGUNAKAN DATETIME PICKER KUSTOM UNTUK PEMILIH EXPIRED */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="valid-until">{t("form.expiryLabel")}</Label>
+                  <DateTimePicker
+                    date={form.validUntil ? new Date(form.validUntil) : undefined}
+                    setDate={(date) =>
+                      setForm((f) => ({
+                        ...f,
+                        validUntil: date ? date.toISOString() : ""
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            // MODE LIHAT DATA (VIEW COUPON DETAILS & REDEMPTIONS LIST)
+            <div className="space-y-4">
+              {/* ACCORDION 1: DETAIL KUPON */}
+              <div className="border-border bg-background overflow-hidden rounded-xl border">
+                <button
+                  type="button"
+                  onClick={() => toggleSection("details")}
+                  className="bg-muted/20 hover:bg-muted/40 border-border/40 flex w-full items-center justify-between border-b p-4 text-left transition-colors">
+                  <span className="text-foreground text-sm font-semibold">Detail Kupon</span>
+                  {openSections.details ? (
+                    <ChevronUp className="text-muted-foreground h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="text-muted-foreground h-4 w-4" />
+                  )}
+                </button>
+
+                {openSections.details && (
+                  <div className="space-y-4 p-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Tipe Diskon</Label>
+                        <p className="mt-0.5 text-sm font-semibold capitalize">
+                          {selectedCoupon.discount_type === "percentage"
+                            ? t("form.percentage")
+                            : t("form.fixedAmount")}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Nilai Diskon</Label>
+                        <p className="mt-0.5 text-sm font-semibold">
+                          {formatDiscount(selectedCoupon)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Batas Kedaluwarsa</Label>
+                        <p className="mt-0.5 text-sm font-semibold">
+                          {selectedCoupon.valid_until
+                            ? formatDateTime(selectedCoupon.valid_until, locale)
+                            : t("table.noExpiry")}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Status Kupon</Label>
+                        <div className="mt-0.5">
+                          <Badge
+                            variant={
+                              getExpiryStatus(selectedCoupon) === "active" ? "default" : "secondary"
+                            }>
+                            {getExpiryStatus(selectedCoupon) === "active" ? "Aktif" : "Kedaluwarsa"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-border/40 space-y-1.5 border-t pt-2">
+                      <div className="text-muted-foreground flex justify-between text-xs font-semibold">
+                        <span>Penggunaan Kuota</span>
+                        <span>
+                          {selectedCoupon.redeemed_count} /{" "}
+                          {selectedCoupon.max_redemptions || "Tak Terbatas"}
+                        </span>
+                      </div>
+                      {selectedCoupon.max_redemptions && (
+                        <Progress
+                          value={Math.min(
+                            100,
+                            (selectedCoupon.redeemed_count / selectedCoupon.max_redemptions) * 100
+                          )}
+                          className="bg-muted h-2 w-full"
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ACCORDION 2: DAFTAR PENGGUNA KUPON (TENANT LIST) */}
+              <div className="border-border bg-background overflow-hidden rounded-xl border">
+                <button
+                  type="button"
+                  onClick={() => toggleSection("redemptionsList")}
+                  className="bg-muted/20 hover:bg-muted/40 border-border/40 flex w-full items-center justify-between border-b p-4 text-left transition-colors">
+                  <span className="text-foreground text-sm font-semibold">
+                    Daftar Pengguna Kupon
+                  </span>
+                  {openSections.redemptionsList ? (
+                    <ChevronUp className="text-muted-foreground h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="text-muted-foreground h-4 w-4" />
+                  )}
+                </button>
+
+                {openSections.redemptionsList && (
+                  <div className="space-y-3 p-4">
+                    {isLoadingRedemptions ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+                      </div>
+                    ) : redemptions.length === 0 ? (
+                      <p className="text-muted-foreground py-4 text-center text-xs">
+                        Belum ada tenant yang menggunakan kupon ini.
+                      </p>
+                    ) : (
+                      <div className="divide-border/60 border-border bg-muted/5 divide-y overflow-hidden rounded-xl border">
+                        {redemptions.map((redemption) => (
+                          <div
+                            key={redemption.id}
+                            className="flex items-center justify-between p-3 text-xs">
+                            <span className="text-foreground font-semibold">
+                              {redemption.tenant_name}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {formatDateTime(redemption.redeemed_at, locale)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Panel */}
+        <div className="border-border bg-muted/20 flex items-center justify-end gap-3 border-t p-6">
+          <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>
+            {t("buttons.cancel")}
+          </Button>
+          {!selectedCoupon && (
             <Button onClick={handleSaveCoupon} disabled={isSaving}>
               {isSaving && <Loader2 className="me-1.5 h-4 w-4 animate-spin" />} {t("buttons.save")}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          )}
+        </div>
+      </div>
 
       {/* CONFIRM DELETE (single row) */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
