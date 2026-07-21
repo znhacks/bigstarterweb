@@ -34,6 +34,7 @@ model Tenant {
   countryCode   String?   @map("country_code")
   kecamatan     String?
   desa          String?
+  theme         Json?     @default("{}")
 
   // Relations
   tasks        Task[]
@@ -70,6 +71,7 @@ model Profile {
   addressCountry    String?   @map("address_country")
   addressKecamatan  String?   @map("address_kecamatan")
   addressDesa       String?   @map("address_desa")
+  theme             Json?     @default("{}")
 
   // Relations
   memberships     Membership[]

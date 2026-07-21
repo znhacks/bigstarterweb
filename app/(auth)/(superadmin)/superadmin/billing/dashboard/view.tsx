@@ -44,6 +44,7 @@ import { useDataTable } from "@/components/data-table/use-data-table";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
 const COLORS = ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6b7280"];
 
@@ -102,7 +103,7 @@ function SuperadminBillingDashboardView({
   const ttable = useTranslations("data-table");
 
   const formatPrice = (amount: number, currency?: string) =>
-    formatCurrency(amount, locale, { currencyCode: currency ?? "IDR" });
+    formatCurrency(amount, locale, { currencyCode: currency ?? APP_BASE_CURRENCY });
 
   // 1. Definisikan Kolom Reusable untuk Recent Transactions
   const transactionColumns = useMemo<ColumnDef<any, unknown>[]>(

@@ -1,5 +1,6 @@
 // /lib/i18n/currency.ts
-import { getLocaleMeta, getDisplayCurrency } from "@/config/i18n-culture";
+import { getLocaleMeta } from "@/config/i18n-culture";
+import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
 interface FormatCurrencyOptions {
   currencyCode?: string; // override default display currency
@@ -15,7 +16,7 @@ export function formatCurrency(
   config: FormatCurrencyOptions = {}
 ): string {
   const meta = getLocaleMeta(locale);
-  const targetCurrency = config.currencyCode ?? getDisplayCurrency(locale);
+  const targetCurrency = config.currencyCode ?? APP_BASE_CURRENCY;
 
   try {
     return new Intl.NumberFormat(meta.bcp47, {

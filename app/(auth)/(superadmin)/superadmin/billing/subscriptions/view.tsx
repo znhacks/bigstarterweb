@@ -21,6 +21,7 @@ import { DataTableColumnHeader } from "@/components/data-table/data-table-column
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
+import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
 interface SuperadminSubscription {
   id: string;
@@ -56,7 +57,7 @@ export function SuperadminSubscriptionsPage() {
   ];
 
   const formatPrice = (amount: number, currency?: string) =>
-    formatCurrency(amount, locale, { currencyCode: currency ?? "IDR" });
+    formatCurrency(amount, locale, { currencyCode: currency ?? APP_BASE_CURRENCY });
 
   useEffect(() => {
     loadSubscriptionData();

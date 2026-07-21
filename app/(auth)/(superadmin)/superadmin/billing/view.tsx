@@ -17,6 +17,7 @@ import { formatCurrency, formatTransactionAmount } from "@/lib/i18n/currency";
 import { useDataTable } from "@/components/data-table/use-data-table";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
 interface SuperadminTransaction {
   id: string;
@@ -53,7 +54,7 @@ export function SuperadminBillingDashboard() {
 
   // Formatter harga lokal — default IDR (base currency aplikasi).
   const formatPrice = (amount: number, currency?: string) =>
-    formatCurrency(amount, locale, { currencyCode: currency ?? "IDR" });
+    formatCurrency(amount, locale, { currencyCode: currency ?? APP_BASE_CURRENCY });
 
   // State Data Global dari Supabase
   const [transactions, setTransactions] = useState<SuperadminTransaction[]>([]);
