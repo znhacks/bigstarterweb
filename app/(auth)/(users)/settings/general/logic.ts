@@ -31,6 +31,7 @@ export function useGeneralSettings() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [localLanguage, setLocalLanguage] = useState<string>("en");
   const [timezone, setTimezone] = useState<string>("UTC");
+  const [currency, setCurrency] = useState<string>("IDR");
   const [description, setDescription] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
 
@@ -38,6 +39,7 @@ export function useGeneralSettings() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isSavingLang, setIsSavingLang] = useState(false);
   const [isSavingTz, setIsSavingTz] = useState(false);
+  const [isSavingCurrency, setIsSavingCurrency] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -79,7 +81,7 @@ export function useGeneralSettings() {
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select(
-            "full_name, avatar, preferred_language, timezone, description, phone, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, address_kecamatan, address_desa"
+            "full_name, avatar, preferred_language, timezone, description, phone, currency, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, address_kecamatan, address_desa"
           )
           .eq("id", user.id)
           .maybeSingle();
@@ -91,6 +93,7 @@ export function useGeneralSettings() {
           setAvatarUrl(profileData.avatar || null);
           setLocalLanguage(profileData.preferred_language || "en");
           setTimezone(profileData.timezone || "UTC");
+          setCurrency(profileData.currency || "IDR");
           setDescription(profileData.description || "");
           setPhone(profileData.phone || "");
 
@@ -340,6 +343,38 @@ export function useGeneralSettings() {
     }
   };
 
+  const handleSaveCurrency = async () => {
+    if (!userId) return;
+    setIsSavingCurrency(true);
+    setAlertMessage(null);
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ currency })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      // Update cookie USER_CURRENCY agar display currency langsung berubah
+      document.cookie = `USER_CURRENCY=${currency};path=/;max-age=31536000;SameSite=Lax`;
+
+      setAlertMessage({
+        title: tCommon("success"),
+        description: "Preferensi mata uang berhasil diperbarui.",
+        variant: "default"
+      });
+    } catch (error: any) {
+      setAlertMessage({
+        title: tCommon("error"),
+        description: error.message || tCommon("error"),
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingCurrency(false);
+    }
+  };
+
   const handleSaveEmail = async () => {
     setIsSavingEmail(true);
     setAlertMessage(null);
@@ -408,6 +443,10 @@ export function useGeneralSettings() {
     setLocalLanguage,
     timezone,
     setTimezone,
+    currency,
+    setCurrency,
+    isSavingCurrency,
+    handleSaveCurrency,
     description,
     setDescription,
     phone,

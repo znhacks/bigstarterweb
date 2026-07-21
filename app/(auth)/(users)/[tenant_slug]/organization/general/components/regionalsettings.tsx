@@ -67,7 +67,7 @@ export function RegionalSettingsForm({
             </Label>
             <select
               disabled={isReadOnly || isSaving}
-              value={timezone}
+              value={timezone || tenantConfig.defaults.timezone}
               onChange={(e) => setTimezone(e.target.value)}
               className="border-border/80 text-foreground bg-background focus-visible:ring-ring h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-1 focus-visible:outline-none">
               <option value="UTC">UTC</option>
@@ -84,7 +84,7 @@ export function RegionalSettingsForm({
             </Label>
             <select
               disabled={isReadOnly || isSaving}
-              value={currency}
+              value={currency || tenantConfig.defaults.currency}
               onChange={(e) => setCurrency(e.target.value)}
               className="border-border/80 text-foreground bg-background focus-visible:ring-ring h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-1 focus-visible:outline-none">
               {tenantConfig.supported.currencies.map((c) => (

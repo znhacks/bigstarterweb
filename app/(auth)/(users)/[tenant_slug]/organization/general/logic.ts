@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { PERMISSIONS, hasPermission, type PermissionName } from "@/lib/rbac";
 import { useLocale, useTranslations } from "next-intl";
 import { tenantConfig } from "@/config/tenant"; // Pastikan path import ini sesuai
-import { updateTenantSchema } from "@/lib/validation/tenants";
+import { normalizeTenantUpdatePayload, updateTenantSchema } from "@/lib/validation/tenants";
 
 export interface AlertState {
   title: string;
@@ -271,13 +271,18 @@ export function useOrganizationGeneral() {
         updatePayload.desa = desa.trim() || null;
       }
 
+      const normalizedPayload = normalizeTenantUpdatePayload(updatePayload);
+
       // Validasi via zod sebelum tulis ke DB
-      const parsed = updateTenantSchema.safeParse(updatePayload);
+      const parsed = updateTenantSchema.safeParse(normalizedPayload);
       if (!parsed.success) {
         throw new Error(parsed.error.issues[0]?.message || "Validasi gagal.");
       }
 
-      const { error } = await supabase.from("tenants").update(updatePayload).eq("id", activeOrgId);
+      const { error } = await supabase
+        .from("tenants")
+        .update(normalizedPayload)
+        .eq("id", activeOrgId);
 
       if (error) throw error;
 

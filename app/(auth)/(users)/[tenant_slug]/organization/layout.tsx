@@ -19,6 +19,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const isMembersActive = pathname?.includes("/organization/member");
   const isBillingActive = pathname?.includes("/organization/billing");
   const isHistoryBillingActive = pathname?.includes("/organization/history-billing");
+  const isAppearancesActive = pathname?.includes("/organization/appearance");
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
@@ -83,6 +84,18 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 )}>
                 <ReceiptText className="h-4 w-4 shrink-0" />
                 <span>{t("menu.history-billing")}</span>
+              </Link>
+
+              <Link
+                href={`/${tenantSlug}/organization/appearance`}
+                className={cn(
+                  "flex w-full items-center justify-start gap-3 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                  isAppearancesActive
+                    ? "bg-secondary text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                )}>
+                <ReceiptText className="h-4 w-4 shrink-0" />
+                <span>{t("menu.appearance")}</span>
               </Link>
             </nav>
           </Card>

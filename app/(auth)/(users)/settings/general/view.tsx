@@ -39,6 +39,7 @@ import { getAllTimezones } from "@/lib/timezones";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 import { AddressForm } from "@/components/ui/address-form";
 import { LOCALES, LOCALE_META } from "@/config/i18n-culture";
+import { tenantConfig } from "@/config/tenant";
 import { Textarea } from "@/components/ui/textarea";
 import { useGeneralSettings } from "./logic";
 
@@ -62,6 +63,10 @@ export function GeneralSettingsPage() {
     setLocalLanguage,
     timezone,
     setTimezone,
+    currency,
+    setCurrency,
+    isSavingCurrency,
+    handleSaveCurrency,
     description,
     setDescription,
     phone,
@@ -378,6 +383,43 @@ export function GeneralSettingsPage() {
                 size="sm"
                 className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
                 {isSavingTz && <Loader2 className="h-3 w-3 animate-spin" />}
+                {tCommon("save")}
+              </Button>
+            </div>
+          </div>
+
+          {/* Section: Display Currency */}
+          <div className="space-y-4 p-8">
+            <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
+              <div className="space-y-1 md:max-w-md">
+                <h2 className="text-foreground text-base font-semibold">{t("currencyTitle") || "Display Currency"}</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {t("currencyDesc") || "Choose your preferred currency for displaying prices."}
+                </p>
+              </div>
+              <div className="w-full md:max-w-xl">
+                <Select value={currency} onValueChange={setCurrency} disabled={isSavingCurrency}>
+                  <SelectTrigger className="border-border/80 h-10 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tenantConfig.supported.currencies.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.code} ({c.symbol})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSaveCurrency}
+                disabled={isSavingCurrency}
+                variant="secondary"
+                size="sm"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-1.5 rounded-lg px-5 text-xs">
+                {isSavingCurrency && <Loader2 className="h-3 w-3 animate-spin" />}
                 {tCommon("save")}
               </Button>
             </div>

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
@@ -285,6 +286,21 @@ export function OrganizationGeneralSettings() {
                   disabled={isReadOnly || isSaving}
                   className="border-border/80 h-10 w-full focus-visible:ring-1"
                 />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm font-medium">{t("currencyLabel") || "Currency"}</Label>
+                <Select value={currency} onValueChange={setCurrency} disabled={isReadOnly || isSaving}>
+                  <SelectTrigger className="border-border/80 h-10 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tenantConfig.supported.currencies.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.code} ({c.symbol})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {!isReadOnly && (
