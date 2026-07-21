@@ -18,6 +18,7 @@ import { formatPlural } from "@/lib/i18n/plural";
 import { sortLocale } from "@/lib/i18n/collator";
 import { formatMeasurement, CONVERSIONS } from "@/lib/i18n/units";
 import { formatCurrency } from "@/lib/i18n/currency";
+import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 import { convertCurrency } from "@/actions/currency";
 import { getLocaleMeta, getDisplayCurrency } from "@/config/i18n-culture";
 
@@ -162,7 +163,7 @@ export function I18nCultureView({ locale }: I18nCultureViewProps) {
                   <div className="flex justify-between border-t pt-2 text-base font-bold">
                     <span>Hasil Konversi:</span>
                     <span className="text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(convertedAmount, locale)}
+                      {formatCurrency(convertedAmount, locale, { currencyCode: APP_BASE_CURRENCY })}
                     </span>
                   </div>
                 </div>
