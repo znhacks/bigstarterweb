@@ -1,9 +1,7 @@
-import Link from "next/link";
+// app/(auth)/(superadmin)/superadmin/roles/page.tsx
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { RolesList } from "./roles-list";
 
 export async function generateMetadata() {
@@ -12,26 +10,39 @@ export async function generateMetadata() {
 }
 
 export default async function RolesPage() {
-  const t = await getTranslations("superadmin.roles");
-
-  const [{ data: roles }, { data: memberRows }, { data: permRows }] = await Promise.all([
+  // Mengambil data secara asinkron dalam satu waktu (Promise.all)
+  const [
+    { data: roles },
+    { data: memberRows },
+    { data: permRows },
+    { data: permissions } // 1. TAMBAHKAN: Ambil data seluruh permissions dari database
+  ] = await Promise.all([
     supabaseAdmin
       .from("roles")
       .select("id, name, hierarchy_level, created_at")
       .order("hierarchy_level", { ascending: false }),
     supabaseAdmin.from("memberships").select("role_id"),
-    supabaseAdmin.from("role_permissions").select("role_id")
+    supabaseAdmin.from("role_permissions").select("role_id"),
+    // Query untuk mengambil data seluruh hak akses sistem
+    supabaseAdmin
+      .from("permissions")
+      .select("id, name, description")
+      .order("name", { ascending: true })
   ]);
 
+  // Kalkulasi jumlah anggota per peran
   const memberCount = new Map<string, number>();
   (memberRows ?? []).forEach((m: any) => {
     if (m.role_id) memberCount.set(m.role_id, (memberCount.get(m.role_id) ?? 0) + 1);
   });
+
+  // Kalkulasi jumlah izin/permissions per peran
   const permCount = new Map<string, number>();
   (permRows ?? []).forEach((p: any) => {
     permCount.set(p.role_id, (permCount.get(p.role_id) ?? 0) + 1);
   });
 
+  // Pemetaan baris data untuk dikonsumsi oleh tabel
   const rows = (roles ?? []).map((r: any) => ({
     id: r.id,
     name: r.name,
@@ -41,21 +52,8 @@ export default async function RolesPage() {
   }));
 
   return (
-    <div className="mx-auto w-full space-y-8 px-4 py-10">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("desc")}</p>
-        </div>
-        <Button asChild>
-          <Link href="/superadmin/roles/new">
-            <Plus className="me-2 h-4 w-4" />
-            {t("new.title")}
-          </Link>
-        </Button>
-      </div>
-
-      <RolesList rows={rows} />
+    <div className="mx-auto w-full px-4 py-10">
+      <RolesList rows={rows} permissions={permissions ?? []} />
     </div>
   );
 }

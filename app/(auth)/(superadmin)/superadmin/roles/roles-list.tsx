@@ -1,19 +1,39 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2, Loader2 } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
+import { type ColumnDef } from "@tanstack/react-table";
+import { Pencil, Trash2, Loader2, Plus, ChevronDown, ChevronUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { deleteRole, updateRole } from "./actions";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PERMISSION_GROUPS } from "@/lib/rbac";
+
+// Mengimpor aksi server untuk manipulasi peran (role) dan hak akses (permissions)
+import {
+  deleteRole,
+  updateRole,
+  createRole,
+  setRolePermissions,
+  getRolePermissions
+} from "./actions";
 
 import { useDataTable } from "@/components/data-table/use-data-table";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { EditableCell, ReadonlyCell } from "@/components/data-table/editable-cell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from "@/components/ui/alert-dialog";
 
 export interface RoleRow {
   id: string;
@@ -23,108 +43,206 @@ export interface RoleRow {
   permissions_count: number;
 }
 
-export function RolesList({ rows: initialRows }: { rows: RoleRow[] }) {
+interface Permission {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+interface RolesListProps {
+  rows: RoleRow[];
+  permissions?: Permission[];
+}
+
+export function RolesList({ rows: initialRows, permissions = [] }: RolesListProps) {
   const t = useTranslations("superadmin.roles");
+  const locale = useLocale();
   const router = useRouter();
+
   const [rows, setRows] = React.useState(initialRows);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  const goToDetail = (id: string) => router.push(`/superadmin/roles/${id}`);
+  // State untuk Panel Samping (Slide-over)
+  const [panelOpen, setPanelOpen] = React.useState(false);
+  const [selectedRole, setSelectedRole] = React.useState<RoleRow | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [loadingPerms, setLoadingPerms] = React.useState(false);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t("messages.confirmDelete"))) return;
-    setPendingId(id);
-    setError(null);
-    const fd = new FormData();
-    fd.set("id", id);
-    const res = await deleteRole(fd);
-    setPendingId(null);
-    if (!res.success) setError(res.error);
-    else setRows((prev) => prev.filter((r) => r.id !== id));
+  // Form States
+  const [formName, setFormName] = React.useState("");
+  const [formHierarchy, setFormHierarchy] = React.useState(0);
+  const [selectedPerms, setSelectedPerms] = React.useState<Set<string>>(new Set());
+  const [deleteTargetId, setDeleteTargetId] = React.useState<string | null>(null);
+
+  // State untuk memastikan transisi dinonaktifkan sebelum komponen terpasang di browser (mencegah flash)
+  const [isMounted, setIsMounted] = React.useState(false);
+  const isRtl = locale === "ar";
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // State untuk mengontrol buka-tutup dropdown menu (accordion) di panel samping
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
+    general: true,
+    permissions: false
+  });
+
+  const toggleSection = (section: string) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
-  // NOTE: assumes an `updateRole(FormData)` server action exists next to
-  // `deleteRole` in "./actions", same shape: FormData in, { success, error? } out.
-  const handleFieldCommit = async (
-    id: string,
-    field: "name" | "hierarchy_level",
-    value: string | null
-  ) => {
+  const togglePermission = (id: string) => {
+    setSelectedPerms((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleOpenCreate = () => {
+    setSelectedRole(null);
+    setFormName("");
+    setFormHierarchy(0);
+    setSelectedPerms(new Set());
     setError(null);
-    const prevRows = rows;
+    setOpenSections({ general: true, permissions: false });
+    setPanelOpen(true);
+  };
 
-    // Optimistic update
-    setRows((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? { ...r, [field]: field === "hierarchy_level" ? Number(value) || 0 : (value ?? "") }
-          : r
-      )
-    );
+  const handleOpenEdit = async (role: RoleRow) => {
+    setSelectedRole(role);
+    setFormName(role.name);
+    setFormHierarchy(role.hierarchy_level);
+    setSelectedPerms(new Set());
+    setError(null);
+    setOpenSections({ general: true, permissions: false });
+    setPanelOpen(true);
 
-    const fd = new FormData();
-    fd.set("id", id);
-    fd.set(field, value ?? "");
-    const res = await updateRole(fd);
-    if (!res.success) {
-      setRows(prevRows); // revert on failure
-      setError(res.error);
+    // Memuat data hak akses yang sudah dimiliki peran secara asinkron
+    if (getRolePermissions) {
+      setLoadingPerms(true);
+      try {
+        const res = await getRolePermissions(role.id);
+        if (res.success && res.grantedIds) {
+          setSelectedPerms(new Set(res.grantedIds));
+        }
+      } catch (err) {
+        console.error("Gagal memuat hak akses:", err);
+      } finally {
+        setLoadingPerms(false);
+      }
     }
   };
 
-  // Columns are hardcoded for this feature — nothing generic about them.
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim()) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const fd = new FormData();
+      fd.set("name", formName);
+      fd.set("hierarchy_level", String(formHierarchy));
+
+      let roleId = selectedRole?.id;
+
+      if (selectedRole) {
+        // Mode Edit Role
+        fd.set("id", selectedRole.id);
+        const res = await updateRole(fd);
+        if (!res.success) throw new Error(res.error);
+      } else {
+        // Mode Tambah Role Baru
+        const res = await createRole(fd);
+        if (!res.success) throw new Error(res.error);
+        roleId = res.roleId; // Ambil ID hasil pembuatan role baru
+      }
+
+      // Simpan Hak Akses (Permissions) ke Peran Terkait
+      if (roleId) {
+        const permsRes = await setRolePermissions(roleId, Array.from(selectedPerms));
+        if (!permsRes.success) throw new Error(permsRes.error);
+      }
+
+      setPanelOpen(false);
+      router.refresh();
+
+      // Update state lokal untuk sinkronisasi antarmuka secara instan
+      if (selectedRole) {
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === selectedRole.id
+              ? {
+                  ...r,
+                  name: formName,
+                  hierarchy_level: formHierarchy,
+                  permissions_count: selectedPerms.size
+                }
+              : r
+          )
+        );
+      } else {
+        // Refresh seluruh data dari server untuk mendapatkan baris peran baru secara lengkap
+        window.location.reload();
+      }
+    } catch (err: any) {
+      setError(err.message || "Gagal menyimpan data.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
+
+    const idToDelete = deleteTargetId;
+    setDeleteTargetId(null); // Tutup dialog konfirmasi secara instan
+
+    setPendingId(idToDelete);
+    setError(null);
+
+    const fd = new FormData();
+    fd.set("id", idToDelete);
+    const res = await deleteRole(fd);
+    setPendingId(null);
+
+    if (!res.success) {
+      setError(res.error);
+    } else {
+      setRows((prev) => prev.filter((r) => r.id !== idToDelete));
+    }
+  };
+
   const columns: ColumnDef<RoleRow, unknown>[] = [
     {
       accessorKey: "name",
       header: ({ column }) => <DataTableColumnHeader column={column} title={t("list.name")} />,
-      cell: ({ row }) => (
-        <EditableCell
-          value={row.original.name}
-          displayValue={<span className="font-medium">{row.original.name}</span>}
-          enabled
-          editor="text"
-          onCommit={(v) => handleFieldCommit(row.original.id, "name", v)}
-          onView={() => goToDetail(row.original.id)}
-        />
-      )
+      cell: ({ row }) => <span className="text-foreground font-semibold">{row.original.name}</span>
     },
     {
       accessorKey: "hierarchy_level",
       header: ({ column }) => <DataTableColumnHeader column={column} title={t("list.hierarchy")} />,
-      cell: ({ row }) => (
-        <EditableCell
-          value={String(row.original.hierarchy_level)}
-          displayValue={<Badge variant="secondary">h{row.original.hierarchy_level}</Badge>}
-          enabled
-          editor="text"
-          onCommit={(v) => handleFieldCommit(row.original.id, "hierarchy_level", v)}
-          onView={() => goToDetail(row.original.id)}
-        />
-      )
+      cell: ({ row }) => <Badge variant="secondary">h{row.original.hierarchy_level}</Badge>
     },
     {
       accessorKey: "members_count",
       header: ({ column }) => <DataTableColumnHeader column={column} title={t("list.members")} />,
-      // Derived count, not directly editable — click still opens detail.
-      cell: ({ row }) => (
-        <ReadonlyCell
-          displayValue={row.original.members_count}
-          onView={() => goToDetail(row.original.id)}
-        />
-      )
+      cell: ({ row }) => <span>{row.original.members_count}</span>
     },
     {
       accessorKey: "permissions_count",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={t("list.permissions")} />
       ),
-      cell: ({ row }) => (
-        <ReadonlyCell
-          displayValue={row.original.permissions_count}
-          onView={() => goToDetail(row.original.id)}
-        />
-      )
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.permissions_count}</span>
     },
     {
       id: "actions",
@@ -132,15 +250,18 @@ export function RolesList({ rows: initialRows }: { rows: RoleRow[] }) {
       enableHiding: false,
       cell: ({ row }) => (
         <div className="flex justify-end gap-1">
-          <Button asChild size="icon" variant="ghost">
-            <Link href={`/superadmin/roles/${row.original.id}`} title={t("detail.edit")}>
-              <Pencil className="h-4 w-4" />
-            </Link>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => handleOpenEdit(row.original)}
+            title={t("detail.edit")}>
+            <Pencil className="h-4 w-4" />
           </Button>
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => handleDelete(row.original.id)}
+            // UBAH: Isi target ID penghapusan untuk membuka AlertDialog
+            onClick={() => setDeleteTargetId(row.original.id)}
             disabled={pendingId === row.original.id}
             title={t("messages.delete")}>
             {pendingId === row.original.id ? (
@@ -154,18 +275,209 @@ export function RolesList({ rows: initialRows }: { rows: RoleRow[] }) {
     }
   ];
 
-  // You own this instance — read/mutate it however this page needs.
   const table = useDataTable({ columns, data: rows });
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("desc")}</p>
+        </div>
+        <Button onClick={handleOpenCreate}>
+          <Plus className="me-1.5 h-4 w-4" /> {t("new.title") || "Tambah Peran"}
+        </Button>
+      </div>
+
       {error && (
-        <p className="text-destructive border-destructive/30 bg-destructive/10 rounded-lg border px-3 py-2 text-sm">
+        <p className="text-destructive border-destructive/30 bg-destructive/10 animate-in fade-in rounded-lg border px-3 py-2 text-sm">
           {error}
         </p>
       )}
 
       <DataTable table={table} columns={columns} noResultsText={t("list.empty")} />
+
+      <AlertDialog
+        open={!!deleteTargetId}
+        onOpenChange={(open) => !open && setDeleteTargetId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("messages.confirmDeleteTitle") || "Hapus Peran"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("messages.confirmDelete") ||
+                "Apakah Anda yakin ingin menghapus peran ini? Tindakan ini tidak dapat dibatalkan."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("messages.cancel") || "Batal"}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t("messages.delete") || "Hapus"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* PANEL INPUT SAMPING (SLIDE-OVER / SHEET) */}
+      {/* 1. Backdrop Overlay */}
+      {panelOpen && (
+        <div
+          className="animate-in fade-in fixed inset-0 z-50 min-h-full bg-black/40 transition-opacity duration-300"
+          onClick={() => setPanelOpen(false)}
+        />
+      )}
+
+      {/* 2. Container Panel Geser */}
+      <div
+        className={`border-border bg-background fixed inset-y-0 z-50 flex h-full w-full flex-col shadow-2xl transition-[transform,opacity] duration-300 ease-in-out sm:max-w-lg md:max-w-xl ${
+          isRtl ? "left-0 border-r" : "right-0 border-l"
+        } ${
+          panelOpen
+            ? "pointer-events-auto translate-x-0 opacity-100"
+            : isRtl
+              ? "pointer-events-none -translate-x-full opacity-0"
+              : "pointer-events-none translate-x-full opacity-0"
+        }`}>
+        {/* Header Panel */}
+        <div className="border-border flex items-center justify-between border-b p-6">
+          <div className="space-y-1.5">
+            <h2 className="text-foreground text-xl font-bold">
+              {selectedRole ? t("detail.editTitle") : t("new.title") || "Tambah Peran"}
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              {selectedRole
+                ? "Ubah properti dan izin peran di bawah ini"
+                : "Konfigurasikan peran sistem baru"}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full"
+            onClick={() => setPanelOpen(false)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Scrollable Form Content */}
+        <form onSubmit={handleSave} className="flex-1 space-y-4 overflow-y-auto p-6">
+          {/* DROPDOWN 1: GENERAL */}
+          <div className="animate-in fade-in overflow-hidden rounded-xl">
+            <button
+              type="button"
+              onClick={() => toggleSection("general")}
+              className="bg-background hover:bg-muted/40 border-border flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
+              <span className="text-foreground text-sm font-semibold">General</span>
+              {openSections.general ? (
+                <ChevronUp className="text-muted-foreground h-4 w-4" />
+              ) : (
+                <ChevronDown className="text-muted-foreground h-4 w-4" />
+              )}
+            </button>
+
+            {openSections.general && (
+              <div className="space-y-4 p-5">
+                <div className="space-y-2">
+                  <Label htmlFor="panel-name">{t("new.nameLabel")}</Label>
+                  <Input
+                    id="panel-name"
+                    required
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="Contoh: Administrator"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="panel-hierarchy">{t("new.hierarchyLabel")}</Label>
+                  <Input
+                    id="panel-hierarchy"
+                    type="number"
+                    min={0}
+                    value={formHierarchy}
+                    onChange={(e) => setFormHierarchy(Number(e.target.value) || 0)}
+                  />
+                  <p className="text-muted-foreground text-xs">{t("new.hierarchyHint")}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* DROPDOWN 2: KONFIGURASI HAK AKSES */}
+          <div className="overflow-hidden rounded-xl">
+            <button
+              type="button"
+              onClick={() => toggleSection("permissions")}
+              className="bg-background hover:bg-muted/40 border-border flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
+              <span className="text-foreground text-sm font-semibold">Konfigurasi Hak Akses</span>
+              {openSections.permissions ? (
+                <ChevronUp className="text-muted-foreground h-4 w-4" />
+              ) : (
+                <ChevronDown className="text-muted-foreground h-4 w-4" />
+              )}
+            </button>
+
+            {openSections.permissions && (
+              <div className="space-y-6 p-5">
+                {loadingPerms ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+                  </div>
+                ) : (
+                  PERMISSION_GROUPS.map((group) => {
+                    // SOLUSI: Menggunakan (permissions || []) untuk mencegah error undefined
+                    const groupPerms = (permissions || []).filter((p) =>
+                      group.names.includes(p.name as any)
+                    );
+                    if (groupPerms.length === 0) return null;
+                    return (
+                      <div key={group.domain} className="space-y-3">
+                        <h4 className="text-foreground text-sm font-semibold">{group.label}</h4>
+                        <div className="grid gap-3 sm:grid-cols-1">
+                          {groupPerms.map((p) => (
+                            <label
+                              key={p.id}
+                              htmlFor={`perm-${p.id}`}
+                              className="border-border/60 hover:bg-accent/40 flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors">
+                              <Checkbox
+                                id={`perm-${p.id}`}
+                                checked={selectedPerms.has(p.id)}
+                                onCheckedChange={() => togglePermission(p.id)}
+                                className="mt-0.5"
+                              />
+                              <div className="space-y-0.5">
+                                <p className="text-foreground text-sm font-medium">{p.name}</p>
+                                {p.description && (
+                                  <p className="text-muted-foreground text-xs">{p.description}</p>
+                                )}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Sticky/Fixed Footer Panel */}
+          <div className="border-border bg-background/90 absolute right-0 bottom-0 left-0 z-10 flex items-center justify-end gap-3 border-t p-6 backdrop-blur-sm">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPanelOpen(false)}
+              disabled={saving}>
+              {t("messages.back") || "Kembali"}
+            </Button>
+            <Button type="submit" disabled={saving || loadingPerms}>
+              {saving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+              {t("detail.save") || "Simpan"}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

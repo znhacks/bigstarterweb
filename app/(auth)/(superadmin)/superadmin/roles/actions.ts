@@ -1,10 +1,13 @@
+// app/(auth)/(superadmin)/superadmin/roles/actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
 
-type ActionResult = { success: true; error?: never } | { success: false; error: string };
+// Mendefinisikan tipe kembalian aksi yang mendukung opsional roleId
+type ActionResult =
+  { success: true; roleId?: string; error?: never } | { success: false; error: string };
 
 /* ------------------------------------------------------------------ */
 /* Roles                                                               */
@@ -17,13 +20,17 @@ export async function createRole(formData: FormData): Promise<ActionResult> {
 
   if (!name) return { success: false, error: "Nama role wajib diisi." };
 
-  const { error } = await supabaseAdmin
+  // SOLUSI: Menambahkan .select("id").single() untuk mendapatkan ID peran baru
+  const { data, error } = await supabaseAdmin
     .from("roles")
-    .insert({ name, hierarchy_level: Number.isFinite(hierarchy) ? hierarchy : 0 });
+    .insert({ name, hierarchy_level: Number.isFinite(hierarchy) ? hierarchy : 0 })
+    .select("id")
+    .single();
 
   if (error) return { success: false, error: error.message };
+
   revalidatePath("/superadmin/roles");
-  return { success: true };
+  return { success: true, roleId: data.id };
 }
 
 export async function updateRole(formData: FormData): Promise<ActionResult> {
@@ -52,7 +59,10 @@ export async function deleteRole(formData: FormData): Promise<ActionResult> {
 
   // Tolak hapus jika masih ada membership/invitation yang memakai role ini.
   const [{ count: memberCount }, { count: inviteCount }] = await Promise.all([
-    supabaseAdmin.from("memberships").select("id", { count: "exact", head: true }).eq("role_id", id),
+    supabaseAdmin
+      .from("memberships")
+      .select("id", { count: "exact", head: true })
+      .eq("role_id", id),
     supabaseAdmin.from("invitations").select("id", { count: "exact", head: true }).eq("role_id", id)
   ]);
 
@@ -101,6 +111,24 @@ export async function setRolePermissions(
   revalidatePath(`/superadmin/roles/${roleId}`);
   revalidatePath("/superadmin/roles");
   return { success: true };
+}
+
+// SOLUSI: Mengimplementasikan getRolePermissions yang hilang
+export async function getRolePermissions(
+  roleId: string
+): Promise<{ success: true; grantedIds: string[] } | { success: false; error: string }> {
+  await requireSuperadmin();
+  if (!roleId) return { success: false, error: "ID role hilang." };
+
+  const { data, error } = await supabaseAdmin
+    .from("role_permissions")
+    .select("permission_id")
+    .eq("role_id", roleId);
+
+  if (error) return { success: false, error: error.message };
+
+  const grantedIds = data?.map((row) => row.permission_id) || [];
+  return { success: true, grantedIds };
 }
 
 /* ------------------------------------------------------------------ */
