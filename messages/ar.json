@@ -119,6 +119,7 @@
     "search": "يبحث...",
     "account": "حساب",
     "noorgfound": "لم يتم العثور على أي منظمات",
+    "notenant": "لا توجد مؤسسة",
     "neworg": "منظمة جديدة",
     "addneworg": "إضافة منظمة جديدة",
     "searchdialog": {
@@ -340,6 +341,29 @@
     }
   },
   "component": {
+    "theme-customizer": {
+      "theme-mode": {
+        "title": "وضع السمة:",
+        "light": "فاتح",
+        "dark": "داكن"
+      },
+      "layout": {
+        "title": "تخطيط المحتوى",
+        "full": "كامل",
+        "centered": "في المنتصف"
+      },
+      "theme-preset": {
+        "title": "إعدادات السمة:"
+      },
+      "radius": "نصف القطر:",
+      "scale": "المقياس:",
+      "sidebar": {
+        "title": "وضع الشريط الجانبي:",
+        "default": "افتراضي",
+        "icon": "أيقونات"
+      },
+      "reset": "إعادة تعيين"
+    },
     "paywallgate": {
       "title": "الميزات المميزة مقفلة",
       "planRequired": "هذه الميزة متاحة فقط في باقة {{plans}}. يرجى التواصل مع المالك أو ترقية باقتك.",
@@ -535,7 +559,8 @@
       "general": "عام",
       "member": "الأعضاء",
       "billing": "الفواتير",
-      "history-billing": "سجل المدفوعات"
+      "history-billing": "سجل المدفوعات",
+      "appearance": "المظهر"
     },
     "organization-general": {
       "readOnlyTitle": "وضع القراءة فقط",
@@ -576,7 +601,8 @@
       "stateProvince": "المنطقة / الولاية",
       "postalCode": "الرمز البريدي",
       "saveAdditional": "حفظ التفاصيل",
-      "successAdditional": "تم تحديث تفاصيل المنظمة."
+      "successAdditional": "تم تحديث تفاصيل المنظمة.",
+      "currencyLabel": "العملة"
     },
     "organization-member": {
       "title": "إدارة الأعضاء",
@@ -738,7 +764,9 @@
       "timezoneTitle": "إعدادات المنطقة الزمنية",
       "timezoneDesc": "تُعرض التواريخ والأوقات حسب منطقتك الزمنية.",
       "addressTitle": "عنوان الفوترة",
-      "addressDesc": "يُستخدم للفواتير والمدفوعات."
+      "addressDesc": "يُستخدم للفواتير والمدفوعات.",
+      "currencyTitle": "عملة العرض",
+      "currencyDesc": "اختر عملتك المفضلة لعرض الأسعار."
     },
     "account-security": {
       "title": "إعدادات الأمان",
@@ -771,6 +799,24 @@
         "current": "الجلسة الحالية",
         "btnTerm": "إنهاء الجلسات الأخرى"
       }
+    },
+    "appearance": {
+      "title": "المظهر",
+      "desc": "خصص مظهر التطبيق لك.",
+      "userDesc": "تفضيلات السمات الشخصية. هذه تتجاوز سمة المؤسسة.",
+      "userHelp": "يتم حفظ سمتك في ملفك الشخصي وتتبعك عبر المؤسسات.",
+      "tenantTitle": "سمة المؤسسة",
+      "tenantDesc": "قم بتعيين سمة افتراضية لجميع أعضاء هذه المؤسسة. الأعضاء الذين يحددون سمتهم الخاصة سيستخدمونها بدلاً من ذلك.",
+      "tenantHelp": "تنطبق هذه السمة على الأعضاء الذين لم يقوموا بتخصيص مظهرهم.",
+      "sourceUser": "سمتك المخصصة",
+      "sourceTenant": "من المؤسسة",
+      "sourceDefault": "افتراضي",
+      "preset": "اللون",
+      "radius": "استدارة الزوايا",
+      "scale": "حجم الخط",
+      "layout": "تخطيط المحتوى",
+      "save": "حفظ",
+      "reset": "إعادة تعيين"
     }
   },
   "superadmin": {
@@ -992,12 +1038,14 @@
         "back": "رجوع",
         "cancel": "إلغاء",
         "delete": "حذف",
+        "confirmDeleteTitle": "تأكيد الحذف",
         "confirmDelete": "هل أنت متأكد من حذف هذا الدور؟"
       }
     },
     "coupons": {
       "title": "إدارة القسائم والخصومات",
       "subTitle": "إدارة قسائم ترويجية وخصومات نسبية/مقطوعة وحصص الاستخدام والصلاحية.",
+      "detail": "التفاصيل",
       "buttons": {
         "create": "إضافة قسيمة",
         "cancel": "إلغاء",

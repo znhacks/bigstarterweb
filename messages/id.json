@@ -119,6 +119,7 @@
     "search": "Pencarian...",
     "account": "Akun",
     "noorgfound": "Organisasi tidak ditemukan",
+    "notenant": "Tidak ada organisasi",
     "neworg": "Organisasi baru",
     "addneworg": "Buat Organisasi baru",
     "searchdialog": {
@@ -340,6 +341,29 @@
     }
   },
   "component": {
+    "theme-customizer": {
+      "theme-mode": {
+        "title": "Mode Tema :",
+        "light": "Terang",
+        "dark": "Gelap"
+      },
+      "layout": {
+        "title": "Layout Konten",
+        "full": "Penuh",
+        "centered": "Rata Tengah"
+      },
+      "theme-preset": {
+        "title": "Pengaturan Tema :"
+      },
+      "radius": "Radius:",
+      "scale": "Skala:",
+      "sidebar": {
+        "title": "Mode Sidebar:",
+        "default": "Bawaan",
+        "icon": "Ikon"
+      },
+      "reset": "Reset ke Default"
+    },
     "paywallgate": {
       "title": "Fitur Premium Terkunci",
       "planRequired": "Fitur ini hanya tersedia pada paket {{plans}}. Silakan hubungi Pemilik atau tingkatkan paket Anda.",
@@ -523,7 +547,8 @@
       "general": "Umum",
       "member": "Anggota",
       "billing": "Berlangganan",
-      "history-billing": "Riwayat Pembayaran"
+      "history-billing": "Riwayat Pembayaran",
+      "appearance": "Tampilan"
     },
     "organization-general": {
       "readOnlyTitle": "Mode Baca Saja",
@@ -564,7 +589,8 @@
       "stateProvince": "Provinsi",
       "postalCode": "Kode Pos",
       "saveAdditional": "Simpan Detail",
-      "successAdditional": "Detail organisasi diperbarui."
+      "successAdditional": "Detail organisasi diperbarui.",
+      "currencyLabel": "Mata Uang"
     },
     "organization-member": {
       "title": "Kelola Anggota",
@@ -726,7 +752,9 @@
       "timezoneTitle": "Pengaturan Zona Waktu",
       "timezoneDesc": "Tanggal & waktu tampil sesuai zona waktu Anda.",
       "addressTitle": "Alamat Penagihan",
-      "addressDesc": "Digunakan untuk faktur & penagihan."
+      "addressDesc": "Digunakan untuk faktur & penagihan.",
+      "currencyTitle": "Mata Uang Tampilan",
+      "currencyDesc": "Pilih mata uang preferensi untuk menampilkan harga."
     },
     "account-security": {
       "title": "Pengaturan Keamanan",
@@ -759,6 +787,24 @@
         "current": "Sesi saat ini",
         "btnTerm": "Akhiri sesi perangkat lain"
       }
+    },
+    "appearance": {
+      "title": "Tampilan",
+      "desc": "Sesuaikan tampilan aplikasi untuk Anda.",
+      "userDesc": "Preferensi tema pribadi Anda. Ini menimpa tema organisasi.",
+      "userHelp": "Tema Anda disimpan di profil dan mengikuti Anda di semua organisasi.",
+      "tenantTitle": "Tema Organisasi",
+      "tenantDesc": "Atur tema default untuk semua anggota organisasi ini. Anggota yang mengatur tema sendiri akan menggunakan temanya.",
+      "tenantHelp": "Tema ini berlaku untuk anggota yang belum menyesuaikan tampilannya sendiri.",
+      "sourceUser": "Tema kustom Anda",
+      "sourceTenant": "Dari organisasi",
+      "sourceDefault": "Default aplikasi",
+      "preset": "Preset Warna",
+      "radius": "Sudut Membulat",
+      "scale": "Skala Font",
+      "layout": "Tata Letak Konten",
+      "save": "Simpan Tema",
+      "reset": "Reset ke Default"
     }
   },
   "superadmin": {
@@ -970,7 +1016,7 @@
       "detail": {
         "edit": "Edit",
         "editTitle": "Edit role",
-        "save": "Simpan perubahan",
+        "save": "Simpan",
         "permissionsTitle": "Permission",
         "permissionsDesc": "Aktifkan permission yang diberikan ke role ini.",
         "savePermissions": "Simpan permission",
@@ -981,17 +1027,19 @@
         "back": "Kembali",
         "cancel": "Batal",
         "delete": "Hapus",
+        "confirmDeleteTitle": "Konfirmasi Hapus",
         "confirmDelete": "Yakin ingin menghapus role ini?"
       }
     },
     "coupons": {
       "title": "Manajemen Kupon & Diskon",
       "subTitle": "Kelola kupon promosi, diskon persentase/flat rupiah, kuota penebusan, dan masa berlaku.",
+      "detail": "Detail",
       "buttons": {
         "create": "Tambah Kupon",
         "cancel": "Batal",
         "save": "Simpan",
-        "delete": "Hapus",
+        "delete": "Hapus ",
         "confirmDelete": "Hapus"
       },
       "table": {
