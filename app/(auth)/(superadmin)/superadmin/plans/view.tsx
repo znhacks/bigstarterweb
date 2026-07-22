@@ -22,6 +22,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { tenantConfig } from "@/config/tenant";
 import { FEATURE_DEFINITIONS, FeatureDefinition } from "@/config/feature-definitions";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableSearch } from "@/components/data-table/data-table-search";
@@ -47,6 +55,8 @@ export function AdminPlansPage() {
     setFormGates,
     deactivateTarget,
     setDeactivateTarget,
+    deleteTarget,
+    setDeleteTarget,
     bulkConfirmOpen,
     setBulkConfirmOpen,
     isBulkDeactivating,
@@ -63,17 +73,17 @@ export function AdminPlansPage() {
     selectedRows,
     selectedActiveCount,
     handleOpenCreate,
+    handleOpenEdit,
     handleSavePlan,
     confirmDeactivate,
+    confirmDelete,
     handleBulkDeactivate,
     activeFormTab,
     setActiveFormTab
   } = useAdminPlans();
 
-  // Deteksi arah bahasa (RTL/LTR) secara dinamis
   const isRtl = locale === "ar";
 
-  // State untuk mengontrol buka-tutup dropdown menu (accordion)
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
     general: true,
     features: false,
@@ -87,7 +97,6 @@ export function AdminPlansPage() {
     }));
   };
 
-  // Mendapatkan metadata placeholder bahasa aktif secara dinamis
   const activeLangMeta = SUPPORTED_LOCALES.find((lang) => lang.code === activeFormTab);
   const activePlaceholderLabel = activeLangMeta?.placeholder || activeFormTab;
 
@@ -153,8 +162,7 @@ export function AdminPlansPage() {
         </>
       )}
 
-      {/* PANEL INPUT SAMPING (SHEET/SLIDE-OVER LAYOUT) */}
-      {/* 1. Backdrop Overlay */}
+      {/* PANEL INPUT SAMPING */}
       {dialogOpen && (
         <div
           className="animate-in fade-in fixed inset-0 z-50 min-h-full bg-black/40 transition-opacity duration-300"
@@ -162,7 +170,6 @@ export function AdminPlansPage() {
         />
       )}
 
-      {/* 2. Container Panel Geser (Mendukung Arah RTL / LTR dan Pencegahan Flash Transisi) */}
       <div
         className={`border-border bg-background fixed inset-y-0 z-50 flex h-full w-full flex-col shadow-2xl transition-[transform,opacity] duration-300 ease-in-out sm:max-w-lg md:max-w-xl ${
           isRtl ? "left-0 border-r" : "right-0 border-l"
@@ -173,7 +180,6 @@ export function AdminPlansPage() {
               ? "pointer-events-none -translate-x-full opacity-0"
               : "pointer-events-none translate-x-full opacity-0"
         }`}>
-        {/* Header Panel */}
         <div className="border-border flex items-center justify-between border-b p-6">
           <div className="space-y-1.5">
             <h2 className="text-foreground text-xl font-bold">
@@ -190,15 +196,14 @@ export function AdminPlansPage() {
           </Button>
         </div>
 
-        {/* Scrollable Content (Sesuai Struktur Dropdown Accordion) */}
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
           {/* ACCORDION: GENERAL */}
-          <div className="\ bg-background overflow-hidden rounded-xl">
+          <div className="bg-background overflow-hidden rounded-xl">
             <button
               type="button"
               onClick={() => toggleSection("general")}
               className="hover:bg-muted/40 border-border bg-background flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
-              <span className="text-foreground text-sm font-semibold">General</span>
+              <span className="text-foreground text-sm font-semibold">{t("form.general")}</span>
               {openSections.general ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />
               ) : (
@@ -210,7 +215,7 @@ export function AdminPlansPage() {
               <div className="space-y-6 p-5">
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
-                    Bahasa Paket
+                    {t("form.language-plans")}
                   </Label>
                   <div className="border-border flex flex-wrap gap-2 border-b pb-3">
                     {SUPPORTED_LOCALES.map((lang) => (
@@ -251,7 +256,9 @@ export function AdminPlansPage() {
                           name: { ...f.name, [activeFormTab]: e.target.value }
                         }))
                       }
-                      placeholder={`Nama dalam bahasa ${activePlaceholderLabel}...`}
+                      placeholder={t("form.placeholder.languageName", {
+                        language: activePlaceholderLabel
+                      })}
                     />
                   </div>
                 </div>
@@ -268,7 +275,9 @@ export function AdminPlansPage() {
                         description: { ...f.description, [activeFormTab]: e.target.value }
                       }))
                     }
-                    placeholder={`Deskripsi pemasaran (${activePlaceholderLabel})...`}
+                    placeholder={t("form.placeholder.desc", {
+                      language: activePlaceholderLabel
+                    })}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -286,7 +295,9 @@ export function AdminPlansPage() {
                         }
                       }))
                     }
-                    placeholder={`Fitur baris demi baris (${activePlaceholderLabel})...`}
+                    placeholder={t("form.placeholder.displayFeature", {
+                      language: activePlaceholderLabel
+                    })}
                   />
                 </div>
               </div>
@@ -299,7 +310,9 @@ export function AdminPlansPage() {
               type="button"
               onClick={() => toggleSection("features")}
               className="hover:bg-muted/40 border-border bg-background flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
-              <span className="text-foreground text-sm font-semibold">Konfigurasi Fitur</span>
+              <span className="text-foreground text-sm font-semibold">
+                {t("form.features-configuration")}
+              </span>
               {openSections.features ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />
               ) : (
@@ -365,7 +378,9 @@ export function AdminPlansPage() {
               type="button"
               onClick={() => toggleSection("billing")}
               className="bg-background hover:bg-muted/40 border-border flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
-              <span className="text-foreground text-sm font-semibold">Gateway Pembayaran</span>
+              <span className="text-foreground text-sm font-semibold">
+                {t("form.payment-gateway")}
+              </span>
               {openSections.billing ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />
               ) : (
@@ -376,7 +391,7 @@ export function AdminPlansPage() {
             {openSections.billing && (
               <div className="space-y-6 p-5">
                 <div className="flex flex-col gap-6">
-                  {/* BLOK BULANAN (MONTHLY) */}
+                  {/* BLOK BULANAN */}
                   <div className="border-border/60 bg-muted/5 space-y-4 rounded-xl border p-5">
                     <div className="border-border/40 flex items-center space-x-2 border-b pb-3">
                       <Checkbox
@@ -392,7 +407,7 @@ export function AdminPlansPage() {
                       <Label
                         htmlFor="enable-monthly"
                         className="cursor-pointer text-sm font-bold select-none">
-                        {t("form.enableMonthly") || "Aktifkan Paket Bulanan"}
+                        {t("form.monthly.title")}
                       </Label>
                     </div>
 
@@ -402,26 +417,44 @@ export function AdminPlansPage() {
                         <Label
                           htmlFor="monthly-amount"
                           className={!isMonthlyEnabled ? "cursor-not-allowed" : ""}>
-                          {t("form.monthlyAmount")}
+                          {t("form.monthly.amount")}
                         </Label>
-                        <Input
-                          id="monthly-amount"
-                          type="number"
-                          disabled={!isMonthlyEnabled}
-                          value={form.monthlyAmount || ""}
-                          onChange={(e) =>
-                            setForm((f) => ({
-                              ...f,
-                              monthlyAmount: parseFloat(e.target.value) || 0
-                            }))
-                          }
-                          placeholder="0"
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            id="monthly-amount"
+                            type="number"
+                            disabled={!isMonthlyEnabled}
+                            value={form.monthlyAmount || ""}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                monthlyAmount: parseFloat(e.target.value) || 0
+                              }))
+                            }
+                            placeholder="0"
+                            className="flex-1"
+                          />
+                          <Select
+                            value={form.monthlyCurrency || "IDR"}
+                            onValueChange={(v) => setForm((f) => ({ ...f, monthlyCurrency: v }))}
+                            disabled={!isMonthlyEnabled}>
+                            <SelectTrigger className="w-[100px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tenantConfig.supported.currencies.map((c) => (
+                                <SelectItem key={c.code} value={c.code}>
+                                  {c.code}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
                       <div className="space-y-4 pt-2">
                         <span className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
-                          ID Gateway Bulanan
+                          {t("form.monthly.id-gateway")}
                         </span>
 
                         {PROVIDER_FIELDS.length === 0 ? (
@@ -480,7 +513,7 @@ export function AdminPlansPage() {
                     </div>
                   </div>
 
-                  {/* BLOK TAHUNAN (YEARLY) */}
+                  {/* BLOK TAHUNAN */}
                   <div className="border-border/60 bg-muted/5 space-y-4 rounded-xl border p-5">
                     <div className="border-border/40 flex items-center space-x-2 border-b pb-3">
                       <Checkbox
@@ -508,19 +541,37 @@ export function AdminPlansPage() {
                           className={!isYearlyEnabled ? "cursor-not-allowed" : ""}>
                           {t("form.yearlyAmount")}
                         </Label>
-                        <Input
-                          id="yearly-amount"
-                          type="number"
-                          disabled={!isYearlyEnabled}
-                          value={form.yearlyAmount || ""}
-                          onChange={(e) =>
-                            setForm((f) => ({
-                              ...f,
-                              yearlyAmount: parseFloat(e.target.value) || 0
-                            }))
-                          }
-                          placeholder="0"
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            id="yearly-amount"
+                            type="number"
+                            disabled={!isYearlyEnabled}
+                            value={form.yearlyAmount || ""}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                yearlyAmount: parseFloat(e.target.value) || 0
+                              }))
+                            }
+                            placeholder="0"
+                            className="flex-1"
+                          />
+                          <Select
+                            value={form.yearlyCurrency || "IDR"}
+                            onValueChange={(v) => setForm((f) => ({ ...f, yearlyCurrency: v }))}
+                            disabled={!isYearlyEnabled}>
+                            <SelectTrigger className="w-[100px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tenantConfig.supported.currencies.map((c) => (
+                                <SelectItem key={c.code} value={c.code}>
+                                  {c.code}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
                       <div className="space-y-4 pt-2">
@@ -589,7 +640,6 @@ export function AdminPlansPage() {
           </div>
         </div>
 
-        {/* Sticky Footer Panel */}
         <div className="border-border bg-muted/20 flex items-center justify-end gap-3 border-t p-6">
           <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>
             {t("buttons.back")}
@@ -608,7 +658,6 @@ export function AdminPlansPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("alerts.deactivateTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {/* SOLUSI: Mengurai nama paket kustom menggunakan getLocalizedValue penentu multi-bahasa */}
               {t("alerts.deactivateDesc", {
                 name: deactivateTarget ? getLocalizedValue(deactivateTarget.name, locale) : ""
               })}
@@ -625,7 +674,30 @@ export function AdminPlansPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* CONFIRM DEACTIVATE (bulk, from checkbox selection) */}
+      {/* CONFIRM DELETE (single row) */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("alerts.deleteTitle") || "Hapus Paket"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("alerts.deleteDesc", {
+                name: deleteTarget ? getLocalizedValue(deleteTarget.name, locale) : ""
+              }) ||
+                `Apakah Anda yakin ingin menghapus paket "${deleteTarget ? getLocalizedValue(deleteTarget.name, locale) : ""}" secara permanen? Tindakan ini tidak dapat dibatalkan.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("buttons.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t("buttons.confirmDelete") || "Hapus Permanen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* CONFIRM DEACTIVATE (bulk) */}
       <AlertDialog
         open={bulkConfirmOpen}
         onOpenChange={(open) => !open && setBulkConfirmOpen(false)}>

@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Edit } from "lucide-react";
+import { MoreHorizontal, Trash2, Ban, MoreVertical } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/i18n/currency";
 import { useDataTable } from "@/components/data-table/use-data-table";
@@ -13,6 +13,13 @@ import { DataTableColumnHeader } from "@/components/data-table/data-table-column
 import { FEATURE_DEFINITIONS, decodeFeatureGates } from "@/config/feature-definitions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 // MENGIMPOR KONFIGURASI ROUTING BAHASA YANG SUDAH ADA
 import { routing } from "@/i18n/routing";
@@ -31,23 +38,24 @@ export interface DBPrice {
   plan_id: string;
   interval: "monthly" | "yearly";
   amount: number;
+  currency?: string;
   provider_ids: Record<string, string>;
 }
 
 export interface PlanRow extends DBPlan {
   monthlyAmount: number;
+  monthlyCurrency: string;
   yearlyAmount: number;
+  yearlyCurrency: string;
 }
 
-// Metadata opsional untuk visualisasi label & placeholder di form
 const LOCALE_METADATA: Record<string, { label: string; placeholder: string }> = {
-  en: { label: "English (EN)", placeholder: "Inggris" },
-  id: { label: "Indonesia (ID)", placeholder: "Indonesia" },
-  ar: { label: "العربية (AR)", placeholder: "Arab" },
-  ja: { label: "日本語 (JA)", placeholder: "Jepang" }
+  en: { label: "English", placeholder: "Inggris" },
+  id: { label: "Indonesia", placeholder: "Indonesia" },
+  ar: { label: "العربية", placeholder: "Arab" },
+  ja: { label: "日本語", placeholder: "Jepang" }
 };
 
-// MEMBUAT SUPPORTED_LOCALES DINAMIS BERDASARKAN FILE i18n/routing.ts
 export const SUPPORTED_LOCALES = routing.locales.map((code) => {
   const meta = LOCALE_METADATA[code as keyof typeof LOCALE_METADATA];
   return {
@@ -104,14 +112,13 @@ export const EMPTY_FORM = {
   isActive: true,
   displayFeaturesRaw: createEmptyMultilingualField(),
   monthlyAmount: 0,
+  monthlyCurrency: "IDR",
   yearlyAmount: 0,
+  yearlyCurrency: "IDR",
   monthlyProviders: emptyProviderMap(),
   yearlyProviders: emptyProviderMap()
 };
 
-/**
- * Helper untuk menyaring terjemahan objek JSONB murni secara fleksibel
- */
 export function getLocalizedValue<T>(
   field: Record<string, T> | T,
   locale: string,
@@ -144,11 +151,13 @@ export function useAdminPlans() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [formGates, setFormGates] = useState<Record<string, any>>({});
+
   const [deactivateTarget, setDeactivateTarget] = useState<DBPlan | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DBPlan | null>(null);
+
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [isBulkDeactivating, setIsBulkDeactivating] = useState(false);
 
-  // Menggunakan locale pertama dari config routing secara dinamis
   const [activeFormTab, setActiveFormTab] = useState<SupportedLocale>(
     SUPPORTED_LOCALES[0]?.code || "en"
   );
@@ -208,13 +217,16 @@ export function useAdminPlans() {
       return {
         ...p,
         monthlyAmount: m ? parseFloat(String(m.amount)) : 0,
-        yearlyAmount: y ? parseFloat(String(y.amount)) : 0
+        monthlyCurrency: (m as any)?.currency || "IDR",
+        yearlyAmount: y ? parseFloat(String(y.amount)) : 0,
+        yearlyCurrency: (y as any)?.currency || "IDR"
       };
     });
   }, [plans, prices]);
 
-  const fmtIDR = useCallback(
-    (amt: number) => formatCurrency(amt, locale, { currencyCode: APP_BASE_CURRENCY }),
+  const fmtPrice = useCallback(
+    (amt: number, currency: string = APP_BASE_CURRENCY) =>
+      formatCurrency(amt, locale, { currencyCode: currency }),
     [locale]
   );
 
@@ -292,7 +304,9 @@ export function useAdminPlans() {
         isActive: plan.is_active,
         displayFeaturesRaw: getLangArrayRaw(plan.display_features),
         monthlyAmount: mPrice ? parseFloat(String(mPrice.amount)) : 0,
+        monthlyCurrency: (mPrice as any)?.currency || "IDR",
         yearlyAmount: yPrice ? parseFloat(String(yPrice.amount)) : 0,
+        yearlyCurrency: (yPrice as any)?.currency || "IDR",
         monthlyProviders: toMap(mPrice),
         yearlyProviders: toMap(yPrice)
       });
@@ -306,7 +320,19 @@ export function useAdminPlans() {
 
   const columns: ColumnDef<PlanRow, unknown>[] = useMemo(
     () => [
-      createSelectColumn<PlanRow>(),
+      {
+        ...createSelectColumn<PlanRow>(),
+        cell: (props) => {
+          const baseSelect = createSelectColumn<PlanRow>();
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              {typeof baseSelect.cell === "function"
+                ? (baseSelect.cell as any)(props)
+                : (baseSelect.cell as any)}
+            </div>
+          );
+        }
+      },
       {
         accessorKey: "name",
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.name")} />,
@@ -314,7 +340,9 @@ export function useAdminPlans() {
         cell: ({ row }) => {
           const nameStr = getLocalizedValue(row.original.name, locale);
           return (
-            <div>
+            <div
+              className="w-full cursor-pointer space-y-0.5 select-none"
+              onClick={() => handleOpenEdit(row.original)}>
               <p className="font-bold">{nameStr}</p>
               <p className="text-muted-foreground font-mono text-xs">{row.original.id}</p>
             </div>
@@ -327,29 +355,41 @@ export function useAdminPlans() {
           <DataTableColumnHeader column={column} title={t("table.monthly")} />
         ),
         cell: ({ row }) => (
-          <span className="font-semibold">{fmtIDR(row.original.monthlyAmount)}</span>
+          <div
+            className="w-full cursor-pointer font-semibold select-none"
+            onClick={() => handleOpenEdit(row.original)}>
+            {fmtPrice(row.original.monthlyAmount, row.original.monthlyCurrency)}
+          </div>
         )
       },
       {
         accessorKey: "yearlyAmount",
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.yearly")} />,
         cell: ({ row }) => (
-          <span className="font-semibold">{fmtIDR(row.original.yearlyAmount)}</span>
+          <div
+            className="w-full cursor-pointer font-semibold select-none"
+            onClick={() => handleOpenEdit(row.original)}>
+            {fmtPrice(row.original.yearlyAmount, row.original.yearlyCurrency)}
+          </div>
         )
       },
       {
         accessorKey: "is_active",
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.status")} />,
         cell: ({ row }) => (
-          <Badge
-            variant={row.original.is_active ? "default" : "secondary"}
-            className={
-              row.original.is_active
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
-                : ""
-            }>
-            {row.original.is_active ? t("table.active") : t("table.inactive")}
-          </Badge>
+          <div
+            className="w-full cursor-pointer select-none"
+            onClick={() => handleOpenEdit(row.original)}>
+            <Badge
+              variant={row.original.is_active ? "default" : "secondary"}
+              className={
+                row.original.is_active
+                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
+                  : ""
+              }>
+              {row.original.is_active ? t("table.active") : t("table.inactive")}
+            </Badge>
+          </div>
         )
       },
       {
@@ -357,23 +397,34 @@ export function useAdminPlans() {
         header: () => <div className="text-end">{t("table.actions")}</div>,
         enableHiding: false,
         cell: ({ row }) => (
-          <div className="flex justify-end gap-2 whitespace-nowrap">
-            <Button variant="outline" size="sm" onClick={() => handleOpenEdit(row.original)}>
-              <Edit className="me-1 h-3.5 w-3.5" /> {t("buttons.edit")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDeactivateTarget(row.original)}
-              disabled={!row.original.is_active}
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive">
-              {t("buttons.deactivate")}
-            </Button>
+          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only"></span>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem
+                  disabled={!row.original.is_active}
+                  onClick={() => setDeactivateTarget(row.original)}
+                  className="text-amber-600 focus:text-amber-600 dark:text-amber-500">
+                  <Ban className="me-2 h-4 w-4" /> {t("buttons.deactivate")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setDeleteTarget(row.original)}
+                  className="text-destructive focus:text-destructive">
+                  <Trash2 className="me-2 h-4 w-4" /> {t("buttons.delete") || "Hapus"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )
       }
     ],
-    [t, fmtIDR, handleOpenEdit, locale]
+    [t, fmtPrice, handleOpenEdit, locale]
   );
 
   const table = useDataTable({ columns, data: rows });
@@ -500,10 +551,12 @@ export function useAdminPlans() {
         prices: {
           monthly: {
             amount: isMonthlyEnabled ? form.monthlyAmount : 0,
+            currency: form.monthlyCurrency || "IDR",
             providerIds: filteredMonthlyProviders
           },
           yearly: {
             amount: isYearlyEnabled ? form.yearlyAmount : 0,
+            currency: form.yearlyCurrency || "IDR",
             providerIds: filteredYearlyProviders
           }
         }
@@ -554,6 +607,31 @@ export function useAdminPlans() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Unauthorized");
+
+      // Mengirimkan query parameter action=delete agar backend tahu ini adalah penghapusan permanen
+      const response = await fetch(`/api/admin/plans?id=${deleteTarget.id}&action=delete`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) throw new Error(data.error || t("alerts.error"));
+
+      showAlert("success", t("alerts.deleteSuccess") || "Paket berhasil dihapus permanen");
+      fetchAdminData();
+    } catch (err: any) {
+      setErrorMsg(err.message || t("alerts.error"));
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
   return {
     t,
     locale,
@@ -570,6 +648,8 @@ export function useAdminPlans() {
     setFormGates,
     deactivateTarget,
     setDeactivateTarget,
+    deleteTarget,
+    setDeleteTarget,
     bulkConfirmOpen,
     setBulkConfirmOpen,
     isBulkDeactivating,
@@ -586,8 +666,10 @@ export function useAdminPlans() {
     selectedRows,
     selectedActiveCount,
     handleOpenCreate,
+    handleOpenEdit,
     handleSavePlan,
     confirmDeactivate,
+    confirmDelete,
     handleBulkDeactivate,
     activeFormTab,
     setActiveFormTab

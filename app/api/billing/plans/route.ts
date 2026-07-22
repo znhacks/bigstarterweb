@@ -48,11 +48,13 @@ export async function GET() {
         prices: {
           monthly: {
             amount: monthlyPrice ? parseFloat(monthlyPrice.amount) : 0,
+            currency: monthlyPrice?.currency || "IDR",
             convertedAmount: monthlyPrice ? parseFloat(monthlyPrice.amount) : 0,
             providers: monthlyPrice ? monthlyPrice.provider_ids : {}
           },
           yearly: {
             amount: yearlyPrice ? parseFloat(yearlyPrice.amount) : 0,
+            currency: yearlyPrice?.currency || "IDR",
             convertedAmount: yearlyPrice ? parseFloat(yearlyPrice.amount) : 0,
             providers: yearlyPrice ? yearlyPrice.provider_ids : {}
           }

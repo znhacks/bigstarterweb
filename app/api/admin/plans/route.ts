@@ -115,6 +115,7 @@ export async function POST(req: Request) {
           plan_id: normalizedId,
           interval: "monthly",
           amount: prices.monthly.amount,
+          currency: prices.monthly.currency || "IDR",
           provider_ids: prices.monthly.providerIds || {}
         },
         { onConflict: "plan_id,interval" }
@@ -130,6 +131,7 @@ export async function POST(req: Request) {
           plan_id: normalizedId,
           interval: "yearly",
           amount: prices.yearly.amount,
+          currency: prices.yearly.currency || "IDR",
           provider_ids: prices.yearly.providerIds || {}
         },
         { onConflict: "plan_id,interval" }
