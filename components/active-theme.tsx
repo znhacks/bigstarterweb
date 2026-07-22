@@ -1,6 +1,14 @@
 "use client";
 
-import { ReactNode, createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import {
+  ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback
+} from "react";
 import { usePathname } from "next/navigation";
 import { DEFAULT_THEME, ThemeType } from "@/lib/themes";
 import { supabase } from "@/lib/supabase";
@@ -41,28 +49,35 @@ export function ActiveThemeProvider({
   );
   const [themeSource, setThemeSource] = useState<string>("default");
   const [isSaving, setIsSaving] = useState(false);
+  const themeRequestRef = useRef(0);
 
   // --- Fetch DB-resolved theme (user > tenant > default) ---
-  const applyDbTheme = useCallback(async () => {
+  const applyDbTheme = useCallback(async (tenantContext?: { id?: string; slug?: string }) => {
+    const requestId = ++themeRequestRef.current;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
       if (!session) return;
 
       // Extract tenant_slug dari URL — lebih reliable daripada localStorage active_org_id
       // yg bisa stale saat pindah tenant via navigasi.
       const pathParts = window.location.pathname.split("/").filter(Boolean);
-      const tenantSlug = pathParts[0] || "";
-      const tenantId = localStorage.getItem("active_org_id") || "";
+      const tenantSlug = tenantContext?.slug || pathParts[0] || "";
+      const tenantId = tenantContext?.id || localStorage.getItem("active_org_id") || "";
 
       const res = await fetch("/api/theme", {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           "x-tenant-slug": tenantSlug,
-          "x-tenant-id": tenantId
+          "x-tenant-id": tenantId,
+          ...(tenantContext?.id ? { "x-tenant-switch": "true" } : {})
         }
-      }).then((r) => r.json()).catch(() => null);
+      })
+        .then((r) => r.json())
+        .catch(() => null);
 
-      if (res?.theme && res.theme.preset !== undefined) {
+      if (requestId === themeRequestRef.current && res?.theme && res.theme.preset !== undefined) {
         setThemeState(res.theme as ThemeType);
         setThemeSource(res.source || "default");
       }
@@ -88,7 +103,10 @@ export function ActiveThemeProvider({
 
   // Juga dengarkan event "storage" utk perubahan programmatic (e.g. org switch tanpa navigasi).
   useEffect(() => {
-    const handler = () => applyDbTheme();
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ tenantId?: string; tenantSlug?: string }>;
+      applyDbTheme({ id: customEvent.detail?.tenantId, slug: customEvent.detail?.tenantSlug });
+    };
     window.addEventListener("storage", handler);
     window.addEventListener("active-org-changed", handler);
     return () => {
@@ -142,11 +160,16 @@ export function ActiveThemeProvider({
     setThemeState({ ...DEFAULT_THEME });
     setThemeSource("default");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
       if (!session) return;
       await fetch("/api/theme", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({ theme: {}, scope: "user" })
       });
       // Re-fetch utk apply tenant/default theme
@@ -154,8 +177,30 @@ export function ActiveThemeProvider({
     } catch {}
   };
 
+  // --- saveTheme: persist current theme ke profiles.theme (explicit save) ---
+  const saveTheme = async () => {
+    setIsSaving(true);
+    try {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch("/api/theme", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ theme, scope: "user" })
+      });
+      setThemeSource("user");
+    } catch {}
+    setIsSaving(false);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resetTheme, themeSource }}>
+    <ThemeContext.Provider
+      value={{ theme, setTheme, resetTheme, saveTheme, isSaving, themeSource }}>
       {children}
     </ThemeContext.Provider>
   );

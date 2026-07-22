@@ -174,7 +174,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     localStorage.setItem("active_org_id", org.id);
     setCookie("active_tenant_id", org.id);
 
-    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(
+      new CustomEvent("active-org-changed", {
+        detail: { tenantId: org.id, tenantSlug: org.slug }
+      })
+    );
 
     if (tenantSlug && pathname) {
       const segments = pathname.split("/");
