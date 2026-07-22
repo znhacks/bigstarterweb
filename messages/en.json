@@ -1101,6 +1101,8 @@
         "cancel": "Cancel",
         "save": "Save Plan",
         "back": "Back",
+        "delete": "Delete",
+        "confirmDelete": "Delete",
         "confirmDeactivate": "Deactivate Plan"
       },
       "table": {
@@ -1139,14 +1141,30 @@
         "yearlyCycle": "Yearly Cycle",
         "basePricePlaceholder": "Base price (IDR)",
         "gatewayIds": "Gateway IDs",
-        "required": "ID, name, and description are required."
+        "required": "ID, name, and description are required.",
+        "general": "General",
+        "language-plans": "Plan Languages",
+        "features-configuration": "Feature Configuration",
+        "payment-gateway": "Payment Gateway",
+        "monthly": {
+          "title": "Monthly Subscription",
+          "amount": "Amount",
+          "id-gateway": "Gateway ID"
+        },
+        "placeholder": {
+          "languageName": "Name in {language}...",
+          "desc": "Marketing description in {language}...",
+          "displayFeature": "One feature per line in {language}..."
+        }
       },
       "alerts": {
         "saveSuccess": "Plan saved successfully.",
         "deactivateSuccess": "Plan deactivated.",
         "deactivateTitle": "Deactivate Plan",
         "deactivateDesc": "Deactivate plan \"{name}\"? It will no longer be available for new subscriptions.",
-        "error": "Something went wrong."
+        "error": "Something went wrong.",
+        "deleteTitle": "Delete Subscription Plan",
+        "deleteDesc": "Are you sure you want to delete this subscription plan? This action cannot be undone and the data will be permanently deleted."
       }
     }
   },

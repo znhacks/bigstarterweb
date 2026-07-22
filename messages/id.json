@@ -1090,6 +1090,8 @@
         "cancel": "Batal",
         "save": "Simpan Paket",
         "back": "Kembali",
+        "delete": "Hapus",
+        "confirmDelete": "Hapus",
         "confirmDeactivate": "Nonaktifkan Paket"
       },
       "table": {
@@ -1128,14 +1130,30 @@
         "yearlyCycle": "Siklus Tahunan",
         "basePricePlaceholder": "Harga dasar IDR",
         "gatewayIds": "ID Gateway",
-        "required": "ID, nama, dan deskripsi wajib diisi."
+        "required": "ID, nama, dan deskripsi wajib diisi.",
+        "general": "Umum",
+        "language-plans": "Bahasa Paket",
+        "features-configuration": "Konfigurasi Fitur",
+        "payment-gateway": "Gateway Pembayaran",
+        "monthly": {
+          "title": "Langganan Bulanan",
+          "amount": "Nominal",
+          "id-gateway": "ID Gateway"
+        },
+        "placeholder": {
+          "languageName": "Nama dalam bahasa {language}...",
+          "desc": "Deskripsi pemasaran {language}...",
+          "displayFeature": "Fitur baris demi baris {language}..."
+        }
       },
       "alerts": {
         "saveSuccess": "Paket berhasil disimpan.",
         "deactivateSuccess": "Paket berhasil dinonaktifkan.",
         "deactivateTitle": "Nonaktifkan Paket",
         "deactivateDesc": "Nonaktifkan paket \"{name}\"? Tidak tersedia untuk langganan baru.",
-        "error": "Terjadi kesalahan."
+        "error": "Terjadi kesalahan.",
+        "deleteTitle": "Hapus Paket Langganan",
+        "deleteDesc": "Yakin ingin menghapus paket langganan anda? data akan dihapus secara permanen."
       }
     }
   },

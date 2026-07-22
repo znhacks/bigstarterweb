@@ -1101,6 +1101,8 @@
         "cancel": "إلغاء",
         "save": "حفظ الباقة",
         "back": "رجوع",
+        "delete": "حذف",
+        "confirmDelete": "حذف",
         "confirmDeactivate": "إلغاء تفعيل الباقة"
       },
       "table": {
@@ -1139,14 +1141,30 @@
         "yearlyCycle": "دورة سنوية",
         "basePricePlaceholder": "السعر الأساسي (IDR)",
         "gatewayIds": "معرّفات البوابة",
-        "required": "المعرّف والاسم والوصف مطلوبة."
+        "required": "المعرّف والاسم والوصف مطلوبة.",
+        "general": "عام",
+        "language-plans": "لغات الخطة",
+        "features-configuration": "إعدادات الميزات",
+        "payment-gateway": "بوابة الدفع",
+        "monthly": {
+          "title": "الاشتراك الشهري",
+          "amount": "المبلغ",
+          "id-gateway": "معرّف البوابة"
+        },
+        "placeholder": {
+          "languageName": "الاسم باللغة {language}...",
+          "desc": "الوصف التسويقي باللغة {language}...",
+          "displayFeature": "ميزة واحدة في كل سطر باللغة {language}..."
+        }
       },
       "alerts": {
         "saveSuccess": "تم حفظ الباقة بنجاح.",
         "deactivateSuccess": "تم إلغاء تفعيل الباقة.",
         "deactivateTitle": "إلغاء تفعيل الباقة",
         "deactivateDesc": "إلغاء تفعيل الباقة \"{name}\"؟ لن تكون متاحة للاشتراكات الجديدة.",
-        "error": "حدث خطأ."
+        "error": "حدث خطأ.",
+        "deleteTitle": "حذف خطة الاشتراك",
+        "deleteDesc": "هل أنت متأكد من رغبتك في حذف خطة الاشتراك هذه؟ لا يمكن التراجع عن هذا الإجراء، وسيتم حذف البيانات نهائيًا."
       }
     }
   },
