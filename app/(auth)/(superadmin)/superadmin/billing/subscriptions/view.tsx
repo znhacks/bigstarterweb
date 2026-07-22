@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Loader2, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -59,11 +59,7 @@ export function SuperadminSubscriptionsPage() {
   const formatPrice = (amount: number, currency?: string) =>
     formatCurrency(amount, locale, { currencyCode: currency ?? APP_BASE_CURRENCY });
 
-  useEffect(() => {
-    loadSubscriptionData();
-  }, []);
-
-  const loadSubscriptionData = async () => {
+  const loadSubscriptionData = useCallback(async () => {
     setIsLoading(true);
     try {
       const plansRes = await fetch("/api/billing/plans").then((r) => r.json());
@@ -89,6 +85,21 @@ export function SuperadminSubscriptionsPage() {
           const planConfig = currentPlans.find((p: any) => p.id === sub.plan_id);
           const price = planConfig ? (planConfig.prices?.monthly?.amount ?? 0) : 0;
 
+          // Mengatasi masalah lokalisasi nama plan
+          let localizedName = "Free";
+          if (planConfig) {
+            const rawName = planConfig.name;
+            if (rawName && typeof rawName === "object") {
+              // Mencari lokalisasi yang sesuai, dengan fallback ke bahasa Inggris atau value pertama
+              localizedName =
+                rawName[locale] || rawName["en"] || Object.values(rawName)[0] || "Free";
+            } else if (rawName) {
+              localizedName = String(rawName);
+            }
+          } else if (sub.plan_id) {
+            localizedName = sub.plan_id;
+          }
+
           return {
             id: sub.id,
             tenant_id: sub.tenant_id,
@@ -97,7 +108,7 @@ export function SuperadminSubscriptionsPage() {
             cancel_at_period_end: sub.cancel_at_period_end,
             tenants: sub.tenants,
             plans: {
-              name: planConfig ? planConfig.name : sub.plan_id || "Free",
+              name: localizedName,
               price: price
             }
           };
@@ -110,7 +121,11 @@ export function SuperadminSubscriptionsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [locale]);
+
+  useEffect(() => {
+    loadSubscriptionData();
+  }, [loadSubscriptionData]);
 
   const planOptions = useMemo(() => {
     const unique = Array.from(
@@ -123,7 +138,7 @@ export function SuperadminSubscriptionsPage() {
     () => [
       {
         accessorKey: "tenants.name",
-        id: "tenants_name", // SOLUSI: Berikan ID eksplisit tanpa titik desimal
+        id: "tenants_name",
         meta: {
           label: t("table.tenant")
         },
@@ -145,7 +160,7 @@ export function SuperadminSubscriptionsPage() {
       },
       {
         accessorKey: "plans.name",
-        id: "plans_name", // SOLUSI: Berikan ID eksplisit tanpa titik desimal
+        id: "plans_name",
         meta: {
           label: t("table.plan")
         },
@@ -164,7 +179,7 @@ export function SuperadminSubscriptionsPage() {
       },
       {
         accessorKey: "plans.price",
-        id: "plans_price", // SOLUSI: Berikan ID eksplisit tanpa titik desimal
+        id: "plans_price",
         meta: {
           label: t("table.price")
         },
@@ -265,14 +280,12 @@ export function SuperadminSubscriptionsPage() {
 
       <div className="space-y-4">
         <div className="flex flex-row flex-wrap items-center gap-2">
-          {/* SOLUSI: Mengubah pencarian merujuk ke ID kolom "tenants_name" */}
           <DataTableSearch
             table={table}
             columnId="tenants_name"
             placeholder={t("table.search") || "Cari tenant..."}
           />
 
-          {/* SOLUSI: Mengubah filter merujuk ke ID kolom "plans_name" */}
           <DataTableFacetedFilter
             column={table.getColumn("plans_name")}
             title={t("table.plan") || "Plan"}
@@ -303,7 +316,7 @@ export function SuperadminSubscriptionsPage() {
             })
           }
           rowsPerPageLabel={ttable("pagination.rowsPerPage")}
-          previousLabel={ttable("pagination.previous")} // Dikirim dinamis
+          previousLabel={ttable("pagination.previous")}
           nextLabel={ttable("pagination.next")}
         />
       </div>
