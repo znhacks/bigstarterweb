@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     // 1. TARIK HARGA TARGET + ID PROVIDER DARI DATABASE (single source of truth)
     const { data: dbTargetPrice, error: targetPriceErr } = await supabaseAdmin
       .from("plan_prices")
-      .select("amount, plan_id, provider_ids")
+      .select("amount, plan_id, provider_ids, currency")
       .eq("plan_id", planId)
       .eq("interval", interval)
       .maybeSingle();
@@ -52,6 +52,7 @@ export async function POST(req: Request) {
     }
 
     const targetPrice = parseFloat(dbTargetPrice.amount);
+    const planCurrency = (dbTargetPrice as any).currency || "IDR";
 
     // Ambil ID plan di sisi provider dari JSONB provider_ids
     const providerPriceId =
@@ -173,7 +174,7 @@ export async function POST(req: Request) {
       planName,
       interval,
       baseAmount: targetPrice,
-      currency: "IDR",
+      currency: planCurrency,
       customPrice: secureFinalPrice,
       providerPriceId: providerPriceId || undefined,
       couponCode: couponCode ? couponCode.trim() : undefined,

@@ -1,12 +1,12 @@
 // app/api/theme/route.ts
 //
 // Per-entity theme resolution & save.
-// Priority: profiles.theme > tenants.theme > DEFAULT_THEME.
+// Priority: custom profiles.theme > tenants.theme > DEFAULT_THEME.
 // Client passes X-Tenant-Id header for tenant resolution.
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { DEFAULT_THEME } from "@/lib/themes";
+import { DEFAULT_THEME, type ThemeType } from "@/lib/themes";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -22,7 +22,18 @@ function isValidTheme(obj: any): boolean {
   );
 }
 
-/** GET /api/theme — resolve effective theme (user > tenant > default). */
+function resolveTheme(obj: unknown): ThemeType {
+  return { ...DEFAULT_THEME, ...(obj && typeof obj === "object" ? obj : {}) } as ThemeType;
+}
+
+function isCustomTheme(obj: unknown): boolean {
+  const theme = resolveTheme(obj);
+  return Object.keys(DEFAULT_THEME).some(
+    (key) => theme[key as keyof ThemeType] !== DEFAULT_THEME[key as keyof ThemeType]
+  );
+}
+
+/** GET /api/theme — resolve effective theme (custom user > tenant > default). */
 export async function GET(req: Request) {
   try {
     const authHeader = req.headers.get("Authorization");
@@ -37,8 +48,20 @@ export async function GET(req: Request) {
     } = await supabaseAdmin.auth.getUser(token);
     if (!user) return NextResponse.json({ theme: DEFAULT_THEME });
 
-    // 1. Tenant theme — tenant context is authoritative for tenant pages.
-    //    Prefer the explicit id during a sidebar switch; the URL can still contain the old slug.
+    // 1. A custom user theme always wins. An all-default user theme inherits the tenant.
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("theme")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const userTheme = profile?.theme;
+    if (isValidTheme(userTheme) && isCustomTheme(userTheme)) {
+      return NextResponse.json({ theme: resolveTheme(userTheme), source: "user" });
+    }
+
+    // 2. Tenant theme — prefer the explicit id during a sidebar switch because the URL may
+    // still contain the previous tenant slug.
     let tenantData: any = null;
     if (isTenantSwitch && tenantId) {
       const { data } = await supabaseAdmin
@@ -64,18 +87,7 @@ export async function GET(req: Request) {
     }
 
     if (tenantData?.theme && isValidTheme(tenantData.theme)) {
-      return NextResponse.json({ theme: tenantData.theme, source: "tenant" });
-    }
-
-    // 2. User theme is a fallback for pages without a tenant theme.
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("theme")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.theme && isValidTheme(profile.theme)) {
-      return NextResponse.json({ theme: profile.theme, source: "user" });
+      return NextResponse.json({ theme: resolveTheme(tenantData.theme), source: "tenant" });
     }
 
     // 3. Default

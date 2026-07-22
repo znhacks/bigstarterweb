@@ -51,7 +51,7 @@ export function ActiveThemeProvider({
   const [isSaving, setIsSaving] = useState(false);
   const themeRequestRef = useRef(0);
 
-  // --- Fetch DB-resolved theme (user > tenant > default) ---
+  // --- Fetch DB-resolved theme (custom user > tenant > default) ---
   const applyDbTheme = useCallback(async (tenantContext?: { id?: string; slug?: string }) => {
     const requestId = ++themeRequestRef.current;
     try {
