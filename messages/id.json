@@ -1087,6 +1087,7 @@
         "create": "Tambah Paket",
         "edit": "Edit",
         "deactivate": "Nonaktifkan",
+        "deactiveselected": "Nonaktifkan {length} paket terpilih",
         "cancel": "Batal",
         "save": "Simpan Paket",
         "back": "Kembali",
@@ -1135,15 +1136,22 @@
         "language-plans": "Bahasa Paket",
         "features-configuration": "Konfigurasi Fitur",
         "payment-gateway": "Gateway Pembayaran",
+        "noprovider": "Tidak ada payment provider yang diaktifkan di konfigurasi environment.",
         "monthly": {
           "title": "Langganan Bulanan",
+          "amount": "Nominal",
+          "id-gateway": "ID Gateway"
+        },
+        "yearly": {
+          "title": "Langganan Tahunan",
           "amount": "Nominal",
           "id-gateway": "ID Gateway"
         },
         "placeholder": {
           "languageName": "Nama dalam bahasa {language}...",
           "desc": "Deskripsi pemasaran {language}...",
-          "displayFeature": "Fitur baris demi baris {language}..."
+          "displayFeature": "Fitur baris demi baris {language}...",
+          "provider": "Masukan id paket {label}..."
         }
       },
       "alerts": {

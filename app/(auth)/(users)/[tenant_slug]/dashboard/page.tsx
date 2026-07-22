@@ -1,19 +1,6 @@
-import { generateMeta } from "@/lib/utils";
-
-import CustomDateRangePicker from "@/components/custom-date-range-picker";
-import { Button } from "@/components/ui/button";
-
-import { ChatWidget } from "./components/chat-widget";
-import { ExerciseMinutes } from "./components/exercise-minutes";
-import { LatestPayments } from "./components/latest-payments";
-import { PaymentMethodCard } from "./components/payment-method";
-import { SubscriptionsCard } from "./components/subscriptions";
-import { TeamMembersCard } from "./components/theme-members";
-import { TotalRevenueCard } from "./components/total-revenue";
-
-import { Download } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
+import { UserWorkspaceDashboard } from "./view";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.users.dashboard");
@@ -25,31 +12,5 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-row items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Dashboard</h1>
-        <div className="flex items-center gap-2">
-          <CustomDateRangePicker />
-          <Button>
-            <Download />
-            <span className="hidden lg:inline">Download</span>
-          </Button>
-        </div>
-      </div>
-      <div className="gap-4 space-y-4 lg:grid lg:grid-cols-3 lg:space-y-0">
-        <TeamMembersCard />
-        <SubscriptionsCard />
-        <TotalRevenueCard />
-        <ChatWidget />
-        <div className="lg:col-span-2">
-          <ExerciseMinutes />
-        </div>
-        <div className="lg:col-span-2">
-          <LatestPayments />
-        </div>
-        <PaymentMethodCard />
-      </div>
-    </div>
-  );
+  return <UserWorkspaceDashboard />;
 }

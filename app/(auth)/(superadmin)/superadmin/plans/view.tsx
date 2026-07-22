@@ -37,6 +37,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 
 import { useAdminPlans, PROVIDER_FIELDS, getLocalizedValue, SUPPORTED_LOCALES } from "./logic";
+import { formatNumber } from "@/lib/i18n/format";
 
 export function AdminPlansPage() {
   const {
@@ -139,7 +140,7 @@ export function AdminPlansPage() {
             className="h-9 text-xs"
             onClick={() => setBulkConfirmOpen(true)}
             disabled={selectedActiveCount === 0}>
-            {t("buttons.deactivate")} {selectedRows.length} terpilih
+            {t("buttons.deactiveselected", { length: formatNumber(selectedRows.length, locale) })}
           </Button>
         )}
 
@@ -458,9 +459,7 @@ export function AdminPlansPage() {
                         </span>
 
                         {PROVIDER_FIELDS.length === 0 ? (
-                          <p className="text-muted-foreground text-xs">
-                            Tidak ada payment provider yang diaktifkan di konfigurasi environment.
-                          </p>
+                          <p className="text-muted-foreground text-xs">{t("form.noprovider")}</p>
                         ) : (
                           PROVIDER_FIELDS.map((pf) => (
                             <div
@@ -503,7 +502,7 @@ export function AdminPlansPage() {
                                     }
                                   }))
                                 }
-                                placeholder="Masukkan ID..."
+                                placeholder={t("form.placeholder.provider", { label: pf.label })}
                                 className="h-8 font-mono text-xs"
                               />
                             </div>
@@ -529,7 +528,7 @@ export function AdminPlansPage() {
                       <Label
                         htmlFor="enable-yearly"
                         className="cursor-pointer text-sm font-bold select-none">
-                        {t("form.enableYearly") || "Aktifkan Paket Tahunan"}
+                        {t("form.yearly.title")}
                       </Label>
                     </div>
 
@@ -539,7 +538,7 @@ export function AdminPlansPage() {
                         <Label
                           htmlFor="yearly-amount"
                           className={!isYearlyEnabled ? "cursor-not-allowed" : ""}>
-                          {t("form.yearlyAmount")}
+                          {t("form.yearly.amount")}
                         </Label>
                         <div className="flex gap-2">
                           <Input
@@ -576,13 +575,11 @@ export function AdminPlansPage() {
 
                       <div className="space-y-4 pt-2">
                         <span className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
-                          ID Gateway Tahunan
+                          {t("form.yearly.id-gateway")}
                         </span>
 
                         {PROVIDER_FIELDS.length === 0 ? (
-                          <p className="text-muted-foreground text-xs">
-                            Tidak ada payment provider yang diaktifkan di konfigurasi environment.
-                          </p>
+                          <p className="text-muted-foreground text-xs">{t("form.noprovider")}</p>
                         ) : (
                           PROVIDER_FIELDS.map((pf) => (
                             <div
@@ -625,7 +622,7 @@ export function AdminPlansPage() {
                                     }
                                   }))
                                 }
-                                placeholder="Masukkan ID..."
+                                placeholder={t("form.placeholder.provider", { label: pf.label })}
                                 className="h-8 font-mono text-xs"
                               />
                             </div>
@@ -678,7 +675,7 @@ export function AdminPlansPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("alerts.deleteTitle") || "Hapus Paket"}</AlertDialogTitle>
+            <AlertDialogTitle>{t("alerts.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               {t("alerts.deleteDesc", {
                 name: deleteTarget ? getLocalizedValue(deleteTarget.name, locale) : ""
@@ -691,7 +688,7 @@ export function AdminPlansPage() {
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {t("buttons.confirmDelete") || "Hapus Permanen"}
+              {t("buttons.confirmDelete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
