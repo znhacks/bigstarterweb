@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { CreditCard, ReceiptText, Settings, Users } from "lucide-react";
+import { CreditCard, Palette, ReceiptText, Settings, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
@@ -94,7 +94,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                     ? "bg-secondary text-foreground font-semibold"
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}>
-                <ReceiptText className="h-4 w-4 shrink-0" />
+                <Palette className="h-4 w-4 shrink-0" />
                 <span>{t("menu.appearance")}</span>
               </Link>
             </nav>
