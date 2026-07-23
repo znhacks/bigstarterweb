@@ -1186,7 +1186,8 @@
         "deactivateDesc": "Nonaktifkan paket \"{name}\"? Tidak tersedia untuk langganan baru.",
         "error": "Terjadi kesalahan.",
         "deleteTitle": "Hapus Paket Langganan",
-        "deleteDesc": "Yakin ingin menghapus paket langganan anda? data akan dihapus secara permanen."
+        "deleteDesc": "Yakin ingin menghapus paket langganan anda? data akan dihapus secara permanen.",
+        "deleteSuccess": "Paket berhasil dihapus"
       }
     }
   },

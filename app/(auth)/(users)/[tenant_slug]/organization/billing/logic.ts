@@ -637,11 +637,22 @@ export function useOrganizationBilling() {
       return "active";
     }
 
-    const planWeights: Record<string, number> = { free: 1, starter: 2, pro: 3 };
-    const currentWeight = planWeights[activeSub.planId] || 1;
-    const targetWeight = planWeights[planId] || 1;
+    // Tentukan arah (upgrade/downgrade) dari HARGA plan, bukan ID yang di-hardcode.
+    // Pakai harga bulanan (convertedAmount) sbg indikator tier kanonik (interval-agnostic);
+    // fallback ke yearly bila monthly tidak ada. Dengan ini plan baru apa pun diperlakukan
+    // benar: harga lebih mahal => upgrade, lebih murah => downgrade.
+    const tierValue = (id: string): number => {
+      const plan = convertedPlans.find((p) => p.id === id);
+      if (!plan) return 0;
+      const monthly = plan.prices.monthly.convertedAmount;
+      const yearly = plan.prices.yearly.convertedAmount;
+      return monthly > 0 ? monthly : yearly;
+    };
 
-    return targetWeight > currentWeight ? "upgrade" : "downgrade";
+    const currentValue = tierValue(activeSub.planId);
+    const targetValue = tierValue(planId);
+
+    return targetValue > currentValue ? "upgrade" : "downgrade";
   };
 
   const getUpgradePrice = (targetPlan: ConvertedPlan) => {

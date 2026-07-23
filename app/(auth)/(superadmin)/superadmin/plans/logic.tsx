@@ -21,7 +21,6 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
-// MENGIMPOR KONFIGURASI ROUTING BAHASA YANG SUDAH ADA
 import { routing } from "@/i18n/routing";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
@@ -144,6 +143,7 @@ export function useAdminPlans() {
   const [prices, setPrices] = useState<DBPrice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -624,13 +624,14 @@ export function useAdminPlans() {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
+    setIsDeleting(true);
+    setErrorMsg(null);
     try {
       const {
         data: { session }
       } = await supabase.auth.getSession();
       if (!session) throw new Error("Unauthorized");
 
-      // Mengirimkan query parameter action=delete agar backend tahu ini adalah penghapusan permanen
       const response = await fetch(`/api/admin/plans?id=${deleteTarget.id}&action=delete`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${session.access_token}` }
@@ -638,11 +639,12 @@ export function useAdminPlans() {
       const data = await response.json();
       if (!response.ok || data.error) throw new Error(data.error || t("alerts.error"));
 
-      showAlert("success", t("alerts.deleteSuccess") || "Paket berhasil dihapus permanen");
+      showAlert("success", t("alerts.deleteSuccess"));
       fetchAdminData();
     } catch (err: any) {
       setErrorMsg(err.message || t("alerts.error"));
     } finally {
+      setIsDeleting(false);
       setDeleteTarget(null);
     }
   };
@@ -652,6 +654,7 @@ export function useAdminPlans() {
     locale,
     isLoading,
     isSaving,
+    isDeleting,
     errorMsg,
     successMsg,
     dialogOpen,

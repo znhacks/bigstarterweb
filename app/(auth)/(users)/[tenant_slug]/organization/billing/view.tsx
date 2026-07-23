@@ -151,7 +151,7 @@ export function OrganizationBilling() {
 
       {/* SECTION 2: PLANS MATRIX */}
       <div className="space-y-6">
-        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="space-y-1">
             <h2 className="text-2xl font-bold tracking-tight text-slate-950">{t("changeTitle")}</h2>
           </div>
@@ -185,7 +185,7 @@ export function OrganizationBilling() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 pt-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-3">
           {convertedPlans.map((plan) => {
             const actionType = getPlanActionType(plan.id);
 

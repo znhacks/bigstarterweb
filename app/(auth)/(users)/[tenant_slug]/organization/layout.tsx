@@ -30,7 +30,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       </div>
 
       {/* Grid Layout: Menu Samping & Slot Konten Anak */}
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         {/* Menu Samping */}
         <div className="md:col-span-1">
           <Card className="overflow-hidden p-2">

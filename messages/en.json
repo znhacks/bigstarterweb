@@ -1186,7 +1186,8 @@
         "deactivateDesc": "Deactivate plan \"{name}\"? It will not be available for new subscriptions.",
         "error": "An error occurred.",
         "deleteTitle": "Delete Subscription Plan",
-        "deleteDesc": "Are you sure you want to delete your subscription plan? Data will be deleted permanently."
+        "deleteDesc": "Are you sure you want to delete your subscription plan? Data will be deleted permanently.",
+        "deleteSuccess": "Plan deleted successfully."
       }
     }
   },

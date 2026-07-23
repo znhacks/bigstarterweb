@@ -29,7 +29,9 @@ async function validateSuperadmin(req: Request) {
   if (authError || !user) throw new Error("Invalid token");
 
   // KOREKSI ARSITEKTUR: Membaca kolom is_superadmin langsung dari tabel profiles (System Role)
-  const { data: profile, error: profileErr } = await (await profileRepository(supabaseAdmin))
+  const { data: profile, error: profileErr } = await (
+    await profileRepository(supabaseAdmin)
+  )
     .query()
     .select("is_superadmin")
     .eq("id", user.id)
@@ -50,7 +52,9 @@ export async function GET(req: Request) {
     await validateSuperadmin(req);
 
     // Ambil seluruh plans
-    const { data: plans, error: plansErr } = await (await planRepository(supabaseAdmin))
+    const { data: plans, error: plansErr } = await (
+      await planRepository(supabaseAdmin)
+    )
       .query()
       .select("*")
       .order("created_at", { ascending: true });
@@ -58,7 +62,9 @@ export async function GET(req: Request) {
     if (plansErr) throw plansErr;
 
     // Ambil seluruh plan_prices
-    const { data: prices, error: pricesErr } = await (await planPriceRepository(supabaseAdmin))
+    const { data: prices, error: pricesErr } = await (
+      await planPriceRepository(supabaseAdmin)
+    )
       .query()
       .select("*");
 
@@ -99,17 +105,15 @@ export async function POST(req: Request) {
 
     // A. Upsert ke tabel 'plans'
     const normalizedId = id.toLowerCase().trim();
-    const { error: planErr } = await (await planRepository(supabaseAdmin))
-      .query()
-      .upsert({
-        id: normalizedId,
-        name,
-        description,
-        is_active: isActive !== undefined ? isActive : true,
-        display_features: displayFeatures || [],
-        features: features || [], // Menyimpan array rbac terpadu: ['allowPdfFormat', 'limit:maxTasks:2000']
-        updated_at: new Date().toISOString()
-      });
+    const { error: planErr } = await (await planRepository(supabaseAdmin)).query().upsert({
+      id: normalizedId,
+      name,
+      description,
+      is_active: isActive !== undefined ? isActive : true,
+      display_features: displayFeatures || [],
+      features: features || [], // Menyimpan array rbac terpadu: ['allowPdfFormat', 'limit:maxTasks:2000']
+      updated_at: new Date().toISOString()
+    });
 
     if (planErr) throw planErr;
 
@@ -157,20 +161,23 @@ export async function POST(req: Request) {
 }
 
 /**
- * 3. DELETE: Soft-delete paket (Mengubah status is_active = false) untuk melindungi transaksi pelanggan aktif
+ * 3. DELETE: Menonaktifkan paket (soft-delete) atau menghapusnya secara permanen dari database
  */
 export async function DELETE(req: Request) {
   try {
     await validateSuperadmin(req);
     const { searchParams } = new URL(req.url);
     const planId = searchParams.get("id");
+    const action = searchParams.get("action"); // Mengambil parameter aksi
 
     if (!planId) {
       return NextResponse.json({ error: "ID paket wajib dikirimkan" }, { status: 400 });
     }
 
-    // Proteksi: Periksa apakah ada pelanggan yang sedang aktif di paket ini
-    const { count, error: countErr } = await (await subscriptionRepository(supabaseAdmin))
+    // Proteksi keamanan: Periksa apakah ada pelanggan yang sedang aktif di paket ini
+    const { count, error: countErr } = await (
+      await subscriptionRepository(supabaseAdmin)
+    )
       .query()
       .select("*", { count: "exact", head: true })
       .eq("plan_id", planId)
@@ -185,13 +192,27 @@ export async function DELETE(req: Request) {
       );
     }
 
-    // Lakukan soft-delete
-    const { error: deleteErr } = await (await planRepository(supabaseAdmin))
-      .query()
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq("id", planId);
+    if (action === "delete") {
+      // PROSES HAPUS FISIK PERMANEN DARI DATABASE
+      const { error: deleteErr } = await (
+        await planRepository(supabaseAdmin)
+      )
+        .query()
+        .delete()
+        .eq("id", planId);
 
-    if (deleteErr) throw deleteErr;
+      if (deleteErr) throw deleteErr;
+    } else {
+      // PROSES NON-AKTIFKAN SAJA (SOFT-DELETE)
+      const { error: deactivateErr } = await (
+        await planRepository(supabaseAdmin)
+      )
+        .query()
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq("id", planId);
+
+      if (deactivateErr) throw deactivateErr;
+    }
 
     // Invalidasi cache gating (konsistensi, best-effort per-instance)
     invalidatePlanCache(planId);

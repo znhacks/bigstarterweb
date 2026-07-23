@@ -46,6 +46,7 @@ export function AdminPlansPage() {
     locale,
     isLoading,
     isSaving,
+    isDeleting,
     errorMsg,
     successMsg,
     dialogOpen,
@@ -461,7 +462,10 @@ export function AdminPlansPage() {
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent className="max-w-xs text-xs">
-                                <p>{t("optional")}</p>
+                                <p>
+                                  Provider yang tidak menggunakan ID gateway tidak perlu diisi,
+                                  cukup aktifkan saja
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -598,7 +602,10 @@ export function AdminPlansPage() {
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent className="max-w-xs text-xs">
-                                <p>{t("optional")}</p>
+                                <p>
+                                  Provider yang tidak menggunakan ID gateway tidak perlu diisi,
+                                  cukup aktifkan saja
+                                </p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -698,23 +705,26 @@ export function AdminPlansPage() {
       </AlertDialog>
 
       {/* CONFIRM DELETE (single row) */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && !isDeleting && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("alerts.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("alerts.deleteDesc", {
-                name: deleteTarget ? getLocalizedValue(deleteTarget.name, locale) : ""
-              }) ||
-                `Apakah Anda yakin ingin menghapus paket "${deleteTarget ? getLocalizedValue(deleteTarget.name, locale) : ""}" secara permanen? Tindakan ini tidak dapat dibatalkan.`}
+              {deleteTarget
+                ? t("alerts.deleteDesc", { name: getLocalizedValue(deleteTarget.name, locale) })
+                : "Apakah Anda yakin ingin menghapus paket ini secara permanen?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("buttons.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t("buttons.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
+              disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {t("buttons.confirmDelete")}
+              {isDeleting && <Loader2 className="me-1.5 h-4 w-4 animate-spin" />}
+              {t("buttons.confirmDelete") || "Hapus"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
