@@ -8,11 +8,27 @@ import { planPriceRepository } from "@/supabase/repositories/plan-pices";
 import { planRepository } from "@/supabase/repositories/plans";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { couponRepository } from "@/supabase/repositories/coupons";
+import { paymentOrderRepository } from "@/supabase/repositories/payment-orders";
+import { convertToIdr } from "@/services/exchange-rate";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
+
+/**
+ * Konversi aman ke IDR (base charge). Bila API kurs gagal, anggap nominal sudah dalam IDR
+ * agar checkout tidak menggantung. Plan bisa dalam valuta asing (USD/SGD/dll); provider
+ * IDR-native menagih dalam IDR sehingga nominal wajib dinormalisasi.
+ */
+async function convertToIdrSafe(amount: number, fromCurrency: string): Promise<number> {
+  try {
+    const conv = await convertToIdr(amount, fromCurrency);
+    return conv.amountInIdr;
+  } catch {
+    return amount;
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -73,6 +89,11 @@ export async function POST(req: Request) {
       .maybeSingle();
     const planName = planRow?.name || planId;
 
+    // 1b. KONVERSI HARGA PLAN KE IDR (base charge). Plan bisa dalam valuta asing
+    //     (USD/SGD/dll); provider IDR-native (Xendit/Mayar/Midtrans) menagih dalam IDR,
+    //     jadi nominal harus dinormalisasi ke IDR dulu agar currency plan benar2 berpengaruh.
+    const chargeAmountIdr = await convertToIdrSafe(targetPrice, planCurrency);
+
     // 2. KALKULASI KREDIT PRO-RATA DINAMIS (pakai interval langganan LAMA)
     let credit = 0;
     let oldProviderSubscriptionId: string | null = null;
@@ -97,15 +118,19 @@ export async function POST(req: Request) {
         if (oldInterval) {
           const { data: dbOldPrice } = await planPriceRepo
             .query()
-            .select("amount")
+            .select("amount, currency")
             .eq("plan_id", activeSub.plan_id)
             .eq("interval", oldInterval)
             .maybeSingle();
 
           if (dbOldPrice) {
-            const originalPrice = parseFloat(dbOldPrice.amount);
+            // Normalisasi harga plan LAMA ke IDR juga (bisa beda mata uang dgn plan baru).
+            const oldOriginalIdr = await convertToIdrSafe(
+              parseFloat(dbOldPrice.amount),
+              (dbOldPrice as any).currency || "IDR"
+            );
             const remainingRatio = remainingTime / totalDuration;
-            credit = remainingRatio * originalPrice;
+            credit = remainingRatio * oldOriginalIdr;
           }
         }
       }
@@ -116,7 +141,8 @@ export async function POST(req: Request) {
       }
     }
 
-    let finalPriceInIdr = targetPrice - credit;
+    // Semua komponen kini dalam IDR: harga plan baru (chargeAmountIdr) & kredit pro-rata.
+    let finalChargeIdr = chargeAmountIdr - credit;
 
     // 3. VALIDASI KUPON DISKON DI SISI SERVER (lookup .ilike — mendukung mixed-case)
     let discountAmount = 0;
@@ -136,16 +162,17 @@ export async function POST(req: Request) {
 
         if (isValidDate && isValidQuota) {
           if (coupon.discount_type === "percentage") {
-            discountAmount = (parseFloat(coupon.discount_value) / 100) * finalPriceInIdr;
+            discountAmount = (parseFloat(coupon.discount_value) / 100) * finalChargeIdr;
           } else if (coupon.discount_type === "fixed_amount") {
+            // Diskon fixed_amount diasumsikan dalam IDR (base).
             discountAmount = parseFloat(coupon.discount_value);
           }
-          finalPriceInIdr = finalPriceInIdr - discountAmount;
+          finalChargeIdr = finalChargeIdr - discountAmount;
         }
       }
     }
 
-    const secureFinalPrice = Math.max(1, parseFloat(finalPriceInIdr.toFixed(2)));
+    const secureFinalPrice = Math.max(1, parseFloat(finalChargeIdr.toFixed(2)));
 
     // 4. Ambil adapter pembayaran yang sesuai
     const paymentProvider = PaymentFactory.getProvider(provider);
@@ -178,14 +205,50 @@ export async function POST(req: Request) {
       planId,
       planName,
       interval,
-      baseAmount: targetPrice,
-      currency: planCurrency,
+      baseAmount: chargeAmountIdr,
+      currency: "IDR",
       customPrice: secureFinalPrice,
       providerPriceId: providerPriceId || undefined,
       couponCode: couponCode ? couponCode.trim() : undefined,
       successUrl: successUrl || `${req.headers.get("origin")}/dashboard/billing?success=true`,
       cancelUrl: cancelUrl || `${req.headers.get("origin")}/dashboard/billing?canceled=true`
     });
+
+    // 6. CATAT INTENT PEMBAYARAN (pending) — sumber otoritatik context untuk webhook.
+    //    Webhook melakukan lookup by (provider, provider_order_id = session.sessionId),
+    //    yaitu id invoice/order provider yang selalu di-echo pada callback, sehingga
+    //    pemulihan context tidak lagi bergantung pada echo metadata/external_id provider.
+    try {
+      const orderRepo = await paymentOrderRepository(supabaseAdmin);
+
+      // Supersede: tandai order pending lama untuk tenant+plan+interval sama menjadi expired.
+      await orderRepo
+        .query()
+        .update({ status: "expired", updated_at: new Date().toISOString() })
+        .eq("tenant_id", tenantId)
+        .eq("plan_id", planId)
+        .eq("interval", interval)
+        .eq("status", "pending");
+
+      await orderRepo.insert({
+        tenant_id: tenantId,
+        user_id: user.id,
+        plan_id: planId,
+        interval,
+        provider,
+        provider_order_id: session.sessionId || null,
+        amount: secureFinalPrice,
+        charge_currency: "IDR",
+        plan_amount: targetPrice,
+        plan_currency: planCurrency,
+        amount_in_idr: secureFinalPrice,
+        coupon_code: couponCode ? couponCode.trim() : null,
+        status: "pending"
+      });
+    } catch (orderErr: any) {
+      // Non-blocking: bila gagal mencatat order, webhook akan fallback ke ekstraksi adapter.
+      console.warn("[checkout] Gagal mencatat payment_orders:", orderErr?.message || orderErr);
+    }
 
     return NextResponse.json(session);
   } catch (error: any) {

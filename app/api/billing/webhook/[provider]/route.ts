@@ -8,6 +8,7 @@ import { planPriceRepository } from "@/supabase/repositories/plan-pices";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { planRepository } from "@/supabase/repositories/plans";
 import { transactionRepository } from "@/supabase/repositories/transactions";
+import { paymentOrderRepository } from "@/supabase/repositories/payment-orders";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -72,10 +73,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
 
     const {
       eventType,
-      tenantId,
-      planId, // ID paket bawaan dari adapter (jika terdeteksi)
-      interval,
-      couponCode,
+      tenantId: rawTenantId,
+      planId: rawPlanId, // ID paket bawaan dari adapter (jika terdeteksi)
+      interval: rawInterval,
+      couponCode: rawCouponCode,
       startsAt,
       endsAt,
       status,
@@ -90,13 +91,33 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
 
     console.log(
       `========== WEBHOOK [${providerName}] ==========\n` +
-        `Event: ${eventType} | Tenant: ${tenantId} | Plan: ${planId} | Status: ${status}\n` +
+        `Event: ${eventType} | Tenant: ${rawTenantId} | Plan: ${rawPlanId} | Status: ${status}\n` +
         `================================================`
     );
 
+    // --- PULIHKAN CONTEXT DARI payment_orders (sumber otoritatif) ---
+    // Order dicatat saat checkout; lookup by (provider, provider_order_id) — id yang selalu
+    // di-echo provider pada callback. Ini menghilangkan ketergantungan pada echo
+    // metadata/external_id (akar bug "Tenant ID not found" pada provider no-ID).
+    let paymentOrder: any = null;
+    if (orderId) {
+      const { data: orderRow } = await (
+        await paymentOrderRepository(supabaseAdmin)
+      ).findByProviderOrder(providerName, orderId);
+      if (orderRow) paymentOrder = orderRow;
+    }
+
+    const tenantId = paymentOrder?.tenant_id || rawTenantId;
+    const planId = paymentOrder?.plan_id || rawPlanId;
+    const interval = paymentOrder?.interval || rawInterval;
+    const couponCode = paymentOrder?.coupon_code || rawCouponCode;
+
     if (!tenantId) {
       return NextResponse.json(
-        { error: "Tenant ID not found in webhook metadata" },
+        {
+          error:
+            "Tenant ID tidak ditemukan: tidak ada payment_orders untuk order ini & provider tidak meng-echo context."
+        },
         { status: 400 }
       );
     }
@@ -331,6 +352,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
 
       // === 5. REDEEM KUPON (atomic, idempotent via RPC) ===
       await redeemCouponIfPresent(couponCode, tenantId);
+
+      // === 6. UPDATE LIFECYCLE payment_orders → paid ===
+      if (paymentOrder) {
+        await (
+          await paymentOrderRepository(supabaseAdmin)
+        ).markStatus(paymentOrder.id, "paid", { paid_at: new Date().toISOString() });
+      }
+    } else if (eventType === "payment.failed") {
+      // Tandai order gagal (lifecycle). Transaksi tidak dicatat; subscription tidak diubah.
+      if (paymentOrder) {
+        await (await paymentOrderRepository(supabaseAdmin)).markStatus(paymentOrder.id, "failed");
+      }
+      console.warn(
+        `[webhook] Payment FAILED untuk order ${orderId} (tenant ${tenantId})`
+      );
     }
 
     return NextResponse.json({ received: true });

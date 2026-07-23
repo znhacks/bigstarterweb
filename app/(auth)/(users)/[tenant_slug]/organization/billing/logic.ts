@@ -222,7 +222,9 @@ export function useOrganizationBilling() {
   };
 
   const fetchTransactionHistory = async (orgId: string) => {
-    const { data, error } = await (await transactionRepository(supabase))
+    const { data, error } = await (
+      await transactionRepository(supabase)
+    )
       .query()
       .select("*")
       .eq("tenant_id", orgId)
@@ -542,7 +544,9 @@ export function useOrganizationBilling() {
     if (!activeSub || !activeOrgId) return;
     setIsUpdatingSub(true);
     try {
-      const { error } = await (await subscriptionRepository(supabase))
+      const { error } = await (
+        await subscriptionRepository(supabase)
+      )
         .query()
         .update({ status: "refund_requested" })
         .eq("id", activeSub.id);
