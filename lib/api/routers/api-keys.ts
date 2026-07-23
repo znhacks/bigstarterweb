@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { o, getTenantId, getSession } from "../context";
 import { supabaseAdmin } from "../supabase-server";
+import { apiKeyRepository } from "@/supabase/repositories/api-keys";
 import { apiKeySchema, uuid } from "../schemas";
 import { notFound, dbError } from "../errors";
 import { generateApiKey, hashApiKey, apiKeyPrefix } from "../crypto";
@@ -11,12 +12,14 @@ import { generateApiKey, hashApiKey, apiKeyPrefix } from "../crypto";
  * existing API key (self-service), scoped to that key's tenant.
  */
 
-const rowsFor = (tenantId: string) =>
-  supabaseAdmin
-    .from("api_keys")
+const rowsFor = async (tenantId: string) => {
+  const apiKeyRepo = await apiKeyRepository(supabaseAdmin);
+  return apiKeyRepo
+    .query()
     .select("id, name, key_prefix, last_used_at, created_at, revoked_at")
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false });
+};
 
 export const listApiKeys = o
   .route({
@@ -29,7 +32,7 @@ export const listApiKeys = o
   .output(z.array(apiKeySchema))
   .handler(async ({ context }) => {
     const tenantId = getTenantId(context);
-    const { data, error } = await rowsFor(tenantId);
+    const { data, error } = await (await rowsFor(tenantId));
     if (error) throw dbError(error);
     return data ?? [];
   });
@@ -53,8 +56,9 @@ export const createApiKey = o
     const session = getSession(context); // session-only — prevents key-minting escalation
     const fullKey = generateApiKey();
 
-    const { data, error } = await supabaseAdmin
-      .from("api_keys")
+    const apiKeyRepo = await apiKeyRepository(supabaseAdmin);
+    const { data, error } = await apiKeyRepo
+      .query()
       .insert({
         tenant_id: session.tenantId,
         name: input.name,
@@ -79,8 +83,9 @@ export const revokeApiKey = o
   .output(z.object({ id: uuid, revoked: z.literal(true) }))
   .handler(async ({ input, context }) => {
     const tenantId = getTenantId(context);
-    const { data, error } = await supabaseAdmin
-      .from("api_keys")
+    const apiKeyRepo = await apiKeyRepository(supabaseAdmin);
+    const { data, error } = await apiKeyRepo
+      .query()
       .update({ revoked_at: new Date().toISOString() })
       .eq("id", input.id)
       .eq("tenant_id", tenantId) // cannot revoke another tenant's key

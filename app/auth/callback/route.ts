@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { ensureProfile } from "@/lib/auth";
+import { profileRepository } from "@/supabase/repositories/profiles";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -53,8 +54,8 @@ export async function GET(request: Request) {
       // Pastikan profile row ada (OAuth/magic-link tak buat profile di client).
       if (user) await ensureProfile(user);
 
-      const { data: profile } = await supabase
-        .from("profiles")
+      const { data: profile } = await (await profileRepository(supabase))
+        .query()
         .select("status, banned_until, address_country")
         .eq("id", user?.id ?? "")
         .maybeSingle();

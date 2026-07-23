@@ -198,7 +198,9 @@ export function AdminCouponsPage() {
           label: t("table.expiry-status")
         },
         accessorFn: (row) => getExpiryStatus(row),
-        header: "Expiry Status",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("table.expiry-status")} />
+        ),
         filterFn: multiSelectFilterFn,
         cell: ({ row }) => <span className="capitalize">{getExpiryStatus(row.original)}</span>
       },
@@ -270,14 +272,13 @@ export function AdminCouponsPage() {
   ];
 
   const expiryStatusOptions = [
-    { value: "active", label: "Active" },
-    { value: "expired", label: "Expired" },
+    { value: "active", label: t("table.active") },
+    { value: "expired", label: t("table.expired") },
     { value: "no_expiry", label: t("table.noExpiry") }
   ];
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
-      {/* Header */}
+    <div className="mx-auto w-full space-y-6 px-4 py-8">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-foreground text-2xl font-bold tracking-tight md:text-3xl">
@@ -330,7 +331,7 @@ export function AdminCouponsPage() {
           </Button>
         )}
 
-        <DataTableViewOptions table={table} className="md:ms-auto" />
+        <DataTableViewOptions table={table} className="md:ms-auto" label={t("column")} />
       </div>
 
       {isLoading ? (
@@ -344,7 +345,7 @@ export function AdminCouponsPage() {
             table={table}
             pageSizeOptions={[10, 20, 50, 100]}
             rowsPerPageLabel={t("table.rowsPerPage")}
-            selectedLabel={(selected, total) => `${selected} / ${total} dipilih`}
+            selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
           />
         </>
       )}
@@ -373,12 +374,10 @@ export function AdminCouponsPage() {
         <div className="border-border flex items-center justify-between border-b p-6">
           <div className="space-y-1.5">
             <h2 className="text-foreground text-xl font-bold">
-              {selectedCoupon ? `${t("detail")} ${selectedCoupon.code}` : t("form.title")}
+              {selectedCoupon ? `${t("detail.title")} ${selectedCoupon.code}` : t("form.title")}
             </h2>
             <p className="text-muted-foreground text-sm">
-              {selectedCoupon
-                ? "Informasi rincian kupon dan riwayat penebusan tenant"
-                : t("form.desc")}
+              {selectedCoupon ? t("detail.desc") : t("form.desc")}
             </p>
           </div>
           <Button
@@ -470,7 +469,9 @@ export function AdminCouponsPage() {
                   type="button"
                   onClick={() => toggleSection("details")}
                   className="bg-muted/20 hover:bg-muted/40 border-border/40 flex w-full items-center justify-between border-b p-4 text-left transition-colors">
-                  <span className="text-foreground text-sm font-semibold">Detail Kupon</span>
+                  <span className="text-foreground text-sm font-semibold">
+                    {t("detail.detail-coupon")}
+                  </span>
                   {openSections.details ? (
                     <ChevronUp className="text-muted-foreground h-4 w-4" />
                   ) : (
@@ -482,7 +483,9 @@ export function AdminCouponsPage() {
                   <div className="space-y-4 p-5">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-muted-foreground text-xs">Tipe Diskon</Label>
+                        <Label className="text-muted-foreground text-xs">
+                          {t("detail.discount-type")}
+                        </Label>
                         <p className="mt-0.5 text-sm font-semibold capitalize">
                           {selectedCoupon.discount_type === "percentage"
                             ? t("form.percentage")
@@ -490,7 +493,9 @@ export function AdminCouponsPage() {
                         </p>
                       </div>
                       <div>
-                        <Label className="text-muted-foreground text-xs">Nilai Diskon</Label>
+                        <Label className="text-muted-foreground text-xs">
+                          {t("detail.discount-value")}
+                        </Label>
                         <p className="mt-0.5 text-sm font-semibold">
                           {formatDiscount(selectedCoupon)}
                         </p>
@@ -499,7 +504,9 @@ export function AdminCouponsPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-muted-foreground text-xs">Batas Kedaluwarsa</Label>
+                        <Label className="text-muted-foreground text-xs">
+                          {t("detail.expiry")}
+                        </Label>
                         <p className="mt-0.5 text-sm font-semibold">
                           {selectedCoupon.valid_until
                             ? formatDateTime(selectedCoupon.valid_until, locale)
@@ -507,13 +514,17 @@ export function AdminCouponsPage() {
                         </p>
                       </div>
                       <div>
-                        <Label className="text-muted-foreground text-xs">Status Kupon</Label>
+                        <Label className="text-muted-foreground text-xs">
+                          {t("detail.coupon-status")}
+                        </Label>
                         <div className="mt-0.5">
                           <Badge
                             variant={
                               getExpiryStatus(selectedCoupon) === "active" ? "default" : "secondary"
                             }>
-                            {getExpiryStatus(selectedCoupon) === "active" ? "Aktif" : "Kedaluwarsa"}
+                            {getExpiryStatus(selectedCoupon) === "active"
+                              ? t("active")
+                              : t("expired")}
                           </Badge>
                         </div>
                       </div>
@@ -521,10 +532,10 @@ export function AdminCouponsPage() {
 
                     <div className="border-border/40 space-y-1.5 border-t pt-2">
                       <div className="text-muted-foreground flex justify-between text-xs font-semibold">
-                        <span>Penggunaan Kuota</span>
+                        <span>{t("detail.usage")}</span>
                         <span>
                           {selectedCoupon.redeemed_count} /{" "}
-                          {selectedCoupon.max_redemptions || "Tak Terbatas"}
+                          {selectedCoupon.max_redemptions || t("detail.unlimited")}
                         </span>
                       </div>
                       {selectedCoupon.max_redemptions && (
@@ -548,7 +559,7 @@ export function AdminCouponsPage() {
                   onClick={() => toggleSection("redemptionsList")}
                   className="bg-muted/20 hover:bg-muted/40 border-border/40 flex w-full items-center justify-between border-b p-4 text-left transition-colors">
                   <span className="text-foreground text-sm font-semibold">
-                    Daftar Pengguna Kupon
+                    {t("detail.coupon-users")}
                   </span>
                   {openSections.redemptionsList ? (
                     <ChevronUp className="text-muted-foreground h-4 w-4" />
@@ -565,7 +576,7 @@ export function AdminCouponsPage() {
                       </div>
                     ) : redemptions.length === 0 ? (
                       <p className="text-muted-foreground py-4 text-center text-xs">
-                        Belum ada tenant yang menggunakan kupon ini.
+                        {t("detail.nousage")}
                       </p>
                     ) : (
                       <div className="divide-border/60 border-border bg-muted/5 divide-y overflow-hidden rounded-xl border">

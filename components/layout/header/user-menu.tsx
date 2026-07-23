@@ -27,6 +27,7 @@ import { Progress } from "@/components/ui/progress";
 
 // Impor klien Supabase Anda
 import { supabase } from "@/lib/supabase";
+import { profileRepository } from "@/supabase/repositories/profiles";
 import { useTranslations } from "next-intl";
 
 export default function UserMenu() {
@@ -52,8 +53,8 @@ export default function UserMenu() {
       setEmail(user.email || "");
 
       // Mengambil nama lengkap & URL avatar secara nyata dari tabel profiles
-      const { data: profileData } = await supabase
-        .from("profiles")
+      const { data: profileData } = await (await profileRepository(supabase))
+        .query()
         .select("full_name, avatar") // <-- Memuat kolom avatar dari database
         .eq("id", user.id)
         .single();

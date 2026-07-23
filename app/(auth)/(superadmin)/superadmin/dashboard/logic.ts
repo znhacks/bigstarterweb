@@ -2,6 +2,12 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { profileRepository } from "@/supabase/repositories/profiles";
+import { tenantRepository } from "@/supabase/repositories/tenants";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+import { planRepository } from "@/supabase/repositories/plans";
+import { transactionRepository } from "@/supabase/repositories/transactions";
+import { couponRepository } from "@/supabase/repositories/coupons";
 import { useLocale } from "next-intl";
 import {
   startOfDay,
@@ -41,21 +47,27 @@ export function useSuperadminMainDashboard() {
       // Ambil data paralel dari seluruh tabel target berdasarkan skema database
       const [profilesRes, tenantsRes, subscriptionsRes, plansRes, transactionsRes, couponsRes] =
         await Promise.all([
-          supabase
-            .from("profiles")
+          (await profileRepository(supabase))
+            .query()
             .select("id, created_at, deleted_at, status")
             .order("created_at", { ascending: false }),
-          supabase.from("tenants").select("*").order("created_at", { ascending: false }),
-          supabase
-            .from("subscriptions")
+          (await tenantRepository(supabase))
+            .query()
+            .select("*")
+            .order("created_at", { ascending: false }),
+          (await subscriptionRepository(supabase))
+            .query()
             .select("*, tenants(name)")
             .order("updated_at", { ascending: false }),
-          supabase.from("plans").select("*, plan_prices(*)"),
-          supabase
-            .from("transactions")
+          (await planRepository(supabase)).query().select("*, plan_prices(*)"),
+          (await transactionRepository(supabase))
+            .query()
             .select("*, tenants(name)")
             .order("created_at", { ascending: false }),
-          supabase.from("coupons").select("*").order("created_at", { ascending: false })
+          (await couponRepository(supabase))
+            .query()
+            .select("*")
+            .order("created_at", { ascending: false })
         ]);
 
       setProfiles(profilesRes.data || []);

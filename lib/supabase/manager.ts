@@ -1,5 +1,6 @@
 // lib/supabase/manager.ts
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { tenantRepository } from "@/supabase/repositories/tenants";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -25,8 +26,9 @@ export async function getTenantClient(subdomain: string): Promise<{
   dbModel: "SHARED" | "ISOLATED";
 }> {
   // 1. Cari info tenant di skema 'system'
-  const { data: tenant, error } = await systemClient
-    .from("tenants")
+  const tenantRepo = await tenantRepository(systemClient);
+  const { data: tenant, error } = await tenantRepo
+    .query()
     .select("*")
     .eq("subdomain", subdomain)
     .single();

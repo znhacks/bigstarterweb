@@ -2,6 +2,7 @@
 
 import { getDatabaseService, getStorageService } from "@/lib/providers";
 import { getTenantSubdomain } from "@/lib/tenant";
+import { projectRepository } from "@/supabase/repositories/projects";
 
 export async function createProjectAction(formData: FormData) {
   try {
@@ -44,7 +45,10 @@ export async function createProjectAction(formData: FormData) {
       insertData.tenant_id = tenantId; // Wajib diisi jika Model 1 (Shared)
     }
 
-    const { data, error } = await supabase.from("projects").insert(insertData).select();
+    const { data, error } = await (await projectRepository(supabase))
+      .query()
+      .insert(insertData)
+      .select();
 
     if (error) throw error;
 

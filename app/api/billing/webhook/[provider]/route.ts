@@ -4,6 +4,10 @@ import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { createClient } from "@supabase/supabase-js";
 import { convertToIdr } from "@/services/exchange-rate";
+import { planPriceRepository } from "@/supabase/repositories/plan-pices";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+import { planRepository } from "@/supabase/repositories/plans";
+import { transactionRepository } from "@/supabase/repositories/transactions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -100,6 +104,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     const normalizedStatus = status.toLowerCase().trim();
     let finalPlanId = planId;
 
+    const subscriptionRepo = await subscriptionRepository(supabaseAdmin);
+
     // =========================================================================
     // SINKRONISASI DATABASE DINAMIS (Pencarian JSONB)
     // Jika planId dari adapter kosong, kueri database menggunakan Price ID eksternal
@@ -107,8 +113,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     if (!finalPlanId && providerSubscriptionId) {
       const externalPriceId = providerSubscriptionId;
 
-      const { data: priceRecord, error: priceErr } = await supabaseAdmin
-        .from("plan_prices")
+      const { data: priceRecord, error: priceErr } = await (await planPriceRepository(supabaseAdmin))
+        .query()
         .select("plan_id")
         .or(`provider_ids->>${providerName}.eq.${externalPriceId}`)
         .maybeSingle();
@@ -130,7 +136,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
         });
       }
 
-      const { error: upsertError } = await supabaseAdmin.from("subscriptions").upsert(
+      const { error: upsertError } = await subscriptionRepo.query().upsert(
         {
           tenant_id: tenantId,
           plan_id: finalPlanId || "free",
@@ -156,8 +162,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       // daripada event sale). Idempotent — aman bila juga ter-redeem di payment.succeeded.
       await redeemCouponIfPresent(couponCode, tenantId);
     } else if (eventType === "subscription.deleted") {
-      const { data: currentSub, error: fetchError } = await supabaseAdmin
-        .from("subscriptions")
+      const { data: currentSub, error: fetchError } = await subscriptionRepo
+        .query()
         .select("pending_plan_id, provider")
         .eq("tenant_id", tenantId)
         .maybeSingle();
@@ -167,8 +173,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       }
 
       if (currentSub?.pending_plan_id) {
-        const { error: downgradeError } = await supabaseAdmin
-          .from("subscriptions")
+        const { error: downgradeError } = await subscriptionRepo
+          .query()
           .update({
             plan_id: currentSub.pending_plan_id,
             status: "active",
@@ -183,8 +189,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
           throw new Error(`Database Process Downgrade Failed: ${downgradeError.message}`);
         }
       } else {
-        const { error: deleteError } = await supabaseAdmin
-          .from("subscriptions")
+        const { error: deleteError } = await subscriptionRepo
+          .query()
           .update({
             plan_id: "free",
             status: "expired",
@@ -235,8 +241,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       // plan_name: simpan NAMA plan (bukan slug) utk tampilan history.
       let resolvedPlanName = finalPlanId || "unknown";
       if (finalPlanId) {
-        const { data: planRow } = await supabaseAdmin
-          .from("plans")
+        const { data: planRow } = await (await planRepository(supabaseAdmin))
+          .query()
           .select("name")
           .eq("id", finalPlanId)
           .maybeSingle();
@@ -247,25 +253,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       const resolvedOrderId =
         orderId || `${providerName}-${providerSubscriptionId || tenantId}`;
 
-      const { error: txError } = await supabaseAdmin.from("transactions").upsert(
-        {
-          tenant_id: tenantId,
-          amount: grossAmount,
-          currency: activeCurrency,
-          plan_name: resolvedPlanName,
-          order_id: resolvedOrderId,
-          status: "paid",
-          provider: providerName,
-          tax_amount: parseFloat(calculatedTax.toFixed(2)),
-          fee_amount: parseFloat(calculatedFee.toFixed(2)),
-          net_amount: parseFloat(calculatedNet.toFixed(2)),
-          amount_in_idr: amountInIdr !== null ? parseFloat(amountInIdr.toFixed(2)) : null,
-          exchange_rate: exchangeRate,
-          exchange_api_used: exchangeApiUsed,
-          created_at: new Date().toISOString()
-        },
-        { onConflict: "order_id" }
-      );
+      const { error: txError } = await (await transactionRepository(supabaseAdmin))
+        .query()
+        .upsert(
+          {
+            tenant_id: tenantId,
+            amount: grossAmount,
+            currency: activeCurrency,
+            plan_name: resolvedPlanName,
+            order_id: resolvedOrderId,
+            status: "paid",
+            provider: providerName,
+            tax_amount: parseFloat(calculatedTax.toFixed(2)),
+            fee_amount: parseFloat(calculatedFee.toFixed(2)),
+            net_amount: parseFloat(calculatedNet.toFixed(2)),
+            amount_in_idr: amountInIdr !== null ? parseFloat(amountInIdr.toFixed(2)) : null,
+            exchange_rate: exchangeRate,
+            exchange_api_used: exchangeApiUsed,
+            created_at: new Date().toISOString()
+          },
+          { onConflict: "order_id" }
+        );
 
       if (txError) {
         throw new Error(`Database Insert Transaction Failed: ${txError.message}`);
@@ -275,8 +283,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       //      yang tidak memancarkan subscription.created). Hanya grant bila perlu agar
       //      tidak menimpa ends_at provider subscription (paypal/stripe) yg sudah benar. ===
       if (finalPlanId) {
-        const { data: existingSub } = await supabaseAdmin
-          .from("subscriptions")
+        const { data: existingSub } = await subscriptionRepo
+          .query()
           .select("id, plan_id, provider_subscription_id, status, ends_at")
           .eq("tenant_id", tenantId)
           .maybeSingle();
@@ -297,7 +305,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
           isExpired;
 
         if (needsGrant) {
-          const { error: subGrantError } = await supabaseAdmin.from("subscriptions").upsert(
+          const { error: subGrantError } = await subscriptionRepo.query().upsert(
             {
               tenant_id: tenantId,
               plan_id: finalPlanId,

@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
+import { planRepository } from "@/supabase/repositories/plans";
+import { planPriceRepository } from "@/supabase/repositories/plan-pices";
+import { transactionRepository } from "@/supabase/repositories/transactions";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { useLocale } from "next-intl";
 import type { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay, subDays } from "date-fns";
@@ -31,20 +35,22 @@ export function useSuperadminBilling() {
   const loadAllDashboardData = async () => {
     setIsLoading(true);
     try {
-      const { data: plansData } = await supabase.from("plans").select("*");
-      const { data: pricesData } = await supabase.from("plan_prices").select("*");
+      const { data: plansData } = await (await planRepository(supabase)).query().select("*");
+      const { data: pricesData } = await (await planPriceRepository(supabase))
+        .query()
+        .select("*");
       setPlans(plansData || []);
       setPlanPrices(pricesData || []);
 
-      const { data: txsData, error: txsError } = await supabase
-        .from("transactions")
+      const { data: txsData, error: txsError } = await (await transactionRepository(supabase))
+        .query()
         .select("*, tenants(name)")
         .order("created_at", { ascending: false });
       if (txsError) throw txsError;
       setTransactions(txsData || []);
 
-      const { data: subsData, error: subsError } = await supabase
-        .from("subscriptions")
+      const { data: subsData, error: subsError } = await (await subscriptionRepository(supabase))
+        .query()
         .select("*, tenants(name)");
       if (subsError) throw subsError;
       setSubscriptions(subsData || []);

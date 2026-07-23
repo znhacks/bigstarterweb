@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 
 // Impor klien Supabase, Global Language Hook
 import { supabase } from "@/lib/supabase";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { useLocale, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/i18n/currency";
 
@@ -66,7 +67,9 @@ export function SuperadminSubscriptionsPage() {
       const currentPlans = plansRes?.plans || [];
       setDbPlans(currentPlans);
 
-      const { data, error } = await supabase.from("subscriptions").select(`
+      const { data, error } = await (await subscriptionRepository(supabase))
+        .query()
+        .select(`
         id,
         tenant_id,
         status,

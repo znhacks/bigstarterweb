@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Globe } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { countryRepository } from "@/supabase/repositories/countries";
+import { profileRepository } from "@/supabase/repositories/profiles";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,8 +41,9 @@ export function OnboardingForm({ next }: { next: string }) {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("countries")
+      const countryRepo = await countryRepository(supabase);
+      const { data } = await countryRepo
+        .query()
         .select("id, name, iso2, currency, timezones")
         .order("name", { ascending: true });
       if (data) setCountries(data as unknown as CountryRow[]);
@@ -75,8 +78,9 @@ export function OnboardingForm({ next }: { next: string }) {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error: updErr } = await supabase
-        .from("profiles")
+      const profileRepo = await profileRepository(supabase);
+      const { error: updErr } = await profileRepo
+        .query()
         .update({
           address_country: iso2,
           preferred_language: locale,

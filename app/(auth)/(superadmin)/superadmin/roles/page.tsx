@@ -2,6 +2,10 @@
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
+import { roleRepository } from "@/supabase/repositories/roles";
+import { membershipRepository } from "@/supabase/repositories/memberships";
+import { rolePermissionRepository } from "@/supabase/repositories/role-permissions";
+import { permissionRepository } from "@/supabase/repositories/permissions";
 import { RolesList } from "./roles-list";
 
 export async function generateMetadata() {
@@ -17,15 +21,15 @@ export default async function RolesPage() {
     { data: permRows },
     { data: permissions } // 1. TAMBAHKAN: Ambil data seluruh permissions dari database
   ] = await Promise.all([
-    supabaseAdmin
-      .from("roles")
+    (await roleRepository(supabaseAdmin))
+      .query()
       .select("id, name, hierarchy_level, created_at")
       .order("hierarchy_level", { ascending: false }),
-    supabaseAdmin.from("memberships").select("role_id"),
-    supabaseAdmin.from("role_permissions").select("role_id"),
+    (await membershipRepository(supabaseAdmin)).query().select("role_id"),
+    (await rolePermissionRepository(supabaseAdmin)).query().select("role_id"),
     // Query untuk mengambil data seluruh hak akses sistem
-    supabaseAdmin
-      .from("permissions")
+    (await permissionRepository(supabaseAdmin))
+      .query()
       .select("id, name, description")
       .order("name", { ascending: true })
   ]);

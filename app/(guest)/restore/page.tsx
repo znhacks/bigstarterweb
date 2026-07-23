@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
+import { profileRepository } from "@/supabase/repositories/profiles";
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
 import { RestoreView } from "./view";
@@ -16,8 +17,9 @@ export default async function RestorePage() {
 
   // Profile status='deleted' disembunyikan oleh RLS dari client user-session,
   // jadi baca via service role di server.
-  const { data } = await supabaseAdmin
-    .from("profiles")
+  const profileRepo = await profileRepository(supabaseAdmin);
+  const { data } = await profileRepo
+    .query()
     .select("status, deleted_at")
     .eq("id", user.id)
     .maybeSingle();

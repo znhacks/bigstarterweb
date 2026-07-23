@@ -15,6 +15,9 @@
 // HIRARKI: angka lebih tinggi = lebih berkuasa. canAssignRole(myLevel > targetLevel).
 
 import { ALL_PERMISSIONS, PERMISSIONS, type PermissionName } from "@/lib/rbac/permissions";
+import { roleRepository } from "@/supabase/repositories/roles";
+import { permissionRepository } from "@/supabase/repositories/permissions";
+import { rolePermissionRepository } from "@/supabase/repositories/role-permissions";
 
 export interface RoleDefinition {
   /** Nama role di DB (case-sensitive, harus match `roles.name`). */
@@ -127,19 +130,23 @@ export function getDefaultGrants(roleName: string): PermissionName[] {
  */
 export async function syncRbacToDb(supabaseAdmin: any): Promise<SyncResult> {
   try {
+    const roleRepo = await roleRepository(supabaseAdmin);
+    const permissionRepo = await permissionRepository(supabaseAdmin);
+    const rolePermissionRepo = await rolePermissionRepository(supabaseAdmin);
+
     // 1. Upsert roles
     for (const role of ROLE_DEFINITIONS) {
-      const { error: roleError } = await supabaseAdmin
-        .from("roles")
+      const { error: roleError } = await roleRepo
+        .query()
         .upsert({ name: role.name, hierarchy_level: role.hierarchy }, { onConflict: "name" });
-      
+
       if (roleError) throw roleError;
     }
 
     // 2. Ensure all permissions exist (from permissions.ts catalog)
     for (const perm of ALL_PERMISSIONS) {
-      const { error: permError } = await supabaseAdmin
-        .from("permissions")
+      const { error: permError } = await permissionRepo
+        .query()
         .upsert({ name: perm }, { onConflict: "name" });
 
       if (permError) throw permError;
@@ -147,27 +154,27 @@ export async function syncRbacToDb(supabaseAdmin: any): Promise<SyncResult> {
 
     // 3. Sync grants (role_permissions)
     for (const [roleName, perms] of Object.entries(DEFAULT_GRANTS)) {
-      const { data: role, error: fetchRoleError } = await supabaseAdmin
-        .from("roles")
+      const { data: role, error: fetchRoleError } = await roleRepo
+        .query()
         .select("id")
         .eq("name", roleName)
         .maybeSingle();
-      
+
       if (fetchRoleError) throw fetchRoleError;
       if (!role) continue;
 
       for (const permName of perms) {
-        const { data: perm, error: fetchPermError } = await supabaseAdmin
-          .from("permissions")
+        const { data: perm, error: fetchPermError } = await permissionRepo
+          .query()
           .select("id")
           .eq("name", permName)
           .maybeSingle();
-        
+
         if (fetchPermError) throw fetchPermError;
         if (!perm) continue;
 
-        const { error: rpError } = await supabaseAdmin
-          .from("role_permissions")
+        const { error: rpError } = await rolePermissionRepo
+          .query()
           .upsert(
             { role_id: role.id, permission_id: perm.id },
             { onConflict: "role_id,permission_id" }

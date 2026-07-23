@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 
 // Impor klien Supabase, Global Language Hook
 import { supabase } from "@/lib/supabase";
+import { transactionRepository } from "@/supabase/repositories/transactions";
 import { useLocale, useTranslations } from "next-intl";
 import { formatTransactionAmount } from "@/lib/i18n/currency";
 import { formatDateTime } from "@/lib/i18n/format";
@@ -61,8 +62,8 @@ export function SuperadminTransactionsPage() {
   const fetchTransactions = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("transactions")
+      const { data, error } = await (await transactionRepository(supabase))
+        .query()
         .select(
           `
           id,

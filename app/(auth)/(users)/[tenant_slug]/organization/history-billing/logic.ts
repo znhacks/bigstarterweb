@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabase";
+import { transactionRepository } from "@/supabase/repositories/transactions";
 
 export interface Transaction {
   id: string;
@@ -35,8 +36,8 @@ export function useBillingHistory() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const { data, error } = await supabase
-        .from("transactions")
+      const { data, error } = await (await transactionRepository(supabase))
+        .query()
         .select("*")
         .eq("tenant_id", orgId)
         .order("created_at", { ascending: false });

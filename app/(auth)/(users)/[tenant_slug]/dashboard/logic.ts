@@ -6,6 +6,10 @@ import { useLocale } from "next-intl";
 import { useParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { id, enUS } from "date-fns/locale";
+import { profileRepository } from "@/supabase/repositories/profiles";
+import { membershipRepository } from "@/supabase/repositories/memberships";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+import { transactionRepository } from "@/supabase/repositories/transactions";
 
 // Helper client-side untuk Cookie (Diselaraskan dengan AppSidebar)
 const getCookie = (name: string) => {
@@ -43,11 +47,11 @@ export function useUserWorkspaceDashboard() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: prof } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      const { data: prof } = await (await profileRepository(supabase)).query().select("*").eq("id", user.id).single();
       setProfile(prof);
 
-      const { data: memberList, error } = await supabase
-        .from("memberships")
+      const { data: memberList, error } = await (await membershipRepository(supabase))
+        .query()
         .select(
           `
           id,
@@ -116,10 +120,10 @@ export function useUserWorkspaceDashboard() {
   const loadActiveTenantData = useCallback(async (tenantId: string) => {
     try {
       const [membersRes, subRes, txsRes] = await Promise.all([
-        supabase.from("memberships").select("*, profiles(*), roles(*)").eq("tenant_id", tenantId),
-        supabase.from("subscriptions").select("*").eq("tenant_id", tenantId).maybeSingle(),
-        supabase
-          .from("transactions")
+        (await membershipRepository(supabase)).query().select("*, profiles(*), roles(*)").eq("tenant_id", tenantId),
+        (await subscriptionRepository(supabase)).query().select("*").eq("tenant_id", tenantId).maybeSingle(),
+        (await transactionRepository(supabase))
+          .query()
           .select("*")
           .eq("tenant_id", tenantId)
           .order("created_at", { ascending: false })

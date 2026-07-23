@@ -3,6 +3,7 @@
 
 import { requireSuperadmin } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
+import { couponRedemptionRepository } from "@/supabase/repositories/coupon-redemptions";
 
 export async function getCouponRedemptions(couponId: string) {
   // Pastikan pengguna adalah superadmin sebelum mengeksekusi
@@ -13,8 +14,8 @@ export async function getCouponRedemptions(couponId: string) {
   }
 
   // Melakukan kueri menggunakan supabaseAdmin untuk bypass RLS
-  const { data, error } = await supabaseAdmin
-    .from("coupon_redemptions")
+  const { data, error } = await (await couponRedemptionRepository(supabaseAdmin))
+    .query()
     .select(
       `
       id,

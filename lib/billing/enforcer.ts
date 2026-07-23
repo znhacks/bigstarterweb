@@ -5,6 +5,8 @@
 // selalu fallback ke default (2 seat, 100 task). Sekarang membaca featureGates.maxUsers/maxTasks.
 
 import { supabaseAdmin } from "@/lib/api/supabase-server";
+import { membershipRepository } from "@/supabase/repositories/memberships";
+import { screenshotLogRepository } from "@/supabase/repositories/screenshot-logs";
 import { getTenantPlan } from "@/services/payment/billing/gating";
 
 interface LimitCheckResult {
@@ -17,8 +19,9 @@ interface LimitCheckResult {
 export async function checkSeatLimit(tenantId: string): Promise<LimitCheckResult> {
   const plan = await getTenantPlan(tenantId);
 
-  const { count, error } = await supabaseAdmin
-    .from("memberships")
+  const membershipRepo = await membershipRepository(supabaseAdmin);
+  const { count, error } = await membershipRepo
+    .query()
     .select("*", { count: "exact", head: true })
     .eq("tenant_id", tenantId);
 
@@ -42,8 +45,9 @@ export async function checkUsageLimit(tenantId: string): Promise<LimitCheckResul
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
   // Catatan: 'screenshot_logs' adalah tabel pencatatan aktivitas fitur (usage metering).
-  const { count, error } = await supabaseAdmin
-    .from("screenshot_logs")
+  const screenshotLogRepo = await screenshotLogRepository(supabaseAdmin);
+  const { count, error } = await screenshotLogRepo
+    .query()
     .select("*", { count: "exact", head: true })
     .eq("tenant_id", tenantId)
     .gte("created_at", startOfMonth);

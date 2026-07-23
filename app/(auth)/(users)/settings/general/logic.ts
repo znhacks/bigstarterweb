@@ -8,6 +8,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { AddressData } from "@/components/ui/address-form";
 import { getAddressConfig } from "@/config/i18n-culture";
 import { updateProfileSchema } from "@/lib/validation/profiles";
+import { profileRepository } from "@/supabase/repositories/profiles";
 
 export interface AlertState {
   title: string;
@@ -78,8 +79,8 @@ export function useGeneralSettings() {
         setUserId(user.id);
         setEmail(user.email || "");
 
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
+        const { data: profileData, error: profileError } = await (await profileRepository(supabase))
+          .query()
           .select(
             "full_name, avatar, preferred_language, timezone, description, phone, currency, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, address_kecamatan, address_desa"
           )
@@ -202,8 +203,8 @@ export function useGeneralSettings() {
 
     try {
       // Pembaruan satu kali jalan ke tabel profiles
-      const { error } = await supabase
-        .from("profiles")
+      const { error } = await (await profileRepository(supabase))
+        .query()
         .update({
           full_name: fullName.trim(),
           description: description.trim() || null,
@@ -258,8 +259,8 @@ export function useGeneralSettings() {
         data: { publicUrl }
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      const { error: profileError } = await supabase
-        .from("profiles")
+      const { error: profileError } = await (await profileRepository(supabase))
+        .query()
         .update({ avatar: publicUrl })
         .eq("id", userId);
 
@@ -289,8 +290,8 @@ export function useGeneralSettings() {
     setAlertMessage(null);
 
     try {
-      const { error } = await supabase
-        .from("profiles")
+      const { error } = await (await profileRepository(supabase))
+        .query()
         .update({ preferred_language: localLanguage })
         .eq("id", userId);
 
@@ -318,8 +319,8 @@ export function useGeneralSettings() {
     setAlertMessage(null);
 
     try {
-      const { error } = await supabase
-        .from("profiles")
+      const { error } = await (await profileRepository(supabase))
+        .query()
         .update({ timezone: timezone })
         .eq("id", userId);
 
@@ -349,8 +350,8 @@ export function useGeneralSettings() {
     setAlertMessage(null);
 
     try {
-      const { error } = await supabase
-        .from("profiles")
+      const { error } = await (await profileRepository(supabase))
+        .query()
         .update({ currency })
         .eq("id", userId);
 
@@ -404,8 +405,8 @@ export function useGeneralSettings() {
     setIsDeleting(true);
 
     try {
-      const { error } = await supabase
-        .from("profiles")
+      const { error } = await (await profileRepository(supabase))
+        .query()
         .update({ status: "deleted", deleted_at: new Date().toISOString() })
         .eq("id", userId);
       if (error) throw error;

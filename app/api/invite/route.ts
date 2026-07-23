@@ -3,6 +3,9 @@ import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import { checkSeatLimit } from "@/lib/billing/enforcer"; // Import Seat-Based Enforcer
 import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server"; // UBAH: Gunakan helper server SSR kita
+import { roleRepository } from "@/supabase/repositories/roles";
+import { tenantRepository } from "@/supabase/repositories/tenants";
+import { invitationRepository } from "@/supabase/repositories/invitations";
 
 const mailersend = new MailerSend({
   apiKey: process.env.MAILERSEND_API_KEY || ""
@@ -32,8 +35,8 @@ export async function POST(req: Request) {
 
     // Validasi roleId benar-benar ada di tabel roles, sekaligus ambil nama role
     // untuk ditampilkan di email & disematkan ke token.
-    const { data: roleData, error: roleError } = await supabase
-      .from("roles")
+    const { data: roleData, error: roleError } = await (await roleRepository(supabase))
+      .query()
       .select("name")
       .eq("id", roleId)
       .maybeSingle();
@@ -44,8 +47,8 @@ export async function POST(req: Request) {
     const role = roleData.name;
 
     // 2. Dapatkan ID organisasi (tenant_id) berdasarkan nama organisasi
-    const { data: tenantData, error: tenantError } = await supabase
-      .from("tenants")
+    const { data: tenantData, error: tenantError } = await (await tenantRepository(supabase))
+      .query()
       .select("id")
       .eq("name", orgName)
       .single();
@@ -71,23 +74,24 @@ export async function POST(req: Request) {
     }
 
     // 3. Kelola penyimpanan data undangan ke tabel 'invitations' secara manual
-    const { data: existingInvite } = await supabase
-      .from("invitations")
+    const invitationRepo = await invitationRepository(supabase);
+    const { data: existingInvite } = await invitationRepo
+      .query()
       .select("id")
       .eq("tenant_id", tenantData.id)
       .eq("email", email)
       .maybeSingle();
 
     if (existingInvite) {
-      const { error: updateError } = await supabase
-        .from("invitations")
+      const { error: updateError } = await invitationRepo
+        .query()
         // role_id adalah sumber kebenaran (kolom role string sudah tidak ada).
         .update({ role_id: roleId })
         .eq("id", existingInvite.id);
 
       if (updateError) throw updateError;
     } else {
-      const { error: insertError } = await supabase.from("invitations").insert({
+      const { error: insertError } = await invitationRepo.query().insert({
         tenant_id: tenantData.id,
         email: email.trim().toLowerCase(),
         role_id: roleId

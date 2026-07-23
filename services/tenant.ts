@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getMembershipsByUser } from "@/supabase/helper/memberships";
+import { membershipRepository } from "@/supabase/repositories/memberships";
 import { cookies } from "next/headers";
 import type {
   ActiveTenant,
@@ -79,8 +80,8 @@ export async function getUserTenants() {
   } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data, error } = await supabase
-    .from("memberships")
+  const { data, error } = await (await membershipRepository(supabase))
+    .query()
     .select(MEMBERSHIP_SELECT)
     .eq("user_id", user.id);
 
@@ -119,12 +120,14 @@ export async function getActiveTenant(
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  const membershipRepo = await membershipRepository(supabase);
+
   // ==========================================
   // OPSI A: DEVELOPER MENGGUNAKAN SLUG DI URL
   // ==========================================
   if (tenantSlug) {
-    const { data, error } = await supabase
-      .from("memberships")
+    const { data, error } = await membershipRepo
+      .query()
       .select(`${MEMBERSHIP_SELECT}`)
       .eq("user_id", user.id)
       .eq("tenants.slug", tenantSlug)
@@ -149,8 +152,8 @@ export async function getActiveTenant(
 
   if (activeTenantId) {
     // Cari data tenant berdasarkan ID yang disimpan di Cookie
-    const { data, error } = await supabase
-      .from("memberships")
+    const { data, error } = await membershipRepo
+      .query()
       .select(`${MEMBERSHIP_SELECT}`)
       .eq("user_id", user.id)
       .eq("tenant_id", activeTenantId)
@@ -170,8 +173,8 @@ export async function getActiveTenant(
   // ==========================================
   // FALLBACK: Jika Cookie kosong, ambil tenant pertama sebagai aktif
   // ==========================================
-  const { data: fallbackData, error: fallbackError } = await supabase
-    .from("memberships")
+  const { data: fallbackData, error: fallbackError } = await membershipRepo
+    .query()
     .select(`${MEMBERSHIP_SELECT}`)
     .eq("user_id", user.id)
     .limit(1)

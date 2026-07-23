@@ -2,6 +2,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { systemClient } from "@/lib/supabase/manager";
+import { tenantRepository } from "@/supabase/repositories/tenants";
 
 /**
  * Membuat Supabase SERVER client yang ter-scope ke schema data tenant
@@ -17,8 +18,9 @@ export async function createTenantServerClient(tenantId: string) {
   // 1. Resolve baris tenant by id. Pakai select("*") agar tidak error bila
   //    kolom opsional (subdomain/db_model) belum ada di skema tenant Anda.
   //    systemClient = service role, jadi RLS tidak berlaku di sini.
-  const { data: tenant, error } = await systemClient
-    .from("tenants")
+  const tenantRepo = await tenantRepository(systemClient);
+  const { data: tenant, error } = await tenantRepo
+    .query()
     .select("*")
     .eq("id", tenantId)
     .maybeSingle();

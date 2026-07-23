@@ -2,6 +2,9 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { profileRepository } from "@/supabase/repositories/profiles";
+import { transactionRepository } from "@/supabase/repositories/transactions";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -27,8 +30,8 @@ export async function GET(req: Request) {
     }
 
     // KOREKSI ARSITEKTUR: Membaca kolom is_superadmin langsung dari tabel profiles (System Role)
-    const { data: profile, error: profileErr } = await supabaseAdmin
-      .from("profiles")
+    const { data: profile, error: profileErr } = await (await profileRepository(supabaseAdmin))
+      .query()
       .select("is_superadmin")
       .eq("id", user.id)
       .maybeSingle();
@@ -41,8 +44,9 @@ export async function GET(req: Request) {
     }
 
     // 2. QUERY AGREGASI FINANSIAL: Menghitung Gross, Net, dan Tax
-    const { data: txMetrics, error: txErr } = await supabaseAdmin
-      .from("transactions")
+    const transactionRepo = await transactionRepository(supabaseAdmin);
+    const { data: txMetrics, error: txErr } = await transactionRepo
+      .query()
       .select("amount, net_amount, tax_amount")
       .eq("status", "paid");
 
@@ -61,8 +65,8 @@ export async function GET(req: Request) {
     }
 
     // 3. QUERY LANGGANAN AKTIF: Jumlah pelanggan aktif per paket (Free, Starter, Pro)
-    const { data: subMetrics, error: subErr } = await supabaseAdmin
-      .from("subscriptions")
+    const { data: subMetrics, error: subErr } = await (await subscriptionRepository(supabaseAdmin))
+      .query()
       .select("plan_id, status")
       .eq("status", "active");
 
@@ -80,8 +84,8 @@ export async function GET(req: Request) {
     }
 
     // 4. QUERY DAFTAR TRANSAKSI TERBARU (AUDIT HISTORY)
-    const { data: recentTransactions, error: recErr } = await supabaseAdmin
-      .from("transactions")
+    const { data: recentTransactions, error: recErr } = await transactionRepo
+      .query()
       .select("id, tenant_id, amount, currency, plan_name, status, created_at, provider")
       .order("created_at", { ascending: false })
       .limit(10);

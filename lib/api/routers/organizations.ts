@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { o, getTenantId } from "../context";
 import { supabaseAdmin } from "../supabase-server";
+import { tenantRepository } from "@/supabase/repositories/tenants";
 import { organizationSchema } from "../schemas";
 import { notFound, dbError } from "../errors";
 
@@ -18,8 +19,9 @@ export const getOrganization = o
   .output(organizationSchema)
   .handler(async ({ context }) => {
     const tenantId = getTenantId(context);
-    const { data, error } = await supabaseAdmin
-      .from("tenants")
+    const tenantRepo = await tenantRepository(supabaseAdmin);
+    const { data, error } = await tenantRepo
+      .query()
       .select("*")
       .eq("id", tenantId)
       .maybeSingle();
@@ -44,8 +46,9 @@ export const updateOrganization = o
     if (input.logo !== undefined) patch.logo = input.logo;
     if (Object.keys(patch).length === 0) throw notFound("No fields to update.");
 
-    const { data, error } = await supabaseAdmin
-      .from("tenants")
+    const tenantRepo = await tenantRepository(supabaseAdmin);
+    const { data, error } = await tenantRepo
+      .query()
       .update(patch)
       .eq("id", tenantId)
       .select("*")

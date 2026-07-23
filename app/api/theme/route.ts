@@ -7,6 +7,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_THEME, type ThemeType } from "@/lib/themes";
+import { profileRepository } from "@/supabase/repositories/profiles";
+import { tenantRepository } from "@/supabase/repositories/tenants";
+import { membershipRepository } from "@/supabase/repositories/memberships";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -49,8 +52,8 @@ export async function GET(req: Request) {
     if (!user) return NextResponse.json({ theme: DEFAULT_THEME });
 
     // 1. A custom user theme always wins. An all-default user theme inherits the tenant.
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
+    const { data: profile } = await (await profileRepository(supabaseAdmin))
+      .query()
       .select("theme")
       .eq("id", user.id)
       .maybeSingle();
@@ -62,24 +65,25 @@ export async function GET(req: Request) {
 
     // 2. Tenant theme — prefer the explicit id during a sidebar switch because the URL may
     // still contain the previous tenant slug.
+    const tenantRepo = await tenantRepository(supabaseAdmin);
     let tenantData: any = null;
     if (isTenantSwitch && tenantId) {
-      const { data } = await supabaseAdmin
-        .from("tenants")
+      const { data } = await tenantRepo
+        .query()
         .select("theme")
         .eq("id", tenantId)
         .maybeSingle();
       tenantData = data;
     } else if (tenantSlug) {
-      const { data } = await supabaseAdmin
-        .from("tenants")
+      const { data } = await tenantRepo
+        .query()
         .select("theme")
         .eq("slug", tenantSlug)
         .maybeSingle();
       tenantData = data;
     } else if (tenantId) {
-      const { data } = await supabaseAdmin
-        .from("tenants")
+      const { data } = await tenantRepo
+        .query()
         .select("theme")
         .eq("id", tenantId)
         .maybeSingle();
@@ -119,8 +123,8 @@ export async function POST(req: Request) {
 
     if (scope === "tenant" && tenantId) {
       // Verify user is member of this tenant (basic guard)
-      const { data: membership } = await supabaseAdmin
-        .from("memberships")
+      const { data: membership } = await (await membershipRepository(supabaseAdmin))
+        .query()
         .select("id")
         .eq("user_id", user.id)
         .eq("tenant_id", tenantId)
@@ -129,11 +133,17 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Not a member of this tenant" }, { status: 403 });
       }
 
-      const { error } = await supabaseAdmin.from("tenants").update({ theme }).eq("id", tenantId);
+      const { error } = await (await tenantRepository(supabaseAdmin))
+        .query()
+        .update({ theme })
+        .eq("id", tenantId);
       if (error) throw error;
     } else {
       // Default: save to user profile
-      const { error } = await supabaseAdmin.from("profiles").update({ theme }).eq("id", user.id);
+      const { error } = await (await profileRepository(supabaseAdmin))
+        .query()
+        .update({ theme })
+        .eq("id", user.id);
       if (error) throw error;
     }
 

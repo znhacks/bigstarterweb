@@ -40,6 +40,9 @@ import {
 } from "@/components/ui/dialog";
 
 import { supabase } from "@/lib/supabase";
+import { membershipRepository } from "@/supabase/repositories/memberships";
+import { tenantRepository } from "@/supabase/repositories/tenants";
+import { roleRepository } from "@/supabase/repositories/roles";
 import { CreateTenantForm } from "../../create-tenant-form";
 import { useTranslations } from "next-intl";
 
@@ -100,8 +103,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
       setUser(currentUser);
 
-      const { data, error } = await supabase
-        .from("memberships")
+      const { data, error } = await (await membershipRepository(supabase))
+        .query()
         .select(
           `
           tenant_id,
@@ -209,8 +212,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "");
 
-      const { data: tenantData, error: tenantError } = await supabase
-        .from("tenants")
+      const { data: tenantData, error: tenantError } = await (await tenantRepository(supabase))
+        .query()
         .insert({
           name: newOrgName.trim(),
           slug: generatedSlug
@@ -220,17 +223,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       if (tenantError) throw tenantError;
 
-      const { data: ownerRole } = await supabase
-        .from("roles")
+      const { data: ownerRole } = await (await roleRepository(supabase))
+        .query()
         .select("id")
         .eq("name", "Owner")
         .maybeSingle();
 
-      const { error: membershipError } = await supabase.from("memberships").insert({
-        user_id: user.id,
-        tenant_id: tenantData.id,
-        role_id: ownerRole?.id ?? null
-      });
+      const { error: membershipError } = await (
+        await membershipRepository(supabase)
+      )
+        .query()
+        .insert({
+          user_id: user.id,
+          tenant_id: tenantData.id,
+          role_id: ownerRole?.id ?? null
+        });
 
       if (membershipError) throw membershipError;
 

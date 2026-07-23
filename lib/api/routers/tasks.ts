@@ -1,10 +1,9 @@
 import * as z from "zod";
 import { o, getTenantId } from "../context";
 import { supabaseAdmin } from "../supabase-server";
+import { taskRepository } from "@/supabase/repositories/tasks";
 import { taskSchema, uuid, pagination, paginated } from "../schemas";
 import { notFound, dbError } from "../errors";
-
-const tenantScoped = (tenantId: string) => supabaseAdmin.from("tasks").select("*", { count: "exact" }).eq("tenant_id", tenantId);
 
 export const listTasks = o
   .route({
@@ -18,7 +17,11 @@ export const listTasks = o
   .output(paginated(taskSchema))
   .handler(async ({ input, context }) => {
     const tenantId = getTenantId(context);
-    const { data, count, error } = await tenantScoped(tenantId)
+    const taskRepo = await taskRepository(supabaseAdmin);
+    const { data, count, error } = await taskRepo
+      .query()
+      .select("*", { count: "exact" })
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .range(input.offset, input.offset + input.limit - 1);
     if (error) throw dbError(error);
@@ -40,8 +43,9 @@ export const createTask = o
   .output(taskSchema)
   .handler(async ({ input, context }) => {
     const tenantId = getTenantId(context);
-    const { data, error } = await supabaseAdmin
-      .from("tasks")
+    const taskRepo = await taskRepository(supabaseAdmin);
+    const { data, error } = await taskRepo
+      .query()
       .insert({ tenant_id: tenantId, title: input.title })
       .select("*")
       .single();
@@ -55,8 +59,9 @@ export const getTask = o
   .output(taskSchema)
   .handler(async ({ input, context }) => {
     const tenantId = getTenantId(context);
-    const { data, error } = await supabaseAdmin
-      .from("tasks")
+    const taskRepo = await taskRepository(supabaseAdmin);
+    const { data, error } = await taskRepo
+      .query()
       .select("*")
       .eq("id", input.id)
       .eq("tenant_id", tenantId)
@@ -72,8 +77,9 @@ export const updateTask = o
   .output(taskSchema)
   .handler(async ({ input, context }) => {
     const tenantId = getTenantId(context);
-    const { data, error } = await supabaseAdmin
-      .from("tasks")
+    const taskRepo = await taskRepository(supabaseAdmin);
+    const { data, error } = await taskRepo
+      .query()
       .update({ ...(input.title !== undefined ? { title: input.title } : {}) })
       .eq("id", input.id)
       .eq("tenant_id", tenantId)
@@ -90,8 +96,9 @@ export const removeTask = o
   .output(z.object({ id: uuid, deleted: z.literal(true) }))
   .handler(async ({ input, context }) => {
     const tenantId = getTenantId(context);
-    const { error, count } = await supabaseAdmin
-      .from("tasks")
+    const taskRepo = await taskRepository(supabaseAdmin);
+    const { error, count } = await taskRepo
+      .query()
       .delete({ count: "exact" })
       .eq("id", input.id)
       .eq("tenant_id", tenantId);

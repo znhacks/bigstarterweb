@@ -1,5 +1,6 @@
 // lib/auth.ts
 import { createClient } from "@/lib/supabase/server";
+import { profileRepository } from "@/supabase/repositories/profiles";
 import { getActiveTenant } from "@/services/tenant";
 import { redirect } from "next/navigation";
 import type { PermissionName } from "@/lib/rbac/permissions";
@@ -117,8 +118,9 @@ export async function ensureProfile(user: {
 }) {
   const { supabaseAdmin } = await import("@/lib/api/supabase-server");
 
-  const { data: existing } = await supabaseAdmin
-    .from("profiles")
+  const profileRepo = await profileRepository(supabaseAdmin);
+  const { data: existing } = await profileRepo
+    .query()
     .select("id, address_country")
     .eq("id", user.id)
     .maybeSingle();
@@ -128,8 +130,8 @@ export async function ensureProfile(user: {
   const fullName =
     meta.full_name || meta.name || user.email?.split("@")[0] || "User";
 
-  const { data, error } = await supabaseAdmin
-    .from("profiles")
+  const { data, error } = await profileRepo
+    .query()
     .insert({ id: user.id, full_name: fullName, status: "active" })
     .select("id, address_country")
     .maybeSingle();
@@ -164,8 +166,9 @@ export async function requireSuperadmin(redirectTo: string = "/dashboard") {
 
   // Cek otoritatif via profiles.is_superadmin (service role, bypass RLS).
   const { supabaseAdmin } = await import("@/lib/api/supabase-server");
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
+  const profileRepo = await profileRepository(supabaseAdmin);
+  const { data: profile } = await profileRepo
+    .query()
     .select("is_superadmin")
     .eq("id", user.id)
     .maybeSingle();

@@ -9,6 +9,8 @@ import { formatCurrency } from "@/lib/i18n/currency";
 import { convertCurrency } from "@/actions/currency";
 import { getUserCurrencyClient } from "@/lib/i18n/user-currency";
 import { CURRENCY } from "@/config/i18n-culture";
+import { transactionRepository } from "@/supabase/repositories/transactions";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 
 export interface AlertState {
   title: string;
@@ -220,8 +222,8 @@ export function useOrganizationBilling() {
   };
 
   const fetchTransactionHistory = async (orgId: string) => {
-    const { data, error } = await supabase
-      .from("transactions")
+    const { data, error } = await (await transactionRepository(supabase))
+      .query()
       .select("*")
       .eq("tenant_id", orgId)
       .order("created_at", { ascending: false });
@@ -231,8 +233,9 @@ export function useOrganizationBilling() {
   };
 
   const fetchActiveSubscription = async (orgId: string) => {
-    const { data, error } = await supabase
-      .from("subscriptions")
+    const subRepo = await subscriptionRepository(supabase);
+    const { data, error } = await subRepo
+      .query()
       .select(
         "id, status, starts_at, ends_at, cancel_at_period_end, plan_id, provider, pending_plan_id"
       )
@@ -254,7 +257,7 @@ export function useOrganizationBilling() {
       const isExpired = endsAt ? new Date() > endsAt : false;
 
       if (isExpired && data.status === "active") {
-        await supabase.from("subscriptions").update({ status: "expired" }).eq("id", data.id);
+        await subRepo.query().update({ status: "expired" }).eq("id", data.id);
         setActiveSub(null);
         return;
       }
@@ -539,8 +542,8 @@ export function useOrganizationBilling() {
     if (!activeSub || !activeOrgId) return;
     setIsUpdatingSub(true);
     try {
-      const { error } = await supabase
-        .from("subscriptions")
+      const { error } = await (await subscriptionRepository(supabase))
+        .query()
         .update({ status: "refund_requested" })
         .eq("id", activeSub.id);
 

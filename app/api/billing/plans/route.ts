@@ -3,6 +3,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { decodeFeatureGates } from "@/config/feature-definitions";
+import { planRepository } from "@/supabase/repositories/plans";
+import { planPriceRepository } from "@/supabase/repositories/plan-pices";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -12,16 +14,16 @@ const supabaseAdmin = createClient(
 export async function GET() {
   try {
     // 1. Tarik semua paket aktif dari database
-    const { data: dbPlans, error: plansError } = await supabaseAdmin
-      .from("plans")
+    const { data: dbPlans, error: plansError } = await (await planRepository(supabaseAdmin))
+      .query()
       .select("*")
       .eq("is_active", true);
 
     if (plansError) throw plansError;
 
     // 2. Tarik seluruh daftar harga aktif dari database
-    const { data: dbPrices, error: pricesError } = await supabaseAdmin
-      .from("plan_prices")
+    const { data: dbPrices, error: pricesError } = await (await planPriceRepository(supabaseAdmin))
+      .query()
       .select("*");
 
     if (pricesError) throw pricesError;

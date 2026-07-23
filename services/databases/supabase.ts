@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { IDatabaseService } from "@/interfaces/database";
+import { tenantRepository } from "@/supabase/repositories/tenants";
 
 // Inisialisasi koneksi ke Project Utama (System DB)
 const systemSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -15,8 +16,8 @@ const connectionCache: Record<string, SupabaseClient> = {};
 export class SupabaseDatabaseService implements IDatabaseService<SupabaseClient> {
   async getClient(subdomain: string) {
     // 1. Ambil data tenant dari tabel 'tenants' di Project Utama Supabase
-    const { data: tenant, error } = await systemSupabase
-      .from("tenants")
+    const { data: tenant, error } = await (await tenantRepository(systemSupabase))
+      .query()
       .select("*")
       .eq("subdomain", subdomain)
       .single();

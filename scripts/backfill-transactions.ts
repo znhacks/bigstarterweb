@@ -17,6 +17,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { convertToIdr } from "../services/exchange-rate";
+import { transactionRepository } from "@/supabase/repositories/transactions";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -35,8 +36,9 @@ const ASSUMED_CURRENCY = "USD"; // PayPal/Stripe/Paddle/Lemon charge USD
 async function main() {
   const apply = process.argv.includes("--apply");
 
-  const { data, error } = await supabase
-    .from("transactions")
+  const transactionRepo = await transactionRepository(supabase);
+  const { data, error } = await transactionRepo
+    .query()
     .select("id, amount, currency, provider, created_at")
     .in("provider", FOREIGN_PROVIDERS)
     .eq("currency", "IDR") // keliru (seharusnya USD)
@@ -75,8 +77,8 @@ async function main() {
   let failed = 0;
   for (const tx of rows) {
     const amountInIdr = parseFloat((Number(tx.amount) * conv.rate).toFixed(2));
-    const { error: updErr } = await supabase
-      .from("transactions")
+    const { error: updErr } = await transactionRepo
+      .query()
       .update({
         currency: ASSUMED_CURRENCY,
         amount_in_idr: amountInIdr,

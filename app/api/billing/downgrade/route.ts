@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { isTenantMember } from "@/lib/billing/tenant-auth";
 import { createClient } from "@supabase/supabase-js";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -37,8 +38,9 @@ export async function POST(req: Request) {
     }
 
     // 2. Ambil data langganan aktif saat ini
-    const { data: activeSub, error: subError } = await supabaseAdmin
-      .from("subscriptions")
+    const subscriptionRepo = await subscriptionRepository(supabaseAdmin);
+    const { data: activeSub, error: subError } = await subscriptionRepo
+      .query()
       .select("id, provider, provider_subscription_id")
       .eq("tenant_id", tenantId)
       .eq("status", "active")
@@ -58,8 +60,8 @@ export async function POST(req: Request) {
     }
 
     // 4. Update tabel subscriptions: simpan target downgrade di pending_plan_id & set cancel_at_period_end
-    const { error: updateError } = await supabaseAdmin
-      .from("subscriptions")
+    const { error: updateError } = await subscriptionRepo
+      .query()
       .update({
         pending_plan_id: targetPlanId,
         cancel_at_period_end: true,

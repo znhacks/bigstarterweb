@@ -6,6 +6,9 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
+import { tenantRepository } from "@/supabase/repositories/tenants";
+import { planRepository } from "@/supabase/repositories/plans";
+import { planPriceRepository } from "@/supabase/repositories/plan-pices";
 
 // Impor komponen klien, tipe data
 import { OrganizationsList, SuperadminOrganization } from "./organizations-list";
@@ -46,8 +49,8 @@ export default async function SuperadminOrganizationsPage() {
   // Ambil data dari Supabase (Server-side).
   // Plan tidak ada di DB (didefinisikan di config/billing.ts), jadi hanya
   // ambil plan_id dari subscriptions lalu cocokkan ke konfigurasi statis.
-  const { data: tenants, error } = await supabaseAdmin
-    .from("tenants")
+  const { data: tenants, error } = await (await tenantRepository(supabaseAdmin))
+    .query()
     .select(
       `
       id,
@@ -71,8 +74,8 @@ export default async function SuperadminOrganizationsPage() {
 
   // Ambil plan + harga bulanan dari DB (bukan config/billing.ts)
   const [{ data: dbPlans }, { data: dbPrices }] = await Promise.all([
-    supabaseAdmin.from("plans").select("id, name"),
-    supabaseAdmin.from("plan_prices").select("plan_id, interval, amount")
+    (await planRepository(supabaseAdmin)).query().select("id, name"),
+    (await planPriceRepository(supabaseAdmin)).query().select("plan_id, interval, amount")
   ]);
   const planInfoMap = new Map<string, { name: string; monthly: number }>();
   (dbPlans ?? []).forEach((p: any) => planInfoMap.set(p.id, { name: p.name, monthly: 0 }));

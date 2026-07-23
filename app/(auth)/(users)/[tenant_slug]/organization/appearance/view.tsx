@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTranslations } from "next-intl";
 import { DEFAULT_THEME, THEMES, type ThemeType } from "@/lib/themes";
 import { supabase } from "@/lib/supabase";
+import { tenantRepository } from "@/supabase/repositories/tenants";
 
 const RADIUS_OPTIONS = [
   { value: "none", label: "None" },
@@ -88,8 +89,8 @@ export function TenantAppearanceView({
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await supabase
-          .from("tenants")
+        const { data } = await (await tenantRepository(supabase))
+          .query()
           .select("theme")
           .eq("id", tenantId)
           .maybeSingle();

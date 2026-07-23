@@ -1,6 +1,7 @@
 // middleware.ts
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { profileRepository } from "@/supabase/repositories/profiles";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -81,8 +82,9 @@ export async function middleware(request: NextRequest) {
   // ALUR 2: USER SUDAH LOGIN — cek status akun (active/deleted/banned).
   // Profile SENDIRI selalu bisa dibaca (policy profiles mengizinkan id=auth.uid()
   // meski deleted/banned).
-  const { data: profile } = await supabase
-    .from("profiles")
+  const profileRepo = await profileRepository(supabase);
+  const { data: profile } = await profileRepo
+    .query()
     .select("status, banned_until, banned_reason, address_country")
     .eq("id", user.id)
     .maybeSingle();
@@ -107,8 +109,8 @@ export async function middleware(request: NextRequest) {
     const expired = bannedUntil ? new Date(bannedUntil).getTime() <= Date.now() : false;
     if (expired) {
       // Lazy unban: ban kedaluwarsa → aktifkan kembali (RLS mengizinkan update sendiri).
-      await supabase
-        .from("profiles")
+      await profileRepo
+        .query()
         .update({ status: "active", banned_until: null, banned_reason: null })
         .eq("id", user.id);
       // lanjut sebagai active (di bawah)

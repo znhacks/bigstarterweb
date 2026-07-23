@@ -7,6 +7,8 @@ import { PERMISSIONS, hasPermission, type PermissionName } from "@/lib/rbac";
 import { useLocale, useTranslations } from "next-intl";
 import { tenantConfig } from "@/config/tenant"; // Pastikan path import ini sesuai
 import { normalizeTenantUpdatePayload, updateTenantSchema } from "@/lib/validation/tenants";
+import { tenantRepository } from "@/supabase/repositories/tenants";
+import { membershipRepository } from "@/supabase/repositories/memberships";
 
 export interface AlertState {
   title: string;
@@ -81,15 +83,15 @@ export function useOrganizationGeneral() {
 
       const [tenantRes, membershipRes] = await Promise.all([
         // --- 2. UPDATE SELECT QUERY UNTUK MENGAMBIL KOLOM BARU ---
-        supabase
-          .from("tenants")
+        (await tenantRepository(supabase))
+          .query()
           .select(
             "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, kecamatan, desa, business_email, phone_number, tax_id, default_locale, timezone, currency"
           )
           .eq("id", orgId)
           .single(),
-        supabase
-          .from("memberships")
+        (await membershipRepository(supabase))
+          .query()
           .select("roles(role_permissions(permissions(name)))")
           .eq("tenant_id", orgId)
           .eq("user_id", user.id)
@@ -175,8 +177,8 @@ export function useOrganizationGeneral() {
         data: { publicUrl }
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      const { error: tenantError } = await supabase
-        .from("tenants")
+      const { error: tenantError } = await (await tenantRepository(supabase))
+        .query()
         .update({ logo: publicUrl })
         .eq("id", activeOrgId);
 
@@ -208,8 +210,8 @@ export function useOrganizationGeneral() {
     setAlertMessage(null);
 
     try {
-      const { error } = await supabase
-        .from("tenants")
+      const { error } = await (await tenantRepository(supabase))
+        .query()
         .update({ name: orgName.trim() })
         .eq("id", activeOrgId);
 
@@ -279,8 +281,8 @@ export function useOrganizationGeneral() {
         throw new Error(parsed.error.issues[0]?.message || "Validasi gagal.");
       }
 
-      const { error } = await supabase
-        .from("tenants")
+      const { error } = await (await tenantRepository(supabase))
+        .query()
         .update(normalizedPayload)
         .eq("id", activeOrgId);
 
@@ -309,8 +311,8 @@ export function useOrganizationGeneral() {
     setAlertMessage(null);
 
     try {
-      const { error } = await supabase
-        .from("tenants")
+      const { error } = await (await tenantRepository(supabase))
+        .query()
         .update({ status: "deleted", deleted_at: new Date().toISOString() })
         .eq("id", activeOrgId);
 

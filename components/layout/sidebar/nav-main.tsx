@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { supabase } from "@/lib/supabase";
+import { membershipRepository } from "@/supabase/repositories/memberships";
 import { useLocale, useTranslations } from "next-intl";
 import { PERMISSIONS, type PermissionName } from "@/lib/rbac";
 
@@ -205,6 +206,8 @@ export function NavMain() {
 
   const fetchUserAuthority = async () => {
     try {
+      const membershipRepo = await membershipRepository(supabase);
+
       const {
         data: { user }
       } = await supabase.auth.getUser();
@@ -217,8 +220,8 @@ export function NavMain() {
       }
 
       try {
-        const { data: membershipData, error: membershipError } = await supabase
-          .from("memberships")
+        const { data: membershipData, error: membershipError } = await membershipRepo
+          .query()
           .select("tenants!inner(slug)")
           .eq("user_id", user.id);
 
@@ -257,8 +260,8 @@ export function NavMain() {
       let error: any = null;
 
       if (tenantSlug) {
-        const { data: resData, error: resError } = await supabase
-          .from("memberships")
+        const { data: resData, error: resError } = await membershipRepo
+          .query()
           .select(`${AUTHORITY_SELECT}, tenants!inner(slug)`)
           .eq("tenants.slug", tenantSlug)
           .eq("user_id", user.id)
@@ -269,8 +272,8 @@ export function NavMain() {
         const activeTenantId =
           getCookie("active_tenant_id") || localStorage.getItem("active_org_id");
         if (activeTenantId) {
-          const { data: resData, error: resError } = await supabase
-            .from("memberships")
+          const { data: resData, error: resError } = await membershipRepo
+            .query()
             .select(AUTHORITY_SELECT)
             .eq("tenant_id", activeTenantId)
             .eq("user_id", user.id)

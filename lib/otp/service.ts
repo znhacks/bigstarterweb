@@ -6,6 +6,7 @@
 import "server-only";
 import crypto from "crypto";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
+import { otpCodeRepository } from "@/supabase/repositories/otp-codes";
 import { OTP_CONFIG, isOtpChannelEnabled, type OtpChannel, type OtpPurpose } from "@/config/otp";
 import { getOtpProvider } from "./provider";
 
@@ -42,9 +43,11 @@ export async function issueOtp(
   const now = Date.now();
   const since = (ms: number) => new Date(now - ms).toISOString();
 
+  const otpCodeRepo = await otpCodeRepository(supabaseAdmin);
+
   // Rate-limit: jumlah kirim dalam 1 jam terakhir
-  const { count: hourlyCount } = await supabaseAdmin
-    .from("otp_codes")
+  const { count: hourlyCount } = await otpCodeRepo
+    .query()
     .select("id", { count: "exact", head: true })
     .eq("target", targetKey)
     .eq("channel", ch)
@@ -55,8 +58,8 @@ export async function issueOtp(
   }
 
   // Cooldown: kirim terakhir
-  const { data: last } = await supabaseAdmin
-    .from("otp_codes")
+  const { data: last } = await otpCodeRepo
+    .query()
     .select("created_at")
     .eq("target", targetKey)
     .eq("channel", ch)
@@ -80,7 +83,7 @@ export async function issueOtp(
   const expiresAt = new Date(now + OTP_CONFIG.expiryMinutes * 60 * 1000).toISOString();
 
   // Simpan kode (hashed)
-  const { error: insErr } = await supabaseAdmin.from("otp_codes").insert({
+  const { error: insErr } = await otpCodeRepo.query().insert({
     target: targetKey,
     channel: ch,
     purpose,
@@ -122,9 +125,11 @@ export async function verifyOtp(
 ): Promise<VerifyResult> {
   const targetKey = target.trim().toLowerCase();
 
+  const otpCodeRepo = await otpCodeRepository(supabaseAdmin);
+
   // Ambil kode aktif (unconsumed) terbaru
-  const { data: row } = await supabaseAdmin
-    .from("otp_codes")
+  const { data: row } = await otpCodeRepo
+    .query()
     .select("id, code_hash, code_salt, attempts, expires_at, verified_at")
     .eq("target", targetKey)
     .eq("channel", channel)
@@ -150,16 +155,16 @@ export async function verifyOtp(
   const matches = hashCode(code.trim(), row.code_salt) === row.code_hash;
 
   if (!matches) {
-    await supabaseAdmin
-      .from("otp_codes")
+    await otpCodeRepo
+      .query()
       .update({ attempts: (row.attempts ?? 0) + 1 })
       .eq("id", row.id);
     return { ok: true, valid: false, error: "Kode salah." };
   }
 
   // Sukses: tandai verified & consumed
-  const { error: upErr } = await supabaseAdmin
-    .from("otp_codes")
+  const { error: upErr } = await otpCodeRepo
+    .query()
     .update({ verified_at: new Date().toISOString(), consumed_at: new Date().toISOString() })
     .eq("id", row.id);
   if (upErr) {
@@ -176,8 +181,9 @@ export async function consumeActiveOtp(
   purpose: OtpPurpose
 ) {
   const targetKey = target.trim().toLowerCase();
-  await supabaseAdmin
-    .from("otp_codes")
+  const otpCodeRepo = await otpCodeRepository(supabaseAdmin);
+  await otpCodeRepo
+    .query()
     .update({ consumed_at: new Date().toISOString() })
     .eq("target", targetKey)
     .eq("channel", channel)

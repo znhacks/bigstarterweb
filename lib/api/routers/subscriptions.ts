@@ -1,5 +1,6 @@
 import { o, getTenantId } from "../context";
 import { supabaseAdmin } from "../supabase-server";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { subscriptionSchema } from "../schemas";
 import { dbError } from "../errors";
 
@@ -14,8 +15,9 @@ export const getSubscription = o
   .output(subscriptionSchema)
   .handler(async ({ context }) => {
     const tenantId = getTenantId(context);
-    const { data, error } = await supabaseAdmin
-      .from("subscriptions")
+    const subscriptionRepo = await subscriptionRepository(supabaseAdmin);
+    const { data, error } = await subscriptionRepo
+      .query()
       .select("tenant_id, status, starts_at, ends_at, cancel_at_period_end, plans(name)")
       .eq("tenant_id", tenantId)
       .maybeSingle();

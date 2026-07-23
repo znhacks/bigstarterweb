@@ -3,6 +3,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { invalidatePlanCache } from "@/services/payment/billing/gating";
+import { profileRepository } from "@/supabase/repositories/profiles";
+import { planRepository } from "@/supabase/repositories/plans";
+import { planPriceRepository } from "@/supabase/repositories/plan-pices";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -25,8 +29,8 @@ async function validateSuperadmin(req: Request) {
   if (authError || !user) throw new Error("Invalid token");
 
   // KOREKSI ARSITEKTUR: Membaca kolom is_superadmin langsung dari tabel profiles (System Role)
-  const { data: profile, error: profileErr } = await supabaseAdmin
-    .from("profiles")
+  const { data: profile, error: profileErr } = await (await profileRepository(supabaseAdmin))
+    .query()
     .select("is_superadmin")
     .eq("id", user.id)
     .maybeSingle();
@@ -46,15 +50,17 @@ export async function GET(req: Request) {
     await validateSuperadmin(req);
 
     // Ambil seluruh plans
-    const { data: plans, error: plansErr } = await supabaseAdmin
-      .from("plans")
+    const { data: plans, error: plansErr } = await (await planRepository(supabaseAdmin))
+      .query()
       .select("*")
       .order("created_at", { ascending: true });
 
     if (plansErr) throw plansErr;
 
     // Ambil seluruh plan_prices
-    const { data: prices, error: pricesErr } = await supabaseAdmin.from("plan_prices").select("*");
+    const { data: prices, error: pricesErr } = await (await planPriceRepository(supabaseAdmin))
+      .query()
+      .select("*");
 
     if (pricesErr) throw pricesErr;
 
@@ -93,15 +99,17 @@ export async function POST(req: Request) {
 
     // A. Upsert ke tabel 'plans'
     const normalizedId = id.toLowerCase().trim();
-    const { error: planErr } = await supabaseAdmin.from("plans").upsert({
-      id: normalizedId,
-      name,
-      description,
-      is_active: isActive !== undefined ? isActive : true,
-      display_features: displayFeatures || [],
-      features: features || [], // Menyimpan array rbac terpadu: ['allowPdfFormat', 'limit:maxTasks:2000']
-      updated_at: new Date().toISOString()
-    });
+    const { error: planErr } = await (await planRepository(supabaseAdmin))
+      .query()
+      .upsert({
+        id: normalizedId,
+        name,
+        description,
+        is_active: isActive !== undefined ? isActive : true,
+        display_features: displayFeatures || [],
+        features: features || [], // Menyimpan array rbac terpadu: ['allowPdfFormat', 'limit:maxTasks:2000']
+        updated_at: new Date().toISOString()
+      });
 
     if (planErr) throw planErr;
 
@@ -109,8 +117,9 @@ export async function POST(req: Request) {
     invalidatePlanCache(normalizedId);
 
     // B. Upsert harga Bulanan (monthly) ke tabel 'plan_prices'
+    const planPriceRepo = await planPriceRepository(supabaseAdmin);
     if (prices?.monthly) {
-      const { error: mPriceErr } = await supabaseAdmin.from("plan_prices").upsert(
+      const { error: mPriceErr } = await planPriceRepo.query().upsert(
         {
           plan_id: normalizedId,
           interval: "monthly",
@@ -126,7 +135,7 @@ export async function POST(req: Request) {
 
     // C. Upsert harga Tahunan (yearly) ke tabel 'plan_prices'
     if (prices?.yearly) {
-      const { error: yPriceErr } = await supabaseAdmin.from("plan_prices").upsert(
+      const { error: yPriceErr } = await planPriceRepo.query().upsert(
         {
           plan_id: normalizedId,
           interval: "yearly",
@@ -161,8 +170,8 @@ export async function DELETE(req: Request) {
     }
 
     // Proteksi: Periksa apakah ada pelanggan yang sedang aktif di paket ini
-    const { count, error: countErr } = await supabaseAdmin
-      .from("subscriptions")
+    const { count, error: countErr } = await (await subscriptionRepository(supabaseAdmin))
+      .query()
       .select("*", { count: "exact", head: true })
       .eq("plan_id", planId)
       .eq("status", "active");
@@ -177,8 +186,8 @@ export async function DELETE(req: Request) {
     }
 
     // Lakukan soft-delete
-    const { error: deleteErr } = await supabaseAdmin
-      .from("plans")
+    const { error: deleteErr } = await (await planRepository(supabaseAdmin))
+      .query()
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq("id", planId);
 

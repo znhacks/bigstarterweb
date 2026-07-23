@@ -1,5 +1,6 @@
 import { o, getTenantId } from "../context";
 import { supabaseAdmin } from "../supabase-server";
+import { transactionRepository } from "@/supabase/repositories/transactions";
 import { transactionSchema, pagination, paginated } from "../schemas";
 import { dbError } from "../errors";
 
@@ -15,8 +16,9 @@ export const listTransactions = o
   .output(paginated(transactionSchema))
   .handler(async ({ input, context }) => {
     const tenantId = getTenantId(context);
-    const { data, count, error } = await supabaseAdmin
-      .from("transactions")
+    const transactionRepo = await transactionRepository(supabaseAdmin);
+    const { data, count, error } = await transactionRepo
+      .query()
       .select("*", { count: "exact" })
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })

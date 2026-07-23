@@ -3,6 +3,8 @@
 import { requireSuperadmin, requireAuth } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { createClient } from "@/lib/supabase/server";
+import { profileRepository } from "@/supabase/repositories/profiles";
+import { tenantRepository } from "@/supabase/repositories/tenants";
 import { computeBannedUntil } from "@/config/moderation";
 
 export interface DeletedUserRow {
@@ -27,8 +29,8 @@ const nowIso = () => new Date().toISOString();
 
 export async function softDeleteUser(userId: string): Promise<ActionResult> {
   await requireSuperadmin();
-  const { error } = await supabaseAdmin
-    .from("profiles")
+  const { error } = await (await profileRepository(supabaseAdmin))
+    .query()
     .update({ status: "deleted", deleted_at: nowIso(), banned_until: null, banned_reason: null })
     .eq("id", userId);
   if (error) return { error: error.message };
@@ -37,8 +39,8 @@ export async function softDeleteUser(userId: string): Promise<ActionResult> {
 
 export async function softDeleteTenant(tenantId: string): Promise<ActionResult> {
   await requireSuperadmin();
-  const { error } = await supabaseAdmin
-    .from("tenants")
+  const { error } = await (await tenantRepository(supabaseAdmin))
+    .query()
     .update({ status: "deleted", deleted_at: nowIso() })
     .eq("id", tenantId);
   if (error) return { error: error.message };
@@ -47,8 +49,8 @@ export async function softDeleteTenant(tenantId: string): Promise<ActionResult> 
 
 export async function restoreUser(userId: string): Promise<ActionResult> {
   await requireSuperadmin();
-  const { error } = await supabaseAdmin
-    .from("profiles")
+  const { error } = await (await profileRepository(supabaseAdmin))
+    .query()
     .update({ status: "active", deleted_at: null })
     .eq("id", userId);
   if (error) return { error: error.message };
@@ -57,8 +59,8 @@ export async function restoreUser(userId: string): Promise<ActionResult> {
 
 export async function restoreTenant(tenantId: string): Promise<ActionResult> {
   await requireSuperadmin();
-  const { error } = await supabaseAdmin
-    .from("tenants")
+  const { error } = await (await tenantRepository(supabaseAdmin))
+    .query()
     .update({ status: "active", deleted_at: null })
     .eq("id", tenantId);
   if (error) return { error: error.message };
@@ -67,8 +69,8 @@ export async function restoreTenant(tenantId: string): Promise<ActionResult> {
 
 export async function listDeletedUsers(): Promise<ActionResult<DeletedUserRow[]>> {
   await requireSuperadmin();
-  const { data, error } = await supabaseAdmin
-    .from("profiles")
+  const { data, error } = await (await profileRepository(supabaseAdmin))
+    .query()
     .select("id, full_name, deleted_at")
     .eq("status", "deleted")
     .order("deleted_at", { ascending: false });
@@ -78,8 +80,8 @@ export async function listDeletedUsers(): Promise<ActionResult<DeletedUserRow[]>
 
 export async function listDeletedTenants(): Promise<ActionResult<DeletedTenantRow[]>> {
   await requireSuperadmin();
-  const { data, error } = await supabaseAdmin
-    .from("tenants")
+  const { data, error } = await (await tenantRepository(supabaseAdmin))
+    .query()
     .select("id, name, deleted_at")
     .eq("status", "deleted")
     .order("deleted_at", { ascending: false });
@@ -96,8 +98,8 @@ export async function banUser(args: {
 }): Promise<ActionResult> {
   await requireSuperadmin();
   const bannedUntil = computeBannedUntil(args.durationKey);
-  const { error } = await supabaseAdmin
-    .from("profiles")
+  const { error } = await (await profileRepository(supabaseAdmin))
+    .query()
     .update({
       status: "banned",
       banned_until: bannedUntil,
@@ -111,8 +113,8 @@ export async function banUser(args: {
 
 export async function unbanUser(userId: string): Promise<ActionResult> {
   await requireSuperadmin();
-  const { error } = await supabaseAdmin
-    .from("profiles")
+  const { error } = await (await profileRepository(supabaseAdmin))
+    .query()
     .update({ status: "active", banned_until: null, banned_reason: null })
     .eq("id", userId);
   if (error) return { error: error.message };
@@ -130,8 +132,8 @@ export async function unbanUser(userId: string): Promise<ActionResult> {
 export async function restoreOwnAccount(): Promise<ActionResult> {
   const user = await requireAuth();
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("profiles")
+  const { error } = await (await profileRepository(supabase))
+    .query()
     .update({ status: "active", deleted_at: null })
     .eq("id", user.id);
   if (error) return { error: error.message };

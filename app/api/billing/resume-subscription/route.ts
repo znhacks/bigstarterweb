@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { isTenantMember } from "@/lib/billing/tenant-auth";
 import { createClient } from "@supabase/supabase-js";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -43,8 +44,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
-    const { data: activeSub, error: subError } = await supabaseAdmin
-      .from("subscriptions")
+    const subscriptionRepo = await subscriptionRepository(supabaseAdmin);
+
+    const { data: activeSub, error: subError } = await subscriptionRepo
+      .query()
       .select("id, provider, provider_subscription_id, cancel_at_period_end")
       .eq("tenant_id", tenantId)
       .eq("status", "active")
@@ -70,8 +73,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const { error: updateError } = await supabaseAdmin
-      .from("subscriptions")
+    const { error: updateError } = await subscriptionRepo
+      .query()
       .update({
         cancel_at_period_end: false,
         updated_at: new Date().toISOString()

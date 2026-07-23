@@ -21,6 +21,7 @@ import { navItems } from "@/components/layout/sidebar/nav-main";
 
 // Impor klien Supabase
 import { supabase } from "@/lib/supabase";
+import { membershipRepository } from "@/supabase/repositories/memberships";
 import { type PermissionName } from "@/lib/rbac";
 import { useTranslations } from "next-intl";
 
@@ -77,8 +78,8 @@ export default function Search() {
       }
 
       // Resolve: memberships.role_id → roles → role_permissions → permissions
-      const { data, error } = await supabase
-        .from("memberships")
+      const { data, error } = await (await membershipRepository(supabase))
+        .query()
         .select("roles(role_permissions(permissions(name)))")
         .eq("tenant_id", orgId)
         .eq("user_id", user.id)

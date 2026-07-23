@@ -4,6 +4,10 @@ import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { isTenantMember } from "@/lib/billing/tenant-auth";
 import { createClient } from "@supabase/supabase-js";
+import { planPriceRepository } from "@/supabase/repositories/plan-pices";
+import { planRepository } from "@/supabase/repositories/plans";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+import { couponRepository } from "@/supabase/repositories/coupons";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -37,8 +41,9 @@ export async function POST(req: Request) {
     }
 
     // 1. TARIK HARGA TARGET + ID PROVIDER DARI DATABASE (single source of truth)
-    const { data: dbTargetPrice, error: targetPriceErr } = await supabaseAdmin
-      .from("plan_prices")
+    const planPriceRepo = await planPriceRepository(supabaseAdmin);
+    const { data: dbTargetPrice, error: targetPriceErr } = await planPriceRepo
+      .query()
       .select("amount, plan_id, provider_ids, currency")
       .eq("plan_id", planId)
       .eq("interval", interval)
@@ -61,8 +66,8 @@ export async function POST(req: Request) {
         : null;
 
     // Ambil nama plan untuk deskripsi invoice
-    const { data: planRow } = await supabaseAdmin
-      .from("plans")
+    const { data: planRow } = await (await planRepository(supabaseAdmin))
+      .query()
       .select("name")
       .eq("id", planId)
       .maybeSingle();
@@ -71,8 +76,8 @@ export async function POST(req: Request) {
     // 2. KALKULASI KREDIT PRO-RATA DINAMIS (pakai interval langganan LAMA)
     let credit = 0;
     let oldProviderSubscriptionId: string | null = null;
-    const { data: activeSub } = await supabaseAdmin
-      .from("subscriptions")
+    const { data: activeSub } = await (await subscriptionRepository(supabaseAdmin))
+      .query()
       .select("starts_at, ends_at, plan_id, provider, provider_subscription_id, interval")
       .eq("tenant_id", tenantId)
       .eq("status", "active")
@@ -90,8 +95,8 @@ export async function POST(req: Request) {
         // FIX BUG: gunakan interval langganan LAMA (bukan interval baru yg diminta)
         const oldInterval = activeSub.interval;
         if (oldInterval) {
-          const { data: dbOldPrice } = await supabaseAdmin
-            .from("plan_prices")
+          const { data: dbOldPrice } = await planPriceRepo
+            .query()
             .select("amount")
             .eq("plan_id", activeSub.plan_id)
             .eq("interval", oldInterval)
@@ -118,8 +123,8 @@ export async function POST(req: Request) {
     if (couponCode) {
       const formattedCode = couponCode.trim();
 
-      const { data: coupon } = await supabaseAdmin
-        .from("coupons")
+      const { data: coupon } = await (await couponRepository(supabaseAdmin))
+        .query()
         .select("*")
         .ilike("code", formattedCode)
         .maybeSingle();

@@ -2,6 +2,8 @@ import { generateMeta } from "@/lib/utils";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
+import { profileRepository } from "@/supabase/repositories/profiles";
+import { planRepository } from "@/supabase/repositories/plans";
 
 // Impor komponen Data Table dan tipe data User
 import UsersDataTable, { User } from "./data-table";
@@ -50,8 +52,8 @@ export default async function Page() {
   // 2. Ambil data gabungan dari Supabase secara Server-Side (BERSIH DARI KOMENTAR)
   //    Pakai service role (supabaseAdmin) agar bypass RLS — superadmin melihat
   //    SEMUA profile. Aman karena halaman sudah di-gate requireSuperadmin().
-  const { data: profiles, error } = await supabaseAdmin
-    .from("profiles")
+  const { data: profiles, error } = await (await profileRepository(supabaseAdmin))
+    .query()
     .select(
       `
       id,
@@ -81,7 +83,9 @@ export default async function Page() {
   }
 
   // Ambil daftar plan dari DB (id -> name) untuk pemetaan nama plan (bukan config/billing.ts)
-  const { data: dbPlans } = await supabaseAdmin.from("plans").select("id, name");
+  const { data: dbPlans } = await (await planRepository(supabaseAdmin))
+    .query()
+    .select("id, name");
   const planNameMap = new Map<string, string>((dbPlans ?? []).map((p: any) => [p.id, p.name]));
 
   // 3. Petakan hasil kueri ke tipe data User[]

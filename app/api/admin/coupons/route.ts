@@ -2,6 +2,8 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { profileRepository } from '@/supabase/repositories/profiles';
+import { couponRepository } from '@/supabase/repositories/coupons';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -21,8 +23,8 @@ async function validateSuperadmin(req: Request) {
   if (authError || !user) throw new Error('Invalid token');
 
   // Menggunakan kueri is_superadmin dari tabel profiles (System Role) yang sudah teruji sukses
-  const { data: profile, error: profileErr } = await supabaseAdmin
-    .from('profiles')
+  const { data: profile, error: profileErr } = await (await profileRepository(supabaseAdmin))
+    .query()
     .select('is_superadmin')
     .eq('id', user.id)
     .maybeSingle();
@@ -41,8 +43,8 @@ export async function GET(req: Request) {
   try {
     await validateSuperadmin(req);
 
-    const { data: coupons, error: couponsErr } = await supabaseAdmin
-      .from('coupons')
+    const { data: coupons, error: couponsErr } = await (await couponRepository(supabaseAdmin))
+      .query()
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -72,8 +74,8 @@ export async function POST(req: Request) {
 
     const formattedCode = code.trim(); // Disimpan apa adanya (mixed-case/Unicode)
 
-    const { error: insertErr } = await supabaseAdmin
-      .from('coupons')
+    const { error: insertErr } = await (await couponRepository(supabaseAdmin))
+      .query()
       .insert({
         code: formattedCode,
         discount_type: discountType,
@@ -110,8 +112,8 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'ID kupon wajib dikirimkan' }, { status: 400 });
     }
 
-    const { error: deleteErr } = await supabaseAdmin
-      .from('coupons')
+    const { error: deleteErr } = await (await couponRepository(supabaseAdmin))
+      .query()
       .delete()
       .eq('id', couponId);
 

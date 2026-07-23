@@ -16,6 +16,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, Loader2, AlertCircle, ArrowRight, Ban, XCircle, X } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
+import { tenantRepository } from "@/supabase/repositories/tenants";
+import { invitationRepository } from "@/supabase/repositories/invitations";
+import { membershipRepository } from "@/supabase/repositories/memberships";
 import { useTranslations } from "next-intl";
 
 interface DecodedToken {
@@ -63,8 +66,9 @@ export function JoinOrganization() {
           setDecoded(decodedData);
 
           // Cari ID Organisasi
-          const { data: tenant } = await supabase
-            .from("tenants")
+          const tenantRepo = await tenantRepository(supabase);
+          const { data: tenant } = await tenantRepo
+            .query()
             .select("id")
             .eq("name", decodedData.orgName)
             .single();
@@ -76,8 +80,9 @@ export function JoinOrganization() {
           }
 
           // Periksa apakah baris undangan masih aktif di tabel 'invitations'
-          const { data: inviteRow } = await supabase
-            .from("invitations")
+          const invitationRepo = await invitationRepository(supabase);
+          const { data: inviteRow } = await invitationRepo
+            .query()
             .select("id")
             .eq("tenant_id", tenant.id)
             .eq("email", decodedData.email)
@@ -110,8 +115,9 @@ export function JoinOrganization() {
     setErrorMsg(null);
 
     try {
-      const { data: tenantData, error: tenantError } = await supabase
-        .from("tenants")
+      const tenantRepo = await tenantRepository(supabase);
+      const { data: tenantData, error: tenantError } = await tenantRepo
+        .query()
         .select("id, slug") // Ambil slug juga
         .eq("name", decoded.orgName)
         .single();
@@ -120,8 +126,9 @@ export function JoinOrganization() {
         throw new Error(t("org-notfound", { orgname: decoded.orgName }));
       }
 
-      const { data: existingMembership } = await supabase
-        .from("memberships")
+      const membershipRepo = await membershipRepository(supabase);
+      const { data: existingMembership } = await membershipRepo
+        .query()
         .select("id")
         .eq("user_id", activeUser.id)
         .eq("tenant_id", tenantData.id)
@@ -133,8 +140,9 @@ export function JoinOrganization() {
 
       // Ambil role_id dari BARIS INVITATION (sumber kebenaran), bukan dari token,
       // agar token yang dimanipulasi tidak bisa meningkatkan hak akses.
-      const { data: inviteRow } = await supabase
-        .from("invitations")
+      const invitationRepo = await invitationRepository(supabase);
+      const { data: inviteRow } = await invitationRepo
+        .query()
         .select("role_id, roles(name)")
         .eq("tenant_id", tenantData.id)
         .eq("email", decoded.email)
@@ -146,17 +154,19 @@ export function JoinOrganization() {
       }
 
       // 1. Daftarkan user ke tabel memberships
-      const { error: membershipError } = await supabase.from("memberships").insert({
-        user_id: activeUser.id,
-        tenant_id: tenantData.id,
-        role_id: inv.role_id
-      });
+      const { error: membershipError } = await membershipRepo
+        .query()
+        .insert({
+          user_id: activeUser.id,
+          tenant_id: tenantData.id,
+          role_id: inv.role_id
+        });
 
       if (membershipError) throw membershipError;
 
       // 2. Hapus baris dari tabel 'invitations' karena sudah resmi bergabung
-      await supabase
-        .from("invitations")
+      await invitationRepo
+        .query()
         .delete()
         .eq("tenant_id", tenantData.id)
         .eq("email", decoded.email);
@@ -190,8 +200,9 @@ export function JoinOrganization() {
     setErrorMsg(null);
 
     try {
-      const { data: tenantData } = await supabase
-        .from("tenants")
+      const tenantRepo = await tenantRepository(supabase);
+      const { data: tenantData } = await tenantRepo
+        .query()
         .select("id")
         .eq("name", decoded.orgName)
         .single();
@@ -201,8 +212,9 @@ export function JoinOrganization() {
       }
 
       // Hapus data undangan langsung dari tabel 'invitations'
-      const { error } = await supabase
-        .from("invitations")
+      const invitationRepo = await invitationRepository(supabase);
+      const { error } = await invitationRepo
+        .query()
         .delete()
         .eq("tenant_id", tenantData.id)
         .eq("email", decoded.email);

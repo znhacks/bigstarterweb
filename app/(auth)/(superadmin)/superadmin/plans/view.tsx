@@ -38,6 +38,7 @@ import { DataTableViewOptions } from "@/components/data-table/data-table-view-op
 
 import { useAdminPlans, PROVIDER_FIELDS, getLocalizedValue, SUPPORTED_LOCALES } from "./logic";
 import { formatNumber } from "@/lib/i18n/format";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function AdminPlansPage() {
   const {
@@ -144,7 +145,7 @@ export function AdminPlansPage() {
           </Button>
         )}
 
-        <DataTableViewOptions table={table} className="md:ms-auto" />
+        <DataTableViewOptions table={table} className="md:ms-auto" label={t("column")} />
       </div>
 
       {isLoading ? (
@@ -158,7 +159,7 @@ export function AdminPlansPage() {
             table={table}
             pageSizeOptions={[10, 20, 50, 100]}
             rowsPerPageLabel={t("table.rowsPerPage")}
-            selectedLabel={(selected, total) => `${selected} / ${total} dipilih`}
+            selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
           />
         </>
       )}
@@ -323,11 +324,6 @@ export function AdminPlansPage() {
 
             {openSections.features && (
               <div className="space-y-4 p-5">
-                <div className="flex items-center gap-1.5 pb-2">
-                  <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                    <Info className="me-0.5 h-3 w-3" /> {t("form.dynamic")}
-                  </span>
-                </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {FEATURE_DEFINITIONS.map((def: FeatureDefinition) => (
                     <div
@@ -335,9 +331,6 @@ export function AdminPlansPage() {
                       className="border-border/60 bg-muted/10 flex flex-col justify-between gap-2 rounded-xl border p-3.5">
                       <div className="space-y-0.5">
                         <Label className="text-sm font-bold">{def.label}</Label>
-                        <p className="text-muted-foreground text-[10px] leading-normal">
-                          {def.description}
-                        </p>
                       </div>
                       <div className="pt-2">
                         {def.type === "boolean" ? (
@@ -392,7 +385,6 @@ export function AdminPlansPage() {
             {openSections.billing && (
               <div className="space-y-6 p-5">
                 <div className="flex flex-col gap-6">
-                  {/* BLOK BULANAN */}
                   <div className="border-border/60 bg-muted/5 space-y-4 rounded-xl border p-5">
                     <div className="border-border/40 flex items-center space-x-2 border-b pb-3">
                       <Checkbox
@@ -454,9 +446,26 @@ export function AdminPlansPage() {
                       </div>
 
                       <div className="space-y-4 pt-2">
-                        <span className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
-                          {t("form.monthly.id-gateway")}
-                        </span>
+                        {/* Bagian Label Gateway ID Bulanan dengan Tooltip */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
+                            {t("form.monthly.id-gateway")}
+                          </span>
+                          <TooltipProvider>
+                            <Tooltip delayDuration={200}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground/70 hover:text-foreground transition-colors">
+                                  <Info className="h-3.5 w-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs text-xs">
+                                <p>{t("optional")}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
 
                         {PROVIDER_FIELDS.length === 0 ? (
                           <p className="text-muted-foreground text-xs">{t("form.noprovider")}</p>
@@ -574,9 +583,26 @@ export function AdminPlansPage() {
                       </div>
 
                       <div className="space-y-4 pt-2">
-                        <span className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
-                          {t("form.yearly.id-gateway")}
-                        </span>
+                        {/* Bagian Label Gateway ID Tahunan dengan Tooltip */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
+                            {t("form.yearly.id-gateway")}
+                          </span>
+                          <TooltipProvider>
+                            <Tooltip delayDuration={200}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground/70 hover:text-foreground transition-colors">
+                                  <Info className="h-3.5 w-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs text-xs">
+                                <p>{t("optional")}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
 
                         {PROVIDER_FIELDS.length === 0 ? (
                           <p className="text-muted-foreground text-xs">{t("form.noprovider")}</p>

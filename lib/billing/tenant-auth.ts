@@ -4,6 +4,8 @@
 // benar-benar anggota tenant yg dimanipulasi (checkout/cancel/resume/downgrade).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { membershipRepository } from "@/supabase/repositories/memberships";
+import { profileRepository } from "@/supabase/repositories/profiles";
 
 /**
  * Cek apakah userId adalah anggota tenantId (tabel memberships).
@@ -16,8 +18,9 @@ export async function isTenantMember(
 ): Promise<boolean> {
   if (!userId || !tenantId) return false;
 
-  const { data: membership } = await supabase
-    .from("memberships")
+  const membershipRepo = await membershipRepository(supabase);
+  const { data: membership } = await membershipRepo
+    .query()
     .select("id")
     .eq("user_id", userId)
     .eq("tenant_id", tenantId)
@@ -26,8 +29,9 @@ export async function isTenantMember(
   if (membership) return true;
 
   // Fallback: superadmin sistem boleh akses tenant manapun
-  const { data: profile } = await supabase
-    .from("profiles")
+  const profileRepo = await profileRepository(supabase);
+  const { data: profile } = await profileRepo
+    .query()
     .select("is_superadmin")
     .eq("id", userId)
     .maybeSingle();

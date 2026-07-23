@@ -6,6 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { supabase } from "@/lib/supabase";
+import { countryRepository } from "@/supabase/repositories/countries";
+import { stateRepository } from "@/supabase/repositories/states";
+import { cityRepository } from "@/supabase/repositories/cities";
+import { subdistrictRepository } from "@/supabase/repositories/sub-districts";
+import { villageRepository } from "@/supabase/repositories/villages";
 import { getCountryDefaults, type CountryDefaults } from "@/lib/i18n/country-defaults";
 import { useTranslations } from "next-intl";
 
@@ -72,8 +77,8 @@ export function AddressForm({
   // --- Memuat daftar negara saat pertama kali render ---
   React.useEffect(() => {
     (async () => {
-      const { data: rows } = await supabase
-        .from("countries")
+      const { data: rows } = await (await countryRepository(supabase))
+        .query()
         .select("id, name, iso2, currency, timezones")
         .order("name", { ascending: true });
       if (rows) setCountries(rows as unknown as CountryRow[]);
@@ -84,8 +89,8 @@ export function AddressForm({
 
   // --- Fetch helpers ---
   const fetchStates = React.useCallback(async (cId: number): Promise<GeoOption[]> => {
-    const { data: rows } = await supabase
-      .from("states")
+    const { data: rows } = await (await stateRepository(supabase))
+      .query()
       .select("id, name")
       .eq("country_id", cId)
       .order("name", { ascending: true })
@@ -96,8 +101,8 @@ export function AddressForm({
   }, []);
 
   const fetchCities = React.useCallback(async (sId: number): Promise<GeoOption[]> => {
-    const { data: rows } = await supabase
-      .from("cities")
+    const { data: rows } = await (await cityRepository(supabase))
+      .query()
       .select("id, name")
       .eq("state_id", sId)
       .order("name", { ascending: true })
@@ -108,8 +113,8 @@ export function AddressForm({
   }, []);
 
   const fetchKecamatan = React.useCallback(async (kabId: number): Promise<GeoOption[]> => {
-    const { data: rows } = await supabase
-      .from("kecamatan")
+    const { data: rows } = await (await subdistrictRepository(supabase))
+      .query()
       .select("id, nama_kecamatan")
       .eq("id_kab_kota", kabId)
       .order("nama_kecamatan", { ascending: true })
@@ -120,8 +125,8 @@ export function AddressForm({
   }, []);
 
   const fetchDesa = React.useCallback(async (kecId: number): Promise<DesaRow[]> => {
-    const { data: rows } = await supabase
-      .from("desa")
+    const { data: rows } = await (await villageRepository(supabase))
+      .query()
       .select("id, nama_desa_kelurahan, kode_pos")
       .eq("id_kecamatan", kecId)
       .order("nama_desa_kelurahan", { ascending: true })

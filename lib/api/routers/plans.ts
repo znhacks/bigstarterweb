@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { o } from "../context";
 import { supabaseAdmin } from "../supabase-server";
+import { planRepository } from "@/supabase/repositories/plans";
 import { planSchema } from "../schemas";
 import { notFound, dbError } from "../errors";
 
@@ -15,8 +16,9 @@ export const listPlans = o
   })
   .output(z.array(planSchema))
   .handler(async () => {
-    const { data, error } = await supabaseAdmin
-      .from("plans")
+    const planRepo = await planRepository(supabaseAdmin);
+    const { data, error } = await planRepo
+      .query()
       .select("*")
       .eq("is_active", true)
       .order("name", { ascending: true });
@@ -35,8 +37,9 @@ export const getPlan = o
   .input(z.object({ id: z.string() }))
   .output(planSchema)
   .handler(async ({ input }) => {
-    const { data, error } = await supabaseAdmin
-      .from("plans")
+    const planRepo = await planRepository(supabaseAdmin);
+    const { data, error } = await planRepo
+      .query()
       .select("*")
       .eq("id", input.id)
       .maybeSingle();

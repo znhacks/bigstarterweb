@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "./supabase-server";
+import { apiKeyRepository } from "@/supabase/repositories/api-keys";
+import { membershipRepository } from "@/supabase/repositories/memberships";
 import { hashApiKey } from "./crypto";
 
 /**
@@ -34,8 +36,9 @@ async function resolveApiKeyAuth(req: Request): Promise<Extract<Auth, { kind: "a
   const key = match[1].trim();
   if (!key.startsWith("sk_live_")) return null;
 
-  const { data, error } = await supabaseAdmin
-    .from("api_keys")
+  const apiKeyRepo = await apiKeyRepository(supabaseAdmin);
+  const { data, error } = await apiKeyRepo
+    .query()
     .select("id, tenant_id, revoked_at")
     .eq("key_hash", hashApiKey(key))
     .is("revoked_at", null)
@@ -45,8 +48,8 @@ async function resolveApiKeyAuth(req: Request): Promise<Extract<Auth, { kind: "a
 
   // Fire-and-forget usage telemetry.
   const ip = getClientIp(req);
-  supabaseAdmin
-    .from("api_keys")
+  apiKeyRepo
+    .query()
     .update({ last_used_at: new Date().toISOString(), ...(ip ? { last_used_ip: ip } : {}) })
     .eq("id", data.id)
     .then(({ error }) => error && console.error("[api] last_used_at update failed:", error.message));
@@ -90,8 +93,9 @@ async function resolveSessionAuth(req: Request): Promise<Extract<Auth, { kind: "
   if (!user) return null;
 
   // Confirm the user actually belongs to this tenant (defense-in-depth).
-  const { data: membership } = await supabaseAdmin
-    .from("memberships")
+  const membershipRepo = await membershipRepository(supabaseAdmin);
+  const { data: membership } = await membershipRepo
+    .query()
     .select("id")
     .eq("user_id", user.id)
     .eq("tenant_id", tenantId)

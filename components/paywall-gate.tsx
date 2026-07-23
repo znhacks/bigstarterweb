@@ -4,6 +4,7 @@ import * as React from "react";
 import { useEffect, useState } from "react";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -28,9 +29,11 @@ export function PaywallGate({ children, allowedPlans, fallback }: PaywallGatePro
         return;
       }
 
+      const subscriptionRepo = await subscriptionRepository(supabase);
+
       try {
-        const { data, error } = await supabase
-          .from("subscriptions")
+        const { data, error } = await subscriptionRepo
+          .query()
           .select("id, plan_id, status, ends_at")
           .eq("tenant_id", orgId)
           .maybeSingle();
@@ -47,8 +50,8 @@ export function PaywallGate({ children, allowedPlans, fallback }: PaywallGatePro
         // Jika masa berlaku habis tetapi status di database masih tertulis 'active',
         // kita perbarui statusnya ke 'expired' secara asinkron di latar belakang.
         if (isExpired && data && data.status === "active") {
-          supabase
-            .from("subscriptions")
+          subscriptionRepo
+            .query()
             .update({ status: "expired" })
             .eq("id", data.id)
             .then(({ error }) => {

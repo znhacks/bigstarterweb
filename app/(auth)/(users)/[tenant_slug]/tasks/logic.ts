@@ -10,6 +10,8 @@ import { compareStrings } from "@/lib/i18n/collator";
 import { fetchTasksAction, createTaskAction, updateTaskAction, deleteTaskAction } from "./actions";
 import { useFeatureGate } from "@/hooks/use-feature-gate";
 import type { FeatureGates } from "@/config/feature-definitions";
+import { profileRepository } from "@/supabase/repositories/profiles";
+import { membershipRepository } from "@/supabase/repositories/memberships";
 
 interface UseTasksArgs {
   tenantSlug: string;
@@ -85,8 +87,8 @@ export function useTasks(
   }, [tenantSlug]);
 
   const fetchMembers = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("memberships")
+    const { data, error } = await (await membershipRepository(supabase))
+      .query()
       .select("user_id, profiles(full_name)")
       .eq("tenant_id", tenantId);
     if (error) {
@@ -111,8 +113,8 @@ export function useTasks(
     if (!session?.user) return;
     setCurrentUserId(session.user.id);
 
-    const { data: profileData } = await supabase
-      .from("profiles")
+    const { data: profileData } = await (await profileRepository(supabase))
+      .query()
       .select("timezone, preferred_language")
       .eq("id", session.user.id)
       .maybeSingle();
@@ -122,8 +124,8 @@ export function useTasks(
       if (profileData.preferred_language) setPreferredLanguage(profileData.preferred_language);
     }
 
-    const { data, error } = await supabase
-      .from("memberships")
+    const { data, error } = await (await membershipRepository(supabase))
+      .query()
       .select("roles(name, hierarchy_level, role_permissions(permissions(name)))")
       .eq("tenant_id", tenantId)
       .eq("user_id", session.user.id)

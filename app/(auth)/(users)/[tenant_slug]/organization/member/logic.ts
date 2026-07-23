@@ -5,6 +5,11 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
 import { PERMISSIONS, hasPermission, canAssignRole, type PermissionName } from "@/lib/rbac";
+import { tenantRepository } from "@/supabase/repositories/tenants";
+import { membershipRepository } from "@/supabase/repositories/memberships";
+import { roleRepository } from "@/supabase/repositories/roles";
+import { invitationRepository } from "@/supabase/repositories/invitations";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 
 export interface Role {
   id: string;
@@ -89,7 +94,7 @@ export function useOrganizationMembers() {
   }, [alertMessage]);
 
   const fetchOrgDetails = async (orgId: string) => {
-    const { data } = await supabase.from("tenants").select("name").eq("id", orgId).single();
+    const { data } = await (await tenantRepository(supabase)).query().select("name").eq("id", orgId).single();
     if (data) setOrgName(data.name);
   };
 
@@ -109,8 +114,8 @@ export function useOrganizationMembers() {
   };
 
   const fetchRoles = async () => {
-    const { data, error } = await supabase
-      .from("roles")
+    const { data, error } = await (await roleRepository(supabase))
+      .query()
       .select("id, name, hierarchy_level")
       .order("hierarchy_level", { ascending: false });
     if (error) {
@@ -130,8 +135,8 @@ export function useOrganizationMembers() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from("memberships")
+    const { data, error } = await (await membershipRepository(supabase))
+      .query()
       .select("roles(name, hierarchy_level, role_permissions(permissions(name)))")
       .eq("tenant_id", orgId)
       .eq("user_id", user.id)
@@ -162,8 +167,8 @@ export function useOrganizationMembers() {
       const to = from + PAGE_SIZE - 1;
 
       // DISESUAIKAN: Menggunakan kolom 'avatar' sesuai dengan skema tabel profiles Anda
-      let query = supabase
-        .from("memberships")
+      let query = (await membershipRepository(supabase))
+        .query()
         .select(
           `
           id,
@@ -246,8 +251,8 @@ export function useOrganizationMembers() {
 
   const fetchPendingInvites = async (orgId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("invitations")
+      const { data, error } = await (await invitationRepository(supabase))
+        .query()
         .select("id, email, role_id, roles(name), created_at")
         .eq("tenant_id", orgId);
 
@@ -269,8 +274,8 @@ export function useOrganizationMembers() {
     try {
       // Ambil paket aktif + daftar plan (DB-driven, featureGates sudah ter-decode) dari API publik
       const [subResult, plansRes] = await Promise.all([
-        supabase
-          .from("subscriptions")
+        (await subscriptionRepository(supabase))
+          .query()
           .select("plan_id, status, ends_at")
           .eq("tenant_id", orgId)
           .maybeSingle(),
@@ -298,8 +303,8 @@ export function useOrganizationMembers() {
     const newRole = roles.find((r) => r.id === newRoleId);
     if (!newRole) return;
     try {
-      const { error } = await supabase
-        .from("memberships")
+      const { error } = await (await membershipRepository(supabase))
+        .query()
         .update({ role_id: newRoleId })
         .eq("id", membershipId);
 
@@ -336,7 +341,7 @@ export function useOrganizationMembers() {
     if (!memberToDelete) return;
 
     try {
-      const { error } = await supabase.from("memberships").delete().eq("id", memberToDelete.id);
+      const { error } = await (await membershipRepository(supabase)).query().delete().eq("id", memberToDelete.id);
 
       if (error) throw error;
 
@@ -360,7 +365,7 @@ export function useOrganizationMembers() {
 
   const handleCancelInvitation = async (inviteId: string, email: string) => {
     try {
-      const { error } = await supabase.from("invitations").delete().eq("id", inviteId);
+      const { error } = await (await invitationRepository(supabase)).query().delete().eq("id", inviteId);
       if (error) throw error;
 
       setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId));

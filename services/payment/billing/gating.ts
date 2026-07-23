@@ -10,6 +10,8 @@ import {
   FeatureGates,
   FEATURE_DEFINITIONS
 } from "@/config/feature-definitions";
+import { planRepository } from "@/supabase/repositories/plans";
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -42,8 +44,8 @@ async function fetchPlanFeatureGates(
     return { name: cached.name, gates: cached.gates };
   }
 
-  const { data: plan } = await supabaseAdmin
-    .from("plans")
+  const { data: plan } = await (await planRepository(supabaseAdmin))
+    .query()
     .select("name, features, is_active")
     .eq("id", planId)
     .maybeSingle();
@@ -61,8 +63,8 @@ async function fetchPlanFeatureGates(
  * di DB, kembalikan defaultValue dari FEATURE_DEFINITIONS.
  */
 export async function getTenantPlan(tenantId: string): Promise<TenantPlan> {
-  const { data: subscription } = await supabaseAdmin
-    .from("subscriptions")
+  const { data: subscription } = await (await subscriptionRepository(supabaseAdmin))
+    .query()
     .select("plan_id, status, ends_at")
     .eq("tenant_id", tenantId)
     .maybeSingle();

@@ -68,10 +68,10 @@ export const SUPPORTED_LOCALES = routing.locales.map((code) => {
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]["code"];
 
 export const ALL_PROVIDER_FIELDS = [
-  { key: "stripe", label: "Stripe Price ID (opsional — payment-only jika kosong)" },
-  { key: "paypal", label: "PayPal Plan ID (opsional — payment-only jika kosong)" },
-  { key: "paddle", label: "Paddle Price ID (wajib)" },
-  { key: "lemonsqueezy", label: "LemonSqueezy Variant ID (wajib)" },
+  { key: "stripe", label: "Stripe Price ID" },
+  { key: "paypal", label: "PayPal Plan ID" },
+  { key: "paddle", label: "Paddle Price ID" },
+  { key: "lemonsqueezy", label: "LemonSqueezy Variant ID" },
   { key: "xendit", label: "Xendit Price/Plan ID (opsional)" },
   { key: "midtrans", label: "Midtrans Price/Plan ID (opsional)" },
   { key: "mayar", label: "Mayar Price/Plan ID (opsional)" }
@@ -335,6 +335,9 @@ export function useAdminPlans() {
       },
       {
         accessorKey: "name",
+        meta: {
+          label: t("table.name")
+        },
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.name")} />,
         filterFn: containsFilterFn,
         cell: ({ row }) => {
@@ -351,6 +354,9 @@ export function useAdminPlans() {
       },
       {
         accessorKey: "monthlyAmount",
+        meta: {
+          label: t("table.monthly")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.monthly")} />
         ),
@@ -364,6 +370,9 @@ export function useAdminPlans() {
       },
       {
         accessorKey: "yearlyAmount",
+        meta: {
+          label: t("table.yearly")
+        },
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.yearly")} />,
         cell: ({ row }) => (
           <div
@@ -375,6 +384,9 @@ export function useAdminPlans() {
       },
       {
         accessorKey: "is_active",
+        meta: {
+          label: t("table.status")
+        },
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.status")} />,
         cell: ({ row }) => (
           <div
@@ -394,6 +406,9 @@ export function useAdminPlans() {
       },
       {
         id: "actions",
+        meta: {
+          label: t("table.actions")
+        },
         header: () => <div className="text-end">{t("table.actions")}</div>,
         enableHiding: false,
         cell: ({ row }) => (

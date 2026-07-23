@@ -1,6 +1,9 @@
 import * as z from "zod";
 import { o, getTenantId } from "../context";
 import { supabaseAdmin } from "../supabase-server";
+import { membershipRepository } from "@/supabase/repositories/memberships";
+import { roleRepository } from "@/supabase/repositories/roles";
+import { invitationRepository } from "@/supabase/repositories/invitations";
 import { memberSchema } from "../schemas";
 import { dbError, forbidden, badRequest } from "../errors";
 import { checkSeatLimit } from "@/lib/billing/enforcer";
@@ -16,8 +19,9 @@ export const listMembers = o
   .output(z.array(memberSchema))
   .handler(async ({ context }) => {
     const tenantId = getTenantId(context);
-    const { data, error } = await supabaseAdmin
-      .from("memberships")
+    const membershipRepo = await membershipRepository(supabaseAdmin);
+    const { data, error } = await membershipRepo
+      .query()
       .select(
         "id, tenant_id, role_id, roles(name, role_permissions(permissions(name))), app_users(email, full_name, avatar)"
       )
@@ -78,16 +82,18 @@ export const inviteMember = o
     }
 
     // Validasi roleId ada di tabel roles sebelum membuat undangan.
-    const { data: roleRow, error: roleError } = await supabaseAdmin
-      .from("roles")
+    const roleRepo = await roleRepository(supabaseAdmin);
+    const { data: roleRow, error: roleError } = await roleRepo
+      .query()
       .select("id, name")
       .eq("id", input.roleId)
       .maybeSingle();
     if (roleError) throw dbError(roleError);
     if (!roleRow) throw badRequest("Role tidak valid.");
 
-    const { data, error } = await supabaseAdmin
-      .from("invitations")
+    const invitationRepo = await invitationRepository(supabaseAdmin);
+    const { data, error } = await invitationRepo
+      .query()
       .upsert(
         { tenant_id: tenantId, email: input.email, role_id: input.roleId },
         { onConflict: "tenant_id,email" }

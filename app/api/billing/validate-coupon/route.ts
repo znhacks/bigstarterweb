@@ -2,6 +2,8 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { couponRepository } from "@/supabase/repositories/coupons";
+import { couponRedemptionRepository } from "@/supabase/repositories/coupon-redemptions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -20,8 +22,8 @@ export async function POST(req: Request) {
     const formattedCode = code.trim(); // mixed-case/Unicode — lookup .ilike (case-insensitive)
 
     // 1. Ambil data kupon dari database
-    const { data: coupon, error: couponError } = await supabaseAdmin
-      .from("coupons")
+    const { data: coupon, error: couponError } = await (await couponRepository(supabaseAdmin))
+      .query()
       .select("*")
       .ilike("code", formattedCode)
       .maybeSingle();
@@ -41,8 +43,10 @@ export async function POST(req: Request) {
     }
 
     // 4. Periksa apakah tenant ini sudah pernah menggunakan kupon ini sebelumnya
-    const { data: redemption, error: redemptionError } = await supabaseAdmin
-      .from("coupon_redemptions")
+    const { data: redemption, error: redemptionError } = await (
+      await couponRedemptionRepository(supabaseAdmin)
+    )
+      .query()
       .select("id")
       .eq("coupon_id", coupon.id)
       .eq("tenant_id", tenantId)

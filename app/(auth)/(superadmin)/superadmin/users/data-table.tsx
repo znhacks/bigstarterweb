@@ -28,6 +28,8 @@ import { generateAvatarFallback } from "@/lib/utils";
 
 import { formatToUserTimezone, formatRelativeTime } from "@/lib/date";
 import { supabase } from "@/lib/supabase";
+import { roleRepository } from "@/supabase/repositories/roles";
+import { profileRepository } from "@/supabase/repositories/profiles";
 import { useTranslations, useLocale } from "next-intl";
 
 import {
@@ -115,19 +117,23 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   }, [initialData]);
 
   useEffect(() => {
-    supabase
-      .from("roles")
-      .select("name")
-      .order("hierarchy_level", { ascending: false })
-      .then(({ data }) => {
-        if (data) setRoles(data.map((r: any) => ({ value: r.name, label: r.name })));
-      });
+    (async () => {
+      (await roleRepository(supabase))
+        .query()
+        .select("name")
+        .order("hierarchy_level", { ascending: false })
+        .then(({ data }) => {
+          if (data) setRoles(data.map((r: any) => ({ value: r.name, label: r.name })));
+        });
+    })();
   }, []);
 
   const loadUsersFromSupabase = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from("profiles").select(`
+      const { data, error } = await (await profileRepository(supabase))
+        .query()
+        .select(`
           id,
           full_name,
           avatar,
