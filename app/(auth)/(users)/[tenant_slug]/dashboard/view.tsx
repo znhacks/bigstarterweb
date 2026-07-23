@@ -58,12 +58,11 @@ function UserWorkspaceDashboardView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8">
-      {/* SECTION 1 — WELCOME (Tanpa Local Selector Dropdown) */}
-      <div className="flex flex-col gap-4 border-b pb-6 md:flex-row md:items-center md:justify-between">
+    <div className="mx-auto w-full space-y-3 px-4 py-8">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
           <h1 className="text-foreground text-3xl font-bold tracking-tight">
-            Welcome back, {profile?.full_name || "Workspace Member"} 👋
+            Welcome {profile?.full_name || "Workspace Member"} !
           </h1>
           <p className="text-muted-foreground text-sm">
             Here&apos;s what&apos;s happening in your active workspace (
@@ -74,7 +73,7 @@ function UserWorkspaceDashboardView({
       </div>
 
       {/* SECTION 2 — SUMMARY CARDS */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Organizations */}
         <Card>
           <CardContent className="flex items-center justify-between py-4">
@@ -146,32 +145,7 @@ function UserWorkspaceDashboardView({
         </Card>
       </div>
 
-      {/* SECTION 3 — QUICK ACTIONS */}
-      <Card>
-        <CardHeader className="py-3">
-          <CardTitle className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-            Quick Actions
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Button variant="outline" className="justify-start gap-2 text-xs" size="sm">
-            <Plus className="h-4 w-4" /> Create Organization
-          </Button>
-          <Button variant="outline" className="justify-start gap-2 text-xs" size="sm">
-            <UserPlus className="h-4 w-4" /> Invite Members
-          </Button>
-          <Button variant="outline" className="justify-start gap-2 text-xs" size="sm">
-            <CreditCard className="h-4 w-4" /> Manage Subscription
-          </Button>
-          <Button variant="outline" className="justify-start gap-2 text-xs" size="sm">
-            <Settings className="h-4 w-4" /> Workspace Settings
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* CORE INFO: ORGANIZATION OVERVIEW & MEMBERSHIPS */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* SECTION 4 — ORGANIZATION OVERVIEW */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-base font-bold">Organization Overview</CardTitle>
@@ -282,8 +256,71 @@ function UserWorkspaceDashboardView({
       </div>
 
       {/* SUBSCRIPTION & BILLING ACTIVITY ROW */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {/* SECTION 6 — SUBSCRIPTION */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-bold">Recent Billing Activity</CardTitle>
+              <CardDescription>Invoices and transactions for active organization.</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" className="gap-1 text-xs">
+              View All <ArrowUpRight className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="text-muted-foreground border-b font-semibold">
+                    <th className="py-2">Date</th>
+                    <th className="py-2">Description</th>
+                    <th className="py-2">Amount</th>
+                    <th className="py-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tenantTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="text-muted-foreground py-6 text-center">
+                        No transactions registered yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    tenantTransactions.map((tx) => (
+                      <tr
+                        key={tx.id}
+                        className="hover:bg-muted/20 border-b transition last:border-0">
+                        <td className="text-muted-foreground py-2 font-mono">
+                          {new Date(tx.created_at).toLocaleDateString(
+                            locale === "id" ? "id-ID" : "en-US"
+                          )}
+                        </td>
+                        <td className="text-foreground py-2 font-bold">{tx.plan_name}</td>
+                        <td className="text-foreground py-2 font-extrabold">
+                          {formatPrice(tx.net_amount || tx.amount_in_idr || tx.amount, tx.currency)}
+                        </td>
+                        <td className="py-2">
+                          <Badge
+                            className={`rounded-full text-[9px] font-bold uppercase ${
+                              ["paid", "completed", "success", "settlement"].includes(
+                                tx.status?.toLowerCase()
+                              )
+                                ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15"
+                                : "bg-red-500/15 text-red-600 hover:bg-red-500/15"
+                            }`}>
+                            {tx.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+        {/* SECTION 7 — RECENT BILLING ACTIVITY */}
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-base font-bold">Subscription Details</CardTitle>
@@ -350,74 +387,10 @@ function UserWorkspaceDashboardView({
             )}
           </CardContent>
         </Card>
-
-        {/* SECTION 7 — RECENT BILLING ACTIVITY */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-bold">Recent Billing Activity</CardTitle>
-              <CardDescription>Invoices and transactions for active organization.</CardDescription>
-            </div>
-            <Button variant="ghost" size="sm" className="gap-1 text-xs">
-              View All <ArrowUpRight className="h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-xs">
-                <thead>
-                  <tr className="text-muted-foreground border-b font-semibold">
-                    <th className="py-2">Date</th>
-                    <th className="py-2">Description</th>
-                    <th className="py-2">Amount</th>
-                    <th className="py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tenantTransactions.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="text-muted-foreground py-6 text-center">
-                        No transactions registered yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    tenantTransactions.map((tx) => (
-                      <tr
-                        key={tx.id}
-                        className="hover:bg-muted/20 border-b transition last:border-0">
-                        <td className="text-muted-foreground py-2 font-mono">
-                          {new Date(tx.created_at).toLocaleDateString(
-                            locale === "id" ? "id-ID" : "en-US"
-                          )}
-                        </td>
-                        <td className="text-foreground py-2 font-bold">{tx.plan_name}</td>
-                        <td className="text-foreground py-2 font-extrabold">
-                          {formatPrice(tx.net_amount || tx.amount_in_idr || tx.amount, tx.currency)}
-                        </td>
-                        <td className="py-2">
-                          <Badge
-                            className={`rounded-full text-[9px] font-bold uppercase ${
-                              ["paid", "completed", "success", "settlement"].includes(
-                                tx.status?.toLowerCase()
-                              )
-                                ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15"
-                                : "bg-red-500/15 text-red-600 hover:bg-red-500/15"
-                            }`}>
-                            {tx.status}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* TEAM MEMBERS, USAGE METRICS, & ACTIVITIES ROW */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {/* SECTION 8 — TEAM MEMBERS */}
         <Card>
           <CardHeader>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useMemo } from "react";
+import { ColumnDef } from "@tanstack/react-table";
 import {
   Loader2,
   Building2,
@@ -45,7 +46,25 @@ import { formatCurrency } from "@/lib/i18n/currency";
 import { useSuperadminMainDashboard } from "./logic";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
+// Reusable table pieces — the same ones every other table in the app uses.
+import { useDataTable } from "@/components/data-table/use-data-table";
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+
 const COLORS = ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6b7280"];
+
+interface RecentTransactionRow {
+  id: string;
+  amount: number;
+  amount_in_idr?: number | null;
+  net_amount?: number | null;
+  currency?: string | null;
+  plan_name: string;
+  provider?: string | null;
+  status: string;
+  created_at: string;
+  tenants: { name: string } | null;
+}
 
 export function SuperadminMainDashboard() {
   const state = useSuperadminMainDashboard();
@@ -80,6 +99,89 @@ function SuperadminMainDashboardView({
   const formatPrice = (amount: number, currency?: string) =>
     formatCurrency(amount, locale, { currencyCode: currency ?? APP_BASE_CURRENCY });
 
+  // Columns are hardcoded for this widget — nothing generic about them.
+  const transactionColumns = useMemo<ColumnDef<RecentTransactionRow, unknown>[]>(
+    () => [
+      {
+        accessorKey: "tenants.name",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Tenant" />,
+        cell: ({ row }) => (
+          <span className="text-foreground font-semibold">
+            {row.original.tenants?.name || "Unknown Tenant"}
+          </span>
+        )
+      },
+      {
+        accessorKey: "plan_name",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Plan" />,
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.plan_name}</span>
+      },
+      {
+        accessorKey: "amount",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Amount" />,
+        cell: ({ row }) => {
+          const tx = row.original;
+          return (
+            <span className="text-foreground font-extrabold">
+              {formatPrice(
+                tx.net_amount || tx.amount_in_idr || tx.amount,
+                tx.currency ?? undefined
+              )}
+            </span>
+          );
+        }
+      },
+      {
+        accessorKey: "provider",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Provider" />,
+        cell: ({ row }) => (
+          <span className="font-mono text-[10px] uppercase">
+            {row.original.provider || "Manual"}
+          </span>
+        )
+      },
+      {
+        accessorKey: "status",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => {
+          const status = row.original.status;
+          const isSuccess = ["paid", "completed", "success", "settlement"].includes(
+            status?.toLowerCase()
+          );
+          return (
+            <Badge
+              className={`rounded-full text-[9px] font-bold uppercase ${
+                isSuccess
+                  ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15"
+                  : "bg-red-500/15 text-red-600 hover:bg-red-500/15"
+              }`}>
+              {status}
+            </Badge>
+          );
+        }
+      },
+      {
+        accessorKey: "created_at",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            {new Date(row.original.created_at).toLocaleDateString(
+              locale === "id" ? "id-ID" : "en-US"
+            )}
+          </span>
+        )
+      }
+    ],
+    [locale]
+  );
+
+  // You own this instance — read/mutate it however this widget needs.
+  const transactionsTable = useDataTable({
+    columns: transactionColumns,
+    data: recentTransactions as RecentTransactionRow[],
+    initialPageSize: 10
+  });
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -89,14 +191,11 @@ function SuperadminMainDashboardView({
   }
 
   return (
-    <div className="mx-auto w-full space-y-6 px-4 py-3">
+    <div className="mx-auto w-full space-y-3 px-4 py-3">
       {/* HEADER SECTION */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-foreground text-3xl font-bold tracking-tight">Main Dashboard</h1>
-          <p className="text-muted-foreground text-sm">
-            Ringkasan global untuk analisis sistem saas, penagihan, pengguna, dan data tenant.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -106,14 +205,11 @@ function SuperadminMainDashboardView({
             size="sm"
             className="h-9 gap-2 text-xs font-semibold">
             <RefreshCw className="h-4 w-4" />
-            Segarkan Data
           </Button>
         </div>
       </div>
 
-      {/* 1. KPI CARDS (8 Cards Grid) */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Tenants */}
         <Card>
           <CardContent className="flex items-center justify-between py-4">
             <div className="space-y-0.5">
@@ -121,7 +217,6 @@ function SuperadminMainDashboardView({
                 Tenants
               </span>
               <h4 className="text-foreground text-2xl font-extrabold">{metrics.totalTenants}</h4>
-              <p className="text-muted-foreground text-[9px]">Organisasi terdaftar</p>
             </div>
             <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-xl">
               <Building2 className="h-5 w-5" />
@@ -245,7 +340,7 @@ function SuperadminMainDashboardView({
       </div>
 
       {/* REVENUE CHART & SUBSCRIPTION STATUS ROW */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {/* 2. Revenue Chart */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-col items-start justify-between gap-4 border-b pb-4 sm:flex-row sm:items-center">
@@ -360,51 +455,8 @@ function SuperadminMainDashboardView({
       </div>
 
       {/* NEW TENANT GROWTH & REVENUE BY PROVIDER */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {/* 4. New Tenant Growth */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base font-bold">New Tenant Growth</CardTitle>
-            <CardDescription>Statistik pendaftaran instansi organisasi per bulan.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 w-full">
-              {tenantGrowthData.length === 0 ? (
-                <div className="text-muted-foreground flex h-full items-center justify-center text-xs">
-                  Tidak ada data pendaftaran
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={tenantGrowthData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
-                    <XAxis
-                      dataKey="name"
-                      stroke="#888888"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "var(--background)",
-                        borderColor: "var(--border)"
-                      }}
-                    />
-                    <Bar
-                      dataKey="Tenants"
-                      name="Tenants Baru"
-                      fill="#0ea5e9"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 5. Revenue by Provider */}
         <Card className="flex flex-col justify-between">
           <CardHeader>
             <CardTitle className="text-base font-bold">Revenue by Provider</CardTitle>
@@ -450,10 +502,52 @@ function SuperadminMainDashboardView({
             </div>
           </CardContent>
         </Card>
+        {/* 5. Revenue by Provider */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base font-bold">New Tenant Growth</CardTitle>
+            <CardDescription>Statistik pendaftaran instansi organisasi per bulan.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 w-full">
+              {tenantGrowthData.length === 0 ? (
+                <div className="text-muted-foreground flex h-full items-center justify-center text-xs">
+                  Tidak ada data pendaftaran
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={tenantGrowthData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
+                    <XAxis
+                      dataKey="name"
+                      stroke="#888888"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--background)",
+                        borderColor: "var(--border)"
+                      }}
+                    />
+                    <Bar
+                      dataKey="Tenants"
+                      name="Tenants Baru"
+                      fill="#0ea5e9"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* POPULAR PLANS & TENANT STATUS DISTRIBUTION */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {/* 6. Popular Plans */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -543,68 +637,18 @@ function SuperadminMainDashboardView({
         </Card>
       </div>
 
-      {/* 7. RECENT TRANSACTIONS (Table Limit 20) */}
+      {/* 7. RECENT TRANSACTIONS — now the reusable DataTable instead of a raw <table> */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-bold">Recent Transactions (Last 20)</CardTitle>
+          <CardTitle className="text-base font-bold">Recent Transactions</CardTitle>
           <CardDescription>Catatan aliran dana terverifikasi pada sistem.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-xs">
-              <thead>
-                <tr className="text-muted-foreground border-b font-bold tracking-wider uppercase">
-                  <th className="py-2.5">Tenant</th>
-                  <th className="py-2.5">Plan</th>
-                  <th className="py-2.5">Amount</th>
-                  <th className="py-2.5">Provider</th>
-                  <th className="py-2.5">Status</th>
-                  <th className="py-2.5">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentTransactions.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-muted-foreground py-6 text-center">
-                      Tidak ada transaksi baru
-                    </td>
-                  </tr>
-                ) : (
-                  recentTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-muted/40 border-b transition last:border-0">
-                      <td className="text-foreground py-3 font-semibold">
-                        {tx.tenants?.name || "Unknown Tenant"}
-                      </td>
-                      <td className="text-muted-foreground py-3">{tx.plan_name}</td>
-                      <td className="text-foreground py-3 font-extrabold">
-                        {formatPrice(tx.net_amount || tx.amount_in_idr || tx.amount, tx.currency)}
-                      </td>
-                      <td className="py-3 font-mono text-[10px] uppercase">
-                        {tx.provider || "Manual"}
-                      </td>
-                      <td className="py-3">
-                        <Badge
-                          className={`rounded-full text-[9px] font-bold uppercase ${
-                            ["paid", "completed", "success", "settlement"].includes(
-                              tx.status?.toLowerCase()
-                            )
-                              ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15"
-                              : "bg-red-500/15 text-red-600 hover:bg-red-500/15"
-                          }`}>
-                          {tx.status}
-                        </Badge>
-                      </td>
-                      <td className="text-muted-foreground py-3">
-                        {new Date(tx.created_at).toLocaleDateString(
-                          locale === "id" ? "id-ID" : "en-US"
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            table={transactionsTable}
+            columns={transactionColumns}
+            noResultsText="Tidak ada transaksi baru"
+          />
         </CardContent>
       </Card>
 
@@ -702,7 +746,7 @@ function SuperadminMainDashboardView({
       </Card>
 
       {/* TOP PAYING TENANTS & COUPON STATS ROW */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {/* 15. Top Paying Tenant */}
         <Card>
           <CardHeader>
@@ -778,7 +822,7 @@ function SuperadminMainDashboardView({
       </div>
 
       {/* ADDITIONAL PARAMETERS (DATABASE, USER STATUS, CURRENCY) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {/* 11. Database Model Distribution */}
         <Card>
           <CardHeader>
@@ -850,64 +894,6 @@ function SuperadminMainDashboardView({
                 <span className="text-muted-foreground text-xs">{cur.value} tenants</span>
               </div>
             ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* QUICK ACTIONS & NOTIFICATIONS PANEL */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* 16. Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-bold">Quick Actions</CardTitle>
-            <CardDescription>Pintasan cepat manajemen fungsional superadmin.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="justify-start gap-2 text-xs" size="sm">
-              <Plus className="h-3.5 w-3.5" /> Create Plan
-            </Button>
-            <Button variant="outline" className="justify-start gap-2 text-xs" size="sm">
-              <Plus className="h-3.5 w-3.5" /> Create Coupon
-            </Button>
-            <Button variant="outline" className="justify-start gap-2 text-xs" size="sm">
-              <Plus className="h-3.5 w-3.5" /> Add Tenant
-            </Button>
-            <Button variant="outline" className="justify-start gap-2 text-xs" size="sm">
-              <ExternalLink className="h-3.5 w-3.5" /> View Transactions
-            </Button>
-            <Button variant="outline" className="col-span-2 justify-center gap-2 text-xs" size="sm">
-              <ArrowRight className="h-3.5 w-3.5" /> View Subscriptions
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* 17. Notification Panel */}
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-bold">
-              <Bell className="h-5 w-5 text-amber-500" />
-              Notification Panel
-            </CardTitle>
-            <CardDescription>
-              Pemberitahuan sistem kesehatan ekosistem SaaS saat ini.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 space-y-2">
-            {notifications.length === 0 ? (
-              <div className="text-muted-foreground flex h-full items-center justify-center py-4 text-xs">
-                <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" />
-                Semua sistem berjalan normal tanpa peringatan.
-              </div>
-            ) : (
-              notifications.map((notif, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-2 rounded-lg border border-amber-500/10 bg-amber-500/5 p-2 text-xs">
-                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                  <span className="text-foreground font-medium">{notif}</span>
-                </div>
-              ))
-            )}
           </CardContent>
         </Card>
       </div>

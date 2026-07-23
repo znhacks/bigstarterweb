@@ -302,7 +302,7 @@ export function useSuperadminMainDashboard() {
   // 7. RECENT TRANSACTIONS (LIMIT 20)
   // ==========================================
   const recentTransactions = useMemo(() => {
-    return transactions.slice(0, 20);
+    return transactions.slice(0, 10);
   }, [transactions]);
 
   // ==========================================
