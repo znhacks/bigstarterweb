@@ -122,6 +122,7 @@
     "notenant": "Tidak ada organisasi",
     "neworg": "Organisasi baru",
     "addneworg": "Buat Organisasi baru",
+    "more": "Lebih Banyak",
     "searchdialog": {
       "title": "Cari Perintah",
       "empty": "Tidak ada hasil yang ditemukan",
@@ -728,6 +729,7 @@
     "subtitle": "Kelola profilmu, preferensi bahasa, dan konfigurasi keamanan akun mu",
     "menu": {
       "general": "Umum",
+      "appearance": "Tampilan",
       "security": "Keamanan"
     },
     "account-general": {
@@ -1045,7 +1047,9 @@
       "table": {
         "code": "Kode Kupon",
         "discount": "Besaran Diskon",
+        "discount-type": "Tipe Diskon",
         "expiry": "Batas Kedaluwarsa",
+        "expiry-status": "Status Kadaluwarsa",
         "quota": "Kuota Penukaran",
         "actions": "Aksi",
         "redeemed": "terpakai",

@@ -740,6 +740,7 @@
     "subtitle": "إدارة ملفك الشخصي، ولغتك المفضلة، وتكوين إعدادات الأمان الخاصة بك",
     "menu": {
       "general": "عام",
+      "appearance": "المظهر",
       "security": "الأمان"
     },
     "account-general": {
@@ -1056,7 +1057,9 @@
       "table": {
         "code": "رمز القسيمة",
         "discount": "قيمة الخصم",
+        "discount-type": "نوع الخصم",
         "expiry": "تاريخ الانتهاء",
+        "expiry-status": "حالة انتهاء الصلاحية",
         "quota": "الحصة",
         "actions": "إجراءات",
         "redeemed": "مُستخدمة",

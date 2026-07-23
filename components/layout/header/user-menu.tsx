@@ -167,21 +167,6 @@ export default function UserMenu() {
           <LogOut className="me-2 h-4 w-4" />
           {t("logout")}
         </DropdownMenuItem>
-        {/* <div className="bg-muted mt-1.5 rounded-md border">
-          <div className="space-y-3 p-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium">Credits</h4>
-              <div className="text-muted-foreground flex cursor-pointer items-center text-sm">
-                <span>5 left</span>
-                <ChevronRightIcon className="ms-1 h-4 w-4 rtl:-scale-x-100" />
-              </div>
-            </div>
-            <Progress value={40} indicatorColor="bg-primary" />
-            <div className="text-muted-foreground flex items-center text-sm text-[11px]">
-              Daily credits used first
-            </div>
-          </div>
-        </div> */}
       </DropdownMenuContent>
     </DropdownMenu>
   );

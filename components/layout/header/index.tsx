@@ -29,7 +29,7 @@ export function SiteHeader() {
           {/* <Notifications /> */}
           <ThemeSwitch />
           <LanguageSwitcher />
-          <ThemeCustomizerPanel />
+          {/* <ThemeCustomizerPanel /> */}
           <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
           <UserMenu />
         </div>

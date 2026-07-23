@@ -740,6 +740,7 @@
     "subtitle": "Manage your profile, prefered language, and configuration your security",
     "menu": {
       "general": "General",
+      "appearance": "Appearance",
       "security": "Security"
     },
     "account-general": {
@@ -1056,7 +1057,9 @@
       "table": {
         "code": "Coupon Code",
         "discount": "Discount",
+        "discount-type": "Discount Type",
         "expiry": "Expires",
+        "expiry-status": "Expiration Status",
         "quota": "Quota",
         "actions": "Actions",
         "redeemed": "used",
