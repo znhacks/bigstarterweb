@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
-export async function taskRepository(supabase: SupabaseClient) {
+export async function taskRepository(supabase: SupabaseClient<any, any, any, any, any>) {
   return {
     query() {
       return supabase.from("tasks");

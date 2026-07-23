@@ -1,7 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
 
-export async function membershipRepository(supabase: SupabaseClient) {
+export async function membershipRepository(supabase: SupabaseClient<any, any, any, any, any>) {
   return {
     query() {
       return supabase.from("memberships");
