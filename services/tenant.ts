@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMembershipsByUser } from "@/supabase/helper/memberships";
 import { cookies } from "next/headers";
 import type {
   ActiveTenant,

@@ -528,7 +528,7 @@
     },
     "export": {
       "filename": "Tugas",
-      "title": "Daftar Tugas",
+      "title": "Tugas",
       "generatedAt": "Dibuat pada",
       "sheetName": "Tugas"
     },
@@ -922,8 +922,8 @@
         }
       },
       "subscriptions": {
-        "title": "Daftar Langganan Aktif",
-        "description": "Menampilkan daftar penyewa (tenant) yang saat ini memiliki paket berlangganan aktif.",
+        "title": "Langganan Aktif",
+        "description": "Menampilkan penyewa (tenant) yang saat ini memiliki paket berlangganan aktif.",
         "table": {
           "tenant": "Tenant",
           "plan": "Paket",
@@ -1034,7 +1034,7 @@
       }
     },
     "coupons": {
-      "title": "Manajemen Kupon & Diskon",
+      "title": "Kupon & Diskon",
       "subTitle": "Kelola kupon promosi, diskon persentase/flat rupiah, kuota penebusan, dan masa berlaku.",
       "detail": "Detail",
       "buttons": {
@@ -1085,7 +1085,7 @@
       }
     },
     "plans": {
-      "title": "Manajemen Paket",
+      "title": "Paket",
       "subTitle": "Buat, ubah, atau nonaktifkan skema harga paket dan pemetaan gateway.",
       "buttons": {
         "create": "Tambah Paket",

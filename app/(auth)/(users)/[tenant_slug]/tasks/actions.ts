@@ -5,6 +5,8 @@ import { getActiveTenant } from "@/services/tenant";
 import { PERMISSIONS } from "@/lib/rbac";
 import { createClient } from "@/lib/supabase/server";
 import { createTenantServerClient } from "@/lib/supabase/tenant-server";
+import { getProfilesByIds } from "@/supabase/helper/profiles";
+import { getTask, getTasksByTenant } from "@/supabase/helper/tasks";
 import type { Task, TaskInput, TaskProfile, ActionResult } from "./types";
 
 /**
