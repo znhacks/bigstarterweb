@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings, Shield } from "lucide-react";
+import { Palette, Settings, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useLocale, useTranslations } from "next-intl";
@@ -47,7 +47,7 @@ export default function SettingsLayout({
                 <span>{t("menu.general")}</span>
               </Link>
 
-              {/* <Link
+              <Link
                 href="/settings/appearance"
                 className={cn(
                   "flex w-full items-center justify-start gap-3 rounded-md px-4 py-2 text-sm font-medium transition-colors",
@@ -55,9 +55,9 @@ export default function SettingsLayout({
                     ? "bg-secondary text-foreground font-semibold"
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}>
-                <Settings className="h-4 w-4 shrink-0" />
+                <Palette className="h-4 w-4 shrink-0" />
                 <span>{t("menu.appearance")}</span>
-              </Link> */}
+              </Link>
 
               <Link
                 href="/settings/security"

@@ -16,6 +16,10 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getCountryDefaults } from "@/lib/i18n/country-defaults";
 import { LOCALE_COOKIE } from "@/i18n/routing";
 
+// Impor repositori yang dibutuhkan (sesuaikan jalur path berkas Anda)
+import { countryRepository } from "@/supabase/repositories/countries";
+import { profileRepository } from "@/supabase/repositories/profiles";
+
 const COOKIE_OPTS = "path=/;max-age=31536000;SameSite=Lax";
 const setCookie = (name: string, value: string) => {
   document.cookie = `${name}=${value};${COOKIE_OPTS}`;
@@ -42,12 +46,18 @@ export function RegisterForm() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [alreadyExists, setAlreadyExists] = useState(false);
 
+  // Mengambil daftar negara menggunakan repositori
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("countries")
+      // 1. Inisialisasi countryRepository dengan melewatkan browser client
+      const countriesRepo = await countryRepository(supabase);
+
+      // 2. Ambil data dengan .query()
+      const { data } = await countriesRepo
+        .query()
         .select("id, name, iso2, currency, timezones")
         .order("name", { ascending: true });
+
       if (data) setCountries(data as any);
     })();
   }, []);
@@ -96,7 +106,11 @@ export function RegisterForm() {
         } catch {}
         const locale = defaults.locale || "en";
 
-        await supabase.from("profiles").insert({
+        // 3. Inisialisasi profileRepository dengan browser client
+        const profilesRepo = await profileRepository(supabase);
+
+        // 4. Masukkan data profil baru menggunakan metode .insert() repositori
+        await profilesRepo.insert({
           id: data.user.id,
           full_name: fullName,
           address_country: country || null,

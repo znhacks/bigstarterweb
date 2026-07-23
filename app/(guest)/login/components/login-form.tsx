@@ -26,6 +26,9 @@ import { useLocale, useTranslations } from "next-intl";
 import { formatDateTime } from "@/lib/i18n/format";
 import { OtpLoginForm } from "@/components/auth/otp-login";
 
+// Impor fungsi repositori baru Anda di sini (sesuaikan jalur path berkas Anda)
+import { profileRepository } from "@/supabase/repositories/profiles";
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,6 +41,7 @@ export function LoginForm() {
     until: string | null;
     reason: string | null;
   } | null>(null);
+
   useEffect(() => {
     if (reason !== "banned") return;
     (async () => {
@@ -45,13 +49,20 @@ export function LoginForm() {
         data: { user }
       } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
-        .from("profiles")
+
+      const profiles = await profileRepository(supabase);
+      const { data } = await profiles
+        .query()
         .select("banned_until, banned_reason")
         .eq("id", user.id)
         .maybeSingle();
-      if (data)
-        setBannedInfo({ until: (data as any).banned_until, reason: (data as any).banned_reason });
+
+      if (data) {
+        setBannedInfo({
+          until: (data as any).banned_until,
+          reason: (data as any).banned_reason
+        });
+      }
     })();
   }, [reason]);
 
@@ -180,15 +191,12 @@ export function LoginForm() {
   };
 
   // 6. Login Menggunakan Passkey (WebAuthn)
-  // Cari fungsi ini di LoginForm.tsx Anda
-  // 6. Login Menggunakan Passkey (WebAuthn)
   const handlePasskeyLogin = async () => {
     setIsLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
 
     try {
-      // Panggil fungsi tanpa menyertakan properti email
       const { data, error } = await supabase.auth.signInWithPasskey();
 
       if (error) throw error;
@@ -202,7 +210,6 @@ export function LoginForm() {
     } catch (err: any) {
       const rawMessage = err.message || "";
 
-      // Memeriksa apakah error disebabkan karena pengguna menekan tombol 'Cancel' atau waktu habis
       if (
         rawMessage.includes("timed out") ||
         rawMessage.includes("not allowed") ||

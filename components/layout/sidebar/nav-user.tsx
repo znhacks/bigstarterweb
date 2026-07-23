@@ -24,6 +24,7 @@ import { DotsVerticalIcon } from "@radix-ui/react-icons";
 
 // Impor klien Supabase Anda
 import { supabase } from "@/lib/supabase";
+import { getProfile } from "@/supabase/helper/profiles";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
@@ -51,11 +52,11 @@ export function NavUser() {
       setEmail(user.email || "");
 
       // Mengambil nama lengkap dari tabel profiles
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("full_name, avatar")
-        .eq("id", user.id)
-        .single();
+      const { data: profileData } = await getProfile(
+        user.id,
+        "full_name, avatar",
+        supabase
+      );
 
       if (profileData) {
         setFullName(profileData.full_name);

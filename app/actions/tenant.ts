@@ -1,13 +1,16 @@
-// app/actions/tenant.ts
 "use server";
 
 import { bigstarterConfig } from "@/bigstarter.config";
-import { createClient as createSystemClient } from "@supabase/supabase-js"; // Gunakan nama alias
-import { createClient as createServerClient } from "@/lib/supabase/server"; // UBAH: Import helper SSR kita
+import { createClient as createSystemClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
+import { getRoleByName } from "@/supabase/helper/roles";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-// Inisialisasi Supabase Client khusus untuk skema 'system' (Bypass RLS dengan Service Role)
+// Impor repositori yang dibutuhkan (sesuaikan jalur path berkas Anda)
+import { tenantRepository } from "@/supabase/repositories/tenants";
+import { membershipRepository } from "@/supabase/repositories/memberships";
+
 const systemSupabase = createSystemClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -17,9 +20,6 @@ const systemSupabase = createSystemClient(
   }
 );
 
-/**
- * Server Action untuk mengganti tenant aktif saat ini melalui Cookie
- */
 export async function switchTenant(tenantId: string, redirectTo: string = "/") {
   const cookieStore = await cookies();
   cookieStore.set("active_tenant_id", tenantId, {
@@ -36,7 +36,7 @@ export async function switchTenant(tenantId: string, redirectTo: string = "/") {
  * Server Action Tunggal untuk pendaftaran organisasi baru (Onboarding Multi-Model)
  */
 export async function createTenant(formData: FormData) {
-  // 1. UBAH: Validasi Autentikasi Pengguna menggunakan SSR Client agar bisa membaca Cookie Sesi
+  // 1. Validasi Autentikasi Pengguna menggunakan SSR Client agar bisa membaca Cookie Sesi
   const defaultSupabase = await createServerClient();
 
   const {
@@ -76,10 +76,13 @@ export async function createTenant(formData: FormData) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
 
-  // Validasi keunikan subdomain/slug di skema system
-  const { data: existingTenant } = await systemSupabase
-    .from("tenants")
-    .select("slug") // Sesuaikan dengan kolom slug Anda
+  // Inisialisasi tenantRepository menggunakan klien sistem (Service Role)
+  const tenantsRepo = await tenantRepository(systemSupabase);
+
+  // Validasi keunikan subdomain/slug di skema system menggunakan query builder repositori
+  const { data: existingTenant } = await tenantsRepo
+    .query()
+    .select("slug")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -88,12 +91,11 @@ export async function createTenant(formData: FormData) {
     slug = `${slug}-${suffix}`;
   }
 
-  // 4. Masukkan data ke tabel system.tenants
-  const { data: newTenant, error: tenantError } = await systemSupabase
-    .from("tenants")
+  // 4. Masukkan data ke tabel system.tenants melalui repositori
+  const { data: newTenant, error: tenantError } = await tenantsRepo
     .insert({
       name: name.trim(),
-      slug: slug, // slug digunakan sebagai subdomain pemisah
+      slug: slug,
       db_model: finalModel
     })
     .select()
@@ -105,13 +107,12 @@ export async function createTenant(formData: FormData) {
 
   // 5. Hubungkan user dengan tenant baru di tabel system.memberships sebagai OWNER
   //    Ambil id role "Owner" dari tabel roles (RBAC ternormalisasi).
-  const { data: ownerRole } = await systemSupabase
-    .from("roles")
-    .select("id")
-    .eq("name", "Owner")
-    .maybeSingle();
+  const { data: ownerRole } = await getRoleByName("Owner", "id", systemSupabase);
 
-  const { error: membershipError } = await systemSupabase.from("memberships").insert({
+  // Inisialisasi membershipRepository menggunakan klien sistem (Service Role)
+  const membershipsRepo = await membershipRepository(systemSupabase);
+
+  const { error: membershipError } = await membershipsRepo.insert({
     user_id: user.id,
     tenant_id: newTenant.id,
     role_id: ownerRole?.id ?? null
