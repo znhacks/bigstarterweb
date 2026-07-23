@@ -40,7 +40,7 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { formatDateTime } from "@/lib/i18n/format";
+import { formatDateTime, formatNumber } from "@/lib/i18n/format";
 
 import { useDataTable } from "@/components/data-table/use-data-table";
 import { DataTable } from "@/components/data-table/data-table";
@@ -113,6 +113,9 @@ export function AdminCouponsPage() {
       createSelectColumn<DBCoupon>(),
       {
         accessorKey: "code",
+        meta: {
+          label: t("table.code")
+        },
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.code")} />,
         filterFn: containsFilterFn,
         cell: ({ row }) => (
@@ -128,6 +131,9 @@ export function AdminCouponsPage() {
       },
       {
         accessorKey: "discount_type",
+        meta: {
+          label: t("table.discount-type")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("form.typeLabel")} />
         ),
@@ -144,6 +150,9 @@ export function AdminCouponsPage() {
       },
       {
         accessorKey: "discount_value",
+        meta: {
+          label: t("table.discount")
+        },
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.discount")} />
         ),
@@ -157,6 +166,9 @@ export function AdminCouponsPage() {
       },
       {
         accessorKey: "valid_until",
+        meta: {
+          label: t("table.expiry")
+        },
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.expiry")} />,
         cell: ({ row }) => {
           const c = row.original;
@@ -182,6 +194,9 @@ export function AdminCouponsPage() {
       },
       {
         id: "expiryStatus",
+        meta: {
+          label: t("table.expiry-status")
+        },
         accessorFn: (row) => getExpiryStatus(row),
         header: "Expiry Status",
         filterFn: multiSelectFilterFn,
@@ -189,6 +204,9 @@ export function AdminCouponsPage() {
       },
       {
         accessorKey: "redeemed_count",
+        meta: {
+          label: t("table.quota")
+        },
         header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.quota")} />,
         cell: ({ row }) => {
           const c = row.original;
@@ -198,14 +216,15 @@ export function AdminCouponsPage() {
           return (
             <div
               onClick={() => handleOpenView(c)}
-              className="max-w-[200px] cursor-pointer space-y-1 select-none">
+              className="max-w-50 cursor-pointer space-y-1 select-none">
               <div className="text-muted-foreground flex items-center justify-between text-xs font-medium">
                 <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" /> {c.redeemed_count} {t("table.redeemed")}
+                  <Users className="h-3.5 w-3.5" /> {formatNumber(c.redeemed_count, locale)}{" "}
+                  {t("table.redeemed")}
                 </span>
                 <span>
-                  {c.max_redemptions
-                    ? `${c.max_redemptions} ${t("table.limit")}`
+                  {c.max_redemptions !== null && c.max_redemptions !== undefined
+                    ? `${formatNumber(c.max_redemptions, locale)} ${t("table.limit")}`
                     : t("table.unlimited")}
                 </span>
               </div>

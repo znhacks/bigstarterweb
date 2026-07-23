@@ -102,7 +102,7 @@ export function AdminPlansPage() {
   const activePlaceholderLabel = activeLangMeta?.placeholder || activeFormTab;
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8">
+    <div className="mx-auto w-full space-y-6 px-4 py-8">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-foreground text-2xl font-bold tracking-tight md:text-3xl">
