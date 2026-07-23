@@ -1036,7 +1036,10 @@
     "coupons": {
       "title": "Coupons & Discounts",
       "subTitle": "Manage promotional coupons, percentage/flat discounts, redemption quotas, and validity periods.",
-      "detail": "Detail",
+      "expired": "Expired",
+      "active": "Active",
+      "column": "Column",
+      "selected": "selected",
       "buttons": {
         "create": "Add Coupon",
         "cancel": "Cancel",
@@ -1060,7 +1063,9 @@
         "search": "Search code...",
         "rowsPerPage": "Rows per page",
         "page": "Page",
-        "of": "of"
+        "of": "of",
+        "active": "Active",
+        "expired": "Expired"
       },
       "form": {
         "title": "Create New Promotional Coupon",
@@ -1082,11 +1087,27 @@
         "deleteDesc": "This action will permanently delete coupon \"{code}\". This cannot be undone.",
         "error": "An error occurred.",
         "required": "Code, type, and value of the coupon are required."
+      },
+      "detail": {
+        "title": "Details",
+        "desc": "View coupon details and tenant redemption history.",
+        "detail-coupon": "Coupon Details",
+        "discount-type": "Discount Type",
+        "discount-value": "Discount Value",
+        "expiry": "Expiration Date",
+        "coupon-status": "Coupon Status",
+        "usage": "Usage",
+        "unlimited": "Unlimited",
+        "coupon-users": "Coupon Users",
+        "nousage": "No tenants have redeemed this coupon yet."
       }
     },
     "plans": {
       "title": "Plans",
       "subTitle": "Create, modify, or deactivate plan pricing schemes and gateway mappings.",
+      "column": "Column",
+      "optional": "Providers that do not require a Gateway ID can be left empty. Simply enable the provider.",
+      "selected": "selected",
       "buttons": {
         "create": "Add Plan",
         "edit": "Edit",

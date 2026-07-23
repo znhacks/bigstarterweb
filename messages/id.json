@@ -1036,7 +1036,10 @@
     "coupons": {
       "title": "Kupon & Diskon",
       "subTitle": "Kelola kupon promosi, diskon persentase/flat rupiah, kuota penebusan, dan masa berlaku.",
-      "detail": "Detail",
+      "column": "Kolom",
+      "expired": "Kedaluwarsa",
+      "active": "Aktif",
+      "selected": "dipilih",
       "buttons": {
         "create": "Tambah Kupon",
         "cancel": "Batal",
@@ -1060,7 +1063,9 @@
         "search": "Cari kode...",
         "rowsPerPage": "Baris per halaman",
         "page": "Halaman",
-        "of": "dari"
+        "of": "dari",
+        "active": "Aktif",
+        "expired": "Kedaluwarsa"
       },
       "form": {
         "title": "Buat Kupon Promosi Baru",
@@ -1082,11 +1087,27 @@
         "deleteDesc": "Tindakan ini akan menghapus permanen kupon \"{code}\". Tidak dapat dibatalkan.",
         "error": "Terjadi kesalahan.",
         "required": "Kode, tipe, dan nilai kupon wajib diisi."
+      },
+      "detail": {
+        "title": "Detail",
+        "desc": "Informasi rincian kupon dan riwayat penebusan tenant",
+        "detail-coupon": "Detail Kupon",
+        "discount-type": "Tipe Diskon",
+        "discount-value": "Nilai Diskon",
+        "expiry": "Batas Kedaluwarsa",
+        "coupon-status": "Status Kupon",
+        "usage": "Penggunaan Kuota",
+        "unlimited": "Tak Terbatas",
+        "coupon-users": "Pengguna Kupon",
+        "nousage": "Belum ada tenant yang menggunakan kupon ini."
       }
     },
     "plans": {
       "title": "Paket",
       "subTitle": "Buat, ubah, atau nonaktifkan skema harga paket dan pemetaan gateway.",
+      "column": "Kolom",
+      "optional": "Provider yang tidak menggunakan ID gateway tidak perlu diisi, cukup aktifkan saja",
+      "selected": "dipilih",
       "buttons": {
         "create": "Tambah Paket",
         "edit": "Edit",
