@@ -394,7 +394,8 @@
       "coupons": "Coupons",
       "billing-dashboard": "Financial Dashboard",
       "subscriptions": "Subscriptions",
-      "history-transactions": "Transaction History"
+      "history-transactions": "Transaction History",
+      "enterprise": "Enterprise Inquiries"
     }
   },
   "currency": {
@@ -640,7 +641,8 @@
       "downgradeinfo": "Downgrading your plan can only be done after your current active plan ends.",
       "loading": "Verifying your payment, please wait...",
       "changeTitle": "Choose Your Plan",
-      "saveDiscount": "Save 17%",
+      "saveDiscount": "Save {discount}%",
+      "recommended": "Recommended",
       "cycles": {
         "monthly": "Monthly",
         "yearly": "Yearly"
@@ -654,6 +656,9 @@
       "buttons": {
         "planActive": "Active Plan",
         "upgrade": "Upgrade Plan",
+        "schedule-downgrade": "Scheduled Downgrade",
+        "switchToYearly": "Switch to Yearly",
+        "switchToMonthly": "Switch to Monthly",
         "downgrade": "Downgrade Plan",
         "choose": "Choose {planName}",
         "cancel": "Cancel",
@@ -706,7 +711,8 @@
         "planCycle": "{planName} Plan ({cycle})",
         "creditApplied": "Prepaid Credit Applied",
         "amountToPay": "Amount Paid",
-        "billedAnnually": "Billed annually"
+        "billedAnnually": "Billed annually",
+        "payNow": "Pay Now"
       },
       "dialogRefund": {
         "title": "Request a Refund",
@@ -1149,6 +1155,9 @@
         "descriptionPlaceholder": "Brief explanation of plan benefits",
         "displayFeatures": "Marketing Features",
         "displayFeaturesPlaceholder": "example:\n10,000 Tasks per month\nPriority Support",
+        "recommended": "Recommended",
+        "enterprise": "Enterprise (Contact)",
+        "trialDays": "Trial (days)",
         "dynamic": "Dynamic",
         "gateActive": "ACTIVE",
         "gateInactive": "INACTIVE",

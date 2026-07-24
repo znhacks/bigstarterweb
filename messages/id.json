@@ -394,7 +394,8 @@
       "coupons": "Kupon",
       "billing-dashboard": "Dasbor Keuangan",
       "subscriptions": "Berlangganan",
-      "history-transactions": "Riwayat Transaksi"
+      "history-transactions": "Riwayat Transaksi",
+      "enterprise": "Permintaan Enterprise"
     }
   },
   "currency": {
@@ -640,7 +641,7 @@
       "downgradeinfo": "Penurunan paket hanya dapat dilakukan setelah paket aktif Anda saat ini berakhir.",
       "loading": "Memverifikasi pembayaran Anda, mohon tunggu...",
       "changeTitle": "Pilih Paket Anda",
-      "saveDiscount": "Hemat 17%",
+      "saveDiscount": "Hemat {discount}%",
       "cycles": {
         "monthly": "Bulanan",
         "yearly": "Tahunan"
@@ -654,6 +655,9 @@
       "buttons": {
         "planActive": "Paket Aktif",
         "upgrade": "Tingkatkan Paket",
+        "schedule-downgrade": "Penurunan Paket Dijadwalkan",
+        "switchToYearly": "Beralih ke Langganan Tahunan",
+        "switchToMonthly": "Beralih ke Langganan Bulanan",
         "downgrade": "Turunkan Paket",
         "choose": "Pilih {planName}",
         "cancel": "Batal",
@@ -706,7 +710,8 @@
         "planCycle": "Paket {planName} ({cycle})",
         "creditApplied": "Kredit Prabayar Diterapkan",
         "amountToPay": "Jumlah yang Dibayar",
-        "billedAnnually": "Ditagih tahunan"
+        "billedAnnually": "Ditagih tahunan",
+        "payNow": "Bayar"
       },
       "dialogRefund": {
         "title": "Ajukan Pengembalian Dana",
@@ -1149,6 +1154,9 @@
         "descriptionPlaceholder": "Penjelasan singkat keunggulan paket",
         "displayFeatures": "Fitur Pemasaran",
         "displayFeaturesPlaceholder": "contoh:\n10.000 Tasks per bulan\nDukungan Prioritas",
+        "recommended": "Direkomendasikan",
+        "enterprise": "Enterprise (Kontak)",
+        "trialDays": "Trial (hari)",
         "dynamic": "Dinamis",
         "gateActive": "AKTIF",
         "gateInactive": "NON-AKTIF",

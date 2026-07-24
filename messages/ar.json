@@ -394,7 +394,8 @@
       "coupons": "الكوبونات",
       "billing-dashboard": "لوحة قيادة المالية",
       "subscriptions": "الاشتراكات",
-      "history-transactions": "سجل المعاملات"
+      "history-transactions": "سجل المعاملات",
+      "enterprise": "طلبات Enterprise"
     }
   },
   "currency": {
@@ -640,7 +641,7 @@
       "downgradeinfo": "لا يمكن خفض الباقة إلا بعد انتهاء صلاحية باقتك النشطة الحالية.",
       "loading": "جاري التحقق من عملية الدفع، يرجى الانتظار...",
       "changeTitle": "اختر باقتك",
-      "saveDiscount": "وفر 17%",
+      "saveDiscount": "وفر {discount}%",
       "cycles": {
         "monthly": "شهريًا",
         "yearly": "سنويًا"
@@ -654,6 +655,9 @@
       "buttons": {
         "planActive": "الباقة النشطة",
         "upgrade": "ترقية الباقة",
+        "schedule-downgrade": "تخفيض مج",
+        "switchToYearly": "التحويل إلى الاشتراك السنوي",
+        "switchToMonthly": "التحويل إلى الاشتراك الشهري",
         "downgrade": "خفض الباقة",
         "choose": "اختر {planName}",
         "cancel": "إلغاء",
@@ -706,7 +710,8 @@
         "planCycle": "باقة {planName} ({cycle})",
         "creditApplied": "الرصيد المسبق المطبق",
         "amountToPay": "المبلغ المدفوع",
-        "billedAnnually": "تُدفع سنويًا"
+        "billedAnnually": "تُدفع سنويًا",
+        "payNow": "ادفع الآن"
       },
       "dialogRefund": {
         "title": "طلب استرداد الأموال",
@@ -1149,6 +1154,9 @@
         "descriptionPlaceholder": "شرح موجز لمزايا الباقة",
         "displayFeatures": "ميزات التسويق",
         "displayFeaturesPlaceholder": "مثال:\n10,000 مهمة شهريًا\nدعم ذو أولوية",
+        "recommended": "موصى به",
+        "enterprise": "Enterprise (تواصل)",
+        "trialDays": "تجريبي (أيام)",
         "dynamic": "ديناميكي",
         "gateActive": "نشط",
         "gateInactive": "غير نشط",
