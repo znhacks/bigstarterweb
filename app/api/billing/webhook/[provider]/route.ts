@@ -47,7 +47,10 @@ function computeEndsAt(interval?: string, provided?: string): string | null {
 }
 
 /** Redeem kupon via RPC (atomic, idempotent). Aman dipanggil di banyak event (subscription.activated & payment.succeeded). */
-async function redeemCouponIfPresent(couponCode: string | undefined, tenantId: string): Promise<void> {
+async function redeemCouponIfPresent(
+  couponCode: string | undefined,
+  tenantId: string
+): Promise<void> {
   if (!couponCode) return;
   try {
     const { data: redeemResult, error: redeemErr } = await supabaseAdmin.rpc("redeem_coupon", {
@@ -135,7 +138,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     if (!finalPlanId && providerSubscriptionId) {
       const externalPriceId = providerSubscriptionId;
 
-      const { data: priceRecord, error: priceErr } = await (await planPriceRepository(supabaseAdmin))
+      const { data: priceRecord, error: priceErr } = await (
+        await planPriceRepository(supabaseAdmin)
+      )
         .query()
         .select("plan_id")
         .or(`provider_ids->>${providerName}.eq.${externalPriceId}`)
@@ -239,7 +244,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
             : 0;
 
       const calculatedFee =
-        feeAmount !== undefined ? feeAmount : calculateGatewayFee(grossAmount, providerName, activeCurrency);
+        feeAmount !== undefined
+          ? feeAmount
+          : calculateGatewayFee(grossAmount, providerName, activeCurrency);
 
       const calculatedNet = Math.max(0, grossAmount - calculatedTax - calculatedFee);
 
@@ -263,7 +270,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       // plan_name: simpan NAMA plan (bukan slug) utk tampilan history.
       let resolvedPlanName = finalPlanId || "unknown";
       if (finalPlanId) {
-        const { data: planRow } = await (await planRepository(supabaseAdmin))
+        const { data: planRow } = await (
+          await planRepository(supabaseAdmin)
+        )
           .query()
           .select("name")
           .eq("id", finalPlanId)
@@ -272,30 +281,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       }
 
       // order_id: deterministik agar replay webhook idempotent (jangan pakai Date.now()).
-      const resolvedOrderId =
-        orderId || `${providerName}-${providerSubscriptionId || tenantId}`;
+      const resolvedOrderId = orderId || `${providerName}-${providerSubscriptionId || tenantId}`;
 
-      const { error: txError } = await (await transactionRepository(supabaseAdmin))
-        .query()
-        .upsert(
-          {
-            tenant_id: tenantId,
-            amount: grossAmount,
-            currency: activeCurrency,
-            plan_name: resolvedPlanName,
-            order_id: resolvedOrderId,
-            status: "paid",
-            provider: providerName,
-            tax_amount: parseFloat(calculatedTax.toFixed(2)),
-            fee_amount: parseFloat(calculatedFee.toFixed(2)),
-            net_amount: parseFloat(calculatedNet.toFixed(2)),
-            amount_in_idr: amountInIdr !== null ? parseFloat(amountInIdr.toFixed(2)) : null,
-            exchange_rate: exchangeRate,
-            exchange_api_used: exchangeApiUsed,
-            created_at: new Date().toISOString()
-          },
-          { onConflict: "order_id" }
-        );
+      const { error: txError } = await (await transactionRepository(supabaseAdmin)).query().upsert(
+        {
+          tenant_id: tenantId,
+          amount: grossAmount,
+          currency: activeCurrency,
+          plan_name: resolvedPlanName,
+          order_id: resolvedOrderId,
+          status: "paid",
+          provider: providerName,
+          tax_amount: parseFloat(calculatedTax.toFixed(2)),
+          fee_amount: parseFloat(calculatedFee.toFixed(2)),
+          net_amount: parseFloat(calculatedNet.toFixed(2)),
+          amount_in_idr: amountInIdr !== null ? parseFloat(amountInIdr.toFixed(2)) : null,
+          exchange_rate: exchangeRate,
+          exchange_api_used: exchangeApiUsed,
+          created_at: new Date().toISOString()
+        },
+        { onConflict: "order_id" }
+      );
 
       if (txError) {
         throw new Error(`Database Insert Transaction Failed: ${txError.message}`);
@@ -306,7 +312,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       //      tidak menimpa ends_at provider subscription (paypal/stripe) yg sudah benar. ===
       if (finalPlanId) {
         // Scope grant sesuai billingAttachedTo: tenant (default) atau user
-        // (bila config "user" & payment_orders punya user_id).
         const grantOwner = resolveBillingOwner({
           tenantId,
           userId: paymentOrder?.user_id
@@ -320,16 +325,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
           .eq(ownerCol, ownerId)
           .maybeSingle();
 
-        // Re-grant bila: belum ada, plan berubah, tidak ada provider sub id,
-        // ATAU langganan sudah expired/kedaluwarsa (penting utk RENEWAL provider invoice
-        // mayar/midtrans/xendit yg hanya memancarkan payment.succeeded — tanpa ini,
-        // re-subscribe plan yg sama tidak perpanjang ends_at & user terkunci).
+        // Deteksi apakah pembayaran ini berasal dari langganan otomatis berulang resmi gateway
+        // - PayPal Subscription diawali dengan "I-" (misal: I-XXXXXXXXXXXX)
+        // - Stripe Subscription diawali dengan "sub_"
+        // - Paddle Subscription diawali dengan "sub_"
+        const isRecurringProvider =
+          (providerName === "paypal" && providerSubscriptionId?.startsWith("I-")) ||
+          (providerName === "stripe" && providerSubscriptionId?.startsWith("sub_")) ||
+          (providerName === "paddle" && providerSubscriptionId?.startsWith("sub_"));
+
         const isExpired = existingSub
           ? existingSub.status === "expired" ||
             (existingSub.ends_at ? new Date(existingSub.ends_at).getTime() < Date.now() : false)
           : true;
 
+        // --- PERBAIKAN LOGIKA GRANT: ---
+        // Selalu set TRUE (Paksa Update) jika pembayaran ini bertipe Prabayar / Prepaid (non-recurring)
+        // agar tanggal kedaluwarsa (ends_at) diperpanjang otomatis di Supabase.
         const needsGrant =
+          !isRecurringProvider || // <-- JIKA BUKAN RECURRING GATEWAY, SELALU UPDATE DB!
           !existingSub ||
           existingSub.plan_id !== finalPlanId ||
           !existingSub.provider_subscription_id ||
@@ -347,7 +361,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
               provider_subscription_id: providerSubscriptionId || orderId || null,
               provider_customer_id: providerCustomerId || null,
               interval: interval || null,
-              cancel_at_period_end: false,
+              cancel_at_period_end: !isRecurringProvider, // Set True jika ini prepaid (agar UI tahu ini akan berakhir)
               pending_plan_id: null,
               updated_at: new Date().toISOString()
             },
@@ -374,9 +388,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       if (paymentOrder) {
         await (await paymentOrderRepository(supabaseAdmin)).markStatus(paymentOrder.id, "failed");
       }
-      console.warn(
-        `[webhook] Payment FAILED untuk order ${orderId} (tenant ${tenantId})`
-      );
+      console.warn(`[webhook] Payment FAILED untuk order ${orderId} (tenant ${tenantId})`);
     }
 
     return NextResponse.json({ received: true });

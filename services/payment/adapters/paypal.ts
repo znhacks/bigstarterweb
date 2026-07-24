@@ -9,10 +9,15 @@ import {
 } from "../../../interfaces/payment-provider";
 import { convertIdrToCurrency } from "../../exchange-rate";
 
-//Delimiter untuk custom_id: aman karena UUID berisi '-' tapi bukan '::'
+// Delimiter untuk custom_id: aman karena UUID berisi '-' tapi bukan '::'
 const CUSTOM_ID_DELIMITER = "::";
 
-function encodeCustomId(tenantId: string, planId: string, interval: string, couponCode?: string): string {
+function encodeCustomId(
+  tenantId: string,
+  planId: string,
+  interval: string,
+  couponCode?: string
+): string {
   const parts = [tenantId, planId, interval];
   if (couponCode) parts.push(couponCode);
   return parts.join(CUSTOM_ID_DELIMITER);
@@ -80,13 +85,18 @@ export class PayPalAdapter implements PaymentProvider {
     // 2. Konversi nominal Rupiah ke USD secara real-time
     const exchange = await convertIdrToCurrency(amountInIdr, "USD");
     const usdValue = exchange.convertedAmount.toFixed(2);
-    const customId = encodeCustomId(params.tenantId, params.planId, params.interval, params.couponCode);
+    const customId = encodeCustomId(
+      params.tenantId,
+      params.planId,
+      params.interval,
+      params.couponCode
+    );
 
     let approveUrl = "";
     let sessionId = "";
 
     if (paypalPlanId) {
-      // === Provider-managed recurring: subscription dgn plan_id + pricing_scheme override ===
+      // === Provider-managed recurring ===
       const requestBody: any = {
         plan_id: paypalPlanId,
         subscriber: { email_address: params.userEmail },
@@ -96,11 +106,9 @@ export class PayPalAdapter implements PaymentProvider {
           return_url: params.successUrl,
           cancel_url: params.cancelUrl
         },
-        // Sematkan context penuh agar webhook bisa recover tenantId/planId/interval/couponCode
         custom_id: customId
       };
 
-      // Penimpaan harga siklus pertama (diskon kupon / sisa kredit pro-rata)
       if (params.customPrice !== undefined) {
         requestBody.plan = {
           billing_cycles: [
@@ -134,7 +142,7 @@ export class PayPalAdapter implements PaymentProvider {
       approveUrl = approveLink.href;
       sessionId = data.id;
     } else {
-      // === Payment-only: Orders API one-time (TANPA plan PayPal). Plan milik kita, PayPal = alat bayar. ===
+      // === Payment-only: Orders API one-time (TANPA plan PayPal) ===
       const orderBody = {
         intent: "CAPTURE",
         purchase_units: [
@@ -145,6 +153,8 @@ export class PayPalAdapter implements PaymentProvider {
           }
         ],
         application_context: {
+          // --- PERBAIKAN 1: UBAH TOMBOL MENJADI "BAYAR SEKARANG" (PAY_NOW) ---
+          user_action: "PAY_NOW",
           shipping_preference: "NO_SHIPPING",
           return_url: params.successUrl,
           cancel_url: params.cancelUrl
@@ -178,14 +188,11 @@ export class PayPalAdapter implements PaymentProvider {
     };
   }
 
-  /**
-   * Verifikasi signature webhook PayPal via /v1/notifications/verify-webhook-signature.
-   * Mencegah webhook palsu. Bila PAYPAL_WEBHOOK_ID belum diset, beri peringatan & lanjut (dev).
-   */
-  private async verifyWebhookSignature(rawBody: string, headers: Headers, token: string): Promise<boolean> {
-    // FAIL-CLOSED: tanpa PAYPAL_WEBHOOK_ID, signature TIDAK dapat diverifikasi.
-    // Jangan pernah `return true` di sini — itu menerima webhook palsu dan
-    // memungkinkan penyerang men-grant langganan berbayar secara gratis.
+  private async verifyWebhookSignature(
+    rawBody: string,
+    headers: Headers,
+    token: string
+  ): Promise<boolean> {
     if (!this.webhookId) {
       throw new Error(
         "[paypal] PAYPAL_WEBHOOK_ID belum diset — verifikasi signature webhook WAJIB. SET env ini sebelum menerima webhook."
@@ -225,7 +232,6 @@ export class PayPalAdapter implements PaymentProvider {
   }
 
   async handleWebhook(req: Request): Promise<UnifiedWebhookResult> {
-    // Baca raw body dulu (untuk verifikasi signature), baru parse JSON
     const rawBody = await req.text();
     const headers = req.headers;
     const token = await this.getAccessToken();
@@ -237,19 +243,21 @@ export class PayPalAdapter implements PaymentProvider {
 
     const payload = JSON.parse(rawBody);
 
-    // Recover context dari custom_id (ada di semua event subscription & sale)
-    const customIdRaw = payload.resource?.custom_id || payload.resource?.custom || "";
+    // --- PERBAIKAN 2: AMBIL CUSTOM_ID DARI DALAM PURCHASE_UNITS ---
+    const customIdRaw =
+      payload.resource?.custom_id ||
+      payload.resource?.custom ||
+      payload.resource?.purchase_units?.[0]?.custom_id || // Ambil dari array item pertama purchase_units
+      "";
+
     const ctx = decodeCustomId(customIdRaw);
 
     const paypalEvent = payload.event_type;
 
-    // === ORDERS API (payment-first, tanpa plan PayPal): setelah buyer approve, PayPal TIDAK
-    //     auto-capture (intent:"CAPTURE" butuh capture manual). Tanpa ini tidak ada
-    //     PAYMENT.CAPTURE.COMPLETED → pembayaran tertinggal "pending". Karena itu kita
-    //     capture di sini pada CHECKOUT.ORDER.APPROVED, lalu perlakukan sebagai payment.succeeded.
     let capturedAmount: number | undefined;
     let capturedCurrency: string | undefined;
     let capturedStatus: string | undefined;
+
     if (paypalEvent === "CHECKOUT.ORDER.APPROVED") {
       const orderId = payload.resource?.id;
       if (orderId) {
@@ -287,11 +295,10 @@ export class PayPalAdapter implements PaymentProvider {
 
     const endsAt = payload.resource?.billing_info?.next_billing_time || undefined;
 
-    // Amount: utamakan hasil capture manual (Orders API); fallback ke bentuk payload lain.
     let amount: number | undefined = capturedAmount;
     if (amount === undefined) {
-      const amtTotal = payload.resource?.amount?.total; // SALE
-      const amtValue = payload.resource?.value || payload.resource?.amount?.value; // capture order
+      const amtTotal = payload.resource?.amount?.total;
+      const amtValue = payload.resource?.value || payload.resource?.amount?.value;
       const lastPayment = payload.resource?.billing_info?.last_payment_amount?.value;
       if (amtTotal) amount = parseFloat(amtTotal);
       else if (amtValue) amount = parseFloat(amtValue);
@@ -303,7 +310,7 @@ export class PayPalAdapter implements PaymentProvider {
       payload.resource?.amount?.currency_code ||
       payload.resource?.amount?.currency?.code ||
       payload.resource?.billing_info?.last_payment_amount?.currency_code ||
-      "USD"; // PayPal kita selalu charge dalam USD (hasil konversi IDR->USD di checkout)
+      "USD";
 
     return {
       eventType,
@@ -321,10 +328,6 @@ export class PayPalAdapter implements PaymentProvider {
     };
   }
 
-  /**
-   * Capture sebuah Order (intent: CAPTURE) — memindahkan dana setelah buyer approve.
-   * Dipakai untuk flow Orders API (payment-first). Mengembalikan nominal + mata uang capture.
-   */
   private async captureOrder(
     orderId: string,
     token: string
