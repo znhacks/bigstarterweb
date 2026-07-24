@@ -1,4 +1,3 @@
-// app/[locale]/settings/tasks/logic.ts
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -21,7 +20,7 @@ interface UseTasksArgs {
 
 interface Props {
   featureGates: FeatureGates; // Ter-decode di server (getTenantPlan), diteruskan ke client
-  planName?: string;
+  planName?: string | Record<string, string>;
 }
 
 export function useTasks(
@@ -42,17 +41,17 @@ export function useTasks(
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-  const { canUse, getLimit } = useFeatureGate({ featureGates, planName });
+  // Localize planName if it is passed as a multilingual object
+  const resolvedPlanName =
+    typeof planName === "object" && planName !== null
+      ? planName[locale] || planName["en"] || Object.values(planName)[0] || ""
+      : planName || "";
 
-  /**
-   * PENGHITUNGAN KUOTA DINAMIS (REAL-TIME)
-   * Kita menghitung jumlah task langsung dari panjang array state `tasks`.
-   * Jika sistem Anda menggunakan pagination (halaman), Anda bisa menggantinya dengan query
-   * `.select('*', { count: 'exact', head: true })` ke tabel tasks Supabase.
-   */
+  // Pass the resolved string to useFeatureGate to resolve the TS2322 type error
+  const { canUse, getLimit } = useFeatureGate({ featureGates, planName: resolvedPlanName });
+
   const currentUsageCount = tasks.length;
 
-  // Mengambil limit kuota maksimal tugas
   const limit = getLimit("maxTasks" as any) || 0;
   const isLimitReached = currentUsageCount >= limit;
 
@@ -87,7 +86,9 @@ export function useTasks(
   }, [tenantSlug]);
 
   const fetchMembers = useCallback(async () => {
-    const { data, error } = await (await membershipRepository(supabase))
+    const { data, error } = await (
+      await membershipRepository(supabase)
+    )
       .query()
       .select("user_id, profiles(full_name)")
       .eq("tenant_id", tenantId);
@@ -113,7 +114,9 @@ export function useTasks(
     if (!session?.user) return;
     setCurrentUserId(session.user.id);
 
-    const { data: profileData } = await (await profileRepository(supabase))
+    const { data: profileData } = await (
+      await profileRepository(supabase)
+    )
       .query()
       .select("timezone, preferred_language")
       .eq("id", session.user.id)
@@ -124,7 +127,9 @@ export function useTasks(
       if (profileData.preferred_language) setPreferredLanguage(profileData.preferred_language);
     }
 
-    const { data, error } = await (await membershipRepository(supabase))
+    const { data, error } = await (
+      await membershipRepository(supabase)
+    )
       .query()
       .select("roles(name, hierarchy_level, role_permissions(permissions(name)))")
       .eq("tenant_id", tenantId)
@@ -200,8 +205,6 @@ export function useTasks(
       const res = await createTaskAction(tenantSlug, payload);
       if (res.error || !res.data) throw new Error(res.error);
 
-      // Ketika task berhasil ditambahkan ke state, tasks.length otomatis bertambah (+1)
-      // Hal ini memicu isLimitReached ter-update secara otomatis secara real-time
       setTasks((prev) => [res.data as Task, ...prev]);
 
       setAlertMessage({
@@ -243,7 +246,6 @@ export function useTasks(
     const target = taskToDelete;
     const prev = tasks;
 
-    // Ketika task dihapus dari state, tasks.length otomatis berkurang (-1)
     setTasks((cur) => cur.filter((tk) => tk.id !== target.id));
     setTaskToDelete(null);
 
@@ -291,9 +293,9 @@ export function useTasks(
     isReadOnly,
     canUse,
     getLimit,
-    planName,
+    planName: resolvedPlanName,
     limit,
-    currentUsageCount, // Dikembalikan ke view untuk ditampilkan di UI lencana kuota
+    currentUsageCount,
     isLimitReached,
     isLoading,
     isSaving,

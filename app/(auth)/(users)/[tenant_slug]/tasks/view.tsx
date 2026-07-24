@@ -104,7 +104,6 @@ function profileName(p: TaskProfile | null | undefined, fallback = ""): string {
   return p?.full_name || fallback;
 }
 
-// Menyesuaikan due_date menggunakan tipe Date | undefined
 const EMPTY_FORM = {
   title: "",
   description: "",
@@ -119,7 +118,7 @@ interface TasksViewProps {
   tenantId: string;
   tenantName: string;
   featureGates: FeatureGates;
-  planName?: string;
+  planName?: string | Record<string, string>;
 }
 
 export function TasksView({
@@ -166,7 +165,6 @@ export function TasksView({
       status: form.status,
       priority: form.priority,
       assignee_id: form.assignee_id || null,
-      // Mengubah objek Date menjadi format string ISO untuk payload API
       due_date: form.due_date ? form.due_date.toISOString() : null
     });
     setCreateOpen(false);
@@ -174,8 +172,6 @@ export function TasksView({
 
   const memberNameOr = (id: string | null | undefined) =>
     id ? h.members.find((m) => m.id === id)?.name || id : t("detail.unassigned");
-
-  // ---- Table setup (inlined — no separate data-table.tsx) ----
 
   const canCreate = h.canCreate && !h.isLimitReached;
 
@@ -188,8 +184,6 @@ export function TasksView({
     [t]
   );
 
-  // Assignee facet uses names (matches what's rendered/filtered on the "assignee" column);
-  // the edit dropdown uses ids (what actually gets saved).
   const assigneeFilterOptions = useMemo(() => {
     const seen = new Set<string>();
     const out: SelectOption[] = [];
@@ -207,7 +201,6 @@ export function TasksView({
     [h.members]
   );
 
-  // Columns are hardcoded for this feature — nothing generic about them.
   const columns = useMemo<ColumnDef<Task, unknown>[]>(() => {
     const localeSortFn: SortingFn<Task> = (rowA, rowB, columnId) => {
       const valA = String(rowA.getValue(columnId) ?? "");
@@ -475,7 +468,6 @@ export function TasksView({
     h.setTaskToDelete
   ]);
 
-  // You own this instance — read/mutate it however this page needs.
   const table = useDataTable({
     columns,
     data: h.tasks,
@@ -557,7 +549,7 @@ export function TasksView({
           </div>
         ) : (
           <div className="w-full">
-            {/* TOOLBAR — hardcoded here, free to add/remove/reorder anything. */}
+            {/* TOOLBAR */}
             <div className="flex flex-col gap-4 py-4 md:flex-row md:items-center">
               <div className="flex flex-wrap items-center gap-2">
                 <DataTableSearch
@@ -603,9 +595,6 @@ export function TasksView({
                   <span className="hidden sm:inline">{t("download")}</span>
                 </Button>
 
-                {/* Custom column-visibility dropdown (kept hardcoded instead of
-                   DataTableViewOptions) because labels need per-column translation
-                   via COLUMN_LABEL_KEYS — not something the generic component does. */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="h-9 text-xs">
@@ -789,7 +778,6 @@ export function TasksView({
                 </Select>
               </div>
 
-              {/* INPUT TANGGAL YANG DIPERBARUI DENGAN DateTimePicker */}
               <div className="flex flex-col justify-end space-y-1.5">
                 <Label className="mb-0.5">{t("form.fields.dueDate")}</Label>
                 <DateTimePicker

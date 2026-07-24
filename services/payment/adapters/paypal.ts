@@ -241,9 +241,30 @@ export class PayPalAdapter implements PaymentProvider {
     const customIdRaw = payload.resource?.custom_id || payload.resource?.custom || "";
     const ctx = decodeCustomId(customIdRaw);
 
-    let eventType: UnifiedWebhookResult["eventType"] = "subscription.updated";
     const paypalEvent = payload.event_type;
 
+    // === ORDERS API (payment-first, tanpa plan PayPal): setelah buyer approve, PayPal TIDAK
+    //     auto-capture (intent:"CAPTURE" butuh capture manual). Tanpa ini tidak ada
+    //     PAYMENT.CAPTURE.COMPLETED → pembayaran tertinggal "pending". Karena itu kita
+    //     capture di sini pada CHECKOUT.ORDER.APPROVED, lalu perlakukan sebagai payment.succeeded.
+    let capturedAmount: number | undefined;
+    let capturedCurrency: string | undefined;
+    let capturedStatus: string | undefined;
+    if (paypalEvent === "CHECKOUT.ORDER.APPROVED") {
+      const orderId = payload.resource?.id;
+      if (orderId) {
+        try {
+          const capture = await this.captureOrder(orderId, token);
+          capturedAmount = capture.amount;
+          capturedCurrency = capture.currency;
+          capturedStatus = "paid";
+        } catch (e) {
+          console.warn("[paypal] capture order gagal:", (e as Error)?.message);
+        }
+      }
+    }
+
+    let eventType: UnifiedWebhookResult["eventType"] = "subscription.updated";
     if (
       paypalEvent === "BILLING.SUBSCRIPTION.CREATED" ||
       paypalEvent === "BILLING.SUBSCRIPTION.ACTIVATED"
@@ -256,22 +277,29 @@ export class PayPalAdapter implements PaymentProvider {
       paypalEvent === "BILLING.SUBSCRIPTION.EXPIRED"
     ) {
       eventType = "subscription.deleted";
-    } else if (paypalEvent === "PAYMENT.SALE.COMPLETED" || paypalEvent === "PAYMENT.CAPTURE.COMPLETED") {
+    } else if (
+      paypalEvent === "PAYMENT.SALE.COMPLETED" ||
+      paypalEvent === "PAYMENT.CAPTURE.COMPLETED" ||
+      paypalEvent === "CHECKOUT.ORDER.APPROVED"
+    ) {
       eventType = "payment.succeeded";
     }
 
     const endsAt = payload.resource?.billing_info?.next_billing_time || undefined;
 
-    // Amount: coba beberapa bentuk payload (subscription vs sale vs capture order)
-    let amount: number | undefined;
-    const amtTotal = payload.resource?.amount?.total; // SALE
-    const amtValue = payload.resource?.value || payload.resource?.amount?.value; // capture order
-    const lastPayment = payload.resource?.billing_info?.last_payment_amount?.value;
-    if (amtTotal) amount = parseFloat(amtTotal);
-    else if (amtValue) amount = parseFloat(amtValue);
-    else if (lastPayment) amount = parseFloat(lastPayment);
+    // Amount: utamakan hasil capture manual (Orders API); fallback ke bentuk payload lain.
+    let amount: number | undefined = capturedAmount;
+    if (amount === undefined) {
+      const amtTotal = payload.resource?.amount?.total; // SALE
+      const amtValue = payload.resource?.value || payload.resource?.amount?.value; // capture order
+      const lastPayment = payload.resource?.billing_info?.last_payment_amount?.value;
+      if (amtTotal) amount = parseFloat(amtTotal);
+      else if (amtValue) amount = parseFloat(amtValue);
+      else if (lastPayment) amount = parseFloat(lastPayment);
+    }
 
     const currency =
+      capturedCurrency ||
       payload.resource?.amount?.currency_code ||
       payload.resource?.amount?.currency?.code ||
       payload.resource?.billing_info?.last_payment_amount?.currency_code ||
@@ -286,11 +314,39 @@ export class PayPalAdapter implements PaymentProvider {
       endsAt,
       providerSubscriptionId: payload.resource?.id,
       providerCustomerId: payload.resource?.subscriber?.payer_id,
-      status: payload.resource?.status?.toLowerCase() || "active",
+      status: capturedStatus || payload.resource?.status?.toLowerCase() || "active",
       amount,
       currency,
       orderId: payload.resource?.id
     };
+  }
+
+  /**
+   * Capture sebuah Order (intent: CAPTURE) — memindahkan dana setelah buyer approve.
+   * Dipakai untuk flow Orders API (payment-first). Mengembalikan nominal + mata uang capture.
+   */
+  private async captureOrder(
+    orderId: string,
+    token: string
+  ): Promise<{ amount?: number; currency?: string }> {
+    const response = await fetch(`${this.baseUrl}/v2/checkout/orders/${orderId}/capture`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(`PayPal capture failed: ${err.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const capture = data.purchase_units?.[0]?.payments?.captures?.[0];
+    const amount = capture?.amount?.value ? parseFloat(capture.amount.value) : undefined;
+    const currency = capture?.amount?.currency_code;
+    return { amount, currency };
   }
 
   async cancelSubscription(providerSubscriptionId: string): Promise<boolean> {
