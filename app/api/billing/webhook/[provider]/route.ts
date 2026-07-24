@@ -9,6 +9,7 @@ import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { planRepository } from "@/supabase/repositories/plans";
 import { transactionRepository } from "@/supabase/repositories/transactions";
 import { paymentOrderRepository } from "@/supabase/repositories/payment-orders";
+import { resolveBillingOwner, ownerFilter } from "@/lib/billing/owner";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -304,10 +305,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       //      yang tidak memancarkan subscription.created). Hanya grant bila perlu agar
       //      tidak menimpa ends_at provider subscription (paypal/stripe) yg sudah benar. ===
       if (finalPlanId) {
+        // Scope grant sesuai billingAttachedTo: tenant (default) atau user
+        // (bila config "user" & payment_orders punya user_id).
+        const grantOwner = resolveBillingOwner({
+          tenantId,
+          userId: paymentOrder?.user_id
+        });
+        const ownerCol = grantOwner ? ownerFilter(grantOwner).column : "tenant_id";
+        const ownerId = grantOwner ? ownerFilter(grantOwner).value : tenantId;
+
         const { data: existingSub } = await subscriptionRepo
           .query()
           .select("id, plan_id, provider_subscription_id, status, ends_at")
-          .eq("tenant_id", tenantId)
+          .eq(ownerCol, ownerId)
           .maybeSingle();
 
         // Re-grant bila: belum ada, plan berubah, tidak ada provider sub id,
@@ -328,7 +338,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
         if (needsGrant) {
           const { error: subGrantError } = await subscriptionRepo.query().upsert(
             {
-              tenant_id: tenantId,
+              [ownerCol]: ownerId,
               plan_id: finalPlanId,
               status: "active",
               starts_at: startsAt || new Date().toISOString(),
@@ -341,7 +351,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
               pending_plan_id: null,
               updated_at: new Date().toISOString()
             },
-            { onConflict: "tenant_id" }
+            { onConflict: ownerCol }
           );
 
           if (subGrantError) {

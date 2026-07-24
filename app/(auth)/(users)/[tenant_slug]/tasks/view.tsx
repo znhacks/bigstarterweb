@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { ColumnDef, SortingFn } from "@tanstack/react-table";
 import { Loader2, CreditCard, Columns, Download, MoreHorizontal, PlusCircle } from "lucide-react";
 import type { FeatureGates } from "@/config/feature-definitions";
+import { billingConfig } from "@/config/payment";
 import { useTasks } from "./logic";
 import type { Task, MemberOption, TaskProfile } from "./types";
 import { exportTasksToExcel } from "./export-tasks";
@@ -667,37 +668,21 @@ export function TasksView({
           <div className="space-y-4 py-4 text-center">
             <p className="text-muted-foreground text-sm">
               Tingkatkan batas pembuatan tugas Anda menjadi <b>10.000 tugas</b> per bulan serta
-              dapatkan dukungan prioritas. Pilih metode pembayaran Anda:
+              dapatkan dukungan prioritas.
             </p>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <Button
-                variant="outline"
-                onClick={() => h.handleUpgrade("mayar")}
-                disabled={h.isUpgrading}
-                className="flex h-20 flex-col items-center justify-center gap-1.5 text-xs">
-                <span className="font-semibold text-blue-600">Mayar.id</span>
-                <span className="text-muted-foreground text-[10px]">QRIS, VA, e-Wallet</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => h.handleUpgrade("paypal")}
-                disabled={h.isUpgrading}
-                className="flex h-20 flex-col items-center justify-center gap-1.5 text-xs">
-                <span className="font-semibold text-yellow-600">PayPal</span>
-                <span className="text-muted-foreground text-[10px]">Kartu / Saldo USD</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => h.handleUpgrade("paddle")}
-                disabled={h.isUpgrading}
-                className="flex h-20 flex-col items-center justify-center gap-1.5 text-xs">
-                <span className="font-semibold text-purple-600">Paddle Billing</span>
-                <span className="text-muted-foreground text-[10px]">Pajak Global Terhitung</span>
-              </Button>
-            </div>
+            <Button
+              onClick={() => h.handleUpgrade(billingConfig.activeProvider)}
+              disabled={h.isUpgrading}
+              className="h-14 w-full rounded-xl bg-slate-950 text-base font-bold text-white hover:bg-slate-800">
+              {h.isUpgrading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" /> Menghubungkan ke gateway...
+                </span>
+              ) : (
+                "Lanjutkan ke Pembayaran"
+              )}
+            </Button>
 
             {h.isUpgrading && (
               <div className="text-muted-foreground mt-2 flex items-center justify-center gap-2 text-xs">

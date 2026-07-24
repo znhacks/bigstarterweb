@@ -152,9 +152,7 @@ export function useTasks(
     loadAll();
   }, [loadAll]);
 
-  const handleUpgrade = async (
-    provider: "mayar" | "paypal" | "paddle" | "midtrans" | "xendit" | "lemonsqueezy" | "stripe"
-  ) => {
+  const handleUpgrade = async (provider: string) => {
     setIsUpgrading(true);
     try {
       const {

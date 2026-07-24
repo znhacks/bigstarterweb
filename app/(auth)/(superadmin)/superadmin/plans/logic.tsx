@@ -7,6 +7,7 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal, Trash2, Ban, MoreVertical } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/i18n/currency";
+import { getLocalizedValue } from "@/lib/i18n/localize";
 import { useDataTable } from "@/components/data-table/use-data-table";
 import { createSelectColumn } from "@/components/data-table/data-table-select-column";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
@@ -31,6 +32,9 @@ export interface DBPlan {
   is_active: boolean;
   display_features: Record<string, string[]> | string[];
   features: string[];
+  is_enterprise?: boolean;
+  is_recommended?: boolean;
+  trial_days?: number;
 }
 
 export interface DBPrice {
@@ -109,6 +113,9 @@ export const EMPTY_FORM = {
   name: createEmptyMultilingualField(),
   description: createEmptyMultilingualField(),
   isActive: true,
+  isEnterprise: false,
+  isRecommended: false,
+  trialDays: 0,
   displayFeaturesRaw: createEmptyMultilingualField(),
   monthlyAmount: 0,
   monthlyCurrency: "IDR",
@@ -118,17 +125,8 @@ export const EMPTY_FORM = {
   yearlyProviders: emptyProviderMap()
 };
 
-export function getLocalizedValue<T>(
-  field: Record<string, T> | T,
-  locale: string,
-  fallback = "en"
-): T {
-  if (field && typeof field === "object" && !Array.isArray(field)) {
-    const val = (field as Record<string, T>)[locale] ?? (field as Record<string, T>)[fallback];
-    return val !== undefined ? val : (field as any);
-  }
-  return field as T;
-}
+// getLocalizedValue tinggal di @/lib/i18n/localize (fallback robust lintas-bahasa).
+export { getLocalizedValue };
 
 const containsFilterFn = (row: any, columnId: string, filterValue: string) => {
   if (!filterValue) return true;
@@ -302,6 +300,9 @@ export function useAdminPlans() {
         name: getLangObject(plan.name),
         description: getLangObject(plan.description),
         isActive: plan.is_active,
+        isEnterprise: !!plan.is_enterprise,
+        isRecommended: !!plan.is_recommended,
+        trialDays: plan.trial_days || 0,
         displayFeaturesRaw: getLangArrayRaw(plan.display_features),
         monthlyAmount: mPrice ? parseFloat(String(mPrice.amount)) : 0,
         monthlyCurrency: (mPrice as any)?.currency || "IDR",
@@ -561,6 +562,9 @@ export function useAdminPlans() {
         name: form.name,
         description: form.description,
         isActive: form.isActive,
+        isEnterprise: form.isEnterprise,
+        isRecommended: form.isRecommended,
+        trialDays: form.trialDays,
         displayFeatures: displayFeaturesCompiled,
         features: compiledFeatures,
         prices: {

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import { checkSeatLimit } from "@/lib/billing/enforcer"; // Import Seat-Based Enforcer
 import { getUser } from "@/lib/auth";
+import { isTenantAdmin } from "@/lib/billing/tenant-auth";
+import { signInviteToken } from "@/lib/invite/token";
 import { createClient } from "@/lib/supabase/server"; // UBAH: Gunakan helper server SSR kita
 import { roleRepository } from "@/supabase/repositories/roles";
 import { tenantRepository } from "@/supabase/repositories/tenants";
@@ -60,6 +62,16 @@ export async function POST(req: Request) {
       );
     }
 
+    // Authorization: hanya admin/owner tenant yang boleh mengundang anggota.
+    // (Kebijakan RLS `invitations` INSERT juga menuntut is_tenant_admin + invited_by = auth.uid.)
+    const canInvite = await isTenantAdmin(supabase, user.id, tenantData.id);
+    if (!canInvite) {
+      return NextResponse.json(
+        { error: "Forbidden: hanya admin/owner yang dapat mengundang anggota." },
+        { status: 403 }
+      );
+    }
+
     // --- INTEGRASI SEAT-BASED LIMIT CHECK (TAHAP 7) ---
     const seatCheck = await checkSeatLimit(tenantData.id);
 
@@ -73,7 +85,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Kelola penyimpanan data undangan ke tabel 'invitations' secara manual
+    // 3. Kelola penyimpanan data undangan ke tabel 'invitations'.
+    //    invited_by WAJIB diisi agar memenuhi WITH CHECK RLS
+    //    (is_tenant_admin AND invited_by = auth.uid()).
     const invitationRepo = await invitationRepository(supabase);
     const { data: existingInvite } = await invitationRepo
       .query()
@@ -82,36 +96,38 @@ export async function POST(req: Request) {
       .eq("email", email)
       .maybeSingle();
 
+    let invitationId: string;
     if (existingInvite) {
       const { error: updateError } = await invitationRepo
         .query()
         // role_id adalah sumber kebenaran (kolom role string sudah tidak ada).
-        .update({ role_id: roleId })
+        .update({ role_id: roleId, invited_by: user.id })
         .eq("id", existingInvite.id);
 
       if (updateError) throw updateError;
+      invitationId = existingInvite.id;
     } else {
-      const { error: insertError } = await invitationRepo.query().insert({
-        tenant_id: tenantData.id,
-        email: email.trim().toLowerCase(),
-        role_id: roleId
-      });
+      const { data: inserted, error: insertError } = await invitationRepo
+        .query()
+        .insert({
+          tenant_id: tenantData.id,
+          email: email.trim().toLowerCase(),
+          role_id: roleId,
+          invited_by: user.id
+        })
+        .select("id")
+        .single();
 
       if (insertError) throw insertError;
+      invitationId = inserted.id;
     }
 
-    // 4. Meng-encode data parameter ke Base64 untuk URL Join.
-    //    roleId di sini HANYA untuk tampilan — saat join, role_id diambil dari
-    //    baris invitation (lihat app/(guest)/join/page.tsx) agar tidak bisa
-    //    dimanipulasi lewat token.
-    const tokenData = JSON.stringify({
-      email: email.trim().toLowerCase(),
-      roleId,
-      roleName: role,
-      orgName
-    });
-    const token = Buffer.from(tokenData).toString("base64");
+    // 4. Tanda tangani token undangan (HMAC-SHA256) — menggantikan Base64 JSON
+    //    tanpa tanda yang dapat di-forging. Payload: id invitation (otoritatif),
+    //    email, orgName, roleName (display) + kedaluwarsa 7 hari. Validasi &
+    //    pencocokan email dilakukan server-side saat accept.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const token = signInviteToken(invitationId, email.trim().toLowerCase(), orgName, role);
     const joinLink = `${appUrl}/join?token=${token}`;
 
     const htmlContent = `

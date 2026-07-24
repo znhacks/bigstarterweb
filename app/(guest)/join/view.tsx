@@ -16,17 +16,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2, Loader2, AlertCircle, ArrowRight, Ban, XCircle, X } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
-import { tenantRepository } from "@/supabase/repositories/tenants";
-import { invitationRepository } from "@/supabase/repositories/invitations";
-import { membershipRepository } from "@/supabase/repositories/memberships";
+import { peekInviteToken } from "@/lib/invite/token-client";
+import { acceptInvitation, declineInvitation } from "./actions";
 import { useTranslations } from "next-intl";
-
-interface DecodedToken {
-  email: string;
-  roleId: string;
-  roleName: string;
-  orgName: string;
-}
 
 export function JoinOrganization() {
   const searchParams = useSearchParams();
@@ -34,20 +26,22 @@ export function JoinOrganization() {
   const token = searchParams.get("token");
   const t = useTranslations("guest.join");
 
-  const [decoded, setDecoded] = useState<DecodedToken | null>(null);
+  // Payload display-only (organisasi & role). TIDAK ada verifikasi di klien —
+  // semua validasi/otorisasi ada di server action (lihat ./actions.ts).
+  const [peek, setPeek] = useState<{ o: string; r: string } | null>(null);
   const [activeUser, setActiveUser] = useState<any>(null);
 
-  // State validasi keaktifan undangan
+  // State validasi keaktifan undangan (indikasi tampilan; final di server).
   const [isInviteValid, setIsInviteValid] = useState<boolean | null>(null);
 
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isDeclined, setIsDeclined] = useState(false); // State baru untuk penolakan
+  const [isDeclined, setIsDeclined] = useState(false); // State untuk penolakan
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkActiveUserAndInvitation = async () => {
+    const checkActiveUser = async () => {
       setIsLoadingUser(true);
 
       // 1. Cek User Aktif
@@ -58,175 +52,74 @@ export function JoinOrganization() {
         setActiveUser(user);
       }
 
-      // 2. Dekode Token & Validasi Keaktifan Undangan di Database
-      if (token) {
-        try {
-          const decodedString = Buffer.from(token, "base64").toString("utf-8");
-          const decodedData: DecodedToken = JSON.parse(decodedString);
-          setDecoded(decodedData);
-
-          // Cari ID Organisasi
-          const tenantRepo = await tenantRepository(supabase);
-          const { data: tenant } = await tenantRepo
-            .query()
-            .select("id")
-            .eq("name", decodedData.orgName)
-            .single();
-
-          if (!tenant) {
-            setIsInviteValid(false);
-            setIsLoadingUser(false);
-            return;
-          }
-
-          // Periksa apakah baris undangan masih aktif di tabel 'invitations'
-          const invitationRepo = await invitationRepository(supabase);
-          const { data: inviteRow } = await invitationRepo
-            .query()
-            .select("id")
-            .eq("tenant_id", tenant.id)
-            .eq("email", decodedData.email)
-            .maybeSingle();
-
-          if (!inviteRow) {
-            setIsInviteValid(false);
-          } else {
-            setIsInviteValid(true);
-          }
-        } catch (e) {
-          console.error("Invalid token parsing", e);
-          setIsInviteValid(false);
-        }
-      } else {
+      // 2. Decode token untuk DISPLAY saja. Token lama (Base64 JSON tanpa tanda)
+      //    akan gagal peek → dianggap tidak valid.
+      const decoded = peekInviteToken(token);
+      if (!decoded) {
         setIsInviteValid(false);
+      } else {
+        setPeek({ o: decoded.o, r: decoded.r });
+        setIsInviteValid(true);
       }
+
       setIsLoadingUser(false);
     };
 
-    checkActiveUserAndInvitation();
+    checkActiveUser();
   }, [token]);
 
-  // AKSI 1: MENERIMA UNDANGAN (JOIN)
+  // AKSI 1: MENERIMA UNDANGAN (JOIN) — via Server Action
   const handleJoinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeUser || !decoded) return;
+    if (!activeUser || !token) return;
 
     setIsSubmitting(true);
     setErrorMsg(null);
 
-    try {
-      const tenantRepo = await tenantRepository(supabase);
-      const { data: tenantData, error: tenantError } = await tenantRepo
-        .query()
-        .select("id, slug") // Ambil slug juga
-        .eq("name", decoded.orgName)
-        .single();
+    const res = await acceptInvitation(token);
 
-      if (tenantError || !tenantData) {
-        throw new Error(t("org-notfound", { orgname: decoded.orgName }));
-      }
-
-      const membershipRepo = await membershipRepository(supabase);
-      const { data: existingMembership } = await membershipRepo
-        .query()
-        .select("id")
-        .eq("user_id", activeUser.id)
-        .eq("tenant_id", tenantData.id)
-        .maybeSingle();
-
-      if (existingMembership) {
-        throw new Error(t("alreadyjoin", { orgname: decoded.orgName }));
-      }
-
-      // Ambil role_id dari BARIS INVITATION (sumber kebenaran), bukan dari token,
-      // agar token yang dimanipulasi tidak bisa meningkatkan hak akses.
-      const invitationRepo = await invitationRepository(supabase);
-      const { data: inviteRow } = await invitationRepo
-        .query()
-        .select("role_id, roles(name)")
-        .eq("tenant_id", tenantData.id)
-        .eq("email", decoded.email)
-        .maybeSingle();
-
-      const inv = inviteRow as any;
-      if (!inv || !inv.role_id) {
-        throw new Error(t("invalidinvite"));
-      }
-
-      // 1. Daftarkan user ke tabel memberships
-      const { error: membershipError } = await membershipRepo
-        .query()
-        .insert({
-          user_id: activeUser.id,
-          tenant_id: tenantData.id,
-          role_id: inv.role_id
-        });
-
-      if (membershipError) throw membershipError;
-
-      // 2. Hapus baris dari tabel 'invitations' karena sudah resmi bergabung
-      await invitationRepo
-        .query()
-        .delete()
-        .eq("tenant_id", tenantData.id)
-        .eq("email", decoded.email);
-
-      // 3. SINKRONISASI STATE KLIEN DAN SERVER COOKIE
-      localStorage.setItem("active_org_id", tenantData.id);
-
-      // Pasang cookie active_tenant_id agar Server Components langsung sinkron
-      const maxAge = 60 * 60 * 24 * 30; // 30 hari
-      document.cookie = `active_tenant_id=${tenantData.id}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
-
-      setIsSuccess(true);
-
-      setTimeout(() => {
-        // Redirect ke dashboard dinamis berbasis slug tenant baru Anda
-        router.push(`/${tenantData.slug}`);
-        router.refresh();
-      }, 2000);
-    } catch (error: any) {
-      setErrorMsg(error.message || t("failedprocess"));
-    } finally {
+    if (!res.ok) {
+      const codeMap: Record<string, string> = {
+        auth: t("failedprocess"),
+        invalid: t("invalidinvite"),
+        email_mismatch: t("invalidinvite"),
+        failed: t("failedprocess")
+      };
+      setErrorMsg(codeMap[res.code] || t("failedprocess"));
       setIsSubmitting(false);
+      return;
     }
+
+    // Sinkronisasi state klien (localStorage + cookie) lalu redirect ke dashboard.
+    localStorage.setItem("active_org_id", res.id);
+    const maxAge = 60 * 60 * 24 * 30; // 30 hari
+    document.cookie = `active_tenant_id=${res.id}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
+
+    setIsSuccess(true);
+
+    setTimeout(() => {
+      router.push(`/${res.slug}`);
+      router.refresh();
+    }, 2000);
   };
 
-  // AKSI 2: MENOLAK UNDANGAN (DECLINE)
+  // AKSI 2: MENOLAK UNDANGAN (DECLINE) — via Server Action
   const handleDeclineInvite = async () => {
-    if (!activeUser || !decoded) return;
+    if (!activeUser || !token) return;
 
     setIsSubmitting(true);
     setErrorMsg(null);
 
-    try {
-      const tenantRepo = await tenantRepository(supabase);
-      const { data: tenantData } = await tenantRepo
-        .query()
-        .select("id")
-        .eq("name", decoded.orgName)
-        .single();
+    const res = await declineInvitation(token);
 
-      if (!tenantData) {
-        throw new Error(t("org-notfound", { orgname: decoded.orgName }));
-      }
-
-      // Hapus data undangan langsung dari tabel 'invitations'
-      const invitationRepo = await invitationRepository(supabase);
-      const { error } = await invitationRepo
-        .query()
-        .delete()
-        .eq("tenant_id", tenantData.id)
-        .eq("email", decoded.email);
-
-      if (error) throw error;
-
-      setIsDeclined(true);
-    } catch (error: any) {
-      setErrorMsg(error.message || t("failedreject"));
-    } finally {
+    if (!res.ok) {
+      setErrorMsg(t("failedreject"));
       setIsSubmitting(false);
+      return;
     }
+
+    setIsDeclined(true);
+    setIsSubmitting(false);
   };
 
   if (isLoadingUser) {
@@ -249,7 +142,7 @@ export function JoinOrganization() {
             <div className="space-y-1">
               <h2 className="text-foreground text-xl font-bold">{t("rejected.title")}</h2>
               <p className="text-muted-foreground mx-auto max-w-xs text-sm">
-                {t("rejected.desc")} <strong>{decoded?.orgName}</strong>.
+                {t("rejected.desc")} <strong>{peek?.o}</strong>.
               </p>
             </div>
             <Button variant="outline" className="mt-2" onClick={() => router.push("/")}>
@@ -261,8 +154,8 @@ export function JoinOrganization() {
     );
   }
 
-  // TAMPILAN JIKA UNDANGAN SUDAH DI-CANCEL / EXPIRED / TIDAK VALID
-  if (isInviteValid === false || !decoded || !activeUser) {
+  // TAMPILAN JIKA UNDANGAN TIDAK VALID / EXPIRED / USER BELUM LOGIN
+  if (isInviteValid === false || !peek || !activeUser) {
     return (
       <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
         <Card className="border-border/85 w-full max-w-md rounded-2xl border py-8 text-center shadow-lg">
@@ -282,8 +175,6 @@ export function JoinOrganization() {
     );
   }
 
-  const isDifferentEmail = activeUser.email?.toLowerCase() !== decoded.email.toLowerCase();
-
   return (
     <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md overflow-hidden">
@@ -293,7 +184,7 @@ export function JoinOrganization() {
             <div className="space-y-1">
               <CardTitle className="text-xl">{t("joined.title")}</CardTitle>
               <CardDescription>
-                {t("joined.desc")} <strong>{decoded.orgName}</strong>.
+                {t("joined.desc")} <strong>{peek.o}</strong>.
               </CardDescription>
             </div>
             <p className="text-muted-foreground text-xs">{t("joined.loading")}</p>
@@ -316,12 +207,12 @@ export function JoinOrganization() {
               <div className="border-border/80 bg-muted/30 space-y-3 rounded-xl border p-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{t("org")}</span>
-                  <span className="text-foreground font-semibold">{decoded.orgName}</span>
+                  <span className="text-foreground font-semibold">{peek.o}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{t("your-role")}</span>
                   <span className="text-foreground font-semibold capitalize">
-                    {decoded.roleName}
+                    {peek.r}
                   </span>
                 </div>
               </div>

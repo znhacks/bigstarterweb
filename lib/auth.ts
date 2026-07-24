@@ -155,14 +155,12 @@ export async function ensureProfile(user: {
 export async function requireSuperadmin(redirectTo: string = "/dashboard") {
   const user = await requireAuth();
 
-  // Cek cepat via auth metadata / email legacy.
-  const quick =
-    (user.app_metadata as Record<string, unknown> | undefined)?.role ===
-      "superadmin" ||
-    (user.user_metadata as Record<string, unknown> | undefined)?.role ===
-      "superadmin" ||
-    user.email === "superadmin@example.com";
-  if (quick) return user;
+  // Fast path: app_metadata adalah SERVER-ONLY (tidak bisa ditulis client).
+  // AMAN sebagai jalan pintas. (Jangan pernah pakai user_metadata di sini —
+  // user_metadata BISA ditulis client via supabase.auth.updateUser, sehingga
+  // memeriksanya untuk otorisasi = privilege escalation.)
+  const appRole = (user.app_metadata as Record<string, unknown> | undefined)?.role;
+  if (appRole === "superadmin") return user;
 
   // Cek otoritatif via profiles.is_superadmin (service role, bypass RLS).
   const { supabaseAdmin } = await import("@/lib/api/supabase-server");

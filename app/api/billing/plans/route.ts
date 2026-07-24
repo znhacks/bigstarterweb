@@ -47,6 +47,9 @@ export async function GET() {
         displayFeatures: plan.display_features || [],
         features: plan.display_features || [], // Backwards compatibility untuk UI
         featureGates: compiledFeatureGates,
+        isEnterprise: !!plan.is_enterprise,
+        isRecommended: !!plan.is_recommended,
+        trialDays: plan.trial_days || 0,
         prices: {
           monthly: {
             amount: monthlyPrice ? parseFloat(monthlyPrice.amount) : 0,

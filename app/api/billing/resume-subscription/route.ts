@@ -2,9 +2,10 @@
 
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
-import { isTenantMember } from "@/lib/billing/tenant-auth";
+import { isTenantMember, canManageBilling } from "@/lib/billing/tenant-auth";
 import { createClient } from "@supabase/supabase-js";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+import { resolveBillingOwner, ownerFilter } from "@/lib/billing/owner";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -44,12 +45,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
+    // Hanya owner/admin (atau role dengan permission billing.manage) boleh melanjutkan langganan.
+    const canBilling = await canManageBilling(supabaseAdmin, user.id, tenantId);
+    if (!canBilling) {
+      return NextResponse.json(
+        { error: "Forbidden: tidak memiliki izin mengelola billing tenant" },
+        { status: 403 }
+      );
+    }
+
+    const owner = resolveBillingOwner({ tenantId, userId: user.id });
+    if (!owner) {
+      return NextResponse.json({ error: "Owner tidak teridentifikasi" }, { status: 400 });
+    }
+    const { column: ownerCol, value: ownerId } = ownerFilter(owner);
+
     const subscriptionRepo = await subscriptionRepository(supabaseAdmin);
 
     const { data: activeSub, error: subError } = await subscriptionRepo
       .query()
       .select("id, provider, provider_subscription_id, cancel_at_period_end")
-      .eq("tenant_id", tenantId)
+      .eq(ownerCol, ownerId)
       .eq("status", "active")
       .maybeSingle();
 

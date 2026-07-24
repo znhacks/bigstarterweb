@@ -303,6 +303,42 @@ export function AdminPlansPage() {
                     })}
                   />
                 </div>
+
+                {/* Opsi plan: recommended / enterprise / trial */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="plan-recommended" className="cursor-pointer">
+                      {t("form.recommended") || "Recommended"}
+                    </Label>
+                    <Switch
+                      id="plan-recommended"
+                      checked={!!form.isRecommended}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, isRecommended: !!v }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="plan-enterprise" className="cursor-pointer">
+                      {t("form.enterprise") || "Enterprise (Contact)"}
+                    </Label>
+                    <Switch
+                      id="plan-enterprise"
+                      checked={!!form.isEnterprise}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, isEnterprise: !!v }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="plan-trial">{t("form.trialDays") || "Trial (hari)"}</Label>
+                    <Input
+                      id="plan-trial"
+                      type="number"
+                      min={0}
+                      value={form.trialDays || 0}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, trialDays: parseInt(e.target.value) || 0 }))
+                      }
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>

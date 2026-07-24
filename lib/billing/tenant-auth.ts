@@ -38,3 +38,76 @@ export async function isTenantMember(
 
   return profile?.is_superadmin === true;
 }
+
+/**
+ * Resolve otoritas user (hierarchy_level + nama permission) di sebuah tenant.
+ *
+ * Mengapa manual: function RLS `is_tenant_admin()` / `has_permission()` memakai
+ * `auth.uid()`, yang bernilai NULL pada client service-role. Route billing
+ * memakai service-role, jadi otoritas HARUS di-resolve di sisi aplikasi lewat
+ * join memberships → roles → role_permissions → permissions (filter user_id).
+ */
+async function resolveTenantAuthority(
+  supabase: SupabaseClient,
+  userId: string,
+  tenantId: string
+): Promise<{ hierarchyLevel: number | null; permissions: string[] } | null> {
+  const membershipRepo = await membershipRepository(supabase);
+  const { data } = await membershipRepo
+    .query()
+    .select("role_id, roles ( hierarchy_level, role_permissions ( permissions ( name ) ) )")
+    .eq("user_id", userId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  if (!data) return null;
+  const role = (data as any).roles;
+  if (!role) return { hierarchyLevel: null, permissions: [] };
+  const perms = ((role.role_permissions as any[]) ?? [])
+    .map((rp: any) => rp?.permissions?.name)
+    .filter((n: any): n is string => typeof n === "string");
+  return { hierarchyLevel: role.hierarchy_level ?? null, permissions: perms };
+}
+
+async function isSystemSuperadmin(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const profileRepo = await profileRepository(supabase);
+  const { data: profile } = await profileRepo
+    .query()
+    .select("is_superadmin")
+    .eq("id", userId)
+    .maybeSingle();
+  return profile?.is_superadmin === true;
+}
+
+/**
+ * Apakah user adalah admin/owner tenant (hierarchy_level >= 50) atau superadmin.
+ */
+export async function isTenantAdmin(
+  supabase: SupabaseClient,
+  userId: string,
+  tenantId: string
+): Promise<boolean> {
+  if (!userId || !tenantId) return false;
+  if (await isSystemSuperadmin(supabase, userId)) return true;
+  const authority = await resolveTenantAuthority(supabase, userId, tenantId);
+  if (!authority) return false;
+  return authority.hierarchyLevel != null && authority.hierarchyLevel >= 50;
+}
+
+/**
+ * Apakah user boleh mengelola billing tenant (cancel/downgrade/resume/trial).
+ * True bila: superadmin sistem, ATAU punya permission `billing.manage`,
+ * ATAU admin/owner (hierarchy_level >= 50).
+ */
+export async function canManageBilling(
+  supabase: SupabaseClient,
+  userId: string,
+  tenantId: string
+): Promise<boolean> {
+  if (!userId || !tenantId) return false;
+  if (await isSystemSuperadmin(supabase, userId)) return true;
+  const authority = await resolveTenantAuthority(supabase, userId, tenantId);
+  if (!authority) return false;
+  if (authority.permissions.includes("billing.manage")) return true;
+  return authority.hierarchyLevel != null && authority.hierarchyLevel >= 50;
+}

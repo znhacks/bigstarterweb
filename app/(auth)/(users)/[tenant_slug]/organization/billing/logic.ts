@@ -11,6 +11,8 @@ import { getUserCurrencyClient } from "@/lib/i18n/user-currency";
 import { CURRENCY } from "@/config/i18n-culture";
 import { transactionRepository } from "@/supabase/repositories/transactions";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+import { getLocalizedValue } from "@/lib/i18n/localize";
+import { resolveBillingOwner } from "@/lib/billing/owner";
 
 export interface AlertState {
   title: string;
@@ -51,6 +53,9 @@ export interface ConvertedPlan {
   displayFeatures?: string[];
   features: string[];
   featureGates?: any;
+  isEnterprise?: boolean;
+  isRecommended?: boolean;
+  trialDays?: number;
   prices: {
     monthly: {
       amount: number;
@@ -65,17 +70,8 @@ export interface ConvertedPlan {
   };
 }
 
-export function getLocalizedValue<T>(
-  field: Record<string, T> | T,
-  locale: string,
-  fallback = "en"
-): T {
-  if (field && typeof field === "object" && !Array.isArray(field)) {
-    const val = (field as Record<string, T>)[locale] ?? (field as Record<string, T>)[fallback];
-    return val !== undefined ? val : (field as any);
-  }
-  return field as T;
-}
+// getLocalizedValue tinggal di @/lib/i18n/localize (fallback robust lintas-bahasa).
+export { getLocalizedValue };
 
 export function useOrganizationBilling() {
   const locale = useLocale();
@@ -236,15 +232,25 @@ export function useOrganizationBilling() {
 
   const fetchActiveSubscription = async (orgId: string) => {
     const subRepo = await subscriptionRepository(supabase);
+
+    // Scope sesuai billingAttachedTo (tenant default; user bila config).
+    const {
+      data: { user: authUser }
+    } = await supabase.auth.getUser();
+    const owner = resolveBillingOwner({ tenantId: orgId, userId: authUser?.id });
+    const ownerCol = owner?.type === "user" ? "user_id" : "tenant_id";
+    const ownerId = owner?.id || orgId;
+
     const { data, error } = await subRepo
       .query()
       .select(
         "id, status, starts_at, ends_at, cancel_at_period_end, plan_id, provider, pending_plan_id"
       )
-      .eq("tenant_id", orgId)
+      .eq(ownerCol, ownerId)
       .in("status", [
         "active",
         "ACTIVE",
+        "trialing",
         "refund_requested",
         "REFUND_REQUESTED",
         "expired",
@@ -258,7 +264,7 @@ export function useOrganizationBilling() {
       const endsAt = data.ends_at ? new Date(data.ends_at) : null;
       const isExpired = endsAt ? new Date() > endsAt : false;
 
-      if (isExpired && data.status === "active") {
+      if (isExpired && (data.status === "active" || data.status === "trialing")) {
         await subRepo.query().update({ status: "expired" }).eq("id", data.id);
         setActiveSub(null);
         return;
@@ -600,6 +606,86 @@ export function useOrganizationBilling() {
     }
   };
 
+  // === ENTERPRISE (hubungi superadmin via form) ===
+  const [enterpriseTarget, setEnterpriseTarget] = useState<ConvertedPlan | null>(null);
+  const [isEnterpriseOpen, setIsEnterpriseOpen] = useState(false);
+  const [enterpriseForm, setEnterpriseForm] = useState({ name: "", email: "", message: "" });
+  const [isSubmittingEnterprise, setIsSubmittingEnterprise] = useState(false);
+
+  const handleOpenEnterprise = (plan: ConvertedPlan) => {
+    setEnterpriseTarget(plan);
+    setEnterpriseForm({ name: "", email: "", message: "" });
+    setIsEnterpriseOpen(true);
+  };
+
+  const handleEnterpriseSubmit = async () => {
+    if (!activeOrgId || !enterpriseTarget) return;
+    setIsSubmittingEnterprise(true);
+    try {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Silakan masuk terlebih dahulu");
+      const res = await fetch("/api/billing/enterprise", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          tenantId: activeOrgId,
+          planId: enterpriseTarget.id,
+          ...enterpriseForm
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Gagal mengirim permintaan");
+      setAlertMessage({
+        title: "Terkirim",
+        description: "Permintaan enterprise Anda telah diteruskan ke tim kami.",
+        variant: "default"
+      });
+      setIsEnterpriseOpen(false);
+    } catch (e: any) {
+      setAlertMessage({ title: "Gagal", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSubmittingEnterprise(false);
+    }
+  };
+
+  // === TRIAL (free-window, tanpa charge) ===
+  const [isStartingTrial, setIsStartingTrial] = useState(false);
+  const handleStartTrial = async (planId: string) => {
+    if (!activeOrgId) return;
+    setIsStartingTrial(true);
+    try {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Silakan masuk terlebih dahulu");
+      const res = await fetch("/api/billing/trial", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ tenantId: activeOrgId, planId })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Gagal memulai trial");
+      setAlertMessage({
+        title: "Trial Aktif",
+        description: "Masa uji coba Anda telah dimulai. Nikmati akses penuh hingga berakhir.",
+        variant: "default"
+      });
+      await fetchActiveSubscription(activeOrgId);
+    } catch (e: any) {
+      setAlertMessage({ title: "Gagal", description: e.message, variant: "destructive" });
+    } finally {
+      setIsStartingTrial(false);
+    }
+  };
+
   const getRemainingCredit = (): number => {
     if (!activeSub || !activeSub.startsAt || !activeSub.endsAt) return 0;
 
@@ -686,7 +772,7 @@ export function useOrganizationBilling() {
 
   const isSubActive =
     activeSub &&
-    activeSub.status === "active" &&
+    (activeSub.status === "active" || activeSub.status === "trialing") &&
     (activeSub.endsAt === null || new Date() < new Date(activeSub.endsAt));
 
   const getDaysLeft = (): number => {
@@ -773,6 +859,16 @@ export function useOrganizationBilling() {
     couponError,
     setCouponError,
     isValidatingCoupon,
-    handleApplyCoupon
+    handleApplyCoupon,
+    enterpriseTarget,
+    isEnterpriseOpen,
+    setIsEnterpriseOpen,
+    enterpriseForm,
+    setEnterpriseForm,
+    isSubmittingEnterprise,
+    handleOpenEnterprise,
+    handleEnterpriseSubmit,
+    isStartingTrial,
+    handleStartTrial
   };
 }

@@ -10,6 +10,7 @@ import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { couponRepository } from "@/supabase/repositories/coupons";
 import { paymentOrderRepository } from "@/supabase/repositories/payment-orders";
 import { convertToIdr } from "@/services/exchange-rate";
+import { resolveBillingOwner, ownerFilter } from "@/lib/billing/owner";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -94,13 +95,20 @@ export async function POST(req: Request) {
     //     jadi nominal harus dinormalisasi ke IDR dulu agar currency plan benar2 berpengaruh.
     const chargeAmountIdr = await convertToIdrSafe(targetPrice, planCurrency);
 
+    // Scope billing sesuai billingAttachedTo (tenant default; user bila config "user").
+    const owner = resolveBillingOwner({ tenantId, userId: user.id });
+    if (!owner) {
+      return NextResponse.json({ error: "Owner tidak teridentifikasi" }, { status: 400 });
+    }
+    const { column: ownerCol, value: ownerId } = ownerFilter(owner);
+
     // 2. KALKULASI KREDIT PRO-RATA DINAMIS (pakai interval langganan LAMA)
     let credit = 0;
     let oldProviderSubscriptionId: string | null = null;
     const { data: activeSub } = await (await subscriptionRepository(supabaseAdmin))
       .query()
       .select("starts_at, ends_at, plan_id, provider, provider_subscription_id, interval")
-      .eq("tenant_id", tenantId)
+      .eq(ownerCol, ownerId)
       .eq("status", "active")
       .maybeSingle();
 
@@ -221,11 +229,11 @@ export async function POST(req: Request) {
     try {
       const orderRepo = await paymentOrderRepository(supabaseAdmin);
 
-      // Supersede: tandai order pending lama untuk tenant+plan+interval sama menjadi expired.
+      // Supersede: tandai order pending lama untuk owner+plan+interval sama menjadi expired.
       await orderRepo
         .query()
         .update({ status: "expired", updated_at: new Date().toISOString() })
-        .eq("tenant_id", tenantId)
+        .eq(ownerCol, ownerId)
         .eq("plan_id", planId)
         .eq("interval", interval)
         .eq("status", "pending");

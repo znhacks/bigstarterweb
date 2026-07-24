@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     await validateSuperadmin(req);
     const body = await req.json();
 
-    const { id, name, description, isActive, displayFeatures, features, prices } = body;
+    const { id, name, description, isActive, displayFeatures, features, prices, isEnterprise, isRecommended, trialDays } = body;
 
     if (!id || !name || !description) {
       return NextResponse.json(
@@ -110,6 +110,9 @@ export async function POST(req: Request) {
       name,
       description,
       is_active: isActive !== undefined ? isActive : true,
+      is_enterprise: isEnterprise ?? false,
+      is_recommended: isRecommended ?? false,
+      trial_days: trialDays ?? 0,
       display_features: displayFeatures || [],
       features: features || [], // Menyimpan array rbac terpadu: ['allowPdfFormat', 'limit:maxTasks:2000']
       updated_at: new Date().toISOString()
