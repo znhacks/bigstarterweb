@@ -24,6 +24,7 @@ import { formatDateTime } from "@/lib/i18n/format";
 import { formatTransactionAmount } from "@/lib/i18n/currency";
 import { Input } from "@/components/ui/input";
 import { getLocaleMeta } from "@/config/i18n-culture";
+import { billingConfig } from "@/config/payment";
 
 const PROVIDER_LABELS: Record<string, { title: string; subtitle: string; color: string }> = {
   stripe: { title: "Credit Card", subtitle: "Stripe Global Secure", color: "text-indigo-600" },
@@ -88,7 +89,17 @@ export function OrganizationBilling() {
     setAppliedCoupon,
     couponError,
     isValidatingCoupon,
-    handleApplyCoupon
+    handleApplyCoupon,
+    isEnterpriseOpen,
+    setIsEnterpriseOpen,
+    enterpriseTarget,
+    enterpriseForm,
+    setEnterpriseForm,
+    isSubmittingEnterprise,
+    handleOpenEnterprise,
+    handleEnterpriseSubmit,
+    isStartingTrial,
+    handleStartTrial
   } = useOrganizationBilling();
 
   const meta = getLocaleMeta(locale);
@@ -209,7 +220,7 @@ export function OrganizationBilling() {
             return (
               <Card
                 key={plan.id}
-                className="flex h-full flex-col justify-between overflow-hidden bg-white py-0 transition-all hover:shadow-md">
+                className={`flex h-full flex-col justify-between overflow-hidden bg-white py-0 transition-all hover:shadow-md ${plan.isRecommended ? "shadow-md ring-2 ring-slate-900" : ""}`}>
                 <CardContent className="flex h-full flex-col justify-between gap-0 sm:p-6">
                   <div className="min-w-0 space-y-5">
                     <div className="space-y-1.5">
@@ -219,7 +230,12 @@ export function OrganizationBilling() {
                         </h3>
                         {billingCycle === "yearly" && plan.id !== "free" && (
                           <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-500/30 bg-emerald-50/50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                            Save {getYearlyDiscountPercent(plan)}%
+                            {t("saveDiscount", { discount: getYearlyDiscountPercent(plan) })}
+                          </span>
+                        )}
+                        {plan.isRecommended && (
+                          <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                            {t("recomended")}
                           </span>
                         )}
                       </div>
@@ -229,12 +245,20 @@ export function OrganizationBilling() {
                     </div>
 
                     <div className="flex min-w-0 flex-wrap items-baseline gap-1 pt-1">
-                      <span className="text-3xl font-extrabold tracking-tight break-all text-slate-900 sm:text-4xl">
-                        {formatPrice(planPrice)}
-                      </span>
-                      <span className="shrink-0 text-sm font-medium text-slate-500">
-                        /{billingCycle === "yearly" ? "year" : "month"}
-                      </span>
+                      {plan.isEnterprise ? (
+                        <span className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+                          Hubungi Kami
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-3xl font-extrabold tracking-tight break-all text-slate-900 sm:text-4xl">
+                            {formatPrice(planPrice)}
+                          </span>
+                          <span className="shrink-0 text-sm font-medium text-slate-500">
+                            /{billingCycle === "yearly" ? "year" : "month"}
+                          </span>
+                        </>
+                      )}
                     </div>
 
                     <div className="space-y-3 border-t border-slate-100 pt-2">
@@ -253,11 +277,17 @@ export function OrganizationBilling() {
 
                   <div className="shrink-0 pt-4">
                     <div className="shrink-0 pt-4">
-                      {activeSub && activeSub.pendingPlanId === plan.id ? (
+                      {plan.isEnterprise ? (
+                        <Button
+                          onClick={() => handleOpenEnterprise(plan)}
+                          className="w-full bg-slate-950 py-5 font-semibold text-white hover:bg-slate-800">
+                          Hubungi Kami
+                        </Button>
+                      ) : activeSub && activeSub.pendingPlanId === plan.id ? (
                         <Button
                           disabled
                           className="w-full cursor-default border border-amber-500/20 bg-amber-500/10 py-5 font-semibold text-amber-600 hover:bg-amber-500/10">
-                          Scheduled Downgrade
+                          {t("buttons.schedule-downgrade")}
                         </Button>
                       ) : isThisPlanActive &&
                         getPlanActionType(plan.id) !== "upgrade_cycle" &&
@@ -274,7 +304,6 @@ export function OrganizationBilling() {
                               {activeSub.endsAt
                                 ? new Date(activeSub.endsAt).toLocaleDateString(locale)
                                 : ""}{" "}
-                              (Scheduled Downgrade)
                             </p>
                           )}
                         </div>
@@ -284,7 +313,7 @@ export function OrganizationBilling() {
                           disabled={isDisabled}
                           className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
                           <ArrowUpRight className="h-4 w-4 shrink-0" />
-                          <span>Switch to Yearly</span>
+                          <span>{t("buttons.switchToYearly")}</span>
                         </Button>
                       ) : getPlanActionType(plan.id) === "downgrade_cycle" ? (
                         <div className="w-full space-y-2">
@@ -302,7 +331,7 @@ export function OrganizationBilling() {
                             variant="outline"
                             className="w-full border-slate-200 py-5 font-semibold text-slate-700 transition-all hover:bg-slate-50">
                             {isDowngrading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                            <span>Switch to Monthly</span>
+                            <span>{t("buttons.switchToMonthly")}</span>
                           </Button>
                           <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
                             *Paket tahunan Anda tetap aktif sampai masa berakhir, baru kemudian
@@ -313,7 +342,7 @@ export function OrganizationBilling() {
                         <Button
                           onClick={() => handleChoosePlan(plan)}
                           disabled={isDisabled}
-                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-950 py-5 font-semibold text-white hover:bg-slate-800">
+                          className="gap-1.5py-5 inline-flex w-full items-center justify-center font-semibold">
                           <ArrowUpRight className="h-4 w-4 shrink-0" />
                           <span className="truncate">{t("buttons.upgrade")}</span>
                         </Button>
@@ -348,6 +377,19 @@ export function OrganizationBilling() {
                         </Button>
                       )}
                     </div>
+                    {!plan.isEnterprise &&
+                      !!plan.trialDays &&
+                      plan.trialDays > 0 &&
+                      !isThisPlanActive && (
+                        <Button
+                          variant="outline"
+                          onClick={() => handleStartTrial(plan.id)}
+                          disabled={isStartingTrial}
+                          className="mt-2 w-full border-slate-200 py-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                          {isStartingTrial && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                          Mulai Trial {plan.trialDays} Hari
+                        </Button>
+                      )}
                   </div>
                 </CardContent>
               </Card>
@@ -500,7 +542,7 @@ export function OrganizationBilling() {
           }
         }}>
         <DialogContent
-          className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8"
+          className="w-[95vw] max-w-[450px] border border-slate-200 p-6 sm:p-8"
           dir={meta.dir}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-slate-900">
@@ -533,7 +575,7 @@ export function OrganizationBilling() {
 
               return (
                 <div className="space-y-5 py-2">
-                  <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm">
+                  <div className="space-y-2 border border-slate-100 bg-slate-50 p-4 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-slate-700">
                         {t("dialogPurchase.planCycle", {
@@ -574,14 +616,16 @@ export function OrganizationBilling() {
                     <Label
                       htmlFor="coupon-input"
                       className="text-xs font-bold tracking-wide text-slate-500 uppercase">
-                      Miliki Kode Promo?
+                      Punya Kode Promo?
                     </Label>
                     <div className="flex gap-2">
                       <Input
                         id="coupon-input"
                         placeholder="Contoh: DISKONSAAS20"
                         value={couponCodeInput}
-                        onChange={(e: any) => setCouponCodeInput(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setCouponCodeInput(e.target.value)
+                        }
                         disabled={isValidatingCoupon || !!appliedCoupon}
                         className="h-9 text-xs uppercase"
                       />
@@ -610,29 +654,13 @@ export function OrganizationBilling() {
                   </div>
 
                   <div className="space-y-2 border-t border-slate-100 pt-3">
-                    <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
-                      {t("dialogPurchase.selectPaymentMethod") || "Pilih Metode Pembayaran:"}
-                    </p>
-                    <div className="flex max-h-[180px] flex-col gap-2 overflow-y-auto pr-1">
-                      {enabledProviders.map((provider) => {
-                        const meta = PROVIDER_LABELS[provider] || {
-                          title: provider.toUpperCase(),
-                          subtitle: "Secure Payment Option",
-                          color: "text-slate-600"
-                        };
-
-                        return (
-                          <Button
-                            key={provider}
-                            variant="outline"
-                            onClick={() => handleInitiateCheckout(provider)}
-                            className="flex h-14 flex-col items-start justify-center gap-0.5 rounded-xl border border-slate-200 px-4 hover:border-slate-300 hover:bg-slate-50/50">
-                            <span className={`text-sm font-bold ${meta.color}`}>{meta.title}</span>
-                            <span className="text-[10px] text-slate-400">{meta.subtitle}</span>
-                          </Button>
-                        );
-                      })}
-                    </div>
+                    <Button
+                      onClick={() => handleInitiateCheckout(billingConfig.activeProvider)}
+                      disabled={isVerifyingPayment}
+                      className="flex h-9 w-full items-center justify-center gap-2 text-base font-bold text-white">
+                      {isVerifyingPayment && <Loader2 className="h-5 w-5 animate-spin" />}
+                      {t("dialogPurchase.payNow")}
+                    </Button>
                   </div>
                 </div>
               );
@@ -675,6 +703,74 @@ export function OrganizationBilling() {
               className="inline-flex items-center gap-1.5 rounded-xl bg-red-700 text-white hover:bg-red-800">
               {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
               {t("buttons.confirmRefund")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: ENTERPRISE CONTACT FORM */}
+      <Dialog open={isEnterpriseOpen} onOpenChange={setIsEnterpriseOpen}>
+        <DialogContent
+          className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8"
+          dir={meta.dir}>
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-900">
+              {enterpriseTarget?.name ? `Hubungi Kami — ${enterpriseTarget.name}` : "Hubungi Kami"}
+            </DialogTitle>
+            <DialogDescription>
+              Sampaikan kebutuhan Anda; tim kami akan menghubungi Anda untuk penawaran enterprise.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold tracking-wide text-slate-500 uppercase">
+                Nama
+              </Label>
+              <Input
+                value={enterpriseForm.name}
+                onChange={(e: any) => setEnterpriseForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Nama lengkap"
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold tracking-wide text-slate-500 uppercase">
+                Email
+              </Label>
+              <Input
+                type="email"
+                value={enterpriseForm.email}
+                onChange={(e: any) => setEnterpriseForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="anda@perusahaan.com"
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold tracking-wide text-slate-500 uppercase">
+                Pesan
+              </Label>
+              <textarea
+                value={enterpriseForm.message}
+                onChange={(e: any) => setEnterpriseForm((f) => ({ ...f, message: e.target.value }))}
+                placeholder="Jumlah seat, kebutuhan khusus, dll."
+                rows={4}
+                className="w-full rounded-md border border-slate-200 p-2 text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsEnterpriseOpen(false)}
+              className="rounded-xl">
+              Batal
+            </Button>
+            <Button
+              onClick={handleEnterpriseSubmit}
+              disabled={isSubmittingEnterprise || !enterpriseForm.email}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-950 text-white hover:bg-slate-800">
+              {isSubmittingEnterprise && <Loader2 className="h-4 w-4 animate-spin" />}
+              Kirim Permintaan
             </Button>
           </DialogFooter>
         </DialogContent>

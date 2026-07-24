@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { billingConfig } from "@/config/payment";
 
 interface PaywallGateProps {
   children: React.ReactNode;
@@ -41,15 +42,13 @@ export function PaywallGate({ children, allowedPlans, fallback }: PaywallGatePro
         if (error) throw error;
 
         // Ambil ID paket aktif dari database, jika tidak ada fallback ke "free"
-        const activePlanId = data?.plan_id || "free";
-        const subscriptionStatus = data?.status || "active";
         const endsAt = data?.ends_at ? new Date(data.ends_at) : null;
         const isExpired = endsAt ? new Date() > endsAt : false;
 
-        // --- INTEGRASI LAZY EXPIRATION (DEGRADASI OTOMATIS) ---
-        // Jika masa berlaku habis tetapi status di database masih tertulis 'active',
-        // kita perbarui statusnya ke 'expired' secara asinkron di latar belakang.
-        if (isExpired && data && data.status === "active") {
+        // --- INTEGRASI LAZY EXPIRATION (DEGRADASI OTOMATATIS) ---
+        // Jika masa berlaku habis tetapi status di database masih 'active'/'trialing',
+        // perbarui ke 'expired' secara asinkron di latar belakang.
+        if (isExpired && data && (data.status === "active" || data.status === "trialing")) {
           subscriptionRepo
             .query()
             .update({ status: "expired" })
@@ -61,17 +60,24 @@ export function PaywallGate({ children, allowedPlans, fallback }: PaywallGatePro
             });
         }
 
-        // Jika statusnya sudah expired, paksa gunakan limit paket "free"
-        const resolvedPlanId =
-          subscriptionStatus === "expired" || isExpired ? "free" : activePlanId;
+        // "active" & "trialing" (trial free-window) dianggap aktif sampai ends_at.
+        const isActiveLike =
+          !!data && (data.status === "active" || data.status === "trialing") && !isExpired;
 
-        // DB-driven: cukup cek keanggotaan plan di allowedPlans (tanpa lookup config)
-        const isAuthorized =
-          allowedPlans.includes(resolvedPlanId) &&
-          subscriptionStatus === "active" &&
-          !isExpired;
+        // Otorisasi:
+        //  - sub aktif → cek plan di allowedPlans
+        //  - tanpa sub aktif & requireActiveSubscription → tolak (tidak ada free plan)
+        //  - tanpa sub aktif & mode free → boleh jika "free" masuk allowedPlans
+        let isAuthorized: boolean;
+        if (isActiveLike) {
+          isAuthorized = allowedPlans.includes(data?.plan_id || "free");
+        } else if (billingConfig.requireActiveSubscription) {
+          isAuthorized = false;
+        } else {
+          isAuthorized = allowedPlans.includes("free");
+        }
 
-        setHasAccess(!!isAuthorized);
+        setHasAccess(isAuthorized);
       } catch (e) {
         console.error("Gagal memeriksa paywall access:", e);
         setHasAccess(false);
