@@ -29,7 +29,8 @@ import {
   Package,
   ReceiptText,
   LayoutDashboard,
-  BadgeCheck
+  BadgeCheck,
+  Headset
 } from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -170,6 +171,11 @@ export const navItems: NavGroup[] = [
             href: "/superadmin/billing/histories"
           }
         ]
+      },
+      {
+        title: "superadmin.enterprise",
+        href: "/superadmin/enterprise",
+        icon: Headset
       }
     ]
   }
