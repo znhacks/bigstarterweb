@@ -91,11 +91,23 @@ export class LemonSqueezyAdapter implements PaymentProvider {
     const rawBody = await req.text();
     const signature = req.headers.get("x-signature") || "";
 
-    // Verifikasi HMAC SHA256 Lemon Squeezy
-    const hmac = crypto.createHmac("sha256", process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "");
-    const digest = hmac.update(rawBody).digest("hex");
+    const secret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET;
+    // FAIL-CLOSED: secret kosong membuat HMAC dapat di-forging (HMAC atas "").
+    if (!secret) {
+      throw new Error(
+        "[lemonsqueezy] LEMONSQUEEZY_WEBHOOK_SECRET belum diset — verifikasi signature webhook WAJIB. SET env ini sebelum menerima webhook."
+      );
+    }
 
-    if (signature !== digest) {
+    // Verifikasi HMAC SHA256 Lemon Squeezy + timing-safe compare.
+    const digest = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+    const sigBuf = Buffer.from(signature, "hex");
+    const expBuf = Buffer.from(digest, "hex");
+    const ok =
+      sigBuf.length === expBuf.length &&
+      sigBuf.length > 0 &&
+      crypto.timingSafeEqual(sigBuf, expBuf);
+    if (!ok) {
       throw new Error("Invalid Lemon Squeezy signature");
     }
 

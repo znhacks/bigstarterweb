@@ -71,13 +71,27 @@ export class MidtransAdapter implements PaymentProvider {
   }
 
   async handleWebhook(req: Request): Promise<UnifiedWebhookResult> {
+    // FAIL-CLOSED: server key kosong membuat signature dapat di-forging
+    // (signature dihitung atas sha512(... + ""), yang bisa dihitung penyerang).
+    if (!this.serverKey) {
+      throw new Error(
+        "[midtrans] MIDTRANS_SERVER_KEY belum diset — verifikasi signature webhook WAJIB. SET env ini sebelum menerima webhook."
+      );
+    }
+
     const payload = await req.json();
 
-    // Verifikasi Signature SHA512 Midtrans untuk keamanan tingkat tinggi
+    // Verifikasi Signature SHA512 Midtrans + timing-safe compare.
     const signatureSource = `${payload.order_id}${payload.status_code}${payload.gross_amount}${this.serverKey}`;
     const localSignature = crypto.createHash("sha512").update(signatureSource).digest("hex");
 
-    if (payload.signature_key !== localSignature) {
+    const sigBuf = Buffer.from(payload.signature_key || "", "hex");
+    const expBuf = Buffer.from(localSignature, "hex");
+    const ok =
+      sigBuf.length === expBuf.length &&
+      sigBuf.length > 0 &&
+      crypto.timingSafeEqual(sigBuf, expBuf);
+    if (!ok) {
       throw new Error("Invalid Midtrans signature key");
     }
 

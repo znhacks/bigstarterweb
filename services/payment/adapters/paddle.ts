@@ -118,21 +118,30 @@ export class PaddleAdapter implements PaymentProvider {
   async handleWebhook(req: Request): Promise<UnifiedWebhookResult> {
     const rawBody = await req.text();
 
-    // Verifikasi signature Paddle (format: "ts=...;h1=...")
-    if (this.webhookSecret) {
-      const sigHeader = req.headers.get("paddle-signature") || "";
-      const parts = Object.fromEntries(sigHeader.split(";").map((kv) => kv.split("=")));
-      const ts = parts.ts;
-      const h1 = parts.h1;
-      if (!ts || !h1) throw new Error("Missing Paddle signature");
-      const expected = crypto
-        .createHmac("sha256", this.webhookSecret)
-        .update(`${ts}:${rawBody}`)
-        .digest("hex");
-      if (expected !== h1) throw new Error("Invalid Paddle signature");
-    } else {
-      console.warn("[paddle] PADDLE_WEBHOOK_SECRET belum diset — verifikasi signature dilewati. SET env ini di production!");
+    // FAIL-CLOSED: tanpa PADDLE_WEBHOOK_SECRET, signature TIDAK dapat diverifikasi.
+    if (!this.webhookSecret) {
+      throw new Error(
+        "[paddle] PADDLE_WEBHOOK_SECRET belum diset — verifikasi signature webhook WAJIB. SET env ini sebelum menerima webhook."
+      );
     }
+
+    // Verifikasi signature Paddle (format: "ts=...;h1=...") + timing-safe compare.
+    const sigHeader = req.headers.get("paddle-signature") || "";
+    const parts = Object.fromEntries(sigHeader.split(";").map((kv) => kv.split("=")));
+    const ts = parts.ts;
+    const h1 = parts.h1;
+    if (!ts || !h1) throw new Error("Missing Paddle signature");
+    const expected = crypto
+      .createHmac("sha256", this.webhookSecret)
+      .update(`${ts}:${rawBody}`)
+      .digest("hex");
+    const sigBuf = Buffer.from(h1, "hex");
+    const expBuf = Buffer.from(expected, "hex");
+    const ok =
+      sigBuf.length === expBuf.length &&
+      sigBuf.length > 0 &&
+      crypto.timingSafeEqual(sigBuf, expBuf);
+    if (!ok) throw new Error("Invalid Paddle signature");
 
     const payload = JSON.parse(rawBody);
     const eventTypeRaw = payload.event_type;

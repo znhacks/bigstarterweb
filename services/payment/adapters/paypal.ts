@@ -183,11 +183,13 @@ export class PayPalAdapter implements PaymentProvider {
    * Mencegah webhook palsu. Bila PAYPAL_WEBHOOK_ID belum diset, beri peringatan & lanjut (dev).
    */
   private async verifyWebhookSignature(rawBody: string, headers: Headers, token: string): Promise<boolean> {
+    // FAIL-CLOSED: tanpa PAYPAL_WEBHOOK_ID, signature TIDAK dapat diverifikasi.
+    // Jangan pernah `return true` di sini — itu menerima webhook palsu dan
+    // memungkinkan penyerang men-grant langganan berbayar secara gratis.
     if (!this.webhookId) {
-      console.warn(
-        "[paypal] PAYPAL_WEBHOOK_ID belum diset — verifikasi signature dilewati. SET env ini di production!"
+      throw new Error(
+        "[paypal] PAYPAL_WEBHOOK_ID belum diset — verifikasi signature webhook WAJIB. SET env ini sebelum menerima webhook."
       );
-      return true;
     }
 
     const transmissionId = headers.get("paypal-transmission-id");

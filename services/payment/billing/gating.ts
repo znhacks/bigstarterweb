@@ -12,6 +12,8 @@ import {
 } from "@/config/feature-definitions";
 import { planRepository } from "@/supabase/repositories/plans";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+import { billingConfig } from "@/config/payment";
+import { ownerFilter, type BillingOwner } from "@/lib/billing/owner";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -30,6 +32,15 @@ const featureGatesCache = new Map<string, { name: string; gates: FeatureGates; t
 
 function defaultGates(): FeatureGates {
   return decodeFeatureGates(null); // memakai defaultValue dari FEATURE_DEFINITIONS
+}
+
+/** Semua fitur dimatikan & limit 0 — dipakai saat requireActiveSubscription=true & tak ada sub aktif. */
+function deniedGates(): FeatureGates {
+  const gates = {} as Record<string, boolean | number>;
+  FEATURE_DEFINITIONS.forEach((f) => {
+    gates[f.key] = f.type === "boolean" ? false : 0;
+  });
+  return gates as unknown as FeatureGates;
 }
 
 /**
@@ -58,19 +69,32 @@ async function fetchPlanFeatureGates(
 }
 
 /**
- * Mengambil paket langganan aktif milik tenant (dengan feature gates hasil decode dari DB).
- * Jika tidak ada langganan aktif / kedaluwarsa → paket "free"; bila plan "free" tidak ada
- * di DB, kembalikan defaultValue dari FEATURE_DEFINITIONS.
+ * Mengambil paket langganan aktif milik sebuah owner (tenant atau user, sesuai config
+ * billingAttachedTo) beserta feature gates hasil decode dari DB.
+ *
+ * Aturan:
+ *  - status "active" atau "trialing" & belum kedaluwarsa → dianggap aktif.
+ *  - requireActiveSubscription=true & tidak aktif → DENIED (semua fitur off, limit 0).
+ *  - selain itu (mode free) → paket "free"; bila tidak ada di DB → default gates.
  */
-export async function getTenantPlan(tenantId: string): Promise<TenantPlan> {
+export async function getBillingPlan(owner: BillingOwner): Promise<TenantPlan> {
+  const { column, value } = ownerFilter(owner);
   const { data: subscription } = await (await subscriptionRepository(supabaseAdmin))
     .query()
     .select("plan_id, status, ends_at")
-    .eq("tenant_id", tenantId)
+    .eq(column, value)
     .maybeSingle();
 
   const isExpired = subscription?.ends_at ? new Date() > new Date(subscription.ends_at) : false;
-  const isActive = subscription && subscription.status === "active" && !isExpired;
+  const isActive =
+    !!subscription &&
+    (subscription.status === "active" || subscription.status === "trialing") &&
+    !isExpired;
+
+  if (!isActive && billingConfig.requireActiveSubscription) {
+    return { id: "denied", name: "No Active Subscription", featureGates: deniedGates() };
+  }
+
   const planId = (isActive && subscription?.plan_id) || "free";
 
   const fetched = await fetchPlanFeatureGates(planId);
@@ -80,6 +104,16 @@ export async function getTenantPlan(tenantId: string): Promise<TenantPlan> {
 
   // Plan tidak ditemukan di DB → pakai default gates
   return { id: planId, name: planId, featureGates: defaultGates() };
+}
+
+/** Alias scope-tenant (kompatibilitas mundur; mode default billingAttachedTo="tenant"). */
+export async function getTenantPlan(tenantId: string): Promise<TenantPlan> {
+  return getBillingPlan({ type: "tenant", id: tenantId });
+}
+
+/** Alias scope-user (dipakai saat billingAttachedTo="user"). */
+export async function getUserPlan(userId: string): Promise<TenantPlan> {
+  return getBillingPlan({ type: "user", id: userId });
 }
 
 /**
