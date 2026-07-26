@@ -10,6 +10,7 @@ import { planRepository } from "@/supabase/repositories/plans";
 import { transactionRepository } from "@/supabase/repositories/transactions";
 import { paymentOrderRepository } from "@/supabase/repositories/payment-orders";
 import { resolveBillingOwner, ownerFilter } from "@/lib/billing/owner";
+import { getLocalizedValue } from "@/lib/i18n/localize";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -126,6 +127,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       );
     }
 
+    // Scope billing owner (tenant default; user bila config) — dipakai di semua branch.
+    const billOwner = resolveBillingOwner({ tenantId, userId: paymentOrder?.user_id });
+    const billCol: "tenant_id" | "user_id" = billOwner ? ownerFilter(billOwner).column : "tenant_id";
+    const billId: string = billOwner ? ownerFilter(billOwner).value : tenantId;
+
     const normalizedStatus = status.toLowerCase().trim();
     let finalPlanId = planId;
 
@@ -136,14 +142,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     // Jika planId dari adapter kosong, kueri database menggunakan Price ID eksternal
     // =========================================================================
     if (!finalPlanId && providerSubscriptionId) {
-      const externalPriceId = providerSubscriptionId;
-
+      // Cari plan via product_id tunggal (fallback bila payment_orders tak match).
       const { data: priceRecord, error: priceErr } = await (
         await planPriceRepository(supabaseAdmin)
       )
         .query()
         .select("plan_id")
-        .or(`provider_ids->>${providerName}.eq.${externalPriceId}`)
+        .eq("product_id", providerSubscriptionId)
         .maybeSingle();
 
       if (!priceErr && priceRecord) {
@@ -165,8 +170,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
 
       const { error: upsertError } = await subscriptionRepo.query().upsert(
         {
-          tenant_id: tenantId,
-          plan_id: finalPlanId || "free",
+          [billCol]: billId,
+          plan_id: finalPlanId || null,
           status: normalizedStatus,
           starts_at: startsAt || new Date().toISOString(),
           ends_at: endsAt || null,
@@ -174,11 +179,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
           provider_subscription_id: providerSubscriptionId,
           provider_customer_id: providerCustomerId,
           interval: interval || null,
-          cancel_at_period_end: false, // re-subscribe setelah cancel: pastikan perpanjangan aktif lagi
+          cancel_at_period_end: false,
           updated_at: new Date().toISOString(),
           pending_plan_id: null
         },
-        { onConflict: "tenant_id" }
+        { onConflict: billCol }
       );
 
       if (upsertError) {
@@ -192,7 +197,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       const { data: currentSub, error: fetchError } = await subscriptionRepo
         .query()
         .select("pending_plan_id, provider")
-        .eq("tenant_id", tenantId)
+        .eq(billCol, billId)
         .maybeSingle();
 
       if (fetchError) {
@@ -210,7 +215,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
             pending_plan_id: null,
             updated_at: new Date().toISOString()
           })
-          .eq("tenant_id", tenantId);
+          .eq(billCol, billId);
 
         if (downgradeError) {
           throw new Error(`Database Process Downgrade Failed: ${downgradeError.message}`);
@@ -219,13 +224,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
         const { error: deleteError } = await subscriptionRepo
           .query()
           .update({
-            plan_id: "free",
+            plan_id: null,
             status: "expired",
             ends_at: null,
             cancel_at_period_end: false,
             updated_at: new Date().toISOString()
           })
-          .eq("tenant_id", tenantId);
+          .eq(billCol, billId);
 
         if (deleteError) {
           throw new Error(`Database Delete Subscription Failed: ${deleteError.message}`);
@@ -277,7 +282,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
           .select("name")
           .eq("id", finalPlanId)
           .maybeSingle();
-        if (planRow?.name) resolvedPlanName = planRow.name;
+        if (planRow?.name) {
+          // name bisa objek multibahasa → ambil string bersih utk hindari "[object Object]".
+          const nm = planRow.name;
+          resolvedPlanName = typeof nm === "string" ? nm : getLocalizedValue(nm, "en");
+        }
       }
 
       // order_id: deterministik agar replay webhook idempotent (jangan pakai Date.now()).
@@ -288,6 +297,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
           tenant_id: tenantId,
           amount: grossAmount,
           currency: activeCurrency,
+          plan_id: finalPlanId || null,
           plan_name: resolvedPlanName,
           order_id: resolvedOrderId,
           status: "paid",
@@ -311,66 +321,33 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       //      yang tidak memancarkan subscription.created). Hanya grant bila perlu agar
       //      tidak menimpa ends_at provider subscription (paypal/stripe) yg sudah benar. ===
       if (finalPlanId) {
-        // Scope grant sesuai billingAttachedTo: tenant (default) atau user
-        const grantOwner = resolveBillingOwner({
-          tenantId,
-          userId: paymentOrder?.user_id
-        });
-        const ownerCol = grantOwner ? ownerFilter(grantOwner).column : "tenant_id";
-        const ownerId = grantOwner ? ownerFilter(grantOwner).value : tenantId;
-
-        const { data: existingSub } = await subscriptionRepo
-          .query()
-          .select("id, plan_id, provider_subscription_id, status, ends_at")
-          .eq(ownerCol, ownerId)
-          .maybeSingle();
-
-        // Deteksi apakah pembayaran ini berasal dari langganan otomatis berulang resmi gateway
-        // - PayPal Subscription diawali dengan "I-" (misal: I-XXXXXXXXXXXX)
-        // - Stripe Subscription diawali dengan "sub_"
-        // - Paddle Subscription diawali dengan "sub_"
+        // Deteksi recurring gateway (PayPal "I-", Stripe/Paddle "sub_").
         const isRecurringProvider =
           (providerName === "paypal" && providerSubscriptionId?.startsWith("I-")) ||
           (providerName === "stripe" && providerSubscriptionId?.startsWith("sub_")) ||
           (providerName === "paddle" && providerSubscriptionId?.startsWith("sub_"));
 
-        const isExpired = existingSub
-          ? existingSub.status === "expired" ||
-            (existingSub.ends_at ? new Date(existingSub.ends_at).getTime() < Date.now() : false)
-          : true;
+        // Uang masuk = langganan WAJIB aktif. Selalu upsert (idempotent via onConflict).
+        const { error: subGrantError } = await subscriptionRepo.query().upsert(
+          {
+            [billCol]: billId,
+            plan_id: finalPlanId,
+            status: "active",
+            starts_at: startsAt || new Date().toISOString(),
+            ends_at: computeEndsAt(interval, endsAt),
+            provider: providerName,
+            provider_subscription_id: providerSubscriptionId || orderId || null,
+            provider_customer_id: providerCustomerId || null,
+            interval: interval || null,
+            cancel_at_period_end: !isRecurringProvider, // prepaid (invoice) → true; recurring → false
+            pending_plan_id: null,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: billCol }
+        );
 
-        // --- PERBAIKAN LOGIKA GRANT: ---
-        // Selalu set TRUE (Paksa Update) jika pembayaran ini bertipe Prabayar / Prepaid (non-recurring)
-        // agar tanggal kedaluwarsa (ends_at) diperpanjang otomatis di Supabase.
-        const needsGrant =
-          !isRecurringProvider || // <-- JIKA BUKAN RECURRING GATEWAY, SELALU UPDATE DB!
-          !existingSub ||
-          existingSub.plan_id !== finalPlanId ||
-          !existingSub.provider_subscription_id ||
-          isExpired;
-
-        if (needsGrant) {
-          const { error: subGrantError } = await subscriptionRepo.query().upsert(
-            {
-              [ownerCol]: ownerId,
-              plan_id: finalPlanId,
-              status: "active",
-              starts_at: startsAt || new Date().toISOString(),
-              ends_at: computeEndsAt(interval, endsAt),
-              provider: providerName,
-              provider_subscription_id: providerSubscriptionId || orderId || null,
-              provider_customer_id: providerCustomerId || null,
-              interval: interval || null,
-              cancel_at_period_end: !isRecurringProvider, // Set True jika ini prepaid (agar UI tahu ini akan berakhir)
-              pending_plan_id: null,
-              updated_at: new Date().toISOString()
-            },
-            { onConflict: ownerCol }
-          );
-
-          if (subGrantError) {
-            console.error(`[webhook] Grant subscription gagal: ${subGrantError.message}`);
-          }
+        if (subGrantError) {
+          console.error(`[webhook] Grant subscription gagal: ${subGrantError.message}`);
         }
       }
 

@@ -497,81 +497,22 @@ export function AdminPlansPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-4 pt-2">
-                        {/* Bagian Label Gateway ID Bulanan dengan Tooltip */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
-                            {t("form.monthly.id-gateway")}
-                          </span>
-                          <TooltipProvider>
-                            <Tooltip delayDuration={200}>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="text-muted-foreground/70 hover:text-foreground transition-colors">
-                                  <Info className="h-3.5 w-3.5" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs text-xs">
-                                <p>
-                                  Provider yang tidak menggunakan ID gateway tidak perlu diisi,
-                                  cukup aktifkan saja
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-
-                        {PROVIDER_FIELDS.length === 0 ? (
-                          <p className="text-muted-foreground text-xs">{t("form.noprovider")}</p>
-                        ) : (
-                          PROVIDER_FIELDS.map((pf) => (
-                            <div
-                              key={pf.key}
-                              className="border-border/40 space-y-1.5 border-l-2 pl-3">
-                              <div className="flex items-center space-x-2 py-0.5">
-                                <Checkbox
-                                  id={`monthly-chk-${pf.key}`}
-                                  disabled={!isMonthlyEnabled}
-                                  checked={!!enabledMonthlyProviders[pf.key]}
-                                  onCheckedChange={(checked) => {
-                                    setEnabledMonthlyProviders((prev) => ({
-                                      ...prev,
-                                      [pf.key]: !!checked
-                                    }));
-                                    if (!checked) {
-                                      setForm((f) => ({
-                                        ...f,
-                                        monthlyProviders: { ...f.monthlyProviders, [pf.key]: "" }
-                                      }));
-                                    }
-                                  }}
-                                />
-                                <Label
-                                  htmlFor={`monthly-chk-${pf.key}`}
-                                  className={`cursor-pointer text-xs font-semibold select-none ${!isMonthlyEnabled ? "text-muted-foreground/40 cursor-not-allowed" : ""}`}>
-                                  {pf.label}
-                                </Label>
-                              </div>
-                              <Input
-                                id={`monthly-${pf.key}`}
-                                disabled={!isMonthlyEnabled || !enabledMonthlyProviders[pf.key]}
-                                value={form.monthlyProviders?.[pf.key] || ""}
-                                onChange={(e) =>
-                                  setForm((f) => ({
-                                    ...f,
-                                    monthlyProviders: {
-                                      ...f.monthlyProviders,
-                                      [pf.key]: e.target.value
-                                    }
-                                  }))
-                                }
-                                placeholder={t("form.placeholder.provider", { label: pf.label })}
-                                className="h-8 font-mono text-xs"
-                              />
-                            </div>
-                          ))
-                        )}
+                      <div className="space-y-1.5 pt-2">
+                        <Label
+                          htmlFor="monthly-product-id"
+                          className={!isMonthlyEnabled ? "cursor-not-allowed" : ""}>
+                          {t("form.monthly.id-gateway")}
+                        </Label>
+                        <Input
+                          id="monthly-product-id"
+                          disabled={!isMonthlyEnabled}
+                          value={form.monthlyProductId || ""}
+                          onChange={(e) =>
+                            setForm((f) => ({ ...f, monthlyProductId: e.target.value }))
+                          }
+                          placeholder={t("form.planIdPlaceholder")}
+                          className="h-9 font-mono text-xs"
+                        />
                       </div>
                     </div>
                   </div>
@@ -637,81 +578,22 @@ export function AdminPlansPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-4 pt-2">
-                        {/* Bagian Label Gateway ID Tahunan dengan Tooltip */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
-                            {t("form.yearly.id-gateway")}
-                          </span>
-                          <TooltipProvider>
-                            <Tooltip delayDuration={200}>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="text-muted-foreground/70 hover:text-foreground transition-colors">
-                                  <Info className="h-3.5 w-3.5" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs text-xs">
-                                <p>
-                                  Provider yang tidak menggunakan ID gateway tidak perlu diisi,
-                                  cukup aktifkan saja
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-
-                        {PROVIDER_FIELDS.length === 0 ? (
-                          <p className="text-muted-foreground text-xs">{t("form.noprovider")}</p>
-                        ) : (
-                          PROVIDER_FIELDS.map((pf) => (
-                            <div
-                              key={pf.key}
-                              className="border-border/40 space-y-1.5 border-l-2 pl-3">
-                              <div className="flex items-center space-x-2 py-0.5">
-                                <Checkbox
-                                  id={`yearly-chk-${pf.key}`}
-                                  disabled={!isYearlyEnabled}
-                                  checked={!!enabledYearlyProviders[pf.key]}
-                                  onCheckedChange={(checked) => {
-                                    setEnabledYearlyProviders((prev) => ({
-                                      ...prev,
-                                      [pf.key]: !!checked
-                                    }));
-                                    if (!checked) {
-                                      setForm((f) => ({
-                                        ...f,
-                                        yearlyProviders: { ...f.yearlyProviders, [pf.key]: "" }
-                                      }));
-                                    }
-                                  }}
-                                />
-                                <Label
-                                  htmlFor={`yearly-chk-${pf.key}`}
-                                  className={`cursor-pointer text-xs font-semibold select-none ${!isYearlyEnabled ? "text-muted-foreground/40 cursor-not-allowed" : ""}`}>
-                                  {pf.label}
-                                </Label>
-                              </div>
-                              <Input
-                                id={`yearly-${pf.key}`}
-                                disabled={!isYearlyEnabled || !enabledYearlyProviders[pf.key]}
-                                value={form.yearlyProviders?.[pf.key] || ""}
-                                onChange={(e) =>
-                                  setForm((f) => ({
-                                    ...f,
-                                    yearlyProviders: {
-                                      ...f.yearlyProviders,
-                                      [pf.key]: e.target.value
-                                    }
-                                  }))
-                                }
-                                placeholder={t("form.placeholder.provider", { label: pf.label })}
-                                className="h-8 font-mono text-xs"
-                              />
-                            </div>
-                          ))
-                        )}
+                      <div className="space-y-1.5 pt-2">
+                        <Label
+                          htmlFor="yearly-product-id"
+                          className={!isYearlyEnabled ? "cursor-not-allowed" : ""}>
+                          {t("form.yearly.id-gateway")}
+                        </Label>
+                        <Input
+                          id="yearly-product-id"
+                          disabled={!isYearlyEnabled}
+                          value={form.yearlyProductId || ""}
+                          onChange={(e) =>
+                            setForm((f) => ({ ...f, yearlyProductId: e.target.value }))
+                          }
+                          placeholder={t("form.planIdPlaceholder")}
+                          className="h-9 font-mono text-xs"
+                        />
                       </div>
                     </div>
                   </div>

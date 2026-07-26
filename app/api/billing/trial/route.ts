@@ -86,11 +86,18 @@ export async function POST(req: Request) {
       await subscriptionRepository(supabaseAdmin)
     )
       .query()
-      .select("id, status")
+      .select("id, status, provider")
       .eq(column, value)
       .maybeSingle();
 
-    if (existingSub && (existingSub.status === "active" || existingSub.status === "trialing")) {
+    // Sekali per owner: blok bila masih aktif/trialing ATAU pernah memakai trial
+    // (provider="trial", meski sudah kedaluwarsa).
+    if (
+      existingSub &&
+      (existingSub.status === "active" ||
+        existingSub.status === "trialing" ||
+        existingSub.provider === "trial")
+    ) {
       return NextResponse.json({ error: "Trial sudah pernah digunakan" }, { status: 409 });
     }
 

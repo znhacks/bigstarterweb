@@ -122,8 +122,10 @@ export const EMPTY_FORM = {
   displayFeaturesRaw: createEmptyMultilingualField(),
   monthlyAmount: 0,
   monthlyCurrency: "IDR",
+  monthlyProductId: "",
   yearlyAmount: 0,
   yearlyCurrency: "IDR",
+  yearlyProductId: "",
   monthlyProviders: emptyProviderMap(),
   yearlyProviders: emptyProviderMap()
 };
@@ -318,8 +320,10 @@ export function useAdminPlans() {
         displayFeaturesRaw: getLangArrayRaw(plan.display_features),
         monthlyAmount: mPrice ? parseFloat(String(mPrice.amount)) : 0,
         monthlyCurrency: (mPrice as any)?.currency || "IDR",
+        monthlyProductId: (mPrice as any)?.product_id || "",
         yearlyAmount: yPrice ? parseFloat(String(yPrice.amount)) : 0,
         yearlyCurrency: (yPrice as any)?.currency || "IDR",
+        yearlyProductId: (yPrice as any)?.product_id || "",
         monthlyProviders: toMap(mPrice),
         yearlyProviders: toMap(yPrice)
       });
@@ -622,12 +626,12 @@ export function useAdminPlans() {
           monthly: {
             amount: isMonthlyEnabled ? form.monthlyAmount : 0,
             currency: form.monthlyCurrency || "IDR",
-            providerIds: filteredMonthlyProviders
+            productId: form.monthlyProductId || null
           },
           yearly: {
             amount: isYearlyEnabled ? form.yearlyAmount : 0,
             currency: form.yearlyCurrency || "IDR",
-            providerIds: filteredYearlyProviders
+            productId: form.yearlyProductId || null
           }
         }
       };

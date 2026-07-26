@@ -61,12 +61,14 @@ export async function GET() {
             amount: monthlyPrice ? parseFloat(monthlyPrice.amount) : 0,
             currency: monthlyPrice?.currency || "IDR",
             convertedAmount: monthlyPrice ? parseFloat(monthlyPrice.amount) : 0,
+            productId: (monthlyPrice as any)?.product_id || null,
             providers: monthlyPrice ? monthlyPrice.provider_ids : {}
           },
           yearly: {
             amount: yearlyPrice ? parseFloat(yearlyPrice.amount) : 0,
             currency: yearlyPrice?.currency || "IDR",
             convertedAmount: yearlyPrice ? parseFloat(yearlyPrice.amount) : 0,
+            productId: (yearlyPrice as any)?.product_id || null,
             providers: yearlyPrice ? yearlyPrice.provider_ids : {}
           }
         }

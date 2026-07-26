@@ -14,6 +14,7 @@ import { planRepository } from "@/supabase/repositories/plans";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { billingConfig } from "@/config/payment";
 import { ownerFilter, type BillingOwner } from "@/lib/billing/owner";
+import { getUser } from "@/lib/auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -117,13 +118,27 @@ export async function getUserPlan(userId: string): Promise<TenantPlan> {
 }
 
 /**
+ * Resolve plan aktif SESUAI billingAttachedTo — dipakai di server page/enforcer:
+ * - "tenant" (default) → getTenantPlan(tenantId).
+ * - "user" → ambil user aktif (getUser) lalu getUserPlan(userId) (satu langganan lintas tenant).
+ * Default mode tidak memanggil getUser (zero overhead).
+ */
+export async function getActivePlan(tenantId: string): Promise<TenantPlan> {
+  if (billingConfig.billingAttachedTo === "user") {
+    const user = await getUser();
+    if (user?.id) return getUserPlan(user.id);
+  }
+  return getTenantPlan(tenantId);
+}
+
+/**
  * Memvalidasi apakah tenant memiliki akses ke suatu fitur boolean (mis. 'allowPdfFormat')
  */
 export async function hasFeature(
   tenantId: string,
   featureKey: keyof Omit<FeatureGates, "maxUsers" | "maxTasks">
 ): Promise<boolean> {
-  const plan = await getTenantPlan(tenantId);
+  const plan = await getActivePlan(tenantId);
   return plan.featureGates[featureKey] === true;
 }
 
@@ -134,7 +149,7 @@ export async function getFeatureLimit(
   tenantId: string,
   limitKey: "maxUsers" | "maxTasks"
 ): Promise<number> {
-  const plan = await getTenantPlan(tenantId);
+  const plan = await getActivePlan(tenantId);
   return plan.featureGates[limitKey] ?? 0;
 }
 

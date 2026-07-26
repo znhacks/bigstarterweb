@@ -322,6 +322,16 @@ export class PayPalAdapter implements PaymentProvider {
       payload.resource?.billing_info?.last_payment_amount?.currency_code ||
       "USD";
 
+    // Stable id untuk lookup payment_orders + deteksi recurring:
+    // - SALE (pembayaran subscription) → billing_agreement_id (I-XXX) = subscription id
+    //   yg disimpan saat checkout (resource.id sale = S-XXX, TIDAK match).
+    // - CAPTURE (orders) → supplementary_data.related_ids.order_id = order id.
+    // - fallback → resource.id.
+    const stableId =
+      payload.resource?.billing_agreement_id ||
+      payload.resource?.supplementary_data?.related_ids?.order_id ||
+      payload.resource?.id;
+
     return {
       eventType,
       tenantId: ctx.tenantId,
@@ -329,12 +339,12 @@ export class PayPalAdapter implements PaymentProvider {
       interval: ctx.interval,
       couponCode: ctx.couponCode,
       endsAt,
-      providerSubscriptionId: payload.resource?.id,
+      providerSubscriptionId: stableId,
       providerCustomerId: payload.resource?.subscriber?.payer_id,
       status: capturedStatus || payload.resource?.status?.toLowerCase() || "active",
       amount,
       currency,
-      orderId: payload.resource?.id
+      orderId: stableId
     };
   }
 

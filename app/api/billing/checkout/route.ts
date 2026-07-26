@@ -76,11 +76,8 @@ export async function POST(req: Request) {
     const targetPrice = parseFloat(dbTargetPrice.amount);
     const planCurrency = (dbTargetPrice as any).currency || "IDR";
 
-    // Ambil ID plan di sisi provider dari JSONB provider_ids
-    const providerPriceId =
-      dbTargetPrice.provider_ids && dbTargetPrice.provider_ids[provider]
-        ? dbTargetPrice.provider_ids[provider]
-        : null;
+    // Product ID tunggal di sisi provider (1 provider aktif untuk user).
+    const providerPriceId = (dbTargetPrice as any).product_id || null;
 
     // Ambil nama plan untuk deskripsi invoice
     const { data: planRow } = await (await planRepository(supabaseAdmin))

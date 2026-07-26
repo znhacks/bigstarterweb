@@ -193,7 +193,7 @@ export async function POST(req: Request) {
           interval: "monthly",
           amount: prices.monthly.amount,
           currency: prices.monthly.currency || "IDR",
-          provider_ids: prices.monthly.providerIds || {}
+          product_id: prices.monthly.productId || null
         },
         { onConflict: "plan_id,interval" }
       );
@@ -209,7 +209,7 @@ export async function POST(req: Request) {
           interval: "yearly",
           amount: prices.yearly.amount,
           currency: prices.yearly.currency || "IDR",
-          provider_ids: prices.yearly.providerIds || {}
+          product_id: prices.yearly.productId || null
         },
         { onConflict: "plan_id,interval" }
       );

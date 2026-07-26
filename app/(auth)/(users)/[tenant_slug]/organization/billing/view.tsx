@@ -78,6 +78,7 @@ export function OrganizationBilling() {
     getUpgradePrice,
     getPlanActionType,
     isSubActive,
+    hasUsedTrial,
     daysLeft,
     showWarningBanner,
     handleDowngrade,
@@ -382,7 +383,8 @@ export function OrganizationBilling() {
                     {!plan.isEnterprise &&
                       !!plan.trialDays &&
                       plan.trialDays > 0 &&
-                      !isThisPlanActive && (
+                      !isSubActive &&
+                      !hasUsedTrial && (
                         <Button
                           variant="outline"
                           onClick={() => handleStartTrial(plan.id)}

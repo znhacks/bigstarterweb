@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { TasksView } from "./view";
 import { requirePermission } from "@/lib/auth";
 import { PERMISSIONS } from "@/lib/rbac";
-import { getTenantPlan } from "@/services/payment/billing/gating";
+import { getActivePlan } from "@/services/payment/billing/gating";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.users.tasks");
@@ -26,7 +26,7 @@ export default async function Page({ params }: PageProps) {
   const ctx = await requirePermission(PERMISSIONS.tasksRead, tenant_slug);
 
   // Ambil paket aktif tenant (DB-driven: decode plans.features[] -> featureGates)
-  const tenantPlan = await getTenantPlan(ctx.tenant.id);
+  const tenantPlan = await getActivePlan(ctx.tenant.id);
 
   return (
     <TasksView

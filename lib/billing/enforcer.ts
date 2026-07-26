@@ -7,7 +7,7 @@
 import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { screenshotLogRepository } from "@/supabase/repositories/screenshot-logs";
-import { getTenantPlan } from "@/services/payment/billing/gating";
+import { getActivePlan } from "@/services/payment/billing/gating";
 
 interface LimitCheckResult {
   allowed: boolean;
@@ -17,7 +17,7 @@ interface LimitCheckResult {
 }
 
 export async function checkSeatLimit(tenantId: string): Promise<LimitCheckResult> {
-  const plan = await getTenantPlan(tenantId);
+  const plan = await getActivePlan(tenantId);
 
   const membershipRepo = await membershipRepository(supabaseAdmin);
   const { count, error } = await membershipRepo
@@ -39,7 +39,7 @@ export async function checkSeatLimit(tenantId: string): Promise<LimitCheckResult
 }
 
 export async function checkUsageLimit(tenantId: string): Promise<LimitCheckResult> {
-  const plan = await getTenantPlan(tenantId);
+  const plan = await getActivePlan(tenantId);
 
   // Hitung penggunaan fitur di bulan kalender berjalan saat ini
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();

@@ -93,6 +93,7 @@ export function useOrganizationBilling() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [activeSub, setActiveSub] = useState<ActiveSubscription | null>(null);
+  const [hasUsedTrial, setHasUsedTrial] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingSub, setIsUpdatingSub] = useState(false);
@@ -276,6 +277,16 @@ export function useOrganizationBilling() {
     const ownerCol = owner?.type === "user" ? "user_id" : "tenant_id";
     const ownerId = owner?.id || orgId;
 
+    // Trial anti-abuse: pernah pakai trial? (sekali per owner — provider="trial")
+    try {
+      const { count } = await subRepo
+        .query()
+        .select("id", { count: "exact", head: true })
+        .eq(ownerCol, ownerId)
+        .eq("provider", "trial");
+      setHasUsedTrial((count ?? 0) > 0);
+    } catch {}
+
     const { data, error } = await subRepo
       .query()
       .select(
@@ -302,12 +313,12 @@ export function useOrganizationBilling() {
       if (isExpired && (data.status === "active" || data.status === "trialing")) {
         await subRepo.query().update({ status: "expired" }).eq("id", data.id);
         setActiveSub(null);
-        return;
+        return false;
       }
 
       if (data.status === "expired") {
         setActiveSub(null);
-        return;
+        return false;
       }
 
       let planName = data.plan_id || "Free";
@@ -331,9 +342,10 @@ export function useOrganizationBilling() {
         provider: data.provider || undefined,
         pendingPlanId: data.pending_plan_id || undefined
       });
-      return;
+      return data.status === "active" || data.status === "trialing";
     }
     setActiveSub(null);
+    return false;
   };
 
   useEffect(() => {
@@ -378,14 +390,34 @@ export function useOrganizationBilling() {
         variant: "default"
       });
 
-      const timer = setTimeout(() => {
-        fetchActiveSubscription(activeOrgId);
-        fetchTransactionHistory(activeOrgId);
-      }, 4000);
-
       window.history.replaceState({}, document.title, window.location.pathname);
 
-      return () => clearTimeout(timer);
+      // Poll: webhook grant bisa sampai beberapa detik setelah redirect. Retry sampai
+      // subscription aktif atau ~32s, agar UI otomatis update tanpa reload manual.
+      let cancelled = false;
+      let attempts = 0;
+      const maxAttempts = 8;
+      const poll = async () => {
+        if (cancelled) return;
+        attempts++;
+        try {
+          const active = await fetchActiveSubscription(activeOrgId);
+          if (cancelled) return;
+          await fetchTransactionHistory(activeOrgId);
+          if (cancelled) return;
+          if (!active && attempts < maxAttempts) {
+            setTimeout(poll, 4000);
+          }
+        } catch {
+          if (!cancelled && attempts < maxAttempts) setTimeout(poll, 4000);
+        }
+      };
+      const timer = setTimeout(poll, 4000);
+
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
     } else if (hasCanceled) {
       setAlertMessage({
         title: locale === "en" ? "Checkout Canceled" : "Pembayaran Dibatalkan",
@@ -874,6 +906,7 @@ export function useOrganizationBilling() {
     getUpgradePrice,
     getPlanActionType,
     isSubActive,
+    hasUsedTrial,
     daysLeft,
     showWarningBanner,
     currentActivePrice,
