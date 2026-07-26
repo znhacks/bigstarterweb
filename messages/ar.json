@@ -642,6 +642,7 @@
       "loading": "جاري التحقق من عملية الدفع، يرجى الانتظار...",
       "changeTitle": "اختر باقتك",
       "saveDiscount": "وفر {discount}%",
+      "recommended": "موصى به",
       "cycles": {
         "monthly": "شهريًا",
         "yearly": "سنويًا"
@@ -659,7 +660,7 @@
         "switchToYearly": "التحويل إلى الاشتراك السنوي",
         "switchToMonthly": "التحويل إلى الاشتراك الشهري",
         "downgrade": "خفض الباقة",
-        "choose": "اختر {planName}",
+        "choose": "اختر",
         "cancel": "إلغاء",
         "confirmRefund": "نعم، اطلب استرداد الأموال",
         "close": "إغلاق",
@@ -1155,6 +1156,7 @@
         "displayFeatures": "ميزات التسويق",
         "displayFeaturesPlaceholder": "مثال:\n10,000 مهمة شهريًا\nدعم ذو أولوية",
         "recommended": "موصى به",
+        "sort-order": "ترتيب الفرز",
         "enterprise": "Enterprise (تواصل)",
         "trialDays": "تجريبي (أيام)",
         "dynamic": "ديناميكي",
@@ -1184,7 +1186,8 @@
           "languageName": "الاسم بـ {language}...",
           "desc": "الوصف التسويقي بـ {language}...",
           "displayFeature": "الميزات سطرًا بسطر بـ {language}...",
-          "provider": "أدخل معرف باقة {label}..."
+          "provider": "أدخل معرف باقة {label}...",
+          "sort-order": "Urutan Paket"
         }
       },
       "alerts": {

@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { type ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Trash2, Ban, MoreVertical } from "lucide-react";
+import { Trash2, Ban, MoreVertical } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/i18n/currency";
 import { getLocalizedValue } from "@/lib/i18n/localize";
@@ -35,6 +35,8 @@ export interface DBPlan {
   is_enterprise?: boolean;
   is_recommended?: boolean;
   trial_days?: number;
+  sort_order?: number;
+  weight?: number;
 }
 
 export interface DBPrice {
@@ -116,6 +118,7 @@ export const EMPTY_FORM = {
   isEnterprise: false,
   isRecommended: false,
   trialDays: 0,
+  sortOrder: "",
   displayFeaturesRaw: createEmptyMultilingualField(),
   monthlyAmount: 0,
   monthlyCurrency: "IDR",
@@ -125,7 +128,6 @@ export const EMPTY_FORM = {
   yearlyProviders: emptyProviderMap()
 };
 
-// getLocalizedValue tinggal di @/lib/i18n/localize (fallback robust lintas-bahasa).
 export { getLocalizedValue };
 
 const containsFilterFn = (row: any, columnId: string, filterValue: string) => {
@@ -152,6 +154,10 @@ export function useAdminPlans() {
 
   const [deactivateTarget, setDeactivateTarget] = useState<DBPlan | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DBPlan | null>(null);
+
+  const [conflictTarget, setConflictTarget] = useState<{ order: number; planName: string } | null>(
+    null
+  );
 
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [isBulkDeactivating, setIsBulkDeactivating] = useState(false);
@@ -303,6 +309,12 @@ export function useAdminPlans() {
         isEnterprise: !!plan.is_enterprise,
         isRecommended: !!plan.is_recommended,
         trialDays: plan.trial_days || 0,
+        sortOrder:
+          plan.sort_order !== undefined
+            ? String(plan.sort_order)
+            : plan.weight !== undefined
+              ? String(plan.weight)
+              : "",
         displayFeaturesRaw: getLangArrayRaw(plan.display_features),
         monthlyAmount: mPrice ? parseFloat(String(mPrice.amount)) : 0,
         monthlyCurrency: (mPrice as any)?.currency || "IDR",
@@ -347,7 +359,14 @@ export function useAdminPlans() {
             <div
               className="w-full cursor-pointer space-y-0.5 select-none"
               onClick={() => handleOpenEdit(row.original)}>
-              <p className="font-bold">{nameStr}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-bold">{nameStr}</p>
+                {(row.original.sort_order !== undefined || row.original.weight !== undefined) && (
+                  <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                    Order: {row.original.sort_order ?? row.original.weight}
+                  </Badge>
+                )}
+              </div>
               <p className="text-muted-foreground font-mono text-xs">{row.original.id}</p>
             </div>
           );
@@ -512,12 +531,40 @@ export function useAdminPlans() {
     setDialogOpen(true);
   };
 
-  const handleSavePlan = async () => {
+  const handleSavePlan = async (bypassConflict = false) => {
     const primaryLocale = SUPPORTED_LOCALES[0]?.code || "en";
     if (!form.id || !form.name[primaryLocale] || !form.description[primaryLocale]) {
       showAlert("error", t("form.required"));
       return;
     }
+
+    // LOGIKA URUTAN: Ambil nilai input atau hitung urutan maksimum selanjutnya
+    let calculatedSortOrder = form.sortOrder.trim() !== "" ? parseInt(form.sortOrder, 10) : null;
+    if (calculatedSortOrder === null || isNaN(calculatedSortOrder)) {
+      const maxSortOrder = plans.reduce((max, p) => {
+        const val = p.sort_order ?? p.weight ?? 0;
+        return val > max ? val : max;
+      }, 0);
+      calculatedSortOrder = maxSortOrder + 1;
+    }
+
+    // DETEKSI BENTROK: Cek duplikasi sort_order di luar data yang sedang diedit
+    if (!bypassConflict) {
+      const conflictingPlan = plans.find(
+        (p) =>
+          p.id !== form.id &&
+          (p.sort_order === calculatedSortOrder || p.weight === calculatedSortOrder)
+      );
+
+      if (conflictingPlan) {
+        setConflictTarget({
+          order: calculatedSortOrder,
+          planName: getLocalizedValue(conflictingPlan.name, locale)
+        });
+        return; // Hentikan dan tampilkan dialog persetujuan geser urutan
+      }
+    }
+
     setIsSaving(true);
     setErrorMsg(null);
     try {
@@ -565,6 +612,10 @@ export function useAdminPlans() {
         isEnterprise: form.isEnterprise,
         isRecommended: form.isRecommended,
         trialDays: form.trialDays,
+        sortOrder: calculatedSortOrder,
+        sort_order: calculatedSortOrder,
+        weight: calculatedSortOrder,
+        resolveConflict: bypassConflict, // Mengirim flag instruksi resolusi konflik pengurutan
         displayFeatures: displayFeaturesCompiled,
         features: compiledFeatures,
         prices: {
@@ -672,6 +723,8 @@ export function useAdminPlans() {
     setDeactivateTarget,
     deleteTarget,
     setDeleteTarget,
+    conflictTarget,
+    setConflictTarget,
     bulkConfirmOpen,
     setBulkConfirmOpen,
     isBulkDeactivating,

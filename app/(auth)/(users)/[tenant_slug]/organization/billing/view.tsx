@@ -129,7 +129,7 @@ export function OrganizationBilling() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-10 px-4" dir={meta.dir}>
       {isVerifyingPayment && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex h-full flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
           <Loader2 className="h-10 w-10 animate-spin text-white" />
           <p className="mt-4 text-sm font-semibold text-white">
             Menghubungkan ke gateway pembayaran eksternal...
@@ -196,7 +196,8 @@ export function OrganizationBilling() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* TAMPILAN RESPONSif: Kiri ke kanan (Row/Flex Wrap), Otomatis turun, Rata tengah jika jumlah paket ganjil */}
+        <div className="flex flex-wrap items-stretch justify-center gap-6 pt-4">
           {convertedPlans.map((plan) => {
             const actionType = getPlanActionType(plan.id);
 
@@ -212,7 +213,6 @@ export function OrganizationBilling() {
                 ? plan.prices.yearly.convertedAmount
                 : plan.prices.monthly.convertedAmount;
 
-            // SOLUSI: Seluruh penamaan, deskripsi, dan fitur diambil murni hasil resolusi Supabase dinamis
             const localizedName = plan.name;
             const localizedDescription = plan.description;
             const localizedFeatures = plan.features || [];
@@ -220,8 +220,10 @@ export function OrganizationBilling() {
             return (
               <Card
                 key={plan.id}
-                className={`flex h-full flex-col justify-between overflow-hidden bg-white py-0 transition-all hover:shadow-md ${plan.isRecommended ? "shadow-md ring-2 ring-slate-900" : ""}`}>
-                <CardContent className="flex h-full flex-col justify-between gap-0 sm:p-6">
+                className={`flex w-full max-w-md flex-col justify-between overflow-hidden bg-white py-0 transition-all hover:shadow-md sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] ${
+                  plan.isRecommended ? "shadow-md ring-2 ring-slate-900" : ""
+                }`}>
+                <CardContent className="flex h-full flex-col justify-between gap-0 p-6">
                   <div className="min-w-0 space-y-5">
                     <div className="space-y-1.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -235,7 +237,7 @@ export function OrganizationBilling() {
                         )}
                         {plan.isRecommended && (
                           <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2.5 py-0.5 text-[11px] font-semibold text-white">
-                            {t("recomended")}
+                            {t("recommended")}
                           </span>
                         )}
                       </div>
@@ -342,7 +344,7 @@ export function OrganizationBilling() {
                         <Button
                           onClick={() => handleChoosePlan(plan)}
                           disabled={isDisabled}
-                          className="gap-1.5py-5 inline-flex w-full items-center justify-center font-semibold">
+                          className="inline-flex w-full items-center justify-center gap-1.5 py-5 font-semibold">
                           <ArrowUpRight className="h-4 w-4 shrink-0" />
                           <span className="truncate">{t("buttons.upgrade")}</span>
                         </Button>
@@ -373,7 +375,7 @@ export function OrganizationBilling() {
                           onClick={() => handleChoosePlan(plan)}
                           disabled={isDisabled}
                           className="w-full truncate bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
-                          {t("buttons.choose", { planName: localizedName })}
+                          {t("buttons.choose")}
                         </Button>
                       )}
                     </div>
@@ -531,7 +533,6 @@ export function OrganizationBilling() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG MODAL CHECKOUT MULTI-PROVIDER */}
       <Dialog
         open={isCheckoutOpen}
         onOpenChange={(open) => {

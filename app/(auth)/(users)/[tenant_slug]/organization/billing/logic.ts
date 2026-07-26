@@ -56,6 +56,8 @@ export interface ConvertedPlan {
   isEnterprise?: boolean;
   isRecommended?: boolean;
   trialDays?: number;
+  sort_order?: number; // Ditambahkan untuk mendukung kustomisasi urutan dari DB
+  weight?: number; // Ditambahkan sebagai alternatif kustomisasi urutan dari DB
   prices: {
     monthly: {
       amount: number;
@@ -70,7 +72,6 @@ export interface ConvertedPlan {
   };
 }
 
-// getLocalizedValue tinggal di @/lib/i18n/localize (fallback robust lintas-bahasa).
 export { getLocalizedValue };
 
 export function useOrganizationBilling() {
@@ -99,7 +100,6 @@ export function useOrganizationBilling() {
 
   const [enabledProviders, setEnabledProviders] = useState<string[]>([]);
 
-  // SOLUSI CACHING STATE: Pisahkan antara data mentah database (raw) dan data tersaring (converted)
   const [rawPlans, setRawPlans] = useState<any[]>([]);
   const [convertedPlans, setConvertedPlans] = useState<ConvertedPlan[]>([]);
 
@@ -120,7 +120,6 @@ export function useOrganizationBilling() {
   const [couponError, setCouponError] = useState<string | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
-  // 1. TAHAP AMBIL DATA (Hanya Dipanggil Sekali Saat Mount): Tanpa request ulang API
   const fetchRawPlansFromDB = async () => {
     try {
       const res = await fetch("/api/billing/plans").then((r) => r.json());
@@ -130,40 +129,64 @@ export function useOrganizationBilling() {
     }
   };
 
-  // 2. TAHAP RESOLUSI LOKAL (Dipanggil Otomatis Setiap Kali Bahasa / Mata Uang Berubah): Tanpa Reload
+  // RESOLUSI LOKAL DAN SORTING YANG KONSISTEN
   useEffect(() => {
     if (rawPlans.length === 0) return;
 
     let isMounted = true;
+
+    // Fungsi pembantu untuk memastikan nilai urutan aman dan konsisten saat dibandingkan
+    const getOrderValue = (plan: any) => {
+      const val =
+        plan.sort_order !== undefined && plan.sort_order !== null ? plan.sort_order : plan.weight;
+      if (val === undefined || val === null || val === "") return 9999; // Taruh di paling belakang jika kosong
+      const parsed = parseInt(String(val), 10);
+      return isNaN(parsed) ? 9999 : parsed;
+    };
 
     const resolvePlansAndPricesLocally = async () => {
       try {
         const rateResult = await convertCurrency(1, targetCurrency, CURRENCY.base);
         const rate = rateResult.rate ?? 1;
 
-        const updated = rawPlans.map((plan) => {
-          const monthlyAmount = plan.prices?.monthly?.amount ?? 0;
-          const yearlyAmount = plan.prices?.yearly?.amount ?? 0;
+        const updated = rawPlans
+          .map((plan) => {
+            const monthlyAmount = plan.prices?.monthly?.amount ?? 0;
+            const yearlyAmount = plan.prices?.yearly?.amount ?? 0;
 
-          return {
-            ...plan,
-            name: getLocalizedValue(plan.name, locale),
-            description: getLocalizedValue(plan.description, locale),
-            features: getLocalizedValue(plan.displayFeatures || plan.features || [], locale),
-            prices: {
-              monthly: {
-                amount: monthlyAmount,
-                providers: plan.prices?.monthly?.providers,
-                convertedAmount: monthlyAmount * rate
-              },
-              yearly: {
-                amount: yearlyAmount,
-                providers: plan.prices?.yearly?.providers,
-                convertedAmount: yearlyAmount * rate
+            return {
+              ...plan,
+              name: getLocalizedValue(plan.name, locale),
+              description: getLocalizedValue(plan.description, locale),
+              features: getLocalizedValue(plan.displayFeatures || plan.features || [], locale),
+              prices: {
+                monthly: {
+                  amount: monthlyAmount,
+                  providers: plan.prices?.monthly?.providers,
+                  convertedAmount: monthlyAmount * rate
+                },
+                yearly: {
+                  amount: yearlyAmount,
+                  providers: plan.prices?.yearly?.providers,
+                  convertedAmount: yearlyAmount * rate
+                }
               }
+            } as ConvertedPlan;
+          })
+          .sort((a, b) => {
+            // 1. Urutkan berdasarkan sort_order hasil konversi yang aman
+            const orderA = getOrderValue(a);
+            const orderB = getOrderValue(b);
+
+            if (orderA !== orderB) {
+              return orderA - orderB;
             }
-          } as ConvertedPlan;
-        });
+
+            // 2. Cadangan jika sort_order sama: Urutkan berdasarkan harga bulanan terendah ke tertinggi
+            const priceA = a.prices.monthly.amount;
+            const priceB = b.prices.monthly.amount;
+            return priceA - priceB;
+          });
 
         if (isMounted) {
           setConvertedPlans(updated);
@@ -171,8 +194,8 @@ export function useOrganizationBilling() {
       } catch (error) {
         console.error("Gagal memproses harga paket billing:", error);
         if (isMounted) {
-          setConvertedPlans(
-            rawPlans.map((plan) => ({
+          const fallbackSorted = rawPlans
+            .map((plan) => ({
               ...plan,
               name: getLocalizedValue(plan.name, locale),
               description: getLocalizedValue(plan.description, locale),
@@ -190,7 +213,20 @@ export function useOrganizationBilling() {
                 }
               }
             }))
-          );
+            .sort((a, b) => {
+              const orderA = getOrderValue(a);
+              const orderB = getOrderValue(b);
+
+              if (orderA !== orderB) {
+                return orderA - orderB;
+              }
+
+              const priceA = a.prices?.monthly?.amount ?? 0;
+              const priceB = b.prices?.monthly?.amount ?? 0;
+              return priceA - priceB;
+            });
+
+          setConvertedPlans(fallbackSorted as ConvertedPlan[]);
         }
       }
     };
@@ -208,7 +244,7 @@ export function useOrganizationBilling() {
       await Promise.all([
         fetchActiveSubscription(orgId),
         fetchTransactionHistory(orgId),
-        fetchRawPlansFromDB() // Tarik rencana mentah
+        fetchRawPlansFromDB()
       ]);
     } catch (e: any) {
       console.error("Gagal memuat data billing:", e);
@@ -233,7 +269,6 @@ export function useOrganizationBilling() {
   const fetchActiveSubscription = async (orgId: string) => {
     const subRepo = await subscriptionRepository(supabase);
 
-    // Scope sesuai billingAttachedTo (tenant default; user bila config).
     const {
       data: { user: authUser }
     } = await supabase.auth.getUser();
@@ -606,7 +641,6 @@ export function useOrganizationBilling() {
     }
   };
 
-  // === ENTERPRISE (hubungi superadmin via form) ===
   const [enterpriseTarget, setEnterpriseTarget] = useState<ConvertedPlan | null>(null);
   const [isEnterpriseOpen, setIsEnterpriseOpen] = useState(false);
   const [enterpriseForm, setEnterpriseForm] = useState({ name: "", email: "", message: "" });
@@ -653,7 +687,6 @@ export function useOrganizationBilling() {
     }
   };
 
-  // === TRIAL (free-window, tanpa charge) ===
   const [isStartingTrial, setIsStartingTrial] = useState(false);
   const handleStartTrial = async (planId: string) => {
     if (!activeOrgId) return;
@@ -727,10 +760,6 @@ export function useOrganizationBilling() {
       return "active";
     }
 
-    // Tentukan arah (upgrade/downgrade) dari HARGA plan, bukan ID yang di-hardcode.
-    // Pakai harga bulanan (convertedAmount) sbg indikator tier kanonik (interval-agnostic);
-    // fallback ke yearly bila monthly tidak ada. Dengan ini plan baru apa pun diperlakukan
-    // benar: harga lebih mahal => upgrade, lebih murah => downgrade.
     const tierValue = (id: string): number => {
       const plan = convertedPlans.find((p) => p.id === id);
       if (!plan) return 0;

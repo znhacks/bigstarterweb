@@ -94,7 +94,22 @@ export async function POST(req: Request) {
     await validateSuperadmin(req);
     const body = await req.json();
 
-    const { id, name, description, isActive, displayFeatures, features, prices, isEnterprise, isRecommended, trialDays } = body;
+    const {
+      id,
+      name,
+      description,
+      isActive,
+      displayFeatures,
+      features,
+      prices,
+      isEnterprise,
+      isRecommended,
+      trialDays,
+      sortOrder, // CamelCase dari client
+      sort_order, // SnakeCase dari client
+      weight, // Sebagai cadangan
+      resolveConflict // Flag instruksi penanganan konflik pengurutan berantai
+    } = body;
 
     if (!id || !name || !description) {
       return NextResponse.json(
@@ -103,8 +118,52 @@ export async function POST(req: Request) {
       );
     }
 
-    // A. Upsert ke tabel 'plans'
     const normalizedId = id.toLowerCase().trim();
+
+    // Resolusi nilai urutan (sort order) dari request
+    const resolvedSortOrder =
+      sort_order !== undefined
+        ? sort_order
+        : sortOrder !== undefined
+          ? sortOrder
+          : weight !== undefined
+            ? weight
+            : 0;
+
+    // RESOLUSI KONFLIK: Jika disetujui untuk menggeser duplikasi
+    if (resolveConflict === true && resolvedSortOrder > 0) {
+      // Dapatkan semua paket lain yang berbenturan atau memiliki urutan lebih besar dari target baru
+      const { data: conflictingPlans, error: getConflictingErr } = await supabaseAdmin
+        .from("plans")
+        .select("id, sort_order, weight")
+        .gte("sort_order", resolvedSortOrder)
+        .neq("id", normalizedId); // Kecualikan data paket yang sedang di-edit itu sendiri
+
+      if (getConflictingErr) throw getConflictingErr;
+
+      if (conflictingPlans && conflictingPlans.length > 0) {
+        // Urutkan data secara menurun (terbesar ke terkecil) sebelum melakukan update
+        // demi menghindari konflik unique index sementara saat proses penyesuaian nilai
+        const sortedConflicting = conflictingPlans.sort(
+          (a, b) => (b.sort_order ?? b.weight ?? 0) - (a.sort_order ?? a.weight ?? 0)
+        );
+
+        for (const plan of sortedConflicting) {
+          const currentOrder = plan.sort_order ?? plan.weight ?? resolvedSortOrder;
+          const nextOrder = currentOrder + 1;
+
+          await supabaseAdmin
+            .from("plans")
+            .update({
+              sort_order: nextOrder,
+              weight: nextOrder
+            })
+            .eq("id", plan.id);
+        }
+      }
+    }
+
+    // A. Upsert ke tabel 'plans'
     const { error: planErr } = await (await planRepository(supabaseAdmin)).query().upsert({
       id: normalizedId,
       name,
@@ -113,6 +172,8 @@ export async function POST(req: Request) {
       is_enterprise: isEnterprise ?? false,
       is_recommended: isRecommended ?? false,
       trial_days: trialDays ?? 0,
+      sort_order: resolvedSortOrder, // Menyimpan ke kolom 'sort_order'
+      weight: resolvedSortOrder, // Menyimpan ke kolom 'weight' sebagai fallback database
       display_features: displayFeatures || [],
       features: features || [], // Menyimpan array rbac terpadu: ['allowPdfFormat', 'limit:maxTasks:2000']
       updated_at: new Date().toISOString()

@@ -642,6 +642,7 @@
       "loading": "Memverifikasi pembayaran Anda, mohon tunggu...",
       "changeTitle": "Pilih Paket Anda",
       "saveDiscount": "Hemat {discount}%",
+      "recommended": "Direkomendasikan",
       "cycles": {
         "monthly": "Bulanan",
         "yearly": "Tahunan"
@@ -659,7 +660,7 @@
         "switchToYearly": "Beralih ke Langganan Tahunan",
         "switchToMonthly": "Beralih ke Langganan Bulanan",
         "downgrade": "Turunkan Paket",
-        "choose": "Pilih {planName}",
+        "choose": "Pilih",
         "cancel": "Batal",
         "confirmRefund": "Ya, Ajukan Refund",
         "close": "Tutup",
@@ -1155,6 +1156,7 @@
         "displayFeatures": "Fitur Pemasaran",
         "displayFeaturesPlaceholder": "contoh:\n10.000 Tasks per bulan\nDukungan Prioritas",
         "recommended": "Direkomendasikan",
+        "sort-order": "Urutan",
         "enterprise": "Enterprise (Kontak)",
         "trialDays": "Trial (hari)",
         "dynamic": "Dinamis",
@@ -1184,7 +1186,8 @@
           "languageName": "Nama dalam bahasa {language}...",
           "desc": "Deskripsi pemasaran {language}...",
           "displayFeature": "Fitur baris demi baris {language}...",
-          "provider": "Masukan id paket {label}..."
+          "provider": "Masukan id paket {label}...",
+          "sort-order": "Urutan Paket"
         }
       },
       "alerts": {

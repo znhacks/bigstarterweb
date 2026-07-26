@@ -660,7 +660,7 @@
         "switchToYearly": "Switch to Yearly",
         "switchToMonthly": "Switch to Monthly",
         "downgrade": "Downgrade Plan",
-        "choose": "Choose {planName}",
+        "choose": "Choose",
         "cancel": "Cancel",
         "confirmRefund": "Yes, Request Refund",
         "close": "Close",
@@ -1156,6 +1156,7 @@
         "displayFeatures": "Marketing Features",
         "displayFeaturesPlaceholder": "example:\n10,000 Tasks per month\nPriority Support",
         "recommended": "Recommended",
+        "sort-order": "Sort Order",
         "enterprise": "Enterprise (Contact)",
         "trialDays": "Trial (days)",
         "dynamic": "Dynamic",
@@ -1185,7 +1186,8 @@
           "languageName": "Name in {language}...",
           "desc": "Marketing description in {language}...",
           "displayFeature": "Features line-by-line in {language}...",
-          "provider": "Enter {label} plan id..."
+          "provider": "Enter {label} plan id...",
+          "sort-order": "Urutan Paket"
         }
       },
       "alerts": {

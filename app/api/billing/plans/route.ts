@@ -14,7 +14,9 @@ const supabaseAdmin = createClient(
 export async function GET() {
   try {
     // 1. Tarik semua paket aktif dari database
-    const { data: dbPlans, error: plansError } = await (await planRepository(supabaseAdmin))
+    const { data: dbPlans, error: plansError } = await (
+      await planRepository(supabaseAdmin)
+    )
       .query()
       .select("*")
       .eq("is_active", true);
@@ -22,13 +24,15 @@ export async function GET() {
     if (plansError) throw plansError;
 
     // 2. Tarik seluruh daftar harga aktif dari database
-    const { data: dbPrices, error: pricesError } = await (await planPriceRepository(supabaseAdmin))
+    const { data: dbPrices, error: pricesError } = await (
+      await planPriceRepository(supabaseAdmin)
+    )
       .query()
       .select("*");
 
     if (pricesError) throw pricesError;
 
-    // 3. Rekonstruksi struktur data agar kompatibel 100% dengan UI Frontend (ConvertedPlan)
+    // 3. Rekonstruksi struktur data agar kompatibel dengan UI Frontend (ConvertedPlan)
     const formattedPlans = dbPlans.map((plan: any) => {
       const monthlyPrice = dbPrices.find(
         (p: any) => p.plan_id === plan.id && p.interval === "monthly"
@@ -50,6 +54,8 @@ export async function GET() {
         isEnterprise: !!plan.is_enterprise,
         isRecommended: !!plan.is_recommended,
         trialDays: plan.trial_days || 0,
+        sort_order: plan.sort_order !== undefined ? plan.sort_order : null, // Menyertakan sort_order ke frontend
+        weight: plan.weight !== undefined ? plan.weight : null, // Menyertakan weight ke frontend
         prices: {
           monthly: {
             amount: monthlyPrice ? parseFloat(monthlyPrice.amount) : 0,

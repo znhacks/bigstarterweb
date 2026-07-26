@@ -1,10 +1,4 @@
 // app/api/billing/trial/route.ts
-//
-// Memulai free-window trial untuk paket yang memiliki trial_days > 0.
-// TIDAK ada charge/pembayaran: subscription langsung di-upsert dengan
-// status "trialing" (provider "trial") berdurasi trial_days hari.
-//
-// Anti-abuse: bila owner sudah memiliki subscription aktif/trialing → ditolak.
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -69,7 +63,9 @@ export async function POST(req: Request) {
     const { column, value } = ownerFilter(owner);
 
     // Ambil trial_days plan
-    const { data: plan, error: planErr } = await (await planRepository(supabaseAdmin))
+    const { data: plan, error: planErr } = await (
+      await planRepository(supabaseAdmin)
+    )
       .query()
       .select("trial_days, is_enterprise")
       .eq("id", planId)
@@ -86,20 +82,19 @@ export async function POST(req: Request) {
     }
 
     // Anti-abuse: cek subscription eksisting untuk owner ini
-    const { data: existingSub } = await (await subscriptionRepository(supabaseAdmin))
+    const { data: existingSub } = await (
+      await subscriptionRepository(supabaseAdmin)
+    )
       .query()
       .select("id, status")
       .eq(column, value)
       .maybeSingle();
 
-    if (
-      existingSub &&
-      (existingSub.status === "active" || existingSub.status === "trialing")
-    ) {
+    if (existingSub && (existingSub.status === "active" || existingSub.status === "trialing")) {
       return NextResponse.json({ error: "Trial sudah pernah digunakan" }, { status: 409 });
     }
 
-    // Grant trial: upsert subscription sesuai scope owner
+    // Grant trial: siapkan payload record data
     const now = new Date();
     const ends = new Date();
     ends.setDate(ends.getDate() + trialDays);
@@ -125,11 +120,27 @@ export async function POST(req: Request) {
       record.tenant_id = tenantId;
     }
 
-    const { error: upsertErr } = await (await subscriptionRepository(supabaseAdmin))
-      .query()
-      .upsert(record, { onConflict: column });
+    // KONDISIONAL UPDATE / INSERT: Mencegah konflik partial unique index database
+    if (existingSub) {
+      // Jika data subscription sudah ada (misal status expired), lakukan UPDATE berdasarkan ID utama (PKEY)
+      const { error: updateErr } = await (
+        await subscriptionRepository(supabaseAdmin)
+      )
+        .query()
+        .update(record)
+        .eq("id", existingSub.id);
 
-    if (upsertErr) throw upsertErr;
+      if (updateErr) throw updateErr;
+    } else {
+      // Jika benar-benar kosong, lakukan INSERT data baru
+      const { error: insertErr } = await (
+        await subscriptionRepository(supabaseAdmin)
+      )
+        .query()
+        .insert(record);
+
+      if (insertErr) throw insertErr;
+    }
 
     return NextResponse.json({ success: true, endsAt: ends.toISOString() });
   } catch (error: any) {

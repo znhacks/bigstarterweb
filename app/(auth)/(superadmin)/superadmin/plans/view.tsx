@@ -60,6 +60,8 @@ export function AdminPlansPage() {
     setDeactivateTarget,
     deleteTarget,
     setDeleteTarget,
+    conflictTarget,
+    setConflictTarget,
     bulkConfirmOpen,
     setBulkConfirmOpen,
     isBulkDeactivating,
@@ -304,8 +306,8 @@ export function AdminPlansPage() {
                   />
                 </div>
 
-                {/* Opsi plan: recommended / enterprise / trial */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {/* Opsi plan: recommended / enterprise / trial / sort order */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="plan-recommended" className="cursor-pointer">
                       {t("form.recommended") || "Recommended"}
@@ -336,6 +338,19 @@ export function AdminPlansPage() {
                       onChange={(e) =>
                         setForm((f) => ({ ...f, trialDays: parseInt(e.target.value) || 0 }))
                       }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="plan-sort-order">
+                      {t("form.sort-order") || "Urutan Tampilan"}
+                    </Label>
+                    <Input
+                      id="plan-sort-order"
+                      type="number"
+                      min={0}
+                      value={form.sortOrder}
+                      onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}
+                      placeholder={t("form.placeholder.sort-order") || "Otomatis"}
                     />
                   </div>
                 </div>
@@ -710,7 +725,7 @@ export function AdminPlansPage() {
           <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>
             {t("buttons.back")}
           </Button>
-          <Button onClick={handleSavePlan} disabled={isSaving}>
+          <Button onClick={() => handleSavePlan(false)} disabled={isSaving}>
             {isSaving && <Loader2 className="me-1.5 h-4 w-4 animate-spin" />} {t("buttons.save")}
           </Button>
         </div>
@@ -787,6 +802,42 @@ export function AdminPlansPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {isBulkDeactivating && <Loader2 className="me-1.5 h-4 w-4 animate-spin" />}
               {t("buttons.confirmDeactivate")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* MODAL PERINGATAN BENTROK URUTAN (SORT_ORDER CONFLICT RESOLUTION) */}
+      <AlertDialog
+        open={!!conflictTarget}
+        onOpenChange={(open) => !open && setConflictTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <Info className="h-5 w-5 shrink-0 text-amber-500" />
+              <span>Peringatan Bentrok Urutan</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Urutan tampilan <strong>{conflictTarget?.order}</strong> sudah digunakan oleh paket{" "}
+                <strong>"{conflictTarget?.planName}"</strong>.
+              </p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Jika Anda menyetujui, sistem akan otomatis melakukan pergeseran berantai pada paket
+                tersebut serta paket-paket setelahnya dengan menaikkan nilai urutan mereka sebesar
+                (+1) agar susunan tetap konsisten dan tidak ada duplikasi.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("buttons.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConflictTarget(null);
+                handleSavePlan(true); // Kirim kembali dengan bypassConflict = true
+              }}
+              className="bg-amber-600 text-white hover:bg-amber-700">
+              Lanjutkan & Geser Paket
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
