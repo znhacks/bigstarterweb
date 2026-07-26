@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/i18n/currency";
-import { convertCurrency } from "@/actions/currency";
+import { convertCurrency } from "@/app/actions/currency";
 import { getUserCurrencyClient } from "@/lib/i18n/user-currency";
 import { CURRENCY } from "@/config/i18n-culture";
 import { transactionRepository } from "@/supabase/repositories/transactions";

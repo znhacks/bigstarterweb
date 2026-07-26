@@ -19,7 +19,7 @@ import { sortLocale } from "@/lib/i18n/collator";
 import { formatMeasurement, CONVERSIONS } from "@/lib/i18n/units";
 import { formatCurrency } from "@/lib/i18n/currency";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
-import { convertCurrency } from "@/actions/currency";
+import { convertCurrency } from "@/app/actions/currency";
 import { getLocaleMeta, getDisplayCurrency } from "@/config/i18n-culture";
 
 interface I18nCultureViewProps {
