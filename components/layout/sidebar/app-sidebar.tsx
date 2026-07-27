@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { tenantConfig } from "@/config/tenant";
+import { siteConfig } from "@/config/site";
 import { ChevronsUpDown, Building2, Check, Plus, Loader2 } from "lucide-react";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { useIsTablet } from "@/hooks/use-mobile";
@@ -72,6 +73,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isTablet = useIsTablet();
 
   const [user, setUser] = useState<any>(null);
+  const isSuperadmin = user?.app_metadata?.role === "superadmin";
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
 
@@ -267,109 +269,128 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <>
       <Sidebar collapsible="icon" {...props}>
         <SidebarHeader>
-          {!tenantConfig.organizations.hideOrganization && (
+          {isSuperadmin ? (
             <SidebarMenu>
               <SidebarMenuItem>
-                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton className="hover:text-foreground h-9 group-data-[collapsible=icon]:px-0!">
-                      {activeOrg?.logo ? (
-                        <img
-                          src={activeOrg.logo}
-                          alt={activeOrg.name}
-                          className="me-1 size-8 rounded-[5px] transition-all group-data-collapsible:size-6 group-data-[collapsible=icon]:size-8"
-                        />
-                      ) : (
-                        <Logo />
-                      )}
-                      <span className="text-foreground truncate font-semibold">
-                        {isLoading ? (
-                          <span className="text-muted-foreground text-xs">
-                            {t("common.loading")}
-                          </span>
-                        ) : activeOrg ? (
-                          activeOrg.name
-                        ) : (
-                          t("common.notenant")
-                        )}
-                      </span>
-                      <ChevronsUpDown className="ms-auto group-data-[collapsible=icon]:hidden" />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    className="mt-4 w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                    side={isMobile ? "bottom" : "right"}
-                    align="end"
-                    sideOffset={4}>
-                    <DropdownMenuLabel>{t("menu.users.organization")}</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-
-                    <div className="max-h-48 overflow-y-auto">
-                      {isLoading ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                        </div>
-                      ) : organizations.length === 0 ? (
-                        <div className="text-muted-foreground px-2 py-3 text-center text-xs">
-                          {t("common.noorgfound")}
-                        </div>
-                      ) : (
-                        organizations.map((org) => (
-                          <DropdownMenuItem
-                            key={org.id}
-                            className="flex cursor-pointer items-center gap-3"
-                            onSelect={() => handleSelectOrg(org)}>
-                            <div
-                              className={`flex size-8 items-center justify-center overflow-hidden ${
-                                org.logo ? "" : "bg-background rounded-md border"
-                              }`}>
-                              {org.logo ? (
-                                <img
-                                  src={org.logo}
-                                  alt={org.name}
-                                  className="size-full object-cover"
-                                />
-                              ) : (
-                                <Building2 className="text-muted-foreground size-4" />
-                              )}
-                            </div>
-                            <div className="flex min-w-0 flex-1 flex-col">
-                              <span className="text-muted-foreground truncate text-sm font-medium">
-                                {org.name}
-                              </span>
-                              <span
-                                className={`text-xs ${
-                                  activeOrg?.id === org.id
-                                    ? "font-semibold text-green-700"
-                                    : "text-muted-foreground"
-                                }`}>
-                                {activeOrg?.id === org.id ? "Active" : "Inactive"}
-                              </span>
-                            </div>
-                            {activeOrg?.id === org.id && (
-                              <Check className="ms-auto size-4 text-green-700" />
-                            )}
-                          </DropdownMenuItem>
-                        ))
-                      )}
-                    </div>
-
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="focus:bg-accent flex cursor-pointer items-center gap-2"
-                      disabled={isLoading}
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        setIsDialogOpen(true);
-                        setDropdownOpen(false);
-                      }}>
-                      <Plus className="size-4" />
-                      <span>{t("common.neworg")}</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <SidebarMenuButton
+                  size="lg"
+                  className="hover:text-foreground h-9 group-data-[collapsible=icon]:px-0!">
+                  <img
+                    src={siteConfig.logo}
+                    alt={siteConfig.name}
+                    className="me-1 size-8 rounded-[5px] transition-all group-data-collapsible:size-6 group-data-[collapsible=icon]:size-8"
+                  />
+                  <div className="grid flex-1 text-start text-sm leading-tight">
+                    <span className="truncate font-bold">{siteConfig.name}</span>
+                  </div>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
+          ) : (
+            !tenantConfig.organizations.hideOrganization && (
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                    <DropdownMenuTrigger asChild>
+                      <SidebarMenuButton className="hover:text-foreground h-9 group-data-[collapsible=icon]:px-0!">
+                        {activeOrg?.logo ? (
+                          <img
+                            src={activeOrg.logo}
+                            alt={activeOrg.name}
+                            className="me-1 size-8 rounded-[5px] transition-all group-data-collapsible:size-6 group-data-[collapsible=icon]:size-8"
+                          />
+                        ) : (
+                          <Logo />
+                        )}
+                        <span className="text-foreground truncate font-semibold">
+                          {isLoading ? (
+                            <span className="text-muted-foreground text-xs">
+                              {t("common.loading")}
+                            </span>
+                          ) : activeOrg ? (
+                            activeOrg.name
+                          ) : (
+                            t("common.notenant")
+                          )}
+                        </span>
+                        <ChevronsUpDown className="ms-auto group-data-[collapsible=icon]:hidden" />
+                      </SidebarMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      className="mt-4 w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                      side={isMobile ? "bottom" : "right"}
+                      align="end"
+                      sideOffset={4}>
+                      <DropdownMenuLabel>{t("menu.users.organization")}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+
+                      <div className="max-h-48 overflow-y-auto">
+                        {isLoading ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                          </div>
+                        ) : organizations.length === 0 ? (
+                          <div className="text-muted-foreground px-2 py-3 text-center text-xs">
+                            {t("common.noorgfound")}
+                          </div>
+                        ) : (
+                          organizations.map((org) => (
+                            <DropdownMenuItem
+                              key={org.id}
+                              className="flex cursor-pointer items-center gap-3"
+                              onSelect={() => handleSelectOrg(org)}>
+                              <div
+                                className={`flex size-8 items-center justify-center overflow-hidden ${
+                                  org.logo ? "" : "bg-background rounded-md border"
+                                }`}>
+                                {org.logo ? (
+                                  <img
+                                    src={org.logo}
+                                    alt={org.name}
+                                    className="size-full object-cover"
+                                  />
+                                ) : (
+                                  <Building2 className="text-muted-foreground size-4" />
+                                )}
+                              </div>
+                              <div className="flex min-w-0 flex-1 flex-col">
+                                <span className="text-muted-foreground truncate text-sm font-medium">
+                                  {org.name}
+                                </span>
+                                <span
+                                  className={`text-xs ${
+                                    activeOrg?.id === org.id
+                                      ? "font-semibold text-green-700"
+                                      : "text-muted-foreground"
+                                  }`}>
+                                  {activeOrg?.id === org.id ? "Active" : "Inactive"}
+                                </span>
+                              </div>
+                              {activeOrg?.id === org.id && (
+                                <Check className="ms-auto size-4 text-green-700" />
+                              )}
+                            </DropdownMenuItem>
+                          ))
+                        )}
+                      </div>
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="focus:bg-accent flex cursor-pointer items-center gap-2"
+                        disabled={isLoading}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setIsDialogOpen(true);
+                          setDropdownOpen(false);
+                        }}>
+                        <Plus className="size-4" />
+                        <span>{t("common.neworg")}</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            )
           )}
         </SidebarHeader>
         <SidebarContent>
