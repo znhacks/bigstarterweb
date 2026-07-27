@@ -1,5 +1,3 @@
-// app/api/billing/webhook/[provider]/route.ts
-
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { createClient } from "@supabase/supabase-js";
@@ -17,28 +15,24 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
-/**
- * FUNGSI PEMBANTU: Menghitung perkiraan potongan biaya administrasi riil dari ke-8 gateway
- */
 function calculateGatewayFee(amount: number, provider: string, currency: string = "IDR"): number {
   const p = provider.toLowerCase().trim();
 
   if (p === "stripe") {
-    return amount * 0.029 + (currency === "USD" ? 0.3 : 5000); // 2.9% + $0.30
+    return amount * 0.029 + (currency === "USD" ? 0.3 : 5000);
   }
   if (p === "paypal" || p === "braintree") {
-    return amount * 0.034 + (currency === "USD" ? 0.3 : 5000); // 3.4% + $0.30
+    return amount * 0.034 + (currency === "USD" ? 0.3 : 5000);
   }
   if (p === "paddle" || p === "lemonsqueezy") {
-    return amount * 0.05 + (currency === "USD" ? 0.5 : 7500); // 5% + $0.50 (SaaS MoR standard)
+    return amount * 0.05 + (currency === "USD" ? 0.5 : 7500);
   }
   if (p === "midtrans" || p === "xendit" || p === "mayar") {
-    return 4000; // Rata-rata flat fee untuk Virtual Account & QRIS lokal Indonesia
+    return 4000;
   }
   return 0;
 }
 
-/** Hitung ends_at default: +1 bulan (monthly) atau +1 tahun (yearly) dari sekarang. */
 function computeEndsAt(interval?: string, provided?: string): string | null {
   if (provided) return provided;
   const now = new Date();
@@ -47,7 +41,6 @@ function computeEndsAt(interval?: string, provided?: string): string | null {
   return now.toISOString();
 }
 
-/** Redeem kupon via RPC (atomic, idempotent). Aman dipanggil di banyak event (subscription.activated & payment.succeeded). */
 async function redeemCouponIfPresent(
   couponCode: string | undefined,
   tenantId: string
@@ -79,7 +72,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     const {
       eventType,
       tenantId: rawTenantId,
-      planId: rawPlanId, // ID paket bawaan dari adapter (jika terdeteksi)
+      planId: rawPlanId,
       interval: rawInterval,
       couponCode: rawCouponCode,
       startsAt,
@@ -100,10 +93,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
         `================================================`
     );
 
-    // --- PULIHKAN CONTEXT DARI payment_orders (sumber otoritatif) ---
-    // Order dicatat saat checkout; lookup by (provider, provider_order_id) — id yang selalu
-    // di-echo provider pada callback. Ini menghilangkan ketergantungan pada echo
-    // metadata/external_id (akar bug "Tenant ID not found" pada provider no-ID).
     let paymentOrder: any = null;
     if (orderId) {
       const { data: orderRow } = await (
@@ -117,9 +106,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     const interval = paymentOrder?.interval || rawInterval;
     const couponCode = paymentOrder?.coupon_code || rawCouponCode;
 
-    // Fallback (mis. LemonSqueezy): bila lookup by provider_order_id miss & context
-    // sudah ter-resolve, cari pending order by (provider, tenant_id, plan_id) supaya
-    // lifecycle pending → paid tetap jalan.
     if (!paymentOrder && tenantId && planId) {
       const { data: pending } = await (
         await paymentOrderRepository(supabaseAdmin)
@@ -137,9 +123,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       );
     }
 
-    // Scope billing owner (tenant default; user bila config) — dipakai di semua branch.
     const billOwner = resolveBillingOwner({ tenantId, userId: paymentOrder?.user_id });
-    const billCol: "tenant_id" | "user_id" = billOwner ? ownerFilter(billOwner).column : "tenant_id";
+    const billCol: "tenant_id" | "user_id" = billOwner
+      ? ownerFilter(billOwner).column
+      : "tenant_id";
     const billId: string = billOwner ? ownerFilter(billOwner).value : tenantId;
 
     const normalizedStatus = status.toLowerCase().trim();
@@ -147,12 +134,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
 
     const subscriptionRepo = await subscriptionRepository(supabaseAdmin);
 
-    // =========================================================================
-    // SINKRONISASI DATABASE DINAMIS (Pencarian JSONB)
-    // Jika planId dari adapter kosong, kueri database menggunakan Price ID eksternal
-    // =========================================================================
     if (!finalPlanId && providerSubscriptionId) {
-      // Cari plan via product_id tunggal (fallback bila payment_orders tak match).
       const { data: priceRecord, error: priceErr } = await (
         await planPriceRepository(supabaseAdmin)
       )
@@ -200,8 +182,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
         throw new Error(`Database Upsert Subscriptions Failed: ${upsertError.message}`);
       }
 
-      // Redeem kupon juga saat subscription aktif (PayPal ACTIVATED membawa custom_id lebih andal
-      // daripada event sale). Idempotent — aman bila juga ter-redeem di payment.succeeded.
       await redeemCouponIfPresent(couponCode, tenantId);
     } else if (eventType === "subscription.deleted") {
       const { data: currentSub, error: fetchError } = await subscriptionRepo
@@ -250,7 +230,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
       const grossAmount = amount || 0;
       const activeCurrency = currency || "IDR";
 
-      // === 1. Hitung pajak, fee, net ===
       const calculatedTax =
         taxAmount !== undefined
           ? taxAmount
@@ -265,7 +244,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
 
       const calculatedNet = Math.max(0, grossAmount - calculatedTax - calculatedFee);
 
-      // === 2. Konversi ke IDR untuk amount_in_idr ===
       let amountInIdr: number | null = grossAmount;
       let exchangeRate: number | null = 1;
       let exchangeApiUsed: string | null = "base";
@@ -281,8 +259,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
         exchangeApiUsed = null;
       }
 
-      // === 3. Catat transaksi (kolom tax/net/fee kini ada; amount_in_idr/rate/api terisi) ===
-      // plan_name: simpan NAMA plan (bukan slug) utk tampilan history.
       let resolvedPlanName = finalPlanId || "unknown";
       if (finalPlanId) {
         const { data: planRow } = await (
@@ -293,13 +269,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
           .eq("id", finalPlanId)
           .maybeSingle();
         if (planRow?.name) {
-          // name bisa objek multibahasa → ambil string bersih utk hindari "[object Object]".
           const nm = planRow.name;
           resolvedPlanName = typeof nm === "string" ? nm : getLocalizedValue(nm, "en");
         }
       }
 
-      // order_id: deterministik agar replay webhook idempotent (jangan pakai Date.now()).
       const resolvedOrderId = orderId || `${providerName}-${providerSubscriptionId || tenantId}`;
 
       const { error: txError } = await (await transactionRepository(supabaseAdmin)).query().upsert(
@@ -327,17 +301,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
         throw new Error(`Database Insert Transaction Failed: ${txError.message}`);
       }
 
-      // === 4. GRANT SUBSCRIPTION (penting untuk provider invoice mayar/midtrans/xendit
-      //      yang tidak memancarkan subscription.created). Hanya grant bila perlu agar
-      //      tidak menimpa ends_at provider subscription (paypal/stripe) yg sudah benar. ===
       if (finalPlanId) {
-        // Deteksi recurring gateway (PayPal "I-", Stripe/Paddle "sub_").
         const isRecurringProvider =
           (providerName === "paypal" && providerSubscriptionId?.startsWith("I-")) ||
           (providerName === "stripe" && providerSubscriptionId?.startsWith("sub_")) ||
           (providerName === "paddle" && providerSubscriptionId?.startsWith("sub_"));
 
-        // Uang masuk = langganan WAJIB aktif. Selalu upsert (idempotent via onConflict).
         const { error: subGrantError } = await subscriptionRepo.query().upsert(
           {
             [billCol]: billId,
@@ -349,7 +318,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
             provider_subscription_id: providerSubscriptionId || orderId || null,
             provider_customer_id: providerCustomerId || null,
             interval: interval || null,
-            cancel_at_period_end: !isRecurringProvider, // prepaid (invoice) → true; recurring → false
+            cancel_at_period_end: !isRecurringProvider,
             pending_plan_id: null,
             updated_at: new Date().toISOString()
           },
@@ -361,17 +330,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
         }
       }
 
-      // === 5. REDEEM KUPON (atomic, idempotent via RPC) ===
       await redeemCouponIfPresent(couponCode, tenantId);
 
-      // === 6. UPDATE LIFECYCLE payment_orders → paid ===
       if (paymentOrder) {
         await (
           await paymentOrderRepository(supabaseAdmin)
         ).markStatus(paymentOrder.id, "paid", { paid_at: new Date().toISOString() });
       }
     } else if (eventType === "payment.failed") {
-      // Tandai order gagal (lifecycle). Transaksi tidak dicatat; subscription tidak diubah.
       if (paymentOrder) {
         await (await paymentOrderRepository(supabaseAdmin)).markStatus(paymentOrder.id, "failed");
       }

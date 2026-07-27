@@ -18,11 +18,6 @@ export async function paymentOrderRepository(supabase: SupabaseClient<any, any, 
       return supabase.from("payment_orders").delete().eq("id", id);
     },
 
-    /**
-     * Lookup order by (provider, provider_order_id) — id sesi/invoice/order dari provider
-     * yang selalu di-echo pada callback webhook. Dipakai webhook untuk memulihkan context
-     * (tenant/plan/interval/coupon/amount) dari DB kita, tidak bergantung echo metadata.
-     */
     findByProviderOrder(provider: string, providerOrderId: string) {
       return supabase
         .from("payment_orders")
@@ -32,10 +27,6 @@ export async function paymentOrderRepository(supabase: SupabaseClient<any, any, 
         .maybeSingle();
     },
 
-    /**
-     * Fallback lookup: pending order by (provider, tenant_id, plan_id). Dipakai webhook
-     * bila lookup by provider_order_id miss — mis. LemonSqueezy (checkout id ≠ order id).
-     */
     findPendingByContext(provider: string, tenantId: string, planId: string) {
       return supabase
         .from("payment_orders")
@@ -49,7 +40,6 @@ export async function paymentOrderRepository(supabase: SupabaseClient<any, any, 
         .maybeSingle();
     },
 
-    /** Update status lifecycle (pending → paid/failed/expired). */
     markStatus(id: string, status: string, extra: Record<string, any> = {}) {
       return supabase
         .from("payment_orders")

@@ -1,15 +1,3 @@
-// scripts/create-user.ts
-//
-// CLI interaktif: membuat user (auth.users + profiles) dan opsional superadmin.
-//
-// === CARA PAKAI ===
-//   npx tsx --env-file=.env scripts/create-user.ts
-//   (atau) npm run create-user
-//
-// Prompt: email, password, nama lengkap, lalu "Jadikan superadmin? (y/N)".
-// Bila superadmin: set profiles.is_superadmin = true (otoritatif, dipakai RLS &
-// validateSuperadmin) + app_metadata.role = "superadmin" (fast-path requireSuperadmin).
-
 import { createClient } from "@supabase/supabase-js";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -52,7 +40,6 @@ async function main() {
 
     console.log(`\nMembuat user: ${email} (superadmin=${isSuperadmin})...`);
 
-    // 1. Buat auth user (email_confirm: true → bisa login langsung tanpa verifikasi email).
     const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -62,7 +49,6 @@ async function main() {
     if (authErr) throw new Error(`createUser: ${authErr.message}`);
     const userId = authData.user.id;
 
-    // 2. Buat baris profile (id = UUID auth user; tidak ada auto-trigger profile).
     const profileRepo = await profileRepository(supabaseAdmin);
     const { error: profErr } = await profileRepo.insert({
       id: userId,
@@ -70,13 +56,11 @@ async function main() {
       status: "active"
     });
     if (profErr) {
-      // Profile gagal → rollback auth user agar tidak yatim.
       console.warn(`Profile insert gagal (${profErr.message}); menghapus auth user...`);
       await supabaseAdmin.auth.admin.deleteUser(userId);
       throw new Error(`profile insert: ${profErr.message}`);
     }
 
-    // 3. Superadmin (bila dipilih): set profiles.is_superadmin + app_metadata.role.
     if (isSuperadmin) {
       const { error: saErr } = await profileRepo.update(userId, { is_superadmin: true });
       if (saErr) console.warn(`Warn: gagal set profiles.is_superadmin (${saErr.message})`);

@@ -178,10 +178,22 @@ export class PaddleAdapter implements PaymentProvider {
       throw new Error("Missing Paddle signature");
     }
 
-    const tsMs = Number(ts);
-    if (!Number.isFinite(tsMs) || Math.abs(Date.now() - tsMs) > 5 * 60 * 1000) {
-      throw new Error("Paddle webhook stale (replay ditolak)");
+    // Konversi Unix timestamp (detik) ke milidetik
+    const tsMs = Number(ts) * 1000;
+
+    // --- BYPASS REPLAY DEFENSE UNTUK MODE SANDBOX (MEMUDAHKAN TESTING / REPLAY HISTORIS) ---
+    if (this.mode === "live") {
+      // Di Live mode (Produksi), proteksi replay attack wajib aktif ketat (maksimal 5 menit)
+      if (!Number.isFinite(tsMs) || Math.abs(Date.now() - tsMs) > 5 * 60 * 1000) {
+        throw new Error("Paddle webhook stale (replay ditolak)");
+      }
+    } else {
+      // Di Sandbox mode, kita bypass pengecekan waktu ini agar Anda bebas melakukan "Resend" webhook lama dari dashboard
+      console.warn(
+        "[paddle] Sandbox mode dideteksi. Pengaman Replay Attack (stale timestamp) dilewati untuk kemudahan testing lokal."
+      );
     }
+
     const expected = crypto
       .createHmac("sha256", this.webhookSecret)
       .update(`${ts}:${rawBody}`)

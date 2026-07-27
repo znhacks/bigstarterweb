@@ -1,8 +1,5 @@
 "use client";
 
-// Hook client: resolve tenant aktif dari slug URL + memberships user.
-// Mirror pola useSession (single fetch, cache state). Return { activeTenant, isTenantAdmin, loaded, refetch }.
-
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -40,14 +37,10 @@ export function useActiveTenant() {
       const memRepo = await membershipRepository(supabase);
       const { data } = await memRepo
         .query()
-        .select(
-          "tenant_id, roles(name, hierarchy_level), tenants(id, name, slug, logo)"
-        )
+        .select("tenant_id, roles(name, hierarchy_level), tenants(id, name, slug, logo)")
         .eq("user_id", user.id);
 
-      const found = ((data as any[]) ?? []).find(
-        (m) => m.tenants?.slug === tenantSlug
-      );
+      const found = ((data as any[]) ?? []).find((m) => m.tenants?.slug === tenantSlug);
 
       if (found?.tenants) {
         setActiveTenant({
