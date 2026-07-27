@@ -4,7 +4,6 @@ import { generateMeta } from "@/lib/utils";
 import { LoginForm } from "./components/login-form";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DemoSandbox } from "./components/demosanbox";
 import { constructMetadata } from "@/lib/metadata";
 import { getTranslations } from "next-intl/server";
 import { useTranslations } from "next-intl";
