@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "auth:migrate": "better-auth migrate",
-    "db:sync-rbac": "tsx scripts/sync-rbac.ts"
+    "db:sync-rbac": "tsx scripts/sync-rbac.ts",
+    "create:user": "tsx --env-file=.env scripts/create-user.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
@@ -156,6 +157,7 @@
     "react-email": "^6.6.5",
     "supabase": "^2.109.1",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.23.1",
     "typescript": "^5.9.3"
   }
 }
