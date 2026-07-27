@@ -1,5 +1,3 @@
-// services/payment/adapters/midtrans.ts
-
 import {
   PaymentProvider,
   CreateCheckoutSessionParams,
@@ -22,7 +20,9 @@ export class MidtransAdapter implements PaymentProvider {
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
     // IDR-native one-time charge: diskon/pro-rata langsung diterapkan via customPrice
     const amount = params.customPrice ?? params.baseAmount ?? 0;
-    if (!amount) throw new Error("Midtrans: amount tidak boleh 0 (customPrice/baseAmount wajib)");
+    if (!amount) {
+      throw new Error("Midtrans: amount tidak boleh 0 (customPrice/baseAmount wajib)");
+    }
 
     // order_id hanya untuk keunikan & tampilan. tenantId/planId/interval/couponCode
     // disimpan penuh di custom_field (bukan di order_id) agar tidak terpotong.
@@ -59,7 +59,7 @@ export class MidtransAdapter implements PaymentProvider {
     });
 
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(`Midtrans failed: ${err.error_messages?.[0] || response.statusText}`);
     }
 
@@ -131,20 +131,33 @@ export class MidtransAdapter implements PaymentProvider {
       status = "failed";
     }
 
+    const eventType: UnifiedWebhookResult["eventType"] =
+      status === "paid" ? "payment.succeeded" : "payment.failed";
+
     return {
-      eventType: status === "paid" ? "payment.succeeded" : "payment.failed",
+      eventType,
       tenantId,
       planId,
       interval,
       couponCode,
-      status: status,
+      status,
       amount: parseFloat(payload.gross_amount),
       currency: "IDR",
-      orderId: payload.order_id
+      orderId: payload.order_id,
+      // Field di bawah ini diset undefined karena Midtrans Snap menggunakan tipe invoice sekali bayar (one-time checkout)
+      endsAt: undefined,
+      providerSubscriptionId: undefined,
+      providerCustomerId: undefined
     };
   }
 
   async cancelSubscription(providerSubscriptionId: string): Promise<boolean> {
-    return true; // Midtrans Snap bersifat one-time charge, return true langsung
+    // Midtrans Snap bersifat one-time charge, return true langsung
+    return true;
+  }
+
+  async reactivateSubscription(providerSubscriptionId: string): Promise<boolean> {
+    // Midtrans Snap bersifat one-time charge, return true langsung
+    return true;
   }
 }
