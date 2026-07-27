@@ -178,19 +178,27 @@ export class PaddleAdapter implements PaymentProvider {
       throw new Error("Missing Paddle signature");
     }
 
-    // Konversi Unix timestamp (detik) ke milidetik
+    // Konversi Unix timestamp (detik dari Paddle) ke milidetik
     const tsMs = Number(ts) * 1000;
 
-    // --- BYPASS REPLAY DEFENSE UNTUK MODE SANDBOX (MEMUDAHKAN TESTING / REPLAY HISTORIS) ---
-    if (this.mode === "live") {
-      // Di Live mode (Produksi), proteksi replay attack wajib aktif ketat (maksimal 5 menit)
+    // --- BYPASS REPLAY DEFENSE UNTUK LOCALHOST ATAU SANDBOX (testing) ---
+    const isDevelopment = process.env.NODE_ENV !== "production";
+    const isSandbox = this.mode !== "live";
+
+    if (!isDevelopment && !isSandbox) {
+      // Proteksi Replay Attack hanya aktif ketat di server produksi (Live Mode)
       if (!Number.isFinite(tsMs) || Math.abs(Date.now() - tsMs) > 5 * 60 * 1000) {
-        throw new Error("Paddle webhook stale (replay ditolak)");
+        const diffMinutes = Math.abs(Date.now() - tsMs) / (60 * 1000);
+        throw new Error(
+          `Paddle webhook stale (replay ditolak). Selisih waktu jam server Anda dengan Paddle: ${diffMinutes.toFixed(2)} menit.`
+        );
       }
     } else {
-      // Di Sandbox mode, kita bypass pengecekan waktu ini agar Anda bebas melakukan "Resend" webhook lama dari dashboard
+      // Cetak log info selisih waktu ke konsol terminal Next.js Anda demi kemudahan debugging
+      const diffMinutes = Math.abs(Date.now() - tsMs) / (60 * 1000);
       console.warn(
-        "[paddle] Sandbox mode dideteksi. Pengaman Replay Attack (stale timestamp) dilewati untuk kemudahan testing lokal."
+        `[paddle] Webhook stale check bypassed (isDevelopment: ${isDevelopment}, isSandbox: ${isSandbox}). ` +
+          `Selisih waktu saat ini: ${diffMinutes.toFixed(2)} menit.`
       );
     }
 
