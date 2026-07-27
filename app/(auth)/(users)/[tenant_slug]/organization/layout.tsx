@@ -14,28 +14,27 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const tenantSlug = params?.tenant_slug as string | undefined;
   const t = useTranslations("organization");
 
-  // Memeriksa status keaktifan menu berdasarkan URL organisasi yang baru
   const isGeneralActive = pathname?.includes("/organization/general");
   const isMembersActive = pathname?.includes("/organization/member");
-  const isBillingActive = pathname?.includes("/organization/billing");
+  const isBillingActive = pathname?.includes("/organization/pricing");
   const isHistoryBillingActive = pathname?.includes("/organization/history-billing");
   const isAppearancesActive = pathname?.includes("/organization/appearance");
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
-      {/* Header Halaman Utama */}
+      {}
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
       </div>
 
-      {/* Grid Layout: Menu Samping & Slot Konten Anak */}
+      {}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        {/* Menu Samping */}
+        {}
         <div className="md:col-span-1">
           <Card className="overflow-hidden p-2">
             <nav className="flex flex-row gap-1 md:flex-col">
-              {/* Menu General */}
+              {}
               <Link
                 href={`/${tenantSlug}/organization/general`}
                 className={cn(
@@ -48,7 +47,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 <span>{t("menu.general")}</span>
               </Link>
 
-              {/* Menu Members */}
+              {}
               <Link
                 href={`/${tenantSlug}/organization/member`}
                 className={cn(
@@ -61,9 +60,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 <span>{t("menu.member")}</span>
               </Link>
 
-              {/* Menu Billing */}
+              {}
               <Link
-                href={`/${tenantSlug}/organization/billing`}
+                href={`/${tenantSlug}/organization/pricing`}
                 className={cn(
                   "flex w-full items-center justify-start gap-3 rounded-md px-4 py-2 text-sm font-medium transition-colors",
                   isBillingActive
@@ -101,7 +100,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           </Card>
         </div>
 
-        {/* Konten Halaman Aktif */}
+        {}
         <div className="md:col-span-3">{children}</div>
       </div>
     </div>

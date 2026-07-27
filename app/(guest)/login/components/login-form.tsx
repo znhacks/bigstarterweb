@@ -20,13 +20,11 @@ import {
   EyeOff
 } from "lucide-react";
 
-// Gunakan client Supabase yang mendukung SSR/Cookies (lihat Bagian 2)
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
 import { formatDateTime } from "@/lib/i18n/format";
 import { OtpLoginForm } from "@/components/auth/otp-login";
 
-// Impor fungsi repositori baru Anda di sini (sesuaikan jalur path berkas Anda)
 import { profileRepository } from "@/supabase/repositories/profiles";
 import { AUTH_FEATURES, hasSocialAuth } from "@/config/auth";
 
@@ -36,7 +34,6 @@ export function LoginForm() {
   const nextTarget = searchParams.get("next");
   const reason = searchParams.get("reason");
 
-  // Tab default = metode login pertama yang aktif (sesuai config/auth.ts).
   const defaultTab = AUTH_FEATURES.enablePassword
     ? "password"
     : AUTH_FEATURES.enableMagicLink
@@ -45,8 +42,6 @@ export function LoginForm() {
         ? "otp"
         : "password";
 
-  // Jika diarahkan karena banned (user masih punya sesi), ambil detail ban
-  // (until/reason) untuk ditampilkan. Profile sendiri selalu bisa dibaca.
   const [bannedInfo, setBannedInfo] = useState<{
     until: string | null;
     reason: string | null;
@@ -76,11 +71,9 @@ export function LoginForm() {
     })();
   }, [reason]);
 
-  // State Input
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // State Loading & Feedback
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -88,9 +81,7 @@ export function LoginForm() {
   const locale = useLocale();
   const t = useTranslations("guest.login");
 
-  // Fungsi pengarah halaman berdasarkan metadata pengguna
   const handleRedirect = (user: any) => {
-    // Memeriksa role dari user_metadata atau app_metadata
     const isSuperAdmin =
       user?.app_metadata?.role === "superadmin" ||
       user?.user_metadata?.role === "superadmin" ||
@@ -104,7 +95,6 @@ export function LoginForm() {
     router.refresh();
   };
 
-  // 1. Login Password Tradisional
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -132,7 +122,6 @@ export function LoginForm() {
     }
   };
 
-  // 3. Login dengan Magic Link
   const handleMagicLinkLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -164,7 +153,6 @@ export function LoginForm() {
     }
   };
 
-  // 4. Login OAuth Google
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setErrorMsg(null);
@@ -182,7 +170,6 @@ export function LoginForm() {
     }
   };
 
-  // 5. Login OAuth GitHub
   const handleGitHubSignIn = async () => {
     setIsLoading(true);
     setErrorMsg(null);
@@ -200,7 +187,6 @@ export function LoginForm() {
     }
   };
 
-  // 6. Login Menggunakan Passkey (WebAuthn)
   const handlePasskeyLogin = async () => {
     setIsLoading(true);
     setErrorMsg(null);
@@ -237,7 +223,7 @@ export function LoginForm() {
 
   return (
     <div className="grid gap-5">
-      {/* Alert Notifikasi */}
+      {}
       {errorMsg && (
         <Alert variant="destructive" className="rounded-xl">
           <AlertCircle className="h-4 w-4" />
@@ -288,7 +274,7 @@ export function LoginForm() {
         </Alert>
       )}
 
-      {/* TABS CONTROLLER */}
+      {}
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="mb-4 h-auto w-full justify-start rounded-none border-b bg-transparent p-0">
           {AUTH_FEATURES.enablePassword && (
@@ -314,14 +300,14 @@ export function LoginForm() {
           )}
         </TabsList>
 
-        {/* TAB: OTP LOGIN */}
+        {}
         {AUTH_FEATURES.enablePasswordlessOtp && (
           <TabsContent value="otp" className="mt-0 focus-visible:outline-none">
             <OtpLoginForm />
           </TabsContent>
         )}
 
-        {/* TAB 1 CONTENT: PASSWORD */}
+        {}
         <TabsContent value="password" className="mt-0 focus-visible:outline-none">
           <form onSubmit={handlePasswordLogin} className="grid gap-4">
             <div className="grid gap-2">
@@ -374,7 +360,7 @@ export function LoginForm() {
           </form>
         </TabsContent>
 
-        {/* TAB 2 CONTENT: MAGIC LINK */}
+        {}
         <TabsContent value="magic" className="mt-0 focus-visible:outline-none">
           <form onSubmit={handleMagicLinkLogin} className="grid gap-4">
             <div className="grid gap-2">
@@ -401,7 +387,7 @@ export function LoginForm() {
         </TabsContent>
       </Tabs>
 
-      {/* CONTINUATOR DIVIDER */}
+      {}
       {hasSocialAuth && (
         <div className="my-1">
           <div className="flex items-center gap-3">
@@ -412,7 +398,7 @@ export function LoginForm() {
         </div>
       )}
 
-      {/* OAUTH BUTTONS */}
+      {}
       <div className="grid grid-cols-1 gap-3">
         {AUTH_FEATURES.enableGoogle && (
           <Button
@@ -455,7 +441,7 @@ export function LoginForm() {
         )}
       </div>
 
-      {/* FUNGSI UTAMA PASSKEY */}
+      {}
       {AUTH_FEATURES.enablePasskey && (
         <Button
           variant="secondary"

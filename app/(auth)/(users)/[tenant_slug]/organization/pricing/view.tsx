@@ -1,4 +1,3 @@
-// app/(auth)/(users)/[tenant_slug]/organization/billing/view.tsx
 "use client";
 
 import * as React from "react";
@@ -161,7 +160,7 @@ export function OrganizationBilling() {
         </Alert>
       )}
 
-      {/* SECTION 2: PLANS MATRIX */}
+      {}
       <div className="space-y-6">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="space-y-1">
@@ -197,7 +196,7 @@ export function OrganizationBilling() {
           </div>
         </div>
 
-        {/* TAMPILAN RESPONSif: Kiri ke kanan (Row/Flex Wrap), Otomatis turun, Rata tengah jika jumlah paket ganjil */}
+        {}
         <div className="flex flex-wrap items-stretch justify-center gap-6 pt-4">
           {convertedPlans.map((plan) => {
             const actionType = getPlanActionType(plan.id);
@@ -402,7 +401,7 @@ export function OrganizationBilling() {
         </div>
       </div>
 
-      {/* ACTIVE PLAN EXPIRY WARNING BANNER */}
+      {}
       {showWarningBanner && activeSub && (
         <Alert className="flex items-start gap-3 rounded-2xl border-amber-500/30 bg-amber-50/50 p-4 text-amber-800">
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
@@ -415,7 +414,7 @@ export function OrganizationBilling() {
         </Alert>
       )}
 
-      {/* DIALOG MODAL DETAIL INVOICE */}
+      {}
       <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
         <DialogContent
           className="max-h-[90vh] w-[95vw] max-w-[550px] overflow-y-auto rounded-2xl border border-slate-200 p-6 sm:p-8"
@@ -671,7 +670,7 @@ export function OrganizationBilling() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG MODAL REFUND */}
+      {}
       <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
         <DialogContent
           className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8"
@@ -711,7 +710,7 @@ export function OrganizationBilling() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: ENTERPRISE CONTACT FORM */}
+      {}
       <Dialog open={isEnterpriseOpen} onOpenChange={setIsEnterpriseOpen}>
         <DialogContent
           className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8"

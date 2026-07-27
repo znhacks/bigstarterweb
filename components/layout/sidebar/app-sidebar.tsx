@@ -3,18 +3,9 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { tenantConfig } from "@/config/tenant";
-import {
-  ChevronsUpDown,
-  Building2,
-  Check,
-  Plus,
-  Loader2,
-  AlertTriangle,
-  Clock
-} from "lucide-react";
+import { ChevronsUpDown, Building2, Check, Plus, Loader2 } from "lucide-react";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { useIsTablet } from "@/hooks/use-mobile";
-import Link from "next/link";
 
 import {
   Sidebar,
@@ -38,17 +29,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { supabase } from "@/lib/supabase";
 import { membershipRepository } from "@/supabase/repositories/memberships";
-import { tenantRepository } from "@/supabase/repositories/tenants";
-import { roleRepository } from "@/supabase/repositories/roles";
 import { CreateTenantForm } from "../../create-tenant-form";
 import { useTranslations } from "next-intl";
+
+// Import komponen TrialCard yang baru dibuat
+import { TrialCard } from "@/components/layout/sidebar/trial-card";
 
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;
@@ -87,10 +76,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [newOrgName, setNewOrgName] = useState("");
 
   const [subscription, setSubscription] = useState<any>(null);
   const [trialRemaining, setTrialRemaining] = useState<string>("");
@@ -391,77 +378,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </ScrollArea>
         </SidebarContent>
         <SidebarFooter>
-          {}
-          {activeOrg && !isLoadingTrial && (
-            <>
-              {}
-              {subscription?.status === "trialing" && !isTrialExpired && trialRemaining && (
-                <div className="mb-2 px-3 py-1 group-data-[collapsible=icon]:hidden">
-                  <Card className="border-amber-200 bg-amber-50/60 dark:border-amber-900/30 dark:bg-amber-950/15">
-                    <CardContent className="p-3">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <span className="flex items-center gap-1 text-xs font-bold text-amber-800 dark:text-amber-400">
-                            <Clock className="h-3.5 w-3.5" />
-                            Trial Aktif
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className="border-amber-300 bg-amber-100 px-1.5 py-0 text-[9px] font-bold text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
-                            Uji Coba
-                          </Badge>
-                        </div>
-                        <div className="text-muted-foreground text-[11px] leading-normal">
-                          Sisa waktu:{" "}
-                          <span className="font-bold text-amber-900 dark:text-amber-300">
-                            {trialRemaining}
-                          </span>
-                        </div>
-                        <Button
-                          asChild
-                          size="sm"
-                          className="h-7 w-full border-none bg-amber-600 text-[11px] font-semibold text-white shadow-none hover:bg-amber-700">
-                          <Link href={`/${activeOrg.slug}/organization/billing`}>
-                            Upgrade Paket
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {}
-              {(isTrialExpired || subscription?.status === "expired") && (
-                <div className="mb-2 px-3 py-1 group-data-[collapsible=icon]:hidden">
-                  <Card className="py-0">
-                    <CardContent className="">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <span className="flex items-center gap-1 text-xs font-bold text-red-800 dark:text-red-400">
-                            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-500" />
-                            Trial Habis
-                          </span>
-                        </div>
-                        <p className="text-muted-foreground text-[11px] leading-relaxed">
-                          Masa uji coba gratis organisasi Anda telah berakhir. Upgrade untuk
-                          memulihkan akses fitur.
-                        </p>
-                        <Button
-                          asChild
-                          size="sm"
-                          variant="destructive"
-                          className="h-7 w-full text-[11px] font-semibold">
-                          <Link href={`/${activeOrg.slug}/organization/billing`}>
-                            Upgrade Sekarang
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </>
+          {/* Memanggil komponen TrialCard yang baru dibuat */}
+          {activeOrg && (
+            <TrialCard
+              slug={activeOrg.slug}
+              subscription={subscription}
+              trialRemaining={trialRemaining}
+              isTrialExpired={isTrialExpired}
+              isLoading={isLoadingTrial}
+            />
           )}
 
           <NavUser />

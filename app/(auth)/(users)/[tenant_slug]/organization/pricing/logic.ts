@@ -1,4 +1,3 @@
-// app/(auth)/(users)/[tenant_slug]/organization/billing/logic.ts
 "use client";
 
 import { useState, useEffect } from "react";
@@ -56,8 +55,8 @@ export interface ConvertedPlan {
   isEnterprise?: boolean;
   isRecommended?: boolean;
   trialDays?: number;
-  sort_order?: number; // Ditambahkan untuk mendukung kustomisasi urutan dari DB
-  weight?: number; // Ditambahkan sebagai alternatif kustomisasi urutan dari DB
+  sort_order?: number;
+  weight?: number;
   prices: {
     monthly: {
       amount: number;
@@ -130,17 +129,15 @@ export function useOrganizationBilling() {
     }
   };
 
-  // RESOLUSI LOKAL DAN SORTING YANG KONSISTEN
   useEffect(() => {
     if (rawPlans.length === 0) return;
 
     let isMounted = true;
 
-    // Fungsi pembantu untuk memastikan nilai urutan aman dan konsisten saat dibandingkan
     const getOrderValue = (plan: any) => {
       const val =
         plan.sort_order !== undefined && plan.sort_order !== null ? plan.sort_order : plan.weight;
-      if (val === undefined || val === null || val === "") return 9999; // Taruh di paling belakang jika kosong
+      if (val === undefined || val === null || val === "") return 9999;
       const parsed = parseInt(String(val), 10);
       return isNaN(parsed) ? 9999 : parsed;
     };
@@ -175,7 +172,6 @@ export function useOrganizationBilling() {
             } as ConvertedPlan;
           })
           .sort((a, b) => {
-            // 1. Urutkan berdasarkan sort_order hasil konversi yang aman
             const orderA = getOrderValue(a);
             const orderB = getOrderValue(b);
 
@@ -183,7 +179,6 @@ export function useOrganizationBilling() {
               return orderA - orderB;
             }
 
-            // 2. Cadangan jika sort_order sama: Urutkan berdasarkan harga bulanan terendah ke tertinggi
             const priceA = a.prices.monthly.amount;
             const priceB = b.prices.monthly.amount;
             return priceA - priceB;
@@ -277,7 +272,6 @@ export function useOrganizationBilling() {
     const ownerCol = owner?.type === "user" ? "user_id" : "tenant_id";
     const ownerId = owner?.id || orgId;
 
-    // Trial anti-abuse: pernah pakai trial? (sekali per owner — provider="trial")
     try {
       const { count } = await subRepo
         .query()
@@ -392,8 +386,6 @@ export function useOrganizationBilling() {
 
       window.history.replaceState({}, document.title, window.location.pathname);
 
-      // Poll: webhook grant bisa sampai beberapa detik setelah redirect. Retry sampai
-      // subscription aktif atau ~32s, agar UI otomatis update tanpa reload manual.
       let cancelled = false;
       let attempts = 0;
       const maxAttempts = 8;

@@ -26,25 +26,21 @@ export function JoinOrganization() {
   const token = searchParams.get("token");
   const t = useTranslations("guest.join");
 
-  // Payload display-only (organisasi & role). TIDAK ada verifikasi di klien —
-  // semua validasi/otorisasi ada di server action (lihat ./actions.ts).
   const [peek, setPeek] = useState<{ o: string; r: string } | null>(null);
   const [activeUser, setActiveUser] = useState<any>(null);
 
-  // State validasi keaktifan undangan (indikasi tampilan; final di server).
   const [isInviteValid, setIsInviteValid] = useState<boolean | null>(null);
 
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isDeclined, setIsDeclined] = useState(false); // State untuk penolakan
+  const [isDeclined, setIsDeclined] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const checkActiveUser = async () => {
       setIsLoadingUser(true);
 
-      // 1. Cek User Aktif
       const {
         data: { user }
       } = await supabase.auth.getUser();
@@ -52,8 +48,6 @@ export function JoinOrganization() {
         setActiveUser(user);
       }
 
-      // 2. Decode token untuk DISPLAY saja. Token lama (Base64 JSON tanpa tanda)
-      //    akan gagal peek → dianggap tidak valid.
       const decoded = peekInviteToken(token);
       if (!decoded) {
         setIsInviteValid(false);
@@ -68,7 +62,6 @@ export function JoinOrganization() {
     checkActiveUser();
   }, [token]);
 
-  // AKSI 1: MENERIMA UNDANGAN (JOIN) — via Server Action
   const handleJoinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeUser || !token) return;
@@ -90,9 +83,8 @@ export function JoinOrganization() {
       return;
     }
 
-    // Sinkronisasi state klien (localStorage + cookie) lalu redirect ke dashboard.
     localStorage.setItem("active_org_id", res.id);
-    const maxAge = 60 * 60 * 24 * 30; // 30 hari
+    const maxAge = 60 * 60 * 24 * 30;
     document.cookie = `active_tenant_id=${res.id}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
 
     setIsSuccess(true);
@@ -103,7 +95,6 @@ export function JoinOrganization() {
     }, 2000);
   };
 
-  // AKSI 2: MENOLAK UNDANGAN (DECLINE) — via Server Action
   const handleDeclineInvite = async () => {
     if (!activeUser || !token) return;
 
@@ -130,7 +121,6 @@ export function JoinOrganization() {
     );
   }
 
-  // TAMPILAN JIKA UNDANGAN SUDAH DITOLAK
   if (isDeclined) {
     return (
       <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
@@ -154,7 +144,6 @@ export function JoinOrganization() {
     );
   }
 
-  // TAMPILAN JIKA UNDANGAN TIDAK VALID / EXPIRED / USER BELUM LOGIN
   if (isInviteValid === false || !peek || !activeUser) {
     return (
       <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
@@ -211,14 +200,12 @@ export function JoinOrganization() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{t("your-role")}</span>
-                  <span className="text-foreground font-semibold capitalize">
-                    {peek.r}
-                  </span>
+                  <span className="text-foreground font-semibold capitalize">{peek.r}</span>
                 </div>
               </div>
             </CardContent>
 
-            {/* CARD FOOTER DENGAN DUA TOMBOL: GABUNG DAN TOLAK */}
+            {}
             <CardFooter className="flex flex-col gap-2 pt-2 sm:flex-row">
               <Button
                 type="button"

@@ -656,7 +656,7 @@
       "buttons": {
         "planActive": "Paket Aktif",
         "upgrade": "Tingkatkan Paket",
-        "schedule-downgrade": "Penurunan Paket Dijadwalkan",
+        "schedule-downgrade": "Penurunan Dijadwalkan",
         "switchToYearly": "Beralih ke Langganan Tahunan",
         "switchToMonthly": "Beralih ke Langganan Bulanan",
         "downgrade": "Turunkan Paket",
