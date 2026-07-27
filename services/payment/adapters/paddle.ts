@@ -223,7 +223,26 @@ export class PaddleAdapter implements PaymentProvider {
       crypto.timingSafeEqual(sigBuf, expBuf);
 
     if (!ok) {
-      throw new Error("Invalid Paddle signature");
+      console.error("[paddle] Sig verify FAILED:", {
+        mode: this.mode,
+        secretLength: secret.length,
+        secretPrefix: secret.length > 6 ? secret.substring(0, 6) + "..." : "(too short)",
+        tsLength: ts.length,
+        bodyLength: rawBody.length,
+        expectedH1Prefix: expected.substring(0, 16) + "...",
+        receivedH1Prefix: h1.substring(0, 16) + "...",
+        h1Length: h1.length,
+        expectedLength: expected.length,
+        lengthsMatch: h1.length === expected.length
+      });
+      // Di sandbox/dev, log hex lengkap utk perbandingan manual.
+      if (isDevelopment || isSandbox) {
+        console.warn("[paddle] DEV/SANDBOX — expected:", expected);
+        console.warn("[paddle] DEV/SANDBOX — received:", h1);
+      }
+      throw new Error(
+        "Invalid Paddle signature. Pastikan PADDLE_WEBHOOK_SECRET benar (Paddle Dashboard → Developer Tools → Notifications → Preview, BUKAN API key). Sandbox & live punya secret berbeda."
+      );
     }
 
     const payload = JSON.parse(rawBody);
