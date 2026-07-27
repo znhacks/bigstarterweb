@@ -1,8 +1,10 @@
 import React from "react";
-import { requireAuth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { requireAuth, requireSuperadmin } from "@/lib/auth";
 import { CreateTenantForm } from "@/components/create-tenant-form";
 import { getTranslations } from "next-intl/server"; // Menggunakan getTranslations untuk Server Component
 import { constructMetadata } from "@/lib/metadata";
+import { tenantConfig } from "@/config/tenant";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.guest.create-tenant");
@@ -19,6 +21,15 @@ export default async function CreateTenantPage() {
 
   // Wajibkan autentikasi sesi sebelum masuk halaman ini
   await requireAuth();
+
+  // Gate: bila user tak boleh create org → hanya superadmin yang diizinkan.
+  if (!tenantConfig.organizations.enableUsersToCreateOrganizations) {
+    try {
+      await requireSuperadmin();
+    } catch {
+      redirect("/login");
+    }
+  }
 
   return (
     <div className="bg-muted/40 flex min-h-screen flex-col items-center justify-center p-4">

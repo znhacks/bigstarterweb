@@ -111,7 +111,8 @@ export class PaddleAdapter implements PaymentProvider {
       }
 
       const data = await response.json();
-      const checkoutUrl = `${this.checkoutHost}/checkout/tx_${data.data.id}`;
+      const checkoutUrl =
+        data.data.checkout?.url || `${this.checkoutHost}/checkout/transact/${data.data.id}`;
 
       return {
         checkoutUrl,

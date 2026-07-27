@@ -23,23 +23,18 @@ export function CreateTenantForm() {
       const formData = new FormData(e.currentTarget);
       const result = await createTenant(formData);
 
-      // 1. Tangani jika ada pesan error dari Server Action
       if (result?.error) {
         setErrorMsg(result.error);
         setIsLoading(false);
         return;
       }
 
-      // 2. Tangani jika diminta redirect ke halaman Login
       if (result?.redirect) {
         window.location.href = result.redirect;
         return;
       }
 
-      // 3. Tangani jika pendaftaran sukses
       if (result?.success && result?.slug) {
-        // Melakukan full-reload redirect ke dashboard agar cookie active_tenant_id
-        // langsung terkirim dan dibaca dengan benar oleh middleware/layout di server.
         window.location.href = `/${result.slug}/dashboard`;
       }
     } catch (err: any) {

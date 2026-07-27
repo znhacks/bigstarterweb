@@ -1,47 +1,25 @@
-// config/rbac.ts
-//
-// DECLARATIVE ROLE CATALOGUE — boilerplate reference utk developer.
-// File ini mendefinisikan roles, hierarchy, dan default grants dalam TypeScript.
-// DB (tabel roles/role_permissions) adalah runtime source of truth; file ini
-// adalah deklarasi yg mencerminkan/menyinkronkan DB.
-//
-// === CARA PAKAI (utk developer boilerplate) ===
-// 1. Tambah/ubah role atau grant di sini.
-// 2. Jalankan `syncRbacToDb(supabaseAdmin)` utk idempotent upsert ke DB.
-//    Atau copy SQL equivalent dari comments ke Supabase SQL Editor.
-// 3. `lib/rbac/permissions.ts` adalah katalog PERMISSION (domain.action) —
-//    tambah permission baru di sana DULU, lalu reference di DEFAULT_GRANTS.
-//
-// HIRARKI: angka lebih tinggi = lebih berkuasa. canAssignRole(myLevel > targetLevel).
-
 import { ALL_PERMISSIONS, PERMISSIONS, type PermissionName } from "@/lib/rbac/permissions";
 import { roleRepository } from "@/supabase/repositories/roles";
 import { permissionRepository } from "@/supabase/repositories/permissions";
 import { rolePermissionRepository } from "@/supabase/repositories/role-permissions";
 
 export interface RoleDefinition {
-  /** Nama role di DB (case-sensitive, harus match `roles.name`). */
   name: string;
-  /** Label human-readable utk UI. */
+
   label: string;
-  /** Level hirarki (Member=10, Admin=50, Owner=100). Gap utk future roles. */
+
   hierarchy: number;
-  /** Deskripsi singkat (tooltip/help). */
+
   description: string;
-  /** Warna badge UI (opsional). */
+
   color?: string;
 }
 
-/** Tipe data pengembalian untuk skrip pengeksekusi CLI */
 export interface SyncResult {
   success: boolean;
   error?: string;
 }
 
-/**
- * Daftar role default. Developer dapat add role baru di sini.
- * HIRARKI: 10 (Member) < 50 (Admin) < 100 (Owner).
- */
 export const ROLE_DEFINITIONS: RoleDefinition[] = [
   {
     name: "Member",
@@ -66,11 +44,6 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
   }
 ];
 
-/**
- * Default grants: role name → list of permission strings.
- * Mirror dari `supabase/migrations/rbac-seed.sql` + `tasks-schema-rbac.sql`.
- * Developer: tambah permission ke array role yg sesuai setelah deklarasi di permissions.ts.
- */
 export const DEFAULT_GRANTS: Record<string, PermissionName[]> = {
   Member: [
     PERMISSIONS.organizationRead,
@@ -82,7 +55,6 @@ export const DEFAULT_GRANTS: Record<string, PermissionName[]> = {
     PERMISSIONS.settingsView
   ],
   Admin: [
-    // Inherits Member reads + operational writes
     PERMISSIONS.organizationRead,
     PERMISSIONS.organizationUpdate,
     PERMISSIONS.membersRead,
@@ -99,42 +71,29 @@ export const DEFAULT_GRANTS: Record<string, PermissionName[]> = {
     PERMISSIONS.dashboardView,
     PERMISSIONS.settingsView
   ],
-  Owner: ALL_PERMISSIONS // semua permission
+  Owner: ALL_PERMISSIONS
 };
 
-/** Ambil RoleDefinition berdasarkan nama role. */
 export function getRoleByName(name: string): RoleDefinition | undefined {
   return ROLE_DEFINITIONS.find((r) => r.name === name);
 }
 
-/** Ambil RoleDefinition berdasarkan level hirarki (nearest match). */
 export function getRoleByHierarchy(level: number): RoleDefinition | undefined {
   return [...ROLE_DEFINITIONS]
     .sort((a, b) => b.hierarchy - a.hierarchy)
     .find((r) => level >= r.hierarchy);
 }
 
-/** Ambil daftar permission default utk sebuah role. */
 export function getDefaultGrants(roleName: string): PermissionName[] {
   return DEFAULT_GRANTS[roleName] ?? [];
 }
 
-/**
- * Utility: sinkronkan roles + grants dari config ini ke DB.
- * Idempotent: upsert roles, reseed permissions, reseed role_permissions.
- * Hanya boleh dipanggil server-side (service-role).
- *
- * @example
- * import { supabaseAdmin } from "@/lib/api/supabase-server";
- * await syncRbacToDb(supabaseAdmin);
- */
 export async function syncRbacToDb(supabaseAdmin: any): Promise<SyncResult> {
   try {
     const roleRepo = await roleRepository(supabaseAdmin);
     const permissionRepo = await permissionRepository(supabaseAdmin);
     const rolePermissionRepo = await rolePermissionRepository(supabaseAdmin);
 
-    // 1. Upsert roles
     for (const role of ROLE_DEFINITIONS) {
       const { error: roleError } = await roleRepo
         .query()
@@ -143,7 +102,6 @@ export async function syncRbacToDb(supabaseAdmin: any): Promise<SyncResult> {
       if (roleError) throw roleError;
     }
 
-    // 2. Ensure all permissions exist (from permissions.ts catalog)
     for (const perm of ALL_PERMISSIONS) {
       const { error: permError } = await permissionRepo
         .query()
@@ -152,7 +110,6 @@ export async function syncRbacToDb(supabaseAdmin: any): Promise<SyncResult> {
       if (permError) throw permError;
     }
 
-    // 3. Sync grants (role_permissions)
     for (const [roleName, perms] of Object.entries(DEFAULT_GRANTS)) {
       const { data: role, error: fetchRoleError } = await roleRepo
         .query()
@@ -184,7 +141,13 @@ export async function syncRbacToDb(supabaseAdmin: any): Promise<SyncResult> {
       }
     }
 
-    console.log("[RBAC] Sync selesai:", ROLE_DEFINITIONS.length, "roles,", ALL_PERMISSIONS.length, "permissions.");
+    console.log(
+      "[RBAC] Sync selesai:",
+      ROLE_DEFINITIONS.length,
+      "roles,",
+      ALL_PERMISSIONS.length,
+      "permissions."
+    );
     return { success: true };
   } catch (err: any) {
     console.error("[RBAC] Sync gagal:", err);

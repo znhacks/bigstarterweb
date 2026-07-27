@@ -1,18 +1,11 @@
-// config/feature-definitions.ts
-
 export interface FeatureDefinition {
-  key: string; // Key unik yang akan dicek di kode (misal: 'allowPdfFormat')
-  label: string; // Label bahasa manusia yang tampil di Form Superadmin
-  type: "boolean" | "number"; // Tipe data (mempengaruhi render input: Switch atau Number Input)
-  defaultValue: any; // Nilai bawaan jika tidak diatur
-  description: string; // Penjelasan fungsi fitur untuk memudahkan developer/admin
+  key: string;
+  label: string;
+  type: "boolean" | "number";
+  defaultValue: any;
+  description: string;
 }
 
-/**
- * DAFTAR FITUR RBAC UTAMA (Single Source of Truth)
- * Developer cukup menambah baris di sini untuk mendaftarkan fitur RBAC baru.
- * Konsol Superadmin & Logic Gating akan langsung menyesuaikan diri secara otomatis!
- */
 export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
   {
     key: "maxUsers",
@@ -61,9 +54,6 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
 
 export type FeatureGateKeys = (typeof FEATURE_DEFINITIONS)[number]["key"];
 
-/**
- * Objek feature gates terstruktur (hasil decode dari array DB plans.features).
- */
 export interface FeatureGates {
   maxUsers: number;
   maxTasks: number;
@@ -73,11 +63,6 @@ export interface FeatureGates {
   prioritySupport: boolean;
 }
 
-/**
- * Decode array teks DB (mis. ['allowPdfFormat','limit:maxTasks:2000']) menjadi
- * objek FeatureGates terstruktur. Nilai default diambil dari FEATURE_DEFINITIONS.
- * Ini adalah Single Source of Truth untuk menerjemahkan DB -> logic gating.
- */
 export function decodeFeatureGates(features: string[] | null | undefined): FeatureGates {
   const arr = Array.isArray(features) ? features : [];
   const gates = {} as Record<string, number | boolean>;
@@ -93,27 +78,11 @@ export function decodeFeatureGates(features: string[] | null | undefined): Featu
   return gates as unknown as FeatureGates;
 }
 
-/**
- * =========================================================================
- * UTILLITAS HELPER PENERJEMAH ARRAY TEKS (DATABASE-TO-LOGIC)
- * =========================================================================
- */
-
-/**
- * Mengecek apakah sebuah fitur boolean aktif di dalam array database
- * Contoh array database: ['allowPdfFormat', 'chooseIpLocation']
- * hasFeature(databaseArray, 'allowPdfFormat') -> true
- */
 export function hasFeatureInArray(features: string[], key: string): boolean {
   if (!Array.isArray(features)) return false;
   return features.includes(key);
 }
 
-/**
- * Mengecek batas numerik di dalam array database
- * Contoh array database: ['limit:maxTasks:2000', 'allowPdfFormat']
- * getFeatureLimitInArray(databaseArray, 'maxTasks', 20) -> 2000
- */
 export function getFeatureLimitInArray(
   features: string[],
   key: string,
@@ -126,7 +95,6 @@ export function getFeatureLimitInArray(
 
   if (!match) return defaultValue;
 
-  // Melakukan split string 'limit:maxTasks:2000' -> ['limit', 'maxTasks', '2000']
   const parts = match.split(":");
   const value = parseInt(parts[2]);
 

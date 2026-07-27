@@ -1,5 +1,3 @@
-// /config/i18n-culture.ts
-
 export const LOCALES = ["en", "id", "ar"] as const;
 export type LocaleCode = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: LocaleCode = "en";
@@ -16,7 +14,7 @@ export interface LocaleMeta {
   measurementSystem: MeasurementSystem;
   phoneCountry: string;
   font: string;
-  numberingSystem?: string; // SOLUSI: Tempatkan sistem penomoran opsional di sini!
+  numberingSystem?: string;
 }
 
 export const LOCALE_META: Record<LocaleCode, LocaleMeta> = {
@@ -29,7 +27,6 @@ export const LOCALE_META: Record<LocaleCode, LocaleMeta> = {
     measurementSystem: "imperial",
     phoneCountry: "US",
     font: "inter"
-    // numberingSystem dibiarkan kosong (otomatis menggunakan angka latin barat)
   },
   id: {
     label: "Bahasa Indonesia",
@@ -40,7 +37,6 @@ export const LOCALE_META: Record<LocaleCode, LocaleMeta> = {
     measurementSystem: "metric",
     phoneCountry: "ID",
     font: "inter"
-    // numberingSystem dibiarkan kosong (otomatis menggunakan angka latin barat)
   },
   ar: {
     label: "العربية",
@@ -51,7 +47,7 @@ export const LOCALE_META: Record<LocaleCode, LocaleMeta> = {
     measurementSystem: "metric",
     phoneCountry: "SA",
     font: "arabic",
-    numberingSystem: "arab" // SOLUSI: Nyatakan sistem penomoran Arab di sini
+    numberingSystem: "arab"
   }
 };
 
@@ -71,7 +67,6 @@ export function getFontVariable(fontKey: string | undefined): string {
   return `var(${FONTS[key as keyof typeof FONTS].variable})`;
 }
 
-// ---- REGISTRY PROVIDER & CONFIG CURRENCY ----
 export const CURRENCY_PROVIDERS = {
   exchangerate_api: "exchangerate_api",
   frankfurter: "frankfurter",
@@ -88,8 +83,7 @@ export const CURRENCY = {
       ar: "SAR"
     } as Record<string, string>
   },
-  // exchangerate-api mendukung IDR sebagai base (Frankfurter tidak), sehingga
-  // konversi display IDR->USD/SAR tidak lagi jatuh ke MockCurrencyService.
+
   activeProvider: CURRENCY_PROVIDERS.exchangerate_api,
   allowedProviders: Object.values(CURRENCY_PROVIDERS)
 };
@@ -100,21 +94,19 @@ export function getDisplayCurrency(locale: string | undefined): string {
   return CURRENCY.display.default;
 }
 
-// ---- UNITS CONFIGURATION ----
 export const UNITS = {
   metric: {
-    length: "meter", // base unit meter
-    mass: "gram", // base unit gram
+    length: "meter",
+    mass: "gram",
     temperature: "celsius"
   },
   imperial: {
-    length: "foot", // base unit foot
-    mass: "pound", // base unit pound
+    length: "foot",
+    mass: "pound",
     temperature: "fahrenheit"
   }
 } as const;
 
-// ---- ADDRESS CONFIGURATION ----
 export type AddressField = "line1" | "line2" | "city" | "region" | "postalCode" | "country";
 
 export interface AddressFieldConfig {

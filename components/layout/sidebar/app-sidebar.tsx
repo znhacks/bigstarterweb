@@ -1,8 +1,8 @@
-// app/components/layout/sidebar/index.tsx (atau letak file AppSidebar Anda)
 "use client";
 
 import * as React from "react";
 import { useEffect, useState } from "react";
+import { tenantConfig } from "@/config/tenant";
 import {
   ChevronsUpDown,
   Building2,
@@ -50,7 +50,6 @@ import { roleRepository } from "@/supabase/repositories/roles";
 import { CreateTenantForm } from "../../create-tenant-form";
 import { useTranslations } from "next-intl";
 
-// Helper client-side untuk Cookie
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;
   const value = `; ${document.cookie}`;
@@ -61,7 +60,7 @@ const getCookie = (name: string) => {
 
 const setCookie = (name: string, value: string) => {
   if (typeof document === "undefined") return;
-  const maxAge = 60 * 60 * 24 * 30; // 30 hari
+  const maxAge = 60 * 60 * 24 * 30;
   const secure = window.location.protocol === "https:" ? "Secure;" : "";
   document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Lax; ${secure}`;
 };
@@ -93,13 +92,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
 
-  // State baru untuk penanganan realtime Trial
   const [subscription, setSubscription] = useState<any>(null);
   const [trialRemaining, setTrialRemaining] = useState<string>("");
   const [isTrialExpired, setIsTrialExpired] = useState<boolean>(false);
   const [isLoadingTrial, setIsLoadingTrial] = useState<boolean>(false);
 
-  // 1. Memuat Pengguna & Daftar Organisasi dari Database
   const loadUserAndOrganizations = async () => {
     setIsLoading(true);
     try {
@@ -150,7 +147,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   };
 
-  // Ambil data status trial ketika organisasi aktif berubah
   const fetchSubscriptionStatus = async (orgId: string) => {
     setIsLoadingTrial(true);
     try {
@@ -182,7 +178,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }, [activeOrg?.id]);
 
-  // Handler Realtime Penghitung Mundur Sisa Hari, Jam, Menit Trial
   useEffect(() => {
     if (!subscription || subscription.status !== "trialing" || !subscription.ends_at) {
       setTrialRemaining("");
@@ -220,7 +215,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     };
 
     calculateTime();
-    const intervalId = setInterval(calculateTime, 60000); // Perbarui waktu setiap 1 menit
+    const intervalId = setInterval(calculateTime, 60000);
 
     return () => clearInterval(intervalId);
   }, [subscription]);
@@ -254,7 +249,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setOpen(!isTablet);
   }, [isTablet]);
 
-  // 3. Handler saat memilih Organisasi dari Dropdown
   const handleSelectOrg = (org: Organization) => {
     setActiveOrg(org);
     localStorage.setItem("active_org_id", org.id);
@@ -286,106 +280,110 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <>
       <Sidebar collapsible="icon" {...props}>
         <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton className="hover:text-foreground h-9 group-data-[collapsible=icon]:px-0!">
-                    {activeOrg?.logo ? (
-                      <img
-                        src={activeOrg.logo}
-                        alt={activeOrg.name}
-                        className="me-1 size-8 rounded-[5px] transition-all group-data-collapsible:size-6 group-data-[collapsible=icon]:size-8"
-                      />
-                    ) : (
-                      <Logo />
-                    )}
-                    <span className="text-foreground truncate font-semibold">
-                      {isLoading ? (
-                        <span className="text-muted-foreground text-xs">{t("common.loading")}</span>
-                      ) : activeOrg ? (
-                        activeOrg.name
+          {!tenantConfig.organizations.hideOrganization && (
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton className="hover:text-foreground h-9 group-data-[collapsible=icon]:px-0!">
+                      {activeOrg?.logo ? (
+                        <img
+                          src={activeOrg.logo}
+                          alt={activeOrg.name}
+                          className="me-1 size-8 rounded-[5px] transition-all group-data-collapsible:size-6 group-data-[collapsible=icon]:size-8"
+                        />
                       ) : (
-                        t("common.notenant")
+                        <Logo />
                       )}
-                    </span>
-                    <ChevronsUpDown className="ms-auto group-data-[collapsible=icon]:hidden" />
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  className="mt-4 w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                  side={isMobile ? "bottom" : "right"}
-                  align="end"
-                  sideOffset={4}>
-                  <DropdownMenuLabel>{t("menu.users.organization")}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
+                      <span className="text-foreground truncate font-semibold">
+                        {isLoading ? (
+                          <span className="text-muted-foreground text-xs">
+                            {t("common.loading")}
+                          </span>
+                        ) : activeOrg ? (
+                          activeOrg.name
+                        ) : (
+                          t("common.notenant")
+                        )}
+                      </span>
+                      <ChevronsUpDown className="ms-auto group-data-[collapsible=icon]:hidden" />
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="mt-4 w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                    side={isMobile ? "bottom" : "right"}
+                    align="end"
+                    sideOffset={4}>
+                    <DropdownMenuLabel>{t("menu.users.organization")}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
 
-                  <div className="max-h-48 overflow-y-auto">
-                    {isLoading ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                      </div>
-                    ) : organizations.length === 0 ? (
-                      <div className="text-muted-foreground px-2 py-3 text-center text-xs">
-                        {t("common.noorgfound")}
-                      </div>
-                    ) : (
-                      organizations.map((org) => (
-                        <DropdownMenuItem
-                          key={org.id}
-                          className="flex cursor-pointer items-center gap-3"
-                          onSelect={() => handleSelectOrg(org)}>
-                          <div
-                            className={`flex size-8 items-center justify-center overflow-hidden ${
-                              org.logo ? "" : "bg-background rounded-md border"
-                            }`}>
-                            {org.logo ? (
-                              <img
-                                src={org.logo}
-                                alt={org.name}
-                                className="size-full object-cover"
-                              />
-                            ) : (
-                              <Building2 className="text-muted-foreground size-4" />
-                            )}
-                          </div>
-                          <div className="flex min-w-0 flex-1 flex-col">
-                            <span className="text-muted-foreground truncate text-sm font-medium">
-                              {org.name}
-                            </span>
-                            <span
-                              className={`text-xs ${
-                                activeOrg?.id === org.id
-                                  ? "font-semibold text-green-700"
-                                  : "text-muted-foreground"
+                    <div className="max-h-48 overflow-y-auto">
+                      {isLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                        </div>
+                      ) : organizations.length === 0 ? (
+                        <div className="text-muted-foreground px-2 py-3 text-center text-xs">
+                          {t("common.noorgfound")}
+                        </div>
+                      ) : (
+                        organizations.map((org) => (
+                          <DropdownMenuItem
+                            key={org.id}
+                            className="flex cursor-pointer items-center gap-3"
+                            onSelect={() => handleSelectOrg(org)}>
+                            <div
+                              className={`flex size-8 items-center justify-center overflow-hidden ${
+                                org.logo ? "" : "bg-background rounded-md border"
                               }`}>
-                              {activeOrg?.id === org.id ? "Active" : "Inactive"}
-                            </span>
-                          </div>
-                          {activeOrg?.id === org.id && (
-                            <Check className="ms-auto size-4 text-green-700" />
-                          )}
-                        </DropdownMenuItem>
-                      ))
-                    )}
-                  </div>
+                              {org.logo ? (
+                                <img
+                                  src={org.logo}
+                                  alt={org.name}
+                                  className="size-full object-cover"
+                                />
+                              ) : (
+                                <Building2 className="text-muted-foreground size-4" />
+                              )}
+                            </div>
+                            <div className="flex min-w-0 flex-1 flex-col">
+                              <span className="text-muted-foreground truncate text-sm font-medium">
+                                {org.name}
+                              </span>
+                              <span
+                                className={`text-xs ${
+                                  activeOrg?.id === org.id
+                                    ? "font-semibold text-green-700"
+                                    : "text-muted-foreground"
+                                }`}>
+                                {activeOrg?.id === org.id ? "Active" : "Inactive"}
+                              </span>
+                            </div>
+                            {activeOrg?.id === org.id && (
+                              <Check className="ms-auto size-4 text-green-700" />
+                            )}
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                    </div>
 
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="focus:bg-accent flex cursor-pointer items-center gap-2"
-                    disabled={isLoading}
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setIsDialogOpen(true);
-                      setDropdownOpen(false);
-                    }}>
-                    <Plus className="size-4" />
-                    <span>{t("common.neworg")}</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="focus:bg-accent flex cursor-pointer items-center gap-2"
+                      disabled={isLoading}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setIsDialogOpen(true);
+                        setDropdownOpen(false);
+                      }}>
+                      <Plus className="size-4" />
+                      <span>{t("common.neworg")}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          )}
         </SidebarHeader>
         <SidebarContent>
           <ScrollArea className="h-full">
@@ -393,12 +391,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </ScrollArea>
         </SidebarContent>
         <SidebarFooter>
-          {/* ========================================================
-              WIDGET TRIAL STATUS (DILETAKKAN DI ATAS NAVUSER)
-             ======================================================== */}
+          {}
           {activeOrg && !isLoadingTrial && (
             <>
-              {/* STATE 1: TRIAL AKTIF (TRIALING) */}
+              {}
               {subscription?.status === "trialing" && !isTrialExpired && trialRemaining && (
                 <div className="mb-2 px-3 py-1 group-data-[collapsible=icon]:hidden">
                   <Card className="border-amber-200 bg-amber-50/60 dark:border-amber-900/30 dark:bg-amber-950/15">
@@ -435,7 +431,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </div>
               )}
 
-              {/* STATE 2: TRIAL HABIS (EXPIRED) */}
+              {}
               {(isTrialExpired || subscription?.status === "expired") && (
                 <div className="mb-2 px-3 py-1 group-data-[collapsible=icon]:hidden">
                   <Card className="py-0">

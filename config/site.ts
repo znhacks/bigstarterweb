@@ -1,4 +1,3 @@
-// config/site.ts
 export const siteConfig = {
   name: "BigStarter",
   description: "Website Sass dengan fitur yang super lengkap.",
