@@ -1,17 +1,18 @@
-// app/api/billing/enterprise/route.ts
-//
-// User mengirim form "hubungi sales" untuk paket enterprise. Hanya mencatat
-// inquiry ke tabel enterprise_inquiries — TIDAK ada charge/pembayaran.
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import { isTenantMember } from "@/lib/billing/tenant-auth";
 import { enterpriseInquiryRepository } from "@/supabase/repositories/enterprise-inquiries";
+import { siteConfig } from "@/config/site";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
+
+const mailersend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY || ""
+});
 
 export async function POST(req: Request) {
   try {
@@ -37,13 +38,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "tenantId wajib dikirimkan" }, { status: 400 });
     }
 
-    // Cegah IDOR: pastikan user adalah anggota tenant yg dimanipulasi
     const isMember = await isTenantMember(supabaseAdmin, user.id, tenantId);
     if (!isMember) {
       return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
-    const { error } = await (await enterpriseInquiryRepository(supabaseAdmin)).insert({
+    const { error } = await (
+      await enterpriseInquiryRepository(supabaseAdmin)
+    ).insert({
       tenant_id: tenantId,
       user_id: user.id,
       plan_id: planId || null,
@@ -54,6 +56,27 @@ export async function POST(req: Request) {
     });
 
     if (error) throw error;
+
+    try {
+      const senderEmail = process.env.MAILERSEND_SENDER_EMAIL || "noreply@example.com";
+      const superadminEmail = process.env.SUPERADMIN_EMAIL || senderEmail;
+      const emailParams = new EmailParams()
+        .setFrom(new Sender(senderEmail, siteConfig.name))
+        .setTo([new Recipient(superadminEmail, "Superadmin")])
+        .setSubject(`[Enterprise Inquiry] ${name || "Unknown"} — ${planId || "N/A"}`)
+        .setHtml(
+          `<div style="font-family:sans-serif;padding:20px;">` +
+            `<h3>Enterprise Inquiry Baru</h3>` +
+            `<p><b>Nama:</b> ${name || "-"}</p>` +
+            `<p><b>Email:</b> ${email || "-"}</p>` +
+            `<p><b>Plan:</b> ${planId || "-"}</p>` +
+            `<p><b>Pesan:</b></p><p>${message || "-"}</p>` +
+            `</div>`
+        );
+      await mailersend.email.send(emailParams);
+    } catch (emailErr: any) {
+      console.warn("[enterprise] Gagal kirim email notifikasi:", emailErr?.message);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

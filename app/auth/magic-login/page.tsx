@@ -13,7 +13,7 @@ export default function MagicLoginHandler() {
   const router = useRouter();
 
   const token = searchParams.get("token");
-  const next = searchParams.get("next") ?? "/dashboard/default";
+  const next = searchParams.get("next") ?? "/dashboard";
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");

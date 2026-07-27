@@ -16,7 +16,7 @@ export default function NotFound() {
         <p className="text-muted-foreground mt-6 text-base leading-7">{t("desc")}</p>
         <div className="mt-10 flex items-center justify-center gap-x-2">
           <Button size="lg" asChild>
-            <Link href="/dashboard/default">{t("gohome")}</Link>
+            <Link href="/">{t("gohome")}</Link>
           </Button>
           <Button size="lg" variant="ghost">
             {t("cs")} <ArrowRight className="ms-2 h-4 w-4" />

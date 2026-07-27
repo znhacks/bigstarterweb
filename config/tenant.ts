@@ -3,7 +3,7 @@ export const tenantConfig = {
     enabled: true,
     requireOrganization: true,
     hideOrganization: false,
-    enableUsersToCreateOrganizations: true
+    enableUsersToCreateOrganizations: false
   },
 
   features: {

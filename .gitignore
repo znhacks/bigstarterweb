@@ -49,3 +49,6 @@ next-env.d.ts
 /lib/generated/prisma
 
 pnpm-lock.yaml
+
+.vercel
+.env*

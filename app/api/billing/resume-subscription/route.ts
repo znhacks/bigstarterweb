@@ -1,5 +1,3 @@
-// app/api/billing/resume-subscription/route.ts
-
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { isTenantMember, canManageBilling } from "@/lib/billing/tenant-auth";
@@ -12,12 +10,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
-/**
- * Mengaktifkan kembali perpanjangan otomatis (membatalkan cancel_at_period_end).
- * Selain update DB, juga reaktivasi di gateway bila adapter mendukungnya
- * (mis. PayPal /v1/billing/subscriptions/{id}/activate, Stripe cancel_at_period_end=false).
- * Body: { tenantId }
- */
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get("Authorization");
@@ -39,13 +31,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "tenantId wajib diisi" }, { status: 400 });
     }
 
-    // Cegah IDOR: pastikan user adalah anggota tenant
     const isMember = await isTenantMember(supabaseAdmin, user.id, tenantId);
     if (!isMember) {
       return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
-    // Hanya owner/admin (atau role dengan permission billing.manage) boleh melanjutkan langganan.
     const canBilling = await canManageBilling(supabaseAdmin, user.id, tenantId);
     if (!canBilling) {
       return NextResponse.json(
@@ -77,7 +67,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Reaktivasi di gateway bila adapter mendukung (opsional method)
     if (activeSub.provider && activeSub.provider_subscription_id) {
       try {
         const paymentProvider = PaymentFactory.getProvider(activeSub.provider);

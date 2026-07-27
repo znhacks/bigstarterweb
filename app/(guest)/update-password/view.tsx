@@ -58,7 +58,7 @@ export function UpdatePasswordPage() {
 
       // Alihkan ke dashboard utama setelah 2 detik
       setTimeout(() => {
-        router.push("/dashboard/default");
+        router.push("/dashboard");
         router.refresh();
       }, 2000);
     } catch (error: any) {

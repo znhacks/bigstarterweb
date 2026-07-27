@@ -1,5 +1,3 @@
-// app/api/billing/trial/route.ts
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { isTenantMember, canManageBilling } from "@/lib/billing/tenant-auth";
@@ -36,13 +34,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "tenantId wajib dikirimkan" }, { status: 400 });
     }
 
-    // Cegah IDOR: pastikan user adalah anggota tenant
     const isMember = await isTenantMember(supabaseAdmin, user.id, tenantId);
     if (!isMember) {
       return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
-    // Hanya owner/admin (atau role dengan permission billing.manage) boleh memulai trial.
     const canBilling = await canManageBilling(supabaseAdmin, user.id, tenantId);
     if (!canBilling) {
       return NextResponse.json(
@@ -51,7 +47,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Resolve owner sesuai config billingAttachedTo (tenant vs user scope)
     const owner = resolveBillingOwner({ tenantId, userId: user.id });
     if (!owner) {
       return NextResponse.json(
@@ -62,7 +57,6 @@ export async function POST(req: Request) {
 
     const { column, value } = ownerFilter(owner);
 
-    // Ambil trial_days plan
     const { data: plan, error: planErr } = await (
       await planRepository(supabaseAdmin)
     )
@@ -81,7 +75,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Plan tidak memiliki trial" }, { status: 400 });
     }
 
-    // Anti-abuse: cek subscription eksisting untuk owner ini
     const { data: existingSub } = await (
       await subscriptionRepository(supabaseAdmin)
     )
@@ -90,8 +83,6 @@ export async function POST(req: Request) {
       .eq(column, value)
       .maybeSingle();
 
-    // Sekali per owner: blok bila masih aktif/trialing ATAU pernah memakai trial
-    // (provider="trial", meski sudah kedaluwarsa).
     if (
       existingSub &&
       (existingSub.status === "active" ||
@@ -101,7 +92,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Trial sudah pernah digunakan" }, { status: 409 });
     }
 
-    // Grant trial: siapkan payload record data
     const now = new Date();
     const ends = new Date();
     ends.setDate(ends.getDate() + trialDays);
@@ -123,13 +113,11 @@ export async function POST(req: Request) {
       record.user_id = user.id;
     } else {
       record.user_id = owner.id;
-      // tenant_id disimpan sebagai referensi konteks (owner sebenarnya adalah user)
+
       record.tenant_id = tenantId;
     }
 
-    // KONDISIONAL UPDATE / INSERT: Mencegah konflik partial unique index database
     if (existingSub) {
-      // Jika data subscription sudah ada (misal status expired), lakukan UPDATE berdasarkan ID utama (PKEY)
       const { error: updateErr } = await (
         await subscriptionRepository(supabaseAdmin)
       )
@@ -139,7 +127,6 @@ export async function POST(req: Request) {
 
       if (updateErr) throw updateErr;
     } else {
-      // Jika benar-benar kosong, lakukan INSERT data baru
       const { error: insertErr } = await (
         await subscriptionRepository(supabaseAdmin)
       )

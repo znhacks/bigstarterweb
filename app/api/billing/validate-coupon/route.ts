@@ -1,5 +1,3 @@
-// app/api/billing/validate-coupon/route.ts
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { couponRepository } from "@/supabase/repositories/coupons";
@@ -19,10 +17,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Kode kupon dan Tenant ID wajib diisi" }, { status: 400 });
     }
 
-    const formattedCode = code.trim(); // mixed-case/Unicode — lookup .ilike (case-insensitive)
+    const formattedCode = code.trim();
 
-    // 1. Ambil data kupon dari database
-    const { data: coupon, error: couponError } = await (await couponRepository(supabaseAdmin))
+    const { data: coupon, error: couponError } = await (
+      await couponRepository(supabaseAdmin)
+    )
       .query()
       .select("*")
       .ilike("code", formattedCode)
@@ -32,17 +31,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Kode kupon tidak valid" }, { status: 404 });
     }
 
-    // 2. Periksa batas tanggal kedaluwarsa
     if (coupon.valid_until && new Date() > new Date(coupon.valid_until)) {
       return NextResponse.json({ error: "Masa berlaku kupon sudah habis" }, { status: 400 });
     }
 
-    // 3. Periksa kuota maksimal penebusan kupon
     if (coupon.max_redemptions !== null && coupon.redeemed_count >= coupon.max_redemptions) {
       return NextResponse.json({ error: "Kuota penukaran kupon sudah habis" }, { status: 400 });
     }
 
-    // 4. Periksa apakah tenant ini sudah pernah menggunakan kupon ini sebelumnya
     const { data: redemption, error: redemptionError } = await (
       await couponRedemptionRepository(supabaseAdmin)
     )

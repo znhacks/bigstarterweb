@@ -1,19 +1,12 @@
 export const AUTH_FEATURES = {
   enablePassword: true,
-
   enablePasswordlessOtp: true,
-
   enableMagicLink: true,
-
   enableGoogle: true,
-
   enableGithub: false,
-
   enablePasskey: true,
-
   enablePasswordReset: true,
-
-  enableSignup: true
+  enableSignup: false
 };
 
 export const hasSocialAuth =

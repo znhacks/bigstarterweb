@@ -15,11 +15,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
-/**
- * Konversi aman ke IDR (base charge). Bila API kurs gagal, anggap nominal sudah dalam IDR
- * agar checkout tidak menggantung. Plan bisa dalam valuta asing (USD/SGD/dll); provider
- * IDR-native menagih dalam IDR sehingga nominal wajib dinormalisasi.
- */
 async function convertToIdrSafe(amount: number, fromCurrency: string): Promise<number> {
   try {
     const conv = await convertToIdr(amount, fromCurrency);
@@ -49,17 +44,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    // Cegah IDOR: pastikan user adalah anggota tenant yg dimanipulasi
     const isMember = await isTenantMember(supabaseAdmin, user.id, tenantId);
     if (!isMember) {
       return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
-    // 1. TARIK HARGA TARGET + ID PROVIDER DARI DATABASE (single source of truth)
     const planPriceRepo = await planPriceRepository(supabaseAdmin);
     const { data: dbTargetPrice, error: targetPriceErr } = await planPriceRepo
       .query()
-      // --- PERBAIKAN: Tambahkan product_id ke dalam fungsi select ---
+
       .select("amount, plan_id, provider_ids, currency, product_id")
       .eq("plan_id", planId)
       .eq("interval", interval)
@@ -75,11 +68,9 @@ export async function POST(req: Request) {
     const targetPrice = parseFloat(dbTargetPrice.amount);
     const planCurrency = (dbTargetPrice as any).currency || "IDR";
 
-    // --- PERBAIKAN: Gunakan skema fallback pembacaan ID dari provider_ids (JSONB) ATAU kolom product_id ---
     const providerPriceId =
       (dbTargetPrice as any).provider_ids?.[provider] || (dbTargetPrice as any).product_id || null;
 
-    // Ambil nama plan untuk deskripsi invoice
     const { data: planRow } = await (
       await planRepository(supabaseAdmin)
     )
@@ -89,19 +80,14 @@ export async function POST(req: Request) {
       .maybeSingle();
     const planName = planRow?.name || planId;
 
-    // 1b. KONVERSI HARGA PLAN KE IDR (base charge). Plan bisa dalam valuta asing
-    //     (USD/SGD/dll); provider IDR-native (Xendit/Mayar/Midtrans) menagih dalam IDR,
-    //     jadi nominal harus dinormalisasi ke IDR dulu agar currency plan benar2 berpengaruh.
     const chargeAmountIdr = await convertToIdrSafe(targetPrice, planCurrency);
 
-    // Scope billing sesuai billingAttachedTo (tenant default; user bila config "user").
     const owner = resolveBillingOwner({ tenantId, userId: user.id });
     if (!owner) {
       return NextResponse.json({ error: "Owner tidak teridentifikasi" }, { status: 400 });
     }
     const { column: ownerCol, value: ownerId } = ownerFilter(owner);
 
-    // 2. KALKULASI KREDIT PRO-RATA DINAMIS (pakai interval langganan LAMA)
     let credit = 0;
     let oldProviderSubscriptionId: string | null = null;
     const { data: activeSub } = await (
@@ -122,7 +108,6 @@ export async function POST(req: Request) {
         const totalDuration = end - start;
         const remainingTime = end - now;
 
-        // FIX BUG: gunakan interval langganan LAMA (bukan interval baru yg diminta)
         const oldInterval = activeSub.interval;
         if (oldInterval) {
           const { data: dbOldPrice } = await planPriceRepo
@@ -133,7 +118,6 @@ export async function POST(req: Request) {
             .maybeSingle();
 
           if (dbOldPrice) {
-            // Normalisasi harga plan LAMA ke IDR juga (bisa beda mata uang dgn plan baru).
             const oldOriginalIdr = await convertToIdrSafe(
               parseFloat(dbOldPrice.amount),
               (dbOldPrice as any).currency || "IDR"
@@ -144,16 +128,13 @@ export async function POST(req: Request) {
         }
       }
 
-      // Simpan referensi subscription lama untuk dicegah orphan-nya (lihat langkah 5)
       if (activeSub.provider_subscription_id) {
         oldProviderSubscriptionId = activeSub.provider_subscription_id;
       }
     }
 
-    // Semua komponen kini dalam IDR: harga plan baru (chargeAmountIdr) & kredit pro-rata.
     let finalChargeIdr = chargeAmountIdr - credit;
 
-    // 3. VALIDASI KUPON DISKON DI SISI SERVER (lookup .ilike — mendukung mixed-case)
     let discountAmount = 0;
     if (couponCode) {
       const formattedCode = couponCode.trim();
@@ -175,7 +156,6 @@ export async function POST(req: Request) {
           if (coupon.discount_type === "percentage") {
             discountAmount = (parseFloat(coupon.discount_value) / 100) * finalChargeIdr;
           } else if (coupon.discount_type === "fixed_amount") {
-            // Diskon fixed_amount diasumsikan dalam IDR (base).
             discountAmount = parseFloat(coupon.discount_value);
           }
           finalChargeIdr = finalChargeIdr - discountAmount;
@@ -185,14 +165,8 @@ export async function POST(req: Request) {
 
     const secureFinalPrice = Math.max(1, parseFloat(finalChargeIdr.toFixed(2)));
 
-    // 4. Ambil adapter pembayaran yang sesuai
     const paymentProvider = PaymentFactory.getProvider(provider);
 
-    // 4b. CEGAH ORPHAN SUBSCRIPTION: bila ada langganan aktif lama, batalkan di gateway-nya.
-    // Cancel = berhenti perpanjangan; siklus berjalan tetap sampai jatuh tempo. Pro-rata credit
-    // sudah mengkompensasi sisa waktu. Non-blocking: kegagalan cancel tidak membatalkan checkout.
-    // Penting: gunakan adapter provider LAMA (bisa beda dgn provider baru) agar cross-provider
-    // switch (mis. PayPal -> Midtrans) tidak meninggalkan sub lama tetap menagih (double-charge).
     if (oldProviderSubscriptionId && activeSub?.provider) {
       try {
         const oldAdapter =
@@ -208,7 +182,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // 5. Jalankan checkout menggunakan harga kustom yang sudah dipotong pro-rata + kupon diskon
     const session = await paymentProvider.createCheckoutSession({
       tenantId,
       userId: user.id,
@@ -221,18 +194,13 @@ export async function POST(req: Request) {
       customPrice: secureFinalPrice,
       providerPriceId: providerPriceId || undefined,
       couponCode: couponCode ? couponCode.trim() : undefined,
-      successUrl: successUrl || `${req.headers.get("origin")}/dashboard/billing?success=true`,
-      cancelUrl: cancelUrl || `${req.headers.get("origin")}/dashboard/billing?canceled=true`
+      successUrl: successUrl || `${req.headers.get("origin")}/dashboard/pricing?success=true`,
+      cancelUrl: cancelUrl || `${req.headers.get("origin")}/dashboard/pricing?canceled=true`
     });
 
-    // 6. CATAT INTENT PEMBAYARAN (pending) — sumber otoritatik context untuk webhook.
-    //    Webhook melakukan lookup by (provider, provider_order_id = session.sessionId),
-    //    yaitu id invoice/order provider yang selalu di-echo pada callback, sehingga
-    //    pemulihan context tidak lagi bergantung pada echo metadata/external_id provider.
     try {
       const orderRepo = await paymentOrderRepository(supabaseAdmin);
 
-      // Supersede: tandai order pending lama untuk owner+plan+interval sama menjadi expired.
       await orderRepo
         .query()
         .update({ status: "expired", updated_at: new Date().toISOString() })
@@ -257,7 +225,6 @@ export async function POST(req: Request) {
         status: "pending"
       });
     } catch (orderErr: any) {
-      // Non-blocking: bila gagal mencatat order, webhook akan fallback ke ekstraksi adapter.
       console.warn("[checkout] Gagal mencatat payment_orders:", orderErr?.message || orderErr);
     }
 

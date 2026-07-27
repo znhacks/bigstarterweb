@@ -38,7 +38,7 @@ export function SecuritySettingsPage() {
           error
         } = await supabase.auth.getUser();
         if (error || !user) {
-          router.push("/dashboard/login/v2");
+          router.push("/login");
           return;
         }
 
@@ -69,7 +69,7 @@ export function SecuritySettingsPage() {
     setAlertMessage(null);
 
     try {
-      const redirectToUrl = `${window.location.origin}/auth/callback?next=/dashboard/update-password`;
+      const redirectToUrl = `${window.location.origin}/auth/callback?next=/update-password`;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectToUrl
       });
@@ -100,7 +100,7 @@ export function SecuritySettingsPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard/settings/security`
+          redirectTo: `${window.location.origin}/settings/security`
         }
       });
       if (error) throw error;
@@ -140,7 +140,7 @@ export function SecuritySettingsPage() {
           </div>
           <button
             onClick={() => setAlertMessage(null)}
-            className="text-muted-foreground hover:text-foreground absolute top-4 end-4 transition-colors">
+            className="text-muted-foreground hover:text-foreground absolute end-4 top-4 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </Alert>

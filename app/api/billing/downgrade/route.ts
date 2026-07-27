@@ -1,5 +1,3 @@
-// app/api/billing/downgrade/route.ts
-
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { isTenantMember, canManageBilling } from "@/lib/billing/tenant-auth";
@@ -17,7 +15,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { tenantId, targetPlanId } = body;
 
-    // 1. Dapatkan otorisasi pengguna aktif
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,13 +29,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    // Cegah IDOR: pastikan user adalah anggota tenant yg dimanipulasi
     const isMember = await isTenantMember(supabaseAdmin, user.id, tenantId);
     if (!isMember) {
       return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
-    // Hanya owner/admin (atau role dengan permission billing.manage) boleh menurunkan paket.
     const canBilling = await canManageBilling(supabaseAdmin, user.id, tenantId);
     if (!canBilling) {
       return NextResponse.json(
@@ -47,7 +42,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Ambil data langganan aktif saat ini (scope sesuai billingAttachedTo)
     const owner = resolveBillingOwner({ tenantId, userId: user.id });
     if (!owner) {
       return NextResponse.json({ error: "Owner tidak teridentifikasi" }, { status: 400 });
@@ -69,13 +63,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Batalkan perpanjangan otomatis di sisi Gateway Pembayaran (Stripe/PayPal/Paddle)
     if (activeSub.provider && activeSub.provider_subscription_id) {
       const paymentProvider = PaymentFactory.getProvider(activeSub.provider);
       await paymentProvider.cancelSubscription(activeSub.provider_subscription_id);
     }
 
-    // 4. Update tabel subscriptions: simpan target downgrade di pending_plan_id & set cancel_at_period_end
     const { error: updateError } = await subscriptionRepo
       .query()
       .update({

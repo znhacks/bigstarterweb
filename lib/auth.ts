@@ -127,8 +127,7 @@ export async function ensureProfile(user: {
   if (existing) return existing;
 
   const meta = (user.user_metadata ?? {}) as Record<string, any>;
-  const fullName =
-    meta.full_name || meta.name || user.email?.split("@")[0] || "User";
+  const fullName = meta.full_name || meta.name || user.email?.split("@")[0] || "User";
 
   const { data, error } = await profileRepo
     .query()
@@ -152,7 +151,7 @@ export async function ensureProfile(user: {
  * Catatan keamanan: sebelum helper ini ditambahkan, TIDAK ada gate server
  * untuk `/superadmin/*` — siapa pun bisa me-render halaman superadmin.
  */
-export async function requireSuperadmin(redirectTo: string = "/dashboard") {
+export async function requireSuperadmin(redirectTo: string = "/") {
   const user = await requireAuth();
 
   // Fast path: app_metadata adalah SERVER-ONLY (tidak bisa ditulis client).

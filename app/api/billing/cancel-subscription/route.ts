@@ -1,5 +1,3 @@
-// app/api/billing/cancel-subscription/route.ts
-
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { isTenantMember, canManageBilling } from "@/lib/billing/tenant-auth";
@@ -12,10 +10,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
-/**
- * Membatalkan perpanjangan otomatis langganan aktif (cancel at period end) di gateway & DB.
- * Body: { tenantId }
- */
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get("Authorization");
@@ -37,13 +31,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "tenantId wajib diisi" }, { status: 400 });
     }
 
-    // Cegah IDOR: pastikan user adalah anggota tenant
     const isMember = await isTenantMember(supabaseAdmin, user.id, tenantId);
     if (!isMember) {
       return NextResponse.json({ error: "Forbidden: bukan anggota tenant" }, { status: 403 });
     }
 
-    // Hanya owner/admin (atau role dengan permission billing.manage) boleh membatalkan langganan.
     const canBilling = await canManageBilling(supabaseAdmin, user.id, tenantId);
     if (!canBilling) {
       return NextResponse.json(
@@ -52,7 +44,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Ambil langganan aktif (scope sesuai billingAttachedTo)
     const owner = resolveBillingOwner({ tenantId, userId: user.id });
     if (!owner) {
       return NextResponse.json({ error: "Owner tidak teridentifikasi" }, { status: 400 });
@@ -75,18 +66,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // Batalkan di gateway (cancel = berhenti perpanjangan; siklus berjalan tetap sampai jatuh tempo)
     if (activeSub.provider && activeSub.provider_subscription_id) {
       try {
         const paymentProvider = PaymentFactory.getProvider(activeSub.provider);
         await paymentProvider.cancelSubscription(activeSub.provider_subscription_id);
       } catch (cancelErr: any) {
         console.warn(`[cancel-subscription] Gateway cancel gagal: ${cancelErr?.message}`);
-        // Tetap lanjut update DB agar UI konsisten; log saja
       }
     }
 
-    // Update DB
     const { error: updateError } = await subscriptionRepo
       .query()
       .update({

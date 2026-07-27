@@ -87,13 +87,16 @@ export async function middleware(request: NextRequest) {
   const profileRepo = await profileRepository(supabase);
   const { data: profile } = await profileRepo
     .query()
-    .select("status, banned_until, banned_reason, address_country")
+    .select("status, banned_until, banned_reason, address_country, is_superadmin")
     .eq("id", user.id)
     .maybeSingle();
 
   const status = (profile as any)?.status ?? "active";
   const bannedUntil = (profile as any)?.banned_until ?? null;
   const hasCountry = !!(profile as any)?.address_country;
+  const isSuperadmin =
+    (profile as any)?.is_superadmin === true ||
+    user.app_metadata?.role === "superadmin";
 
   // (a) SOFT-DELETED → arahkan ke /restore (kecuali route publik/restore/login).
   if (status === "deleted") {
@@ -136,7 +139,7 @@ export async function middleware(request: NextRequest) {
 
   // ONBOARDING GATE: user aktif tapi belum pilih negara → paksa ke /onboarding
   // (kecuali sedang di onboarding/auth/logout agar tidak loop).
-  if (!hasCountry) {
+  if (!hasCountry && !isSuperadmin) {
     const onboardingAllowed =
       path.startsWith("/onboarding") ||
       path.startsWith("/auth") ||
@@ -151,7 +154,7 @@ export async function middleware(request: NextRequest) {
 
   // ORGANIZATION GATE: organizations.requireOrganization = true → user tanpa org
   // → redirect ke /create-tenant (kecuali route yg dikecualikan utk hindari loop).
-  if (tenantConfig.organizations.requireOrganization) {
+  if (tenantConfig.organizations.requireOrganization && !isSuperadmin) {
     const orgAllowed =
       path.startsWith("/create-tenant") ||
       path.startsWith("/auth") ||

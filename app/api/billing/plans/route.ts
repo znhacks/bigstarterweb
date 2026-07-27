@@ -1,5 +1,3 @@
-// app/api/billing/plans/route.ts
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { decodeFeatureGates } from "@/config/feature-definitions";
@@ -13,7 +11,6 @@ const supabaseAdmin = createClient(
 
 export async function GET() {
   try {
-    // 1. Tarik semua paket aktif dari database
     const { data: dbPlans, error: plansError } = await (
       await planRepository(supabaseAdmin)
     )
@@ -23,7 +20,6 @@ export async function GET() {
 
     if (plansError) throw plansError;
 
-    // 2. Tarik seluruh daftar harga aktif dari database
     const { data: dbPrices, error: pricesError } = await (
       await planPriceRepository(supabaseAdmin)
     )
@@ -32,7 +28,6 @@ export async function GET() {
 
     if (pricesError) throw pricesError;
 
-    // 3. Rekonstruksi struktur data agar kompatibel dengan UI Frontend (ConvertedPlan)
     const formattedPlans = dbPlans.map((plan: any) => {
       const monthlyPrice = dbPrices.find(
         (p: any) => p.plan_id === plan.id && p.interval === "monthly"
@@ -41,7 +36,6 @@ export async function GET() {
         (p: any) => p.plan_id === plan.id && p.interval === "yearly"
       );
 
-      // Dekompilasi array ['limit:maxTasks:2000'] menjadi objek terstruktur FeatureGates untuk dibaca sistem
       const compiledFeatureGates = decodeFeatureGates(plan.features);
 
       return {
@@ -49,13 +43,13 @@ export async function GET() {
         name: plan.name,
         description: plan.description,
         displayFeatures: plan.display_features || [],
-        features: plan.display_features || [], // Backwards compatibility untuk UI
+        features: plan.display_features || [],
         featureGates: compiledFeatureGates,
         isEnterprise: !!plan.is_enterprise,
         isRecommended: !!plan.is_recommended,
         trialDays: plan.trial_days || 0,
-        sort_order: plan.sort_order !== undefined ? plan.sort_order : null, // Menyertakan sort_order ke frontend
-        weight: plan.weight !== undefined ? plan.weight : null, // Menyertakan weight ke frontend
+        sort_order: plan.sort_order !== undefined ? plan.sort_order : null,
+        weight: plan.weight !== undefined ? plan.weight : null,
         prices: {
           monthly: {
             amount: monthlyPrice ? parseFloat(monthlyPrice.amount) : 0,

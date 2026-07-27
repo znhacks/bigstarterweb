@@ -388,7 +388,7 @@ export function OrganizationBilling() {
                           variant="outline"
                           onClick={() => handleStartTrial(plan.id)}
                           disabled={isStartingTrial}
-                          className="mt-2 w-full border-slate-200 py-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                          className="mt-2 w-full text-xs font-semibold text-slate-700">
                           {isStartingTrial && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                           Mulai Trial {plan.trialDays} Hari
                         </Button>
