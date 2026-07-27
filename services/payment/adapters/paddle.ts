@@ -164,18 +164,29 @@ export class PaddleAdapter implements PaymentProvider {
   async handleWebhook(req: Request): Promise<UnifiedWebhookResult> {
     const rawBody = await req.text();
 
-    if (!this.webhookSecret) {
+    // --- PERBAIKAN CELAH 2: Bersihkan tanda kutip dari env variable Vercel ---
+    const secret = (this.webhookSecret || "").replace(/['"]/g, "").trim();
+
+    if (!secret) {
       throw new Error(
         "[paddle] PADDLE_WEBHOOK_SECRET belum diset — verifikasi signature webhook WAJIB. SET env ini sebelum menerima webhook."
       );
     }
 
     const sigHeader = req.headers.get("paddle-signature") || "";
-    const parts = Object.fromEntries(sigHeader.split(";").map((kv) => kv.split("=")));
+
+    // --- PERBAIKAN CELAH 1: Lakukan safe trimming (.trim()) pada key dan value hasil split ---
+    const parts = Object.fromEntries(
+      sigHeader.split(";").map((kv) => {
+        const [k, v] = kv.split("=");
+        return [k ? k.trim() : "", v ? v.trim() : ""];
+      })
+    );
+
     const ts = parts.ts;
     const h1 = parts.h1;
     if (!ts || !h1) {
-      throw new Error("Missing Paddle signature");
+      throw new Error("Missing Paddle signature components (ts or h1)");
     }
 
     // Konversi Unix timestamp (detik dari Paddle) ke milidetik
@@ -194,7 +205,6 @@ export class PaddleAdapter implements PaymentProvider {
         );
       }
     } else {
-      // Cetak log info selisih waktu ke konsol terminal Next.js Anda demi kemudahan debugging
       const diffMinutes = Math.abs(Date.now() - tsMs) / (60 * 1000);
       console.warn(
         `[paddle] Webhook stale check bypassed (isDevelopment: ${isDevelopment}, isSandbox: ${isSandbox}). ` +
@@ -202,16 +212,16 @@ export class PaddleAdapter implements PaymentProvider {
       );
     }
 
-    const expected = crypto
-      .createHmac("sha256", this.webhookSecret)
-      .update(`${ts}:${rawBody}`)
-      .digest("hex");
+    // Hitung ulang HMAC menggunakan secret yang telah dibersihkan
+    const expected = crypto.createHmac("sha256", secret).update(`${ts}:${rawBody}`).digest("hex");
+
     const sigBuf = Buffer.from(h1, "hex");
     const expBuf = Buffer.from(expected, "hex");
     const ok =
       sigBuf.length === expBuf.length &&
       sigBuf.length > 0 &&
       crypto.timingSafeEqual(sigBuf, expBuf);
+
     if (!ok) {
       throw new Error("Invalid Paddle signature");
     }

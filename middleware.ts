@@ -2,6 +2,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { profileRepository } from "@/supabase/repositories/profiles";
+import { membershipRepository } from "@/supabase/repositories/memberships";
+import { tenantConfig } from "@/config/tenant";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -144,6 +146,30 @@ export async function middleware(request: NextRequest) {
       url.pathname = "/onboarding";
       url.search = `?next=${nextTarget}`;
       return NextResponse.redirect(url);
+    }
+  }
+
+  // ORGANIZATION GATE: organizations.requireOrganization = true → user tanpa org
+  // → redirect ke /create-tenant (kecuali route yg dikecualikan utk hindari loop).
+  if (tenantConfig.organizations.requireOrganization) {
+    const orgAllowed =
+      path.startsWith("/create-tenant") ||
+      path.startsWith("/auth") ||
+      path.startsWith("/logout") ||
+      path.startsWith("/onboarding") ||
+      path.startsWith("/settings") ||
+      path.startsWith("/superadmin");
+    if (!orgAllowed) {
+      const memRepo = await membershipRepository(supabase);
+      const { count } = await memRepo
+        .query()
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      if (!count || count === 0) {
+        url.pathname = "/create-tenant";
+        url.search = "";
+        return NextResponse.redirect(url);
+      }
     }
   }
 
