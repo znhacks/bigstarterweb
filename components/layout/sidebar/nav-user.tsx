@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -24,7 +23,7 @@ import { DotsVerticalIcon } from "@radix-ui/react-icons";
 
 // Impor klien Supabase Anda
 import { supabase } from "@/lib/supabase";
-import { getProfile } from "@/supabase/helper/profiles";
+import { useSession } from "@/hooks/use-session";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
@@ -33,49 +32,12 @@ export function NavUser() {
   const router = useRouter();
   const t = useTranslations("menu");
 
-  // State data user & profil
-  const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [avatar, setAvatar] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Fungsi untuk memuat data user yang aktif dari Supabase
-  const loadUserData = async () => {
-    setIsLoading(true);
-    try {
-      const {
-        data: { user },
-        error: userError
-      } = await supabase.auth.getUser();
-      if (userError || !user) return;
-
-      setEmail(user.email || "");
-
-      // Mengambil nama lengkap dari tabel profiles
-      const { data: profileData } = await getProfile(
-        user.id,
-        "full_name, avatar",
-        supabase
-      );
-
-      if (profileData) {
-        setFullName(profileData.full_name);
-        setAvatar(profileData.avatar || "");
-      } else {
-        // Fallback jika profile belum terbuat, gunakan nama metadata atau pangkas email
-        setFullName(user.user_metadata?.full_name || user.email?.split("@")[0] || "User");
-        setAvatar("");
-      }
-    } catch (error) {
-      console.error("Gagal memuat profil pengguna:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
+  // Sesi user dari SessionProvider (single source of truth — tanpa fetch ad-hoc).
+  const { user, loaded } = useSession();
+  const email = user?.email ?? "";
+  const fullName = user?.name ?? "";
+  const avatar = user?.image ?? "";
+  const isLoading = !loaded;
 
   // Handler fungsi keluar akun (Sign Out)
   const handleLogOut = async () => {

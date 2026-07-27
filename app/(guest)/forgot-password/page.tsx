@@ -1,6 +1,8 @@
 import { constructMetadata } from "@/lib/metadata";
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
 import ForgotPasswordForm from "./view";
+import { AUTH_FEATURES } from "@/config/auth";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.guest.forgot-password");
@@ -12,5 +14,8 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
+  if (!AUTH_FEATURES.enablePasswordReset) {
+    redirect("/login");
+  }
   return <ForgotPasswordForm />;
 }

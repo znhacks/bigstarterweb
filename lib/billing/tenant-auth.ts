@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { profileRepository } from "@/supabase/repositories/profiles";
+import { ALL_PERMISSIONS } from "@/lib/rbac/permissions";
 
 /**
  * Cek apakah userId adalah anggota tenantId (tabel memberships).
@@ -67,6 +68,54 @@ async function resolveTenantAuthority(
     .map((rp: any) => rp?.permissions?.name)
     .filter((n: any): n is string => typeof n === "string");
   return { hierarchyLevel: role.hierarchy_level ?? null, permissions: perms };
+}
+
+/**
+ * Resolve daftar permission efektif untuk (userId, tenantId). Superadmin sistem
+ * (profiles.is_superadmin) → semua permission; selain itu → permission dari
+ * membership tenant tsb. Dipakai lapisan API (oRPC requirePermission).
+ */
+export async function resolveTenantPermissions(
+  supabase: SupabaseClient,
+  userId: string,
+  tenantId: string
+): Promise<string[]> {
+  if (!userId || !tenantId) return [];
+  if (await isSystemSuperadmin(supabase, userId)) {
+    return ALL_PERMISSIONS as unknown as string[];
+  }
+  const authority = await resolveTenantAuthority(supabase, userId, tenantId);
+  return authority?.permissions ?? [];
+}
+
+/**
+ * Resolve otoritas lengkap (hierarchy + permissions + flag superadmin) untuk
+ * (userId, tenantId). Superadmin → hierarchy tinggi (canAssignRole selalu true) +
+ * semua permission. Dipakai server action org/member utk cek permission + hierarchy.
+ */
+export async function resolveTenantAuthorityFull(
+  supabase: SupabaseClient,
+  userId: string,
+  tenantId: string
+): Promise<{
+  hierarchyLevel: number | null;
+  permissions: string[];
+  isSuperadmin: boolean;
+}> {
+  const isSuperadmin = await isSystemSuperadmin(supabase, userId);
+  if (isSuperadmin) {
+    return {
+      hierarchyLevel: Number.MAX_SAFE_INTEGER,
+      permissions: ALL_PERMISSIONS as unknown as string[],
+      isSuperadmin: true
+    };
+  }
+  const authority = await resolveTenantAuthority(supabase, userId, tenantId);
+  return {
+    hierarchyLevel: authority?.hierarchyLevel ?? null,
+    permissions: authority?.permissions ?? [],
+    isSuperadmin: false
+  };
 }
 
 async function isSystemSuperadmin(supabase: SupabaseClient, userId: string): Promise<boolean> {

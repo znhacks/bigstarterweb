@@ -117,6 +117,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     const interval = paymentOrder?.interval || rawInterval;
     const couponCode = paymentOrder?.coupon_code || rawCouponCode;
 
+    // Fallback (mis. LemonSqueezy): bila lookup by provider_order_id miss & context
+    // sudah ter-resolve, cari pending order by (provider, tenant_id, plan_id) supaya
+    // lifecycle pending → paid tetap jalan.
+    if (!paymentOrder && tenantId && planId) {
+      const { data: pending } = await (
+        await paymentOrderRepository(supabaseAdmin)
+      ).findPendingByContext(providerName, tenantId, planId);
+      if (pending) paymentOrder = pending;
+    }
+
     if (!tenantId) {
       return NextResponse.json(
         {

@@ -1,10 +1,11 @@
-import { o, getTenantId } from "../context";
+import { getTenantId } from "../context";
+import { protectedProcedure } from "../procedures";
 import { supabaseAdmin } from "../supabase-server";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { subscriptionSchema } from "../schemas";
 import { dbError } from "../errors";
 
-export const getSubscription = o
+export const getSubscription = protectedProcedure
   .route({
     method: "GET",
     path: "/subscription",

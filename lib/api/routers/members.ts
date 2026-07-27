@@ -1,5 +1,6 @@
 import * as z from "zod";
-import { o, getTenantId } from "../context";
+import { getTenantId, requirePermission } from "../context";
+import { protectedProcedure, sessionProcedure } from "../procedures";
 import { supabaseAdmin } from "../supabase-server";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { roleRepository } from "@/supabase/repositories/roles";
@@ -7,8 +8,9 @@ import { invitationRepository } from "@/supabase/repositories/invitations";
 import { memberSchema } from "../schemas";
 import { dbError, forbidden, badRequest } from "../errors";
 import { checkSeatLimit } from "@/lib/billing/enforcer";
+import { PERMISSIONS } from "@/lib/rbac";
 
-export const listMembers = o
+export const listMembers = protectedProcedure
   .route({
     method: "GET",
     path: "/members",
@@ -59,7 +61,7 @@ const invitationOutput = z.object({
   created_at: z.string().nullable()
 });
 
-export const inviteMember = o
+export const inviteMember = sessionProcedure
   .route({
     method: "POST",
     path: "/members/invite",
@@ -71,6 +73,7 @@ export const inviteMember = o
   .input(inviteInput)
   .output(invitationOutput)
   .handler(async ({ input, context }) => {
+    await requirePermission(context, PERMISSIONS.membersInvite);
     const tenantId = getTenantId(context);
 
     // Reuse the existing seat-limit enforcer (same logic as the dashboard invite route).

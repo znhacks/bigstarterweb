@@ -1,10 +1,12 @@
 import * as z from "zod";
-import { o, getTenantId, getSession } from "../context";
+import { getTenantId, getSession, requirePermission } from "../context";
+import { protectedProcedure, sessionProcedure } from "../procedures";
 import { supabaseAdmin } from "../supabase-server";
 import { apiKeyRepository } from "@/supabase/repositories/api-keys";
 import { apiKeySchema, uuid } from "../schemas";
 import { notFound, dbError } from "../errors";
 import { generateApiKey, hashApiKey, apiKeyPrefix } from "../crypto";
+import { PERMISSIONS } from "@/lib/rbac";
 
 /**
  * Lifecycle of an API key. For security, CREATE is dashboard-session-only — an
@@ -21,7 +23,7 @@ const rowsFor = async (tenantId: string) => {
     .order("created_at", { ascending: false });
 };
 
-export const listApiKeys = o
+export const listApiKeys = protectedProcedure
   .route({
     method: "GET",
     path: "/api-keys",
@@ -42,7 +44,7 @@ const createdApiKeyOutput = apiKeySchema.extend({
   key: z.string()
 });
 
-export const createApiKey = o
+export const createApiKey = sessionProcedure
   .route({
     method: "POST",
     path: "/api-keys",
@@ -54,6 +56,7 @@ export const createApiKey = o
   .output(createdApiKeyOutput)
   .handler(async ({ input, context }) => {
     const session = getSession(context); // session-only — prevents key-minting escalation
+    await requirePermission(context, PERMISSIONS.apiKeysManage);
     const fullKey = generateApiKey();
 
     const apiKeyRepo = await apiKeyRepository(supabaseAdmin);
@@ -72,7 +75,7 @@ export const createApiKey = o
     return { ...data, key: fullKey };
   });
 
-export const revokeApiKey = o
+export const revokeApiKey = sessionProcedure
   .route({
     method: "DELETE",
     path: "/api-keys/{id}",
@@ -82,6 +85,7 @@ export const revokeApiKey = o
   .input(z.object({ id: uuid }))
   .output(z.object({ id: uuid, revoked: z.literal(true) }))
   .handler(async ({ input, context }) => {
+    await requirePermission(context, PERMISSIONS.apiKeysManage);
     const tenantId = getTenantId(context);
     const apiKeyRepo = await apiKeyRepository(supabaseAdmin);
     const { data, error } = await apiKeyRepo

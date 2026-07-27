@@ -1,8 +1,12 @@
 // app/api/otp/send/route.ts
 import { NextResponse } from "next/server";
 import { issueOtp } from "@/lib/otp/service";
+import { AUTH_FEATURES } from "@/config/auth";
 
 export async function POST(req: Request) {
+  if (!AUTH_FEATURES.enablePasswordlessOtp) {
+    return NextResponse.json({ ok: false, error: "OTP dinonaktifkan." }, { status: 404 });
+  }
   try {
     const { target, channel, purpose } = await req.json();
     if (!target || !channel || !purpose) {

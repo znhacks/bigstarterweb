@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { AUTH_FEATURES } from "@/config/auth";
 
 export default function MagicLoginHandler() {
   const searchParams = useSearchParams();
@@ -19,6 +20,10 @@ export default function MagicLoginHandler() {
 
   useEffect(() => {
     const processMagicLogin = async () => {
+      if (!AUTH_FEATURES.enableMagicLink) {
+        router.replace("/login");
+        return;
+      }
       if (!token) {
         setStatus("error");
         setErrorMsg("Token autentikasi tidak ditemukan.");

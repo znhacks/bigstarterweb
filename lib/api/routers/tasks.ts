@@ -1,11 +1,13 @@
 import * as z from "zod";
-import { o, getTenantId } from "../context";
+import { getTenantId, requirePermission } from "../context";
+import { protectedProcedure, sessionProcedure } from "../procedures";
 import { supabaseAdmin } from "../supabase-server";
 import { taskRepository } from "@/supabase/repositories/tasks";
 import { taskSchema, uuid, pagination, paginated } from "../schemas";
 import { notFound, dbError } from "../errors";
+import { PERMISSIONS } from "@/lib/rbac";
 
-export const listTasks = o
+export const listTasks = protectedProcedure
   .route({
     method: "GET",
     path: "/tasks",
@@ -32,7 +34,7 @@ export const listTasks = o
     };
   });
 
-export const createTask = o
+export const createTask = sessionProcedure
   .route({
     method: "POST",
     path: "/tasks",
@@ -42,6 +44,7 @@ export const createTask = o
   .input(z.object({ title: z.string().min(1).max(255) }))
   .output(taskSchema)
   .handler(async ({ input, context }) => {
+    await requirePermission(context, PERMISSIONS.tasksCreate);
     const tenantId = getTenantId(context);
     const taskRepo = await taskRepository(supabaseAdmin);
     const { data, error } = await taskRepo
@@ -53,7 +56,7 @@ export const createTask = o
     return data;
   });
 
-export const getTask = o
+export const getTask = protectedProcedure
   .route({ method: "GET", path: "/tasks/{id}", tags: ["Tasks"], summary: "Get a task" })
   .input(z.object({ id: uuid }))
   .output(taskSchema)
@@ -71,11 +74,12 @@ export const getTask = o
     return data;
   });
 
-export const updateTask = o
+export const updateTask = sessionProcedure
   .route({ method: "PATCH", path: "/tasks/{id}", tags: ["Tasks"], summary: "Update a task" })
   .input(z.object({ id: uuid, title: z.string().min(1).max(255).optional() }))
   .output(taskSchema)
   .handler(async ({ input, context }) => {
+    await requirePermission(context, PERMISSIONS.tasksUpdate);
     const tenantId = getTenantId(context);
     const taskRepo = await taskRepository(supabaseAdmin);
     const { data, error } = await taskRepo
@@ -90,11 +94,12 @@ export const updateTask = o
     return data;
   });
 
-export const removeTask = o
+export const removeTask = sessionProcedure
   .route({ method: "DELETE", path: "/tasks/{id}", tags: ["Tasks"], summary: "Delete a task" })
   .input(z.object({ id: uuid }))
   .output(z.object({ id: uuid, deleted: z.literal(true) }))
   .handler(async ({ input, context }) => {
+    await requirePermission(context, PERMISSIONS.tasksDelete);
     const tenantId = getTenantId(context);
     const taskRepo = await taskRepository(supabaseAdmin);
     const { error, count } = await taskRepo

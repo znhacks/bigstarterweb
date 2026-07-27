@@ -10,6 +10,7 @@ import { membershipRepository } from "@/supabase/repositories/memberships";
 import { roleRepository } from "@/supabase/repositories/roles";
 import { invitationRepository } from "@/supabase/repositories/invitations";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+import { changeMemberRoleAction, removeMemberAction, cancelInvitationAction } from "./actions";
 
 export interface Role {
   id: string;
@@ -300,15 +301,12 @@ export function useOrganizationMembers() {
   };
 
   const handleRoleChange = async (membershipId: string, newRoleId: string) => {
+    if (!activeOrgId) return;
     const newRole = roles.find((r) => r.id === newRoleId);
     if (!newRole) return;
     try {
-      const { error } = await (await membershipRepository(supabase))
-        .query()
-        .update({ role_id: newRoleId })
-        .eq("id", membershipId);
-
-      if (error) throw error;
+      const res = await changeMemberRoleAction(activeOrgId, membershipId, newRoleId);
+      if (res.error) throw new Error(res.error);
 
       setMembers((prev) =>
         prev.map((m) =>
@@ -338,12 +336,11 @@ export function useOrganizationMembers() {
   };
 
   const handleConfirmRemoveMember = async () => {
-    if (!memberToDelete) return;
+    if (!activeOrgId || !memberToDelete) return;
 
     try {
-      const { error } = await (await membershipRepository(supabase)).query().delete().eq("id", memberToDelete.id);
-
-      if (error) throw error;
+      const res = await removeMemberAction(activeOrgId, memberToDelete.id);
+      if (res.error) throw new Error(res.error);
 
       setMembers((prev) => prev.filter((m) => m.id !== memberToDelete.id));
 
@@ -364,9 +361,10 @@ export function useOrganizationMembers() {
   };
 
   const handleCancelInvitation = async (inviteId: string, email: string) => {
+    if (!activeOrgId) return;
     try {
-      const { error } = await (await invitationRepository(supabase)).query().delete().eq("id", inviteId);
-      if (error) throw error;
+      const res = await cancelInvitationAction(activeOrgId, inviteId);
+      if (res.error) throw new Error(res.error);
 
       setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId));
       setAlertMessage({

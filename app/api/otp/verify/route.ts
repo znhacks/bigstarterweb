@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { verifyOtp } from "@/lib/otp/service";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
+import { AUTH_FEATURES } from "@/config/auth";
 
 export async function POST(req: Request) {
+  if (!AUTH_FEATURES.enablePasswordlessOtp) {
+    return NextResponse.json(
+      { ok: false, valid: false, error: "OTP dinonaktifkan." },
+      { status: 404 }
+    );
+  }
   try {
     const { target, channel, purpose, code } = await req.json();
     if (!target || !channel || !purpose || !code) {

@@ -27,56 +27,19 @@ import { Progress } from "@/components/ui/progress";
 
 // Impor klien Supabase Anda
 import { supabase } from "@/lib/supabase";
-import { profileRepository } from "@/supabase/repositories/profiles";
+import { useSession } from "@/hooks/use-session";
 import { useTranslations } from "next-intl";
 
 export default function UserMenu() {
   const router = useRouter();
 
-  // State data user & profil
-  const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [avatar, setAvatar] = useState(""); // Menyimpan URL avatar dari database
-  const [isLoading, setIsLoading] = useState(true);
+  // Sesi user dari SessionProvider (single source of truth).
+  const { user: sessionUser, loaded } = useSession();
+  const email = sessionUser?.email ?? "";
+  const fullName = sessionUser?.name ?? "";
+  const avatar = sessionUser?.image ?? "";
+  const isLoading = !loaded;
   const t = useTranslations("menu");
-
-  // Memuat data user dari Supabase
-  const loadUserData = async () => {
-    setIsLoading(true);
-    try {
-      const {
-        data: { user },
-        error: userError
-      } = await supabase.auth.getUser();
-      if (userError || !user) return;
-
-      setEmail(user.email || "");
-
-      // Mengambil nama lengkap & URL avatar secara nyata dari tabel profiles
-      const { data: profileData } = await (await profileRepository(supabase))
-        .query()
-        .select("full_name, avatar") // <-- Memuat kolom avatar dari database
-        .eq("id", user.id)
-        .single();
-
-      if (profileData) {
-        setFullName(profileData.full_name);
-        setAvatar(profileData.avatar || ""); // Menyimpan URL avatar ke state
-      } else {
-        // Fallback jika profile belum ada
-        setFullName(user.user_metadata?.full_name || user.email?.split("@")[0] || "User");
-        setAvatar("");
-      }
-    } catch (error) {
-      console.error("Gagal memuat profil pengguna:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
 
   // Handler keluar akun (Log out)
   const handleLogOut = async () => {

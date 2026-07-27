@@ -1,5 +1,3 @@
-// app/api/billing/checkout/route.ts
-
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { isTenantMember } from "@/lib/billing/tenant-auth";
@@ -61,7 +59,8 @@ export async function POST(req: Request) {
     const planPriceRepo = await planPriceRepository(supabaseAdmin);
     const { data: dbTargetPrice, error: targetPriceErr } = await planPriceRepo
       .query()
-      .select("amount, plan_id, provider_ids, currency")
+      // --- PERBAIKAN: Tambahkan product_id ke dalam fungsi select ---
+      .select("amount, plan_id, provider_ids, currency, product_id")
       .eq("plan_id", planId)
       .eq("interval", interval)
       .maybeSingle();
@@ -76,11 +75,14 @@ export async function POST(req: Request) {
     const targetPrice = parseFloat(dbTargetPrice.amount);
     const planCurrency = (dbTargetPrice as any).currency || "IDR";
 
-    // Product ID tunggal di sisi provider (1 provider aktif untuk user).
-    const providerPriceId = (dbTargetPrice as any).product_id || null;
+    // --- PERBAIKAN: Gunakan skema fallback pembacaan ID dari provider_ids (JSONB) ATAU kolom product_id ---
+    const providerPriceId =
+      (dbTargetPrice as any).provider_ids?.[provider] || (dbTargetPrice as any).product_id || null;
 
     // Ambil nama plan untuk deskripsi invoice
-    const { data: planRow } = await (await planRepository(supabaseAdmin))
+    const { data: planRow } = await (
+      await planRepository(supabaseAdmin)
+    )
       .query()
       .select("name")
       .eq("id", planId)
@@ -102,7 +104,9 @@ export async function POST(req: Request) {
     // 2. KALKULASI KREDIT PRO-RATA DINAMIS (pakai interval langganan LAMA)
     let credit = 0;
     let oldProviderSubscriptionId: string | null = null;
-    const { data: activeSub } = await (await subscriptionRepository(supabaseAdmin))
+    const { data: activeSub } = await (
+      await subscriptionRepository(supabaseAdmin)
+    )
       .query()
       .select("starts_at, ends_at, plan_id, provider, provider_subscription_id, interval")
       .eq(ownerCol, ownerId)
@@ -154,7 +158,9 @@ export async function POST(req: Request) {
     if (couponCode) {
       const formattedCode = couponCode.trim();
 
-      const { data: coupon } = await (await couponRepository(supabaseAdmin))
+      const { data: coupon } = await (
+        await couponRepository(supabaseAdmin)
+      )
         .query()
         .select("*")
         .ilike("code", formattedCode)

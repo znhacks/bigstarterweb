@@ -1,10 +1,11 @@
-import { o, getTenantId } from "../context";
+import { getTenantId } from "../context";
+import { protectedProcedure } from "../procedures";
 import { supabaseAdmin } from "../supabase-server";
 import { transactionRepository } from "@/supabase/repositories/transactions";
 import { transactionSchema, pagination, paginated } from "../schemas";
 import { dbError } from "../errors";
 
-export const listTransactions = o
+export const listTransactions = protectedProcedure
   .route({
     method: "GET",
     path: "/transactions",

@@ -1,15 +1,17 @@
 import * as z from "zod";
-import { o, getTenantId } from "../context";
+import { getTenantId, requirePermission } from "../context";
+import { protectedProcedure, sessionProcedure } from "../procedures";
 import { supabaseAdmin } from "../supabase-server";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { organizationSchema } from "../schemas";
 import { notFound, dbError } from "../errors";
+import { PERMISSIONS } from "@/lib/rbac";
 
 /**
  * The API key (or dashboard session) is bound to a single tenant, so these
  * operate on "the current organization" — no path id.
  */
-export const getOrganization = o
+export const getOrganization = protectedProcedure
   .route({
     method: "GET",
     path: "/organization",
@@ -30,7 +32,7 @@ export const getOrganization = o
     return data;
   });
 
-export const updateOrganization = o
+export const updateOrganization = sessionProcedure
   .route({
     method: "PATCH",
     path: "/organization",
@@ -40,6 +42,7 @@ export const updateOrganization = o
   .input(z.object({ name: z.string().min(1).max(255).optional(), logo: z.string().url().optional() }))
   .output(organizationSchema)
   .handler(async ({ input, context }) => {
+    await requirePermission(context, PERMISSIONS.organizationUpdate);
     const tenantId = getTenantId(context);
     const patch: Record<string, unknown> = {};
     if (input.name !== undefined) patch.name = input.name;

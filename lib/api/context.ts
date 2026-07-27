@@ -1,6 +1,10 @@
 import { os } from "@orpc/server";
 import type { Auth } from "./auth";
-import { unauthorized } from "./errors";
+import { unauthorized, forbidden } from "./errors";
+import { supabaseAdmin } from "./supabase-server";
+import { resolveTenantPermissions } from "@/lib/billing/tenant-auth";
+import { hasPermission } from "@/lib/rbac";
+import type { PermissionName } from "@/lib/rbac/permissions";
 
 /**
  * Base context shared by every procedure. `auth` is resolved once per request in
@@ -30,4 +34,16 @@ export function getSession(context: ApiContext): {
 /** Resolve the effective tenant id for either auth flavour. */
 export function getTenantId(context: ApiContext): string {
   return getAuth(context).tenantId;
+}
+
+/**
+ * Enforce RBAC pada mutasi API. Wajib dashboard session (API key hanya bisa membaca),
+ * lalu cek permission efektif (superadmin bypass). Throw FORBIDDEN bila tidak memenuhi.
+ */
+export async function requirePermission(context: ApiContext, perm: PermissionName): Promise<void> {
+  const { userId, tenantId } = getSession(context);
+  const perms = await resolveTenantPermissions(supabaseAdmin, userId, tenantId);
+  if (!hasPermission(perms, perm)) {
+    throw forbidden(`Permission "${perm}" diperlukan untuk aksi ini.`);
+  }
 }

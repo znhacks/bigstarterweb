@@ -9,6 +9,7 @@ import { tenantConfig } from "@/config/tenant"; // Pastikan path import ini sesu
 import { normalizeTenantUpdatePayload, updateTenantSchema } from "@/lib/validation/tenants";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { membershipRepository } from "@/supabase/repositories/memberships";
+import { deleteOrganizationAction } from "./actions";
 
 export interface AlertState {
   title: string;
@@ -311,12 +312,8 @@ export function useOrganizationGeneral() {
     setAlertMessage(null);
 
     try {
-      const { error } = await (await tenantRepository(supabase))
-        .query()
-        .update({ status: "deleted", deleted_at: new Date().toISOString() })
-        .eq("id", activeOrgId);
-
-      if (error) throw error;
+      const res = await deleteOrganizationAction(activeOrgId);
+      if (res.error) throw new Error(res.error);
 
       localStorage.removeItem("active_org_id");
 
