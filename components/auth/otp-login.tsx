@@ -1,4 +1,3 @@
-// components/auth/otp-login.tsx
 "use client";
 
 import { useState } from "react";
@@ -57,12 +56,10 @@ export function OtpLoginForm() {
 
       if (!res.ok || !data.valid) throw new Error(data.error || t("verifyError"));
 
-      // Login success: selesaikan sesi via verifyOtp(token_hash) di client — tanpa redirect.
       if (data.tokenHash) {
         const loginRes = await completeOtpLogin(data.tokenHash);
         if (!loginRes.ok) throw new Error(loginRes.error || t("verifyError"));
         router.push(nextTarget || "/");
-        // router.refresh();
       } else {
         window.location.reload();
       }

@@ -57,13 +57,13 @@ const getCookie = (name: string) => {
 };
 
 type NavGroup = {
-  title: string; // Kunci terjemahan untuk judul grup
+  title: string;
   roles?: ("users" | "superadmin")[];
   items: NavItem[];
 };
 
 type NavItem = {
-  title: string; // Kunci terjemahan untuk judul item
+  title: string;
   href: string;
   icon?: LucideIcon;
   isComing?: boolean;
@@ -75,7 +75,6 @@ type NavItem = {
   tenantScoped?: boolean;
 };
 
-// Nilai 'title' di bawah ini adalah KEY yang akan diterjemahkan oleh next-intl
 export const navItems: NavGroup[] = [
   {
     title: "menu",
@@ -110,11 +109,6 @@ export const navItems: NavGroup[] = [
             tenantScoped: true,
             permissions: [PERMISSIONS.organizationRead]
           }
-          // Tambahkan baris rute ini di dalam array navigasi sidebar Anda:
-            // {
-            //   title: "users.i18n-culture",
-            //   href: "/settings/i18n-culture"
-            // }
         ]
       }
     ]
@@ -186,7 +180,7 @@ export function NavMain() {
   const pathname = usePathname();
   const params = useParams();
   const tenantSlug = params?.tenant_slug as string | undefined;
-  const t = useTranslations("menu"); // Menggunakan namespace "menu"
+  const t = useTranslations("menu");
 
   const { isMobile } = useSidebar();
   const dropdownSide = isMobile ? "bottom" : locale === "ar" ? "left" : "right";
@@ -365,7 +359,7 @@ export function NavMain() {
     <>
       {filteredNavItems.map((nav) => (
         <SidebarGroup key={nav.title}>
-          {/* Menerjemahkan nama grup */}
+          {}
           <SidebarGroupLabel className="text-start">{t(nav.title)}</SidebarGroupLabel>
           <SidebarGroupContent className="flex flex-col gap-2">
             <SidebarMenu>
@@ -376,7 +370,7 @@ export function NavMain() {
                       <div className="hidden group-data-[collapsible=icon]:block">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            {/* Menerjemahkan tooltip judul utama */}
+                            {}
                             <SidebarMenuButton className="text-start" tooltip={t(item.title)}>
                               {item.icon && <item.icon />}
                               <span>{t(item.title)}</span>
@@ -394,7 +388,7 @@ export function NavMain() {
                                 asChild
                                 key={subItem.title}>
                                 <a href={getLocalizedHref(subItem.href, subItem.tenantScoped)}>
-                                  {/* Menerjemahkan sub-item dropdown */}
+                                  {}
                                   {t(subItem.title)}
                                 </a>
                               </DropdownMenuItem>
@@ -432,7 +426,7 @@ export function NavMain() {
                                   <Link
                                     href={getLocalizedHref(subItem.href, subItem.tenantScoped)}
                                     target={subItem.newTab ? "_blank" : ""}>
-                                    {/* Menerjemahkan sub-item collapsible */}
+                                    {}
                                     <span>{t(subItem.title)}</span>
                                   </Link>
                                 </SidebarMenuSubButton>

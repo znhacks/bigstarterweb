@@ -29,8 +29,6 @@ interface DataTableFacetedFilterProps<TData, TValue> {
   emptyText?: string;
 }
 
-// Usage: <DataTableFacetedFilter column={table.getColumn("status")} title="Status" options={[...]} />
-// Same call shape as shadcn's own data-table example — nothing hidden.
 export function DataTableFacetedFilter<TData, TValue>({
   column,
   title,
@@ -54,9 +52,7 @@ export function DataTableFacetedFilter<TData, TValue>({
   };
 
   const toggle = (value: string) => {
-    setTemp((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    );
+    setTemp((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
   };
 
   return (

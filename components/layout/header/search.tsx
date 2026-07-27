@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { navItems } from "@/components/layout/sidebar/nav-main";
 
-// Impor klien Supabase
 import { supabase } from "@/lib/supabase";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { type PermissionName } from "@/lib/rbac";
@@ -31,7 +30,7 @@ type NavItem = {
   icon?: any;
   permissions?: string[];
   items?: NavItem[];
-  displayTitle?: string; // Menyimpan nama gabungan (Induk › Sub-menu)
+  displayTitle?: string;
 };
 
 export default function Search() {
@@ -40,12 +39,10 @@ export default function Search() {
   const t = useTranslations("common");
   const tmenu = useTranslations("menu");
 
-  // State untuk melacak grup user dan permission organisasi internal
   const [userGroup, setUserGroup] = useState<"users" | "superadmin" | null>(null);
   const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Ambil otoritas (permission) aktif dari Supabase
   const fetchUserAuthority = async () => {
     try {
       const {
@@ -77,8 +74,9 @@ export default function Search() {
         return;
       }
 
-      // Resolve: memberships.role_id → roles → role_permissions → permissions
-      const { data, error } = await (await membershipRepository(supabase))
+      const { data, error } = await (
+        await membershipRepository(supabase)
+      )
         .query()
         .select("roles(role_permissions(permissions(name)))")
         .eq("tenant_id", orgId)
@@ -106,7 +104,6 @@ export default function Search() {
   useEffect(() => {
     fetchUserAuthority();
 
-    // Dengarkan event perubahan organisasi aktif
     const handleOrgChange = () => {
       fetchUserAuthority();
     };
@@ -127,7 +124,6 @@ export default function Search() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Fungsi rekursif memfilter item menu berdasarkan permission saat ini
   const filterMenuByPermissions = (items: NavItem[]): NavItem[] => {
     return items
       .filter((item) => {
@@ -152,7 +148,6 @@ export default function Search() {
       });
   };
 
-  // Filter seluruh grup menu utama berdasarkan userGroup ("users" atau "superadmin")
   const filteredNavItems = navItems
     .filter((group) => {
       if (!group.roles) return true;
@@ -164,14 +159,12 @@ export default function Search() {
     }))
     .filter((group) => group.items.length > 0);
 
-  // Meratakan (flatten) menu secara rekursif dengan menyertakan nama menu induknya
   const getFlatItems = (items: NavItem[], parentTitle?: string): NavItem[] => {
     const flat: NavItem[] = [];
     items.forEach((item) => {
       const currentDisplayTitle = parentTitle ? `${parentTitle} › ${item.title}` : item.title;
 
       if (item.items && item.items.length > 0) {
-        // Teruskan nama menu saat ini sebagai prefix induk bagi sub-item di bawahnya
         flat.push(...getFlatItems(item.items, currentDisplayTitle));
       } else {
         flat.push({

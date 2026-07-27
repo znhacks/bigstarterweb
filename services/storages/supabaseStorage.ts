@@ -15,7 +15,6 @@ export class SupabaseStorageService implements IStorageService {
     tenantId?: string,
     dbModel?: "SHARED" | "ISOLATED"
   ): Promise<string> {
-    // Model 1: Satukan dalam folder berisi tenantId
     const finalPath = dbModel === "SHARED" && tenantId ? `${tenantId}/${path}` : path;
 
     const { error } = await this.client.storage

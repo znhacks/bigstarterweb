@@ -1,5 +1,3 @@
-// /services/currency/types.ts
-
 export interface CurrencyRates {
   base: string;
   date: string;

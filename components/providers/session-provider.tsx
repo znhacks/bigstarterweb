@@ -1,15 +1,6 @@
 "use client";
 
-// Single source of truth sesi di client. Satu fetch + onAuthStateChange subscription;
-// konsumsi via `useSession()`. Hilangkan puluhan `supabase.auth.getUser()` ad-hoc.
-
-import React, {
-  createContext,
-  useContext,
-  useCallback,
-  useEffect,
-  useState
-} from "react";
+import React, { createContext, useContext, useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { profileRepository } from "@/supabase/repositories/profiles";
 import type { AuthUser, AuthSession } from "@/lib/session";
@@ -55,9 +46,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       });
       setSession({
         userId: session.user.id,
-        expiresAt: session.expires_at
-          ? new Date(session.expires_at * 1000).toISOString()
-          : null,
+        expiresAt: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
         accessToken: session.access_token
       });
     } catch {
@@ -83,7 +72,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Hook sesi client. Harus dipakai di dalam <SessionProvider>. */
 export function useSession(): SessionState {
   const ctx = useContext(SessionContext);
   if (!ctx) {

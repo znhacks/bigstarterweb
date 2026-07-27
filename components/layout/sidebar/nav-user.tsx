@@ -21,7 +21,6 @@ import {
 import { BellIcon, CreditCardIcon, LogOutIcon, UserCircle2Icon, Loader2 } from "lucide-react";
 import { DotsVerticalIcon } from "@radix-ui/react-icons";
 
-// Impor klien Supabase Anda
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/hooks/use-session";
 import Link from "next/link";
@@ -32,22 +31,18 @@ export function NavUser() {
   const router = useRouter();
   const t = useTranslations("menu");
 
-  // Sesi user dari SessionProvider (single source of truth — tanpa fetch ad-hoc).
   const { user, loaded } = useSession();
   const email = user?.email ?? "";
   const fullName = user?.name ?? "";
   const avatar = user?.image ?? "";
   const isLoading = !loaded;
 
-  // Handler fungsi keluar akun (Sign Out)
   const handleLogOut = async () => {
     try {
       await supabase.auth.signOut();
 
-      // Bersihkan juga ID organisasi aktif dari penyimpanan lokal
       localStorage.removeItem("active_org_id");
 
-      // Redirect ke halaman login v2
       router.push("/login");
       router.refresh();
     } catch (error) {
@@ -55,7 +50,6 @@ export function NavUser() {
     }
   };
 
-  // Helper untuk menghasilkan inisial nama secara otomatis (misal: "John Doe" -> "JD")
   const getInitials = (name: string) => {
     if (!name) return "U";
     return name
@@ -87,7 +81,7 @@ export function NavUser() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
               <Avatar className="cursor-pointer border">
-                {/* RENDER AVATAR USER DARI SUPABASE JIKA ADA */}
+                {}
                 {avatar ? (
                   <AvatarImage src={avatar} alt={fullName} className="object-cover" />
                 ) : (
@@ -111,7 +105,7 @@ export function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
                 <Avatar className="cursor-pointer border">
-                  {/* RENDER AVATAR USER DARI SUPABASE JIKA ADA */}
+                  {}
                   {avatar ? (
                     <AvatarImage src={avatar} alt={fullName} className="object-cover" />
                   ) : (

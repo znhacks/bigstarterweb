@@ -17,11 +17,11 @@ export interface TranslationSchema {
     error: string;
     loading: string;
   };
-  // Tambahan Konfigurasi Mata Uang & Lokalitas
+
   currency: {
     code: string;
     symbol: string;
-    rate: number; // Kurs konversi dari USD
+    rate: number;
     locale: string;
   };
   sidebar: {
@@ -134,7 +134,7 @@ export const dictionaries: Record<LanguageType, TranslationSchema> = {
     currency: {
       code: "IDR",
       symbol: "Rp",
-      rate: 15000, // Simulasi kurs: $1 = Rp 15.000
+      rate: 15000,
       locale: "id-ID"
     },
     sidebar: {
@@ -192,7 +192,7 @@ export const dictionaries: Record<LanguageType, TranslationSchema> = {
     currency: {
       code: "EUR",
       symbol: "€",
-      rate: 0.92, // Kurs: $1 = €0.92
+      rate: 0.92,
       locale: "es-ES"
     },
     sidebar: {
@@ -242,7 +242,7 @@ interface LanguageContextType {
   language: LanguageType;
   setLanguage: (lang: LanguageType) => Promise<void>;
   t: TranslationSchema;
-  formatPrice: (usdAmount: number) => string; // Helper pemformat harga dinamis
+  formatPrice: (usdAmount: number) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -253,7 +253,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchUserLanguage = async () => {
       try {
-        // 1. Coba ambil dari profil Supabase
         const {
           data: { user }
         } = await supabase.auth.getUser();
@@ -266,14 +265,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // 2. Coba ambil dari localStorage jika ada
         const savedLang = localStorage.getItem("app_language") as LanguageType;
         if (savedLang && dictionaries[savedLang]) {
           setLanguageState(savedLang);
           return;
         }
 
-        // 3. FITUR BARU: Deteksi Bahasa Browser Pengguna Secara Otomatis
         if (typeof window !== "undefined") {
           const browserLang = window.navigator.language.toLowerCase();
           if (browserLang.startsWith("id")) {
@@ -310,7 +307,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const t = dictionaries[language];
 
-  // 4. FITUR BARU: Helper Pemformat Mata Uang Berdasarkan Negara Terpilih
   const formatPrice = (usdAmount: number) => {
     const convertedAmount = Math.round(usdAmount * t.currency.rate);
     return new Intl.NumberFormat(t.currency.locale, {

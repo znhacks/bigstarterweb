@@ -1,4 +1,3 @@
-// components/ui/date-time-picker.tsx
 "use client";
 
 import * as React from "react";
@@ -16,22 +15,20 @@ import { getLocaleMeta } from "@/config/i18n-culture";
 type Props = {
   date: Date | undefined;
   setDate: (value: Date | undefined) => void;
-  showDate?: boolean; // Prop penentu visibilitas penanggalan tanggal (default: true)
-  showTime?: boolean; // Prop penentu visibilitas pemilih waktu jam (default: true)
+  showDate?: boolean;
+  showTime?: boolean;
 };
 
 export function DateTimePicker({ date, setDate, showDate = true, showTime = true }: Props) {
   const [isOpen, setIsOpen] = React.useState(false);
   const locale = useLocale();
 
-  // Membaca metadata arah layout (RTL / LTR) murni dari Single Source of Truth
   const meta = getLocaleMeta(locale);
 
   const hours = Array.from({ length: 12 }, (_, i) => i + 1);
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
     if (selectedDate) {
-      // Jika penampil waktu aktif dan kita sudah memiliki jam terpilih sebelumnya, pertahankan nilai jam tersebut
       if (showTime && date) {
         selectedDate.setHours(date.getHours());
         selectedDate.setMinutes(date.getMinutes());
@@ -41,7 +38,6 @@ export function DateTimePicker({ date, setDate, showDate = true, showTime = true
   };
 
   const handleTimeChange = (type: "hour" | "minute" | "ampm", value: string) => {
-    // Skenario aman: jika date bernilai undefined (TimePicker saja), inisialisasi menggunakan tanggal hari ini
     const baseDate = date ? new Date(date) : new Date();
 
     if (type === "hour") {
@@ -55,7 +51,6 @@ export function DateTimePicker({ date, setDate, showDate = true, showTime = true
     setDate(baseDate);
   };
 
-  // Menerjemahkan Label AM/PM secara kustom peka-kultur
   const getAmPmLabel = (ampm: "AM" | "PM") => {
     if (locale === "ar") {
       return ampm === "AM" ? "ص" : "م";
@@ -63,7 +58,6 @@ export function DateTimePicker({ date, setDate, showDate = true, showTime = true
     return ampm;
   };
 
-  // Menentukan opsi pemformatan Intl berdasarkan properti visibilitas yang aktif
   const getFormatOptions = (): Intl.DateTimeFormatOptions => {
     const options: Intl.DateTimeFormatOptions = {};
     if (showDate) {
@@ -109,17 +103,17 @@ export function DateTimePicker({ date, setDate, showDate = true, showTime = true
 
       <PopoverContent className="w-auto p-0" dir={meta.dir} align="start">
         <div className="sm:flex">
-          {/* RENDER KONDISIONAL: Tampilkan kalender hanya jika showDate bernilai TRUE */}
+          {}
           {showDate && (
             <Calendar mode="single" selected={date} onSelect={handleDateSelect} initialFocus />
           )}
 
-          {/* RENDER KONDISIONAL: Tampilkan pemilih waktu hanya jika showTime bernilai TRUE */}
+          {}
           {showTime && (
             <div
               className={cn(
                 "flex h-[300px] flex-col divide-y sm:flex-row sm:divide-x sm:divide-y-0",
-                // Berikan pembatas border kiri hanya jika kalender tanggal juga sedang ditampilkan
+
                 showDate && "border-s"
               )}>
               <ScrollArea className="w-64 sm:w-auto">

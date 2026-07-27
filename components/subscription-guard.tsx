@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * Global app-access gate untuk `requireActiveSubscription`.
- *
- * Saat flag `true` (config/payment) & tidak ada langganan aktif → blok SEMUA halaman
- * di bawah [tenant_slug] (dashboard, tasks, dll) dan tampilkan paywall, KECUALI route
- * billing/organization agar user tetap bisa berlangganan / kelola org.
- *
- * Saat flag `false` (default) → children dirender apa adalaunya (zero overhead).
- */
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,7 +21,6 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Route billing/organization dikecualikan agar tetap dapat diakses.
     if (pathname.includes("/organization")) {
       setStatus("ok");
       return;
@@ -39,8 +29,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const orgId =
-          typeof window !== "undefined" ? localStorage.getItem("active_org_id") : null;
+        const orgId = typeof window !== "undefined" ? localStorage.getItem("active_org_id") : null;
         if (!orgId) {
           if (!cancelled) setStatus("denied");
           return;
@@ -54,9 +43,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
         const endsAt = data?.ends_at ? new Date(data.ends_at) : null;
         const isExpired = endsAt ? new Date() > endsAt : false;
         const activeLike =
-          !!data &&
-          (data.status === "active" || data.status === "trialing") &&
-          !isExpired;
+          !!data && (data.status === "active" || data.status === "trialing") && !isExpired;
 
         if (!cancelled) setStatus(activeLike ? "ok" : "denied");
       } catch {
@@ -79,7 +66,6 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // denied
   return (
     <div className="mx-auto w-full max-w-md px-4 py-16">
       <Card className="border border-amber-500/30 bg-amber-500/5">

@@ -1,9 +1,6 @@
-// services/currency/cachedRateService.ts
-// Decorator cache TTL in-memory membungkus provider apa pun. Rate kurs
-// relatif stabil; cache 1 jam menghindari hit API berulang per render.
 import type { ICurrencyRateService } from "@/interfaces/currency-rate";
 
-const TTL_MS = 60 * 60 * 1000; // 1 jam
+const TTL_MS = 60 * 60 * 1000;
 
 export class CachedRateService implements ICurrencyRateService {
   private cache = new Map<string, { at: number; rates: Record<string, number> }>();

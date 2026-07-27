@@ -1,4 +1,3 @@
-// components/ui/address-form.tsx
 "use client";
 
 import * as React from "react";
@@ -17,10 +16,10 @@ import { useTranslations } from "next-intl";
 export interface AddressData {
   line1: string;
   line2: string;
-  city: string; // nama kota/kabupaten
-  region: string; // nama provinsi/negara bagian
+  city: string;
+  region: string;
   postalCode: string;
-  country: string; // ISO alpha-2
+  country: string;
   kecamatan?: string;
   desa?: string;
 }
@@ -40,7 +39,7 @@ interface AddressFormProps {
   data: AddressData;
   errors?: Partial<Record<string, string>>;
   onChange: (field: keyof AddressData, value: string) => void;
-  /** Dipanggil saat negara berubah, mengirim default i18n (currency/timezone/locale). */
+
   onCountryDefaults?: (defaults: CountryDefaults) => void;
   disabled?: boolean;
 }
@@ -63,7 +62,6 @@ export function AddressForm({
   const [kecamatans, setKecamatans] = React.useState<GeoOption[]>([]);
   const [desas, setDesas] = React.useState<DesaRow[]>([]);
 
-  // ID terpilih per level untuk pencarian data relasional
   const [countryId, setCountryId] = React.useState<number | null>(null);
   const [stateId, setStateId] = React.useState<number | null>(null);
   const [cityId, setCityId] = React.useState<number | null>(null);
@@ -74,10 +72,11 @@ export function AddressForm({
   const didInit = React.useRef(false);
   const lastResolvedSignature = React.useRef("");
 
-  // --- Memuat daftar negara saat pertama kali render ---
   React.useEffect(() => {
     (async () => {
-      const { data: rows } = await (await countryRepository(supabase))
+      const { data: rows } = await (
+        await countryRepository(supabase)
+      )
         .query()
         .select("id, name, iso2, currency, timezones")
         .order("name", { ascending: true });
@@ -87,9 +86,10 @@ export function AddressForm({
 
   const countryOpts: GeoOption[] = countries.map((c) => ({ value: c.iso2, label: c.name }));
 
-  // --- Fetch helpers ---
   const fetchStates = React.useCallback(async (cId: number): Promise<GeoOption[]> => {
-    const { data: rows } = await (await stateRepository(supabase))
+    const { data: rows } = await (
+      await stateRepository(supabase)
+    )
       .query()
       .select("id, name")
       .eq("country_id", cId)
@@ -101,7 +101,9 @@ export function AddressForm({
   }, []);
 
   const fetchCities = React.useCallback(async (sId: number): Promise<GeoOption[]> => {
-    const { data: rows } = await (await cityRepository(supabase))
+    const { data: rows } = await (
+      await cityRepository(supabase)
+    )
       .query()
       .select("id, name")
       .eq("state_id", sId)
@@ -113,7 +115,9 @@ export function AddressForm({
   }, []);
 
   const fetchKecamatan = React.useCallback(async (kabId: number): Promise<GeoOption[]> => {
-    const { data: rows } = await (await subdistrictRepository(supabase))
+    const { data: rows } = await (
+      await subdistrictRepository(supabase)
+    )
       .query()
       .select("id, nama_kecamatan")
       .eq("id_kab_kota", kabId)
@@ -125,7 +129,9 @@ export function AddressForm({
   }, []);
 
   const fetchDesa = React.useCallback(async (kecId: number): Promise<DesaRow[]> => {
-    const { data: rows } = await (await villageRepository(supabase))
+    const { data: rows } = await (
+      await villageRepository(supabase)
+    )
       .query()
       .select("id, nama_desa_kelurahan, kode_pos")
       .eq("id_kecamatan", kecId)
@@ -140,7 +146,6 @@ export function AddressForm({
     return opts;
   }, []);
 
-  // --- Resolusi Otomatis Data Tersimpan (Sekuensial & Case-Insensitive) ---
   React.useEffect(() => {
     const currentSignature = `${data.country || ""}-${data.region || ""}-${data.city || ""}-${data.kecamatan || ""}-${data.desa || ""}`;
 
@@ -152,12 +157,10 @@ export function AddressForm({
 
     (async () => {
       try {
-        // 1. Negara
         const c = countries.find((x) => x.iso2.toLowerCase() === data.country.toLowerCase());
         if (!c) return;
         setCountryId(c.id);
 
-        // 2. Provinsi / State
         const stateOpts = await fetchStates(c.id);
         if (!data.region) return;
         const cleanedRegion = data.region.trim().toLowerCase();
@@ -166,7 +169,6 @@ export function AddressForm({
         const sId = Number(s.value);
         setStateId(sId);
 
-        // 3. Kota / Kabupaten
         const cityOpts = await fetchCities(sId);
         if (!data.city) return;
         const cleanedCity = data.city.trim().toLowerCase();
@@ -177,7 +179,6 @@ export function AddressForm({
 
         if (c.iso2 !== "ID") return;
 
-        // 4. Kecamatan
         const kecamatanOpts = await fetchKecamatan(cId);
         if (!data.kecamatan) return;
         const cleanedKecamatan = data.kecamatan.trim().toLowerCase();
@@ -186,7 +187,6 @@ export function AddressForm({
         const kId = Number(k.value);
         setKecamatanId(kId);
 
-        // 5. Desa
         await fetchDesa(kId);
       } catch (error) {
         console.error("Gagal memuat struktur alamat:", error);
@@ -205,7 +205,6 @@ export function AddressForm({
     fetchDesa
   ]);
 
-  // Pencocokan value Desa secara case-insensitive
   const getDesaValue = () => {
     if (!data.desa || desas.length === 0) return "";
     const cleanedDesa = data.desa.trim().toLowerCase();
@@ -213,13 +212,11 @@ export function AddressForm({
     return found ? String(found.value) : "";
   };
 
-  // Membersihkan angka ".0" di akhir kode pos
   const formatPostalCode = (code: string | null | undefined): string => {
     if (!code) return "";
     return String(code).replace(/\.0$/, "").trim();
   };
 
-  // --- Handlers (Interaksi Pengguna) ---
   const onCountry = (iso2: string) => {
     const c = countries.find((x) => x.iso2 === iso2);
     setCountryId(c?.id ?? null);
@@ -310,7 +307,7 @@ export function AddressForm({
 
   return (
     <div className="space-y-4">
-      {/* Alamat Baris 1 & 2 */}
+      {}
       <div className="space-y-1.5">
         <Label className="text-sm font-medium">{t("line1")}</Label>
         <Input
@@ -333,7 +330,7 @@ export function AddressForm({
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Negara */}
+        {}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">{t("country")}</Label>
           <SearchableSelect
@@ -348,7 +345,7 @@ export function AddressForm({
           {errors.country && <p className="text-destructive mt-1 text-xs">{errors.country}</p>}
         </div>
 
-        {/* Provinsi / State */}
+        {}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">{t("region")}</Label>
           <SearchableSelect
@@ -363,7 +360,7 @@ export function AddressForm({
           {errors.region && <p className="text-destructive mt-1 text-xs">{errors.region}</p>}
         </div>
 
-        {/* Kota / Kabupaten */}
+        {}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">{t("city")}</Label>
           <SearchableSelect
@@ -378,7 +375,7 @@ export function AddressForm({
           {errors.city && <p className="text-destructive mt-1 text-xs">{errors.city}</p>}
         </div>
 
-        {/* Kecamatan (Hanya Indonesia) */}
+        {}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">{t("kecamatan")}</Label>
           <SearchableSelect
@@ -393,7 +390,7 @@ export function AddressForm({
           {errors.kecamatan && <p className="text-destructive mt-1 text-xs">{errors.kecamatan}</p>}
         </div>
 
-        {/* Desa / Kelurahan (Hanya Indonesia) */}
+        {}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">{t("desa")}</Label>
           <SearchableSelect
@@ -408,7 +405,7 @@ export function AddressForm({
           {errors.desa && <p className="text-destructive mt-1 text-xs">{errors.desa}</p>}
         </div>
 
-        {/* Kode Pos */}
+        {}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">{t("postalCode")}</Label>
           <Input

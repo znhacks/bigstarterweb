@@ -1,4 +1,3 @@
-// components/ui/calendar-date-range-picker.tsx
 "use client";
 
 import * as React from "react";
@@ -60,10 +59,8 @@ export default function CalendarDateRangePicker({
   const [open, setOpen] = React.useState(false);
   const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date());
 
-  // Membaca metadata arah layout (RTL / LTR)
   const meta = getLocaleMeta(locale);
 
-  // Menerjemahkan nama menu preset secara dinamis peka-kultur
   const getPresetLabel = (value: string, defaultName: string) => {
     const labels: Record<string, Record<string, string>> = {
       today: { en: "Today", id: "Hari Ini", ar: "اليوم" },
@@ -131,7 +128,6 @@ export default function CalendarDateRangePicker({
       return <span>{placeholders[locale] ?? placeholders["en"]}</span>;
     }
 
-    // SOLUSI: Menggunakan formatDateTime standard BCP-47 peka-kultur kita
     const formatCleanDate = (d: Date) => {
       return formatDateTime(d, locale, {
         day: "numeric",
@@ -188,7 +184,7 @@ export default function CalendarDateRangePicker({
             </Button>
           )}
         </PopoverTrigger>
-        {/* SOLUSI: Suntikkan arah dir (RTL/LTR) murni dari metadata bahasa aktif */}
+        {}
         <PopoverContent className="w-auto" align="end" dir={meta.dir}>
           <div className="flex flex-col lg:flex-row">
             <div className="me-0 lg:me-4">
@@ -204,7 +200,7 @@ export default function CalendarDateRangePicker({
                     onClick={() => changeHandle(item.value)}
                     asChild>
                     <Button variant="ghost" className="w-full justify-start font-normal">
-                      {/* SOLUSI: Menerjemahkan label samping secara peka-kultur */}
+                      {}
                       {getPresetLabel(item.value, item.name)}
                     </Button>
                   </ToggleGroupItem>
@@ -217,7 +213,7 @@ export default function CalendarDateRangePicker({
                   className="mb-4 flex w-full lg:hidden"
                   size="sm"
                   aria-label="Select a value">
-                  {/* SOLUSI: Menerjemahkan placeholder mobile select secara peka-kultur */}
+                  {}
                   <SelectValue placeholder={getPresetLabel("last28Days", "Last 28 Days")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -229,7 +225,7 @@ export default function CalendarDateRangePicker({
                 </SelectContent>
               </Select>
             </div>
-            {/* Kalender otomatis beradaptasi penuh terhadap layout RTL dan awal hari pekan lokal */}
+            {}
             <Calendar
               className="border-s-0 py-0! ps-0! pe-0! lg:border-s lg:ps-4!"
               mode="range"

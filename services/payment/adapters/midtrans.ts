@@ -18,14 +18,11 @@ export class MidtransAdapter implements PaymentProvider {
   }
 
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
-    // IDR-native one-time charge: diskon/pro-rata langsung diterapkan via customPrice
     const amount = params.customPrice ?? params.baseAmount ?? 0;
     if (!amount) {
       throw new Error("Midtrans: amount tidak boleh 0 (customPrice/baseAmount wajib)");
     }
 
-    // order_id hanya untuk keunikan & tampilan. tenantId/planId/interval/couponCode
-    // disimpan penuh di custom_field (bukan di order_id) agar tidak terpotong.
     const orderId = `MID-${Date.now()}-${params.tenantId.substring(0, 8)}`;
     const authHeader = Buffer.from(`${this.serverKey}:`).toString("base64");
 
@@ -48,7 +45,7 @@ export class MidtransAdapter implements PaymentProvider {
           finish: params.successUrl,
           cancel: params.cancelUrl
         },
-        // Key pendek agar muat dalam batas 100 char custom_field Midtrans
+
         custom_field1: JSON.stringify({
           t: params.tenantId,
           p: params.planId,
@@ -65,14 +62,12 @@ export class MidtransAdapter implements PaymentProvider {
 
     const data = await response.json();
     return {
-      checkoutUrl: data.redirect_url, // URL Snap Midtrans
+      checkoutUrl: data.redirect_url,
       sessionId: orderId
     };
   }
 
   async handleWebhook(req: Request): Promise<UnifiedWebhookResult> {
-    // FAIL-CLOSED: server key kosong membuat signature dapat di-forging
-    // (signature dihitung atas sha512(... + ""), yang bisa dihitung penyerang).
     if (!this.serverKey) {
       throw new Error(
         "[midtrans] MIDTRANS_SERVER_KEY belum diset — verifikasi signature webhook WAJIB. SET env ini sebelum menerima webhook."
@@ -81,7 +76,6 @@ export class MidtransAdapter implements PaymentProvider {
 
     const payload = await req.json();
 
-    // Verifikasi Signature SHA512 Midtrans + timing-safe compare.
     const signatureSource = `${payload.order_id}${payload.status_code}${payload.gross_amount}${this.serverKey}`;
     const localSignature = crypto.createHash("sha512").update(signatureSource).digest("hex");
 
@@ -95,7 +89,6 @@ export class MidtransAdapter implements PaymentProvider {
       throw new Error("Invalid Midtrans signature key");
     }
 
-    // Ambil context penuh dari custom_field (bukan dari order_id yg terpotong)
     let tenantId = "";
     let planId: string | undefined;
     let interval: SubscriptionInterval | undefined;
@@ -106,14 +99,11 @@ export class MidtransAdapter implements PaymentProvider {
       tenantId = ctx.t || "";
       planId = ctx.p;
       interval = ctx.i;
-    } catch {
-      // custom_field1 bukan JSON valid — biarkan kosong
-    }
+    } catch {}
     if (payload.custom_field2) {
       couponCode = payload.custom_field2 || undefined;
     }
 
-    // Pencocokan status pembayaran Midtrans
     const transactionStatus = payload.transaction_status;
     const fraudStatus = payload.fraud_status;
     let status = "failed";
@@ -144,7 +134,7 @@ export class MidtransAdapter implements PaymentProvider {
       amount: parseFloat(payload.gross_amount),
       currency: "IDR",
       orderId: payload.order_id,
-      // Field di bawah ini diset undefined karena Midtrans Snap menggunakan tipe invoice sekali bayar (one-time checkout)
+
       endsAt: undefined,
       providerSubscriptionId: undefined,
       providerCustomerId: undefined
@@ -152,12 +142,10 @@ export class MidtransAdapter implements PaymentProvider {
   }
 
   async cancelSubscription(providerSubscriptionId: string): Promise<boolean> {
-    // Midtrans Snap bersifat one-time charge, return true langsung
     return true;
   }
 
   async reactivateSubscription(providerSubscriptionId: string): Promise<boolean> {
-    // Midtrans Snap bersifat one-time charge, return true langsung
     return true;
   }
 }

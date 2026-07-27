@@ -12,6 +12,16 @@ export class PaddleAdapter implements PaymentProvider {
   private apiKey = process.env.PADDLE_API_KEY;
   private webhookSecret = process.env.PADDLE_WEBHOOK_SECRET;
   private mode = process.env.PADDLE_MODE || "sandbox";
+  private hostedCheckoutUrl = process.env.PADDLE_HOSTED_CHECKOUT_URL;
+
+  constructor() {
+    if (!this.hostedCheckoutUrl) {
+      console.warn(
+        "[paddle] PADDLE_HOSTED_CHECKOUT_URL belum diset di environment variable. " +
+          "Sistem akan otomatis menggunakan fallback URL bawaan Paddle."
+      );
+    }
+  }
 
   private get baseUrl() {
     return this.mode === "live" ? "https://api.paddle.com" : "https://sandbox-api.paddle.com";
@@ -27,15 +37,12 @@ export class PaddleAdapter implements PaymentProvider {
     try {
       const paddlePriceId = params.providerPriceId;
       if (!paddlePriceId) {
-        // Paddle Billing berbasis price object — tidak mendukung payment-only tanpa price.
-        // Untuk provider payment-only (tanpa setup plan provider), gunakan Mayar/Midtrans/Xendit/Stripe.
         throw new Error(
           `Paddle memerlukan Price ID (payment-only tanpa price tidak didukung Paddle Billing). ` +
             `Konfigurasi provider_ids.paddle di plan_prices, atau gunakan provider lain.`
         );
       }
 
-      // Ambil Price object Paddle untuk mengetahui currency & nominal asli (akurat untuk diskon).
       const priceRes = await fetch(`${this.baseUrl}/prices/${paddlePriceId}`, {
         headers: { Authorization: `Bearer ${this.apiKey}` }
       });
@@ -46,9 +53,8 @@ export class PaddleAdapter implements PaymentProvider {
       }
       const priceData = await priceRes.json();
       const priceCurrency = (priceData?.data?.currency_code || "USD").toUpperCase();
-      const priceUnitCents = priceData?.data?.unit_price?.amount ?? 0; // Paddle simpan dalam cents
+      const priceUnitCents = priceData?.data?.unit_price?.amount ?? 0;
 
-      // Diskon first-cycle bila customPrice < baseAmount
       let discounts: { id: string }[] | undefined;
       if (
         params.customPrice !== undefined &&
@@ -65,7 +71,6 @@ export class PaddleAdapter implements PaymentProvider {
         }
       }
 
-      // Membangun request body secara dinamis guna menghindari pengiriman parameter kosong/null
       const requestBody: any = {
         items: [{ price_id: paddlePriceId, quantity: 1 }],
         custom_data: {
@@ -95,7 +100,6 @@ export class PaddleAdapter implements PaymentProvider {
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
 
-        // Mengekstrak informasi terperinci langsung dari struktur respon error API Paddle v3
         const errDetail = err.error?.detail || err.error?.message || response.statusText;
         const errCode = err.error?.code ? ` [Code: ${err.error.code}]` : "";
 
@@ -111,8 +115,16 @@ export class PaddleAdapter implements PaymentProvider {
       }
 
       const data = await response.json();
-      const checkoutUrl =
-        data.data.checkout?.url || `${this.checkoutHost}/checkout/transact/${data.data.id}`;
+
+      let checkoutUrl = "";
+
+      if (this.hostedCheckoutUrl) {
+        const separator = this.hostedCheckoutUrl.includes("?") ? "&" : "?";
+        checkoutUrl = `${this.hostedCheckoutUrl}${separator}transaction_id=${data.data.id}`;
+      } else {
+        checkoutUrl =
+          data.data.checkout?.url || `${this.checkoutHost}/checkout/transact/${data.data.id}`;
+      }
 
       return {
         checkoutUrl,
@@ -152,14 +164,12 @@ export class PaddleAdapter implements PaymentProvider {
   async handleWebhook(req: Request): Promise<UnifiedWebhookResult> {
     const rawBody = await req.text();
 
-    // FAIL-CLOSED: tanpa PADDLE_WEBHOOK_SECRET, signature TIDAK dapat diverifikasi.
     if (!this.webhookSecret) {
       throw new Error(
         "[paddle] PADDLE_WEBHOOK_SECRET belum diset — verifikasi signature webhook WAJIB. SET env ini sebelum menerima webhook."
       );
     }
 
-    // Verifikasi signature Paddle (format: "ts=...;h1=...") + timing-safe compare.
     const sigHeader = req.headers.get("paddle-signature") || "";
     const parts = Object.fromEntries(sigHeader.split(";").map((kv) => kv.split("=")));
     const ts = parts.ts;
@@ -167,7 +177,7 @@ export class PaddleAdapter implements PaymentProvider {
     if (!ts || !h1) {
       throw new Error("Missing Paddle signature");
     }
-    // Replay defense: tolak webhook stale (>5 menit dari timestamp Paddle).
+
     const tsMs = Number(ts);
     if (!Number.isFinite(tsMs) || Math.abs(Date.now() - tsMs) > 5 * 60 * 1000) {
       throw new Error("Paddle webhook stale (replay ditolak)");
@@ -205,7 +215,6 @@ export class PaddleAdapter implements PaymentProvider {
       eventType = "payment.failed";
     }
 
-    // Ekstraksi tanggal perpanjangan / habis masa aktif dari skema Paddle Billing
     const endsAt = data.next_billed_at || data.current_billing_period?.ends_at || undefined;
 
     return {
@@ -248,7 +257,6 @@ export class PaddleAdapter implements PaymentProvider {
 
   async reactivateSubscription(providerSubscriptionId: string): Promise<boolean> {
     try {
-      // Undo scheduled cancellation: hapus scheduled_change (Paddle Billing update subscription)
       const response = await fetch(`${this.baseUrl}/subscriptions/${providerSubscriptionId}`, {
         method: "PATCH",
         headers: {

@@ -22,16 +22,13 @@ interface UseDataTableOptions<TData, TValue> {
   initialSorting?: SortingState;
   initialColumnVisibility?: VisibilityState;
   initialPageSize?: number;
-  /** Turn off if you're doing server-side sorting/filtering/pagination yourself. */
+
   manualPagination?: boolean;
   manualSorting?: boolean;
   manualFiltering?: boolean;
   pageCount?: number;
 }
 
-// Just the TanStack Table setup. Nothing about how it renders.
-// Own this file — add/remove row models, plug in server-side pagination,
-// whatever your case needs. It's a hook, not a black box.
 export function useDataTable<TData, TValue>({
   columns,
   data,

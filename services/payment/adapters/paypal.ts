@@ -48,9 +48,6 @@ export class PayPalAdapter implements PaymentProvider {
     return this.mode === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
   }
 
-  /**
-   * Mengambil Access Token OAuth2 dari PayPal
-   */
   private async getAccessToken(): Promise<string> {
     const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString("base64");
     const response = await fetch(`${this.baseUrl}/v1/oauth2/token`, {
@@ -73,16 +70,13 @@ export class PayPalAdapter implements PaymentProvider {
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
     const token = await this.getAccessToken();
 
-    // ID plan PayPal di sisi provider (OPSIONAL). Bila tidak ada → payment-only via Orders API.
     const paypalPlanId = params.providerPriceId;
 
-    // 1. Nominal IDR (diskon/pro-rata sudah terpotong di customPrice)
     const amountInIdr = params.customPrice ?? params.baseAmount ?? 0;
     if (!amountInIdr) {
       throw new Error("PayPal: amount tidak boleh 0 (customPrice/baseAmount wajib)");
     }
 
-    // 2. Konversi nominal Rupiah ke USD secara real-time
     const exchange = await convertIdrToCurrency(amountInIdr, "USD");
     const usdValue = exchange.convertedAmount.toFixed(2);
     const customId = encodeCustomId(
@@ -96,7 +90,6 @@ export class PayPalAdapter implements PaymentProvider {
     let sessionId = "";
 
     if (paypalPlanId) {
-      // === Provider-managed recurring ===
       const requestBody: any = {
         plan_id: paypalPlanId,
         subscriber: { email_address: params.userEmail },
@@ -142,7 +135,6 @@ export class PayPalAdapter implements PaymentProvider {
       approveUrl = approveLink.href;
       sessionId = data.id;
     } else {
-      // === Payment-only: Orders API one-time (TANPA plan PayPal) ===
       const orderBody = {
         intent: "CAPTURE",
         purchase_units: [
@@ -153,7 +145,6 @@ export class PayPalAdapter implements PaymentProvider {
           }
         ],
         application_context: {
-          // --- PERBAIKAN 1: UBAH TOMBOL MENJADI "BAYAR SEKARANG" (PAY_NOW) ---
           user_action: "PAY_NOW",
           shipping_preference: "NO_SHIPPING",
           return_url: params.successUrl,
@@ -193,9 +184,6 @@ export class PayPalAdapter implements PaymentProvider {
     headers: Headers,
     token: string
   ): Promise<boolean> {
-    // --- BYPASS UNTUK MODE SANDBOX (MEMUDAHKAN TESTING LOKAL) ---
-    // PayPal Sandbox memiliki bug sertifikat yang sering menggagalkan verifikasi signature di localhost.
-    // Kita bypass demi kelancaran testing, tetapi wajib aktif dan aman saat Live Mode (Produksi).
     if (this.mode !== "live") {
       console.warn(
         "[paypal] Sandbox mode detected. Webhook signature verification bypassed for ease of local testing."
@@ -253,11 +241,10 @@ export class PayPalAdapter implements PaymentProvider {
 
     const payload = JSON.parse(rawBody);
 
-    // --- PERBAIKAN 2: AMBIL CUSTOM_ID DARI DALAM PURCHASE_UNITS ---
     const customIdRaw =
       payload.resource?.custom_id ||
       payload.resource?.custom ||
-      payload.resource?.purchase_units?.[0]?.custom_id || // Ambil dari array item pertama purchase_units
+      payload.resource?.purchase_units?.[0]?.custom_id ||
       "";
 
     const ctx = decodeCustomId(customIdRaw);
@@ -322,11 +309,6 @@ export class PayPalAdapter implements PaymentProvider {
       payload.resource?.billing_info?.last_payment_amount?.currency_code ||
       "USD";
 
-    // Stable id untuk lookup payment_orders + deteksi recurring:
-    // - SALE (pembayaran subscription) → billing_agreement_id (I-XXX) = subscription id
-    //   yg disimpan saat checkout (resource.id sale = S-XXX, TIDAK match).
-    // - CAPTURE (orders) → supplementary_data.related_ids.order_id = order id.
-    // - fallback → resource.id.
     const stableId =
       payload.resource?.billing_agreement_id ||
       payload.resource?.supplementary_data?.related_ids?.order_id ||

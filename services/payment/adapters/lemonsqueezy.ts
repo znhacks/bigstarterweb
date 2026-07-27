@@ -16,17 +16,12 @@ export class LemonSqueezyAdapter implements PaymentProvider {
     try {
       const variantId = params.providerPriceId;
       if (!variantId) {
-        // LemonSqueezy berbasis variant — tidak mendukung payment-only tanpa variant.
-        // Untuk provider payment-only (tanpa setup plan provider), gunakan Mayar/Midtrans/Xendit/Stripe.
         throw new Error(
           `LemonSqueezy memerlukan Variant ID (payment-only tanpa variant tidak didukung). ` +
             `Konfigurasi provider_ids.lemonsqueezy di plan_prices, atau gunakan provider lain.`
         );
       }
 
-      // Diskon first-cycle via custom_price (cents) — hanya bila benar ada diskon (customPrice < baseAmount).
-      // Catatan: variant harus mengizinkan custom price di dashboard LemonSqueezy; bila tidak,
-      // harga normal dipakai & diskon hilang (di-warn).
       let customPriceCents: number | undefined;
       if (
         params.customPrice !== undefined &&
@@ -94,14 +89,13 @@ export class LemonSqueezyAdapter implements PaymentProvider {
     const signature = req.headers.get("x-signature") || "";
 
     const secret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET;
-    // FAIL-CLOSED: secret kosong membuat HMAC dapat di-forging (HMAC atas "").
+
     if (!secret) {
       throw new Error(
         "[lemonsqueezy] LEMONSQUEEZY_WEBHOOK_SECRET belum diset — verifikasi signature webhook WAJIB. SET env ini sebelum menerima webhook."
       );
     }
 
-    // Verifikasi HMAC SHA256 Lemon Squeezy + timing-safe compare.
     const digest = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
     const sigBuf = Buffer.from(signature, "hex");
     const expBuf = Buffer.from(digest, "hex");
@@ -132,7 +126,6 @@ export class LemonSqueezyAdapter implements PaymentProvider {
       eventType = "subscription.updated";
     }
 
-    // Ekstraksi tanggal berakhir atau tanggal siklus tagihan berikutnya
     const endsAt = attributes.ends_at || attributes.renews_at || undefined;
 
     return {
@@ -153,7 +146,6 @@ export class LemonSqueezyAdapter implements PaymentProvider {
 
   async cancelSubscription(providerSubscriptionId: string): Promise<boolean> {
     try {
-      // PATCH cancelled:true = batalkan di akhir periode (bukan DELETE immediate), agar bisa di-resume
       const response = await fetch(`${this.baseUrl}/subscriptions/${providerSubscriptionId}`, {
         method: "PATCH",
         headers: {
@@ -178,7 +170,6 @@ export class LemonSqueezyAdapter implements PaymentProvider {
 
   async reactivateSubscription(providerSubscriptionId: string): Promise<boolean> {
     try {
-      // Resume: set cancelled kembali ke false
       const response = await fetch(`${this.baseUrl}/subscriptions/${providerSubscriptionId}`, {
         method: "PATCH",
         headers: {

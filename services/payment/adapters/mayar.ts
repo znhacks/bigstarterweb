@@ -18,13 +18,11 @@ export class MayarAdapter implements PaymentProvider {
 
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSessionResult> {
     try {
-      // IDR-native one-time charge: diskon/pro-rata langsung diterapkan via customPrice
       const amount = params.customPrice ?? params.baseAmount ?? 0;
       if (!amount) {
         throw new Error("Mayar: amount tidak boleh 0 (customPrice/baseAmount wajib)");
       }
 
-      // Membuat pembayaran kustom menggunakan API Mayar
       const response = await fetch(`${this.baseUrl}/payment`, {
         method: "POST",
         headers: {
@@ -32,7 +30,7 @@ export class MayarAdapter implements PaymentProvider {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          name: params.userEmail.split("@")[0], // Fallback nama dari email
+          name: params.userEmail.split("@")[0],
           email: params.userEmail,
           amount: amount,
           description: `Subscription ${params.planName ?? params.planId} - ${params.interval}`,
@@ -54,7 +52,7 @@ export class MayarAdapter implements PaymentProvider {
 
       const data = await response.json();
       return {
-        checkoutUrl: data.payment_url, // URL halaman pembayaran Mayar
+        checkoutUrl: data.payment_url,
         sessionId: data.id
       };
     } catch (e: any) {
@@ -71,14 +69,12 @@ export class MayarAdapter implements PaymentProvider {
 
     const token = req.headers.get("x-mayar-token");
 
-    // Verifikasi token webhook demi keamanan
     if (token !== process.env.MAYAR_WEBHOOK_TOKEN) {
       throw new Error("Unauthorized Mayar Webhook Token");
     }
 
     const payload = await req.json();
 
-    // Petakan status transaksi dari Mayar ke status sistem kita
     const status =
       payload.status === "settlement" || payload.status === "success" ? "paid" : "failed";
 
@@ -96,7 +92,7 @@ export class MayarAdapter implements PaymentProvider {
       amount: payload.amount,
       currency: "IDR",
       orderId: payload.id,
-      // Diisi undefined karena tipe transaksi default di Mayar (dalam skema ini) bersifat one-time charge
+
       endsAt: undefined,
       providerSubscriptionId: undefined,
       providerCustomerId: undefined
@@ -104,14 +100,10 @@ export class MayarAdapter implements PaymentProvider {
   }
 
   async cancelSubscription(providerSubscriptionId: string): Promise<boolean> {
-    // Mayar payment link defaultnya adalah one-time charge,
-    // pembatalan subscription dikembalikan true secara otomatis
     return true;
   }
 
   async reactivateSubscription(providerSubscriptionId: string): Promise<boolean> {
-    // Mayar payment link defaultnya adalah one-time charge,
-    // reaktivasi subscription dikembalikan true secara otomatis
     return true;
   }
 }

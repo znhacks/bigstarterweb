@@ -1,11 +1,10 @@
-// /services/currency/frankfurter-service.ts
 import { ICurrencyRateService, CurrencyRates } from "./types";
 
 export class FrankfurterCurrencyService implements ICurrencyRateService {
   async getLatestRates(base: string): Promise<CurrencyRates> {
     try {
       const response = await fetch(`https://api.frankfurter.app/latest?from=${base}`, {
-        next: { revalidate: 3600 } // Dukungan caching Next.js jika digunakan pada runtime
+        next: { revalidate: 3600 }
       });
 
       if (!response.ok) {
@@ -20,7 +19,6 @@ export class FrankfurterCurrencyService implements ICurrencyRateService {
       };
     } catch (error) {
       console.error("Gagal mengambil kurs dari Frankfurter API, beralih ke fallback:", error);
-      // Lempar error agar ditangani oleh registry/registry fallback
       throw error;
     }
   }

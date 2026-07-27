@@ -19,30 +19,22 @@ export interface SelectOption {
 }
 
 interface EditableCellProps {
-  /** Nilai mentah saat ini. */
   value: string | null | undefined;
-  /** Tampilan saat tidak editing (ReactNode). */
+
   displayValue: React.ReactNode;
-  /** Boleh diedit? (sudah memperhitungkan RBAC + kepemilikan). */
+
   enabled: boolean;
   editor: Editor;
   options?: SelectOption[];
-  /** Dipanggil saat nilai di-commit. */
+
   onCommit: (next: string | null) => void;
-  /** Dipanggil saat isi sel diklik sekali (buka detail). */
+
   onView: () => void;
   className?: string;
 }
 
 const NONE = "__none__";
 
-/**
- * Sel tabel yang dapat diedit in-place.
- * - Klik tunggal pada isi sel  -> onView (buka detail).
- * - Klik ganda pada sel        -> mode edit (jika enabled).
- * Kedua gestur dibedakan lewat timer (klik tunggal di-cancel bila
- * menyusul klik ganda).
- */
 export function EditableCell({
   value,
   displayValue,
@@ -83,9 +75,7 @@ export function EditableCell({
 
   if (isEditing && enabled) {
     return (
-      <div
-        onClick={(e) => e.stopPropagation()}
-        onDoubleClick={(e) => e.stopPropagation()}>
+      <div onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         {editor === "text" && (
           <TextEditor
             value={value ?? ""}
@@ -188,7 +178,6 @@ function DateEditor({
     if (!draft) {
       onCommit(null);
     } else {
-      // Simpan sebagai UTC tengah malam agar konsisten lintas zona.
       onCommit(`${draft}T00:00:00.000Z`);
     }
   };
@@ -257,7 +246,6 @@ function toDateInputValue(iso: string): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Sel hanya-baca: klik tunggal tetap membuka detail, tanpa mode edit. */
 export function ReadonlyCell({
   displayValue,
   onView,

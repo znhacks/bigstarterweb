@@ -78,7 +78,6 @@ export function DataTableViewOptions<TData>({
               className="cursor-pointer capitalize"
               checked={column.getIsVisible()}
               onCheckedChange={(value) => column.toggleVisibility(!!value)}
-              // SOLUSI: Cegah aksi penutupan dropdown bawaan Radix UI saat item diklik
               onSelect={(event) => event.preventDefault()}>
               {(column.columnDef.meta as { label?: string })?.label ?? column.id}
             </DropdownMenuCheckboxItem>

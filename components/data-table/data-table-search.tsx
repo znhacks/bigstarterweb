@@ -14,9 +14,6 @@ interface DataTableSearchProps<TData> {
   className?: string;
 }
 
-// Optional convenience piece — the Enter/button-triggered search pattern.
-// If you need something else (debounce, global search, server-side query),
-// just write your own <Input onChange={...}> directly. This isn't required.
 export function DataTableSearch<TData>({
   table,
   columnId,

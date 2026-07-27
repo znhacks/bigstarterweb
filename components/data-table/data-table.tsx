@@ -16,10 +16,6 @@ interface DataTableProps<TData> {
   noResultsText?: string;
 }
 
-// This is the whole "reusable" surface for rendering. Everything else —
-// search box, filters, columns dropdown, pagination, bulk-action bar —
-// is written directly in your own page/feature component using the
-// `table` instance you already have from useDataTable(). Hardcode away.
 export function DataTable<TData>({
   table,
   columns,

@@ -8,8 +8,6 @@ import {
 import { convertIdrToCurrency } from "../../exchange-rate";
 import Stripe from "stripe";
 
-// Cache coupon Stripe berdasarkan (currency, amount_off_cents) agar tidak membuat
-// object Coupon baru untuk nilai diskon yg sama berulang-ulang.
 const couponCache = new Map<string, string>();
 
 export class StripeAdapter implements PaymentProvider {
@@ -37,7 +35,6 @@ export class StripeAdapter implements PaymentProvider {
       let discounts: Stripe.Checkout.SessionCreateParams.Discount[] = [];
 
       if (stripePriceId) {
-        // === Provider-managed recurring: pakai Price ID bawaan Stripe + Coupon utk diskon ===
         const price = await this.stripe.prices.retrieve(stripePriceId);
         const priceCurrency = (price.currency || "usd").toUpperCase();
         const priceUnitAmountCents = price.unit_amount ?? 0;
@@ -58,8 +55,6 @@ export class StripeAdapter implements PaymentProvider {
           }
         }
       } else {
-        // === Payment-only: inline price_data (TANPA pre-create Price di Stripe) ===
-        // Plan milik kita; Stripe hanya alat pembayaran. Amount = customPrice (diskon langsung di unit_amount).
         const chargeIdr = params.customPrice ?? params.baseAmount ?? 0;
         if (!chargeIdr) {
           throw new Error("Stripe: amount tidak boleh 0 (customPrice/baseAmount wajib)");
@@ -134,7 +129,6 @@ export class StripeAdapter implements PaymentProvider {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature") || "";
 
-    // Validasi signature webhook Stripe
     const event = this.stripe.webhooks.constructEvent(
       body,
       signature,
@@ -159,14 +153,11 @@ export class StripeAdapter implements PaymentProvider {
       eventType = "payment.failed";
     }
 
-    // Ekstraksi UNIX timestamp masa aktif berikutnya ke format ISO string
     let endsAt: string | undefined = undefined;
     if (obj.current_period_end) {
       endsAt = new Date(obj.current_period_end * 1000).toISOString();
     }
 
-    // Tentukan ID Subscription yang stabil:
-    // Jika event dipicu langsung oleh objek subscription, ambil obj.id
     const providerSubscriptionId =
       obj.subscription || (event.type.startsWith("customer.subscription.") ? obj.id : undefined);
 

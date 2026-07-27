@@ -26,12 +26,9 @@ function setThemeCookie(key: string, value: string | null) {
 type ThemeContextType = {
   theme: ThemeType;
   setTheme: (theme: ThemeType) => void;
-  /** Reset: hapus profile.theme ({}) → tenant/default mewarisi. */
   resetTheme: () => void;
-  /** Save eksplisit: persist theme saat ini ke profiles.theme. */
   saveTheme: () => Promise<void>;
   isSaving: boolean;
-  /** Source of the current theme: "user" | "tenant" | "default". */
   themeSource: string;
 };
 
@@ -51,7 +48,6 @@ export function ActiveThemeProvider({
   const [isSaving, setIsSaving] = useState(false);
   const themeRequestRef = useRef(0);
 
-  // --- Fetch DB-resolved theme (custom user > tenant > default) ---
   const applyDbTheme = useCallback(async (tenantContext?: { id?: string; slug?: string }) => {
     const requestId = ++themeRequestRef.current;
     try {
@@ -60,8 +56,6 @@ export function ActiveThemeProvider({
       } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Extract tenant_slug dari URL — lebih reliable daripada localStorage active_org_id
-      // yg bisa stale saat pindah tenant via navigasi.
       const pathParts = window.location.pathname.split("/").filter(Boolean);
       const tenantSlug = tenantContext?.slug || pathParts[0] || "";
       const tenantId = tenantContext?.id || localStorage.getItem("active_org_id") || "";
@@ -81,13 +75,9 @@ export function ActiveThemeProvider({
         setThemeState(res.theme as ThemeType);
         setThemeSource(res.source || "default");
       }
-    } catch {
-      // Silent fail → keep current theme.
-    }
+    } catch {}
   }, []);
 
-  // Re-fetch theme saat path berubah (pindah tenant = URL berubah).
-  // Debounced: mount = immediate; navigasi = delay 300ms.
   const pathname = usePathname();
   const isFirstRender = useRef(true);
 
@@ -101,7 +91,6 @@ export function ActiveThemeProvider({
     return () => clearTimeout(timer);
   }, [pathname, applyDbTheme]);
 
-  // Juga dengarkan event "storage" utk perubahan programmatic (e.g. org switch tanpa navigasi).
   useEffect(() => {
     const handler = (event: Event) => {
       const customEvent = event as CustomEvent<{ tenantId?: string; tenantSlug?: string }>;
@@ -115,7 +104,6 @@ export function ActiveThemeProvider({
     };
   }, [applyDbTheme]);
 
-  // --- Apply theme to body + cookies (SSR-consistent) ---
   useEffect(() => {
     const body = document.body;
 
@@ -148,14 +136,10 @@ export function ActiveThemeProvider({
     }
   }, [theme.preset, theme.radius, theme.scale, theme.contentLayout]);
 
-  // --- setTheme: LOCAL PREVIEW ONLY (cookies + body attributes) ---
-  // TIDAK auto-save ke DB. Hanya Save eksplisit (appearance page) yg persist.
-  // Ini mencegah profiles.theme terisi secara tak sengaja → menutupi tenant theme.
   const setTheme = (next: ThemeType) => {
     setThemeState(next);
   };
 
-  // --- resetTheme: hapus profile.theme ({}) → tenant/default mewarisi ---
   const resetTheme = async () => {
     setThemeState({ ...DEFAULT_THEME });
     setThemeSource("default");
@@ -172,12 +156,11 @@ export function ActiveThemeProvider({
         },
         body: JSON.stringify({ theme: {}, scope: "user" })
       });
-      // Re-fetch utk apply tenant/default theme
+
       setTimeout(() => applyDbTheme(), 300);
     } catch {}
   };
 
-  // --- saveTheme: persist current theme ke profiles.theme (explicit save) ---
   const saveTheme = async () => {
     setIsSaving(true);
     try {

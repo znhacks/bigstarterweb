@@ -1,5 +1,3 @@
-// services/currency/frankfurterRateService.ts
-// Provider kurs Frankfurter (gratis, tanpa API key). https://frankfurter.dev
 import type { ICurrencyRateService } from "@/interfaces/currency-rate";
 
 const ENDPOINT = "https://api.frankfurter.dev/v1/latest";

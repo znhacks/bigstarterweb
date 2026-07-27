@@ -32,7 +32,7 @@ interface RestoreDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   kind: Kind;
-  /** Dipanggil setelah restore berhasil (mis. untuk refresh list utama). */
+
   onRestored?: () => void;
 }
 
@@ -40,9 +40,7 @@ export function RestoreDialog({ open, onOpenChange, kind, onRestored }: RestoreD
   const t = useTranslations("common.restore");
   const locale = useLocale();
   const tz =
-    typeof window !== "undefined"
-      ? Intl.DateTimeFormat().resolvedOptions().timeZone
-      : "UTC";
+    typeof window !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC";
 
   const [rows, setRows] = useState<DeletedRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,8 +48,7 @@ export function RestoreDialog({ open, onOpenChange, kind, onRestored }: RestoreD
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res =
-      kind === "user" ? await listDeletedUsers() : await listDeletedTenants();
+    const res = kind === "user" ? await listDeletedUsers() : await listDeletedTenants();
     if (res.data) {
       setRows(
         res.data.map((r: any) => ({
@@ -83,9 +80,7 @@ export function RestoreDialog({ open, onOpenChange, kind, onRestored }: RestoreD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>
-            {kind === "user" ? t("deletedUsers") : t("deletedOrgs")}
-          </DialogTitle>
+          <DialogTitle>{kind === "user" ? t("deletedUsers") : t("deletedOrgs")}</DialogTitle>
           <DialogDescription>{t("desc")}</DialogDescription>
         </DialogHeader>
 
@@ -104,8 +99,7 @@ export function RestoreDialog({ open, onOpenChange, kind, onRestored }: RestoreD
                     <p className="truncate text-sm font-medium">{r.name}</p>
                     {r.deleted_at && (
                       <p className="text-muted-foreground text-xs">
-                        {t("deletedOn")}:{" "}
-                        {formatToUserTimezone(r.deleted_at, tz, locale)}
+                        {t("deletedOn")}: {formatToUserTimezone(r.deleted_at, tz, locale)}
                       </p>
                     )}
                   </div>

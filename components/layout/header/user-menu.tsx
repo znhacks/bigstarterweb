@@ -25,7 +25,6 @@ import {
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 
-// Impor klien Supabase Anda
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/hooks/use-session";
 import { useTranslations } from "next-intl";
@@ -33,7 +32,6 @@ import { useTranslations } from "next-intl";
 export default function UserMenu() {
   const router = useRouter();
 
-  // Sesi user dari SessionProvider (single source of truth).
   const { user: sessionUser, loaded } = useSession();
   const email = sessionUser?.email ?? "";
   const fullName = sessionUser?.name ?? "";
@@ -41,15 +39,12 @@ export default function UserMenu() {
   const isLoading = !loaded;
   const t = useTranslations("menu");
 
-  // Handler keluar akun (Log out)
   const handleLogOut = async () => {
     try {
       await supabase.auth.signOut();
 
-      // Bersihkan juga ID organisasi aktif dari penyimpanan lokal
       localStorage.removeItem("active_org_id");
 
-      // Redirect ke halaman login v2
       router.push("/login");
       router.refresh();
     } catch (error) {
@@ -57,7 +52,6 @@ export default function UserMenu() {
     }
   };
 
-  // Helper untuk menghasilkan inisial nama secara otomatis (misal: "Daffa Ryadi" -> "DR")
   const getInitials = (name: string) => {
     if (!name) return "U";
     return name
@@ -80,7 +74,7 @@ export default function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Avatar className="cursor-pointer border">
-          {/* RENDER AVATAR USER DARI SUPABASE JIKA ADA */}
+          {}
           {avatar ? (
             <AvatarImage src={avatar} alt={fullName} className="object-cover" />
           ) : (

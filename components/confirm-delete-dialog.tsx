@@ -18,25 +18,14 @@ import { Loader2 } from "lucide-react";
 interface ConfirmDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Judul dialog. */
   title?: string;
-  /** Deskripsi (boleh berisi {name}). */
   description?: string;
-  /** Nama yang harus diketik setelah kata "delete" (mis. "Acme Inc"). */
   confirmName: string;
-  /** Label tombol destruktif. */
   actionLabel?: string;
-  /** Dipanggil saat konfirmasi (input cocok). */
   onConfirm: () => void | Promise<void>;
-  /** State loading di tombol. */
   loading?: boolean;
 }
 
-/**
- * Dialog konfirmasi destruktif dgn "type-to-confirm":
- * user harus mengetik persis `delete {confirmName}` (case-insensitive, trim)
- * agar tombol hapus aktif.
- */
 export function ConfirmDeleteDialog({
   open,
   onOpenChange,
@@ -50,15 +39,11 @@ export function ConfirmDeleteDialog({
   const t = useTranslations("common.confirmDelete");
   const [value, setValue] = useState("");
 
-  // Reset input setiap kali dialog dibuka.
   useEffect(() => {
     if (open) setValue("");
   }, [open, confirmName]);
 
-  const required = useMemo(
-    () => `delete ${confirmName}`.trim().toLowerCase(),
-    [confirmName]
-  );
+  const required = useMemo(() => `delete ${confirmName}`.trim().toLowerCase(), [confirmName]);
   const matches = value.trim().toLowerCase() === required;
 
   const placeholder = t("placeholder", { phrase: `delete ${confirmName}` });
@@ -81,7 +66,9 @@ export function ConfirmDeleteDialog({
             className="h-9"
             autoComplete="off"
           />
-          <p className="text-muted-foreground text-xs">{t("hint", { phrase: `delete ${confirmName}` })}</p>
+          <p className="text-muted-foreground text-xs">
+            {t("hint", { phrase: `delete ${confirmName}` })}
+          </p>
         </div>
 
         <AlertDialogFooter>

@@ -1,8 +1,3 @@
-// /services/currency/exchangerate-api-service.ts
-//
-// Provider kurs utama. Memakai exchangerate-api (v6) yang mendukung IDR sebagai base,
-// sehingga konversi display IDR -> USD/SAR berfungsi (Frankfurter tidak support IDR base).
-// Env: EXCHANGERATE_API_KEY
 import { ICurrencyRateService, CurrencyRates } from "./types";
 
 export class ExchangeRateApiCurrencyService implements ICurrencyRateService {
@@ -13,7 +8,6 @@ export class ExchangeRateApiCurrencyService implements ICurrencyRateService {
       throw new Error("EXCHANGERATE_API_KEY is not configured");
     }
 
-    // Endpoint /latest/{BASE} mengembalikan conversion_rates dari BASE ke semua mata uang.
     const url = `https://v6.exchangerate-api.com/v6/${this.apiKey}/latest/${base.toUpperCase()}`;
     const response = await fetch(url, { next: { revalidate: 3600 } });
 

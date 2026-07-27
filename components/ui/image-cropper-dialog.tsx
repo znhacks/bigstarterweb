@@ -1,4 +1,3 @@
-// ./components/ui/image-cropper-dialog.tsx
 "use client";
 
 import * as React from "react";
@@ -16,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Upload, Link2, RotateCw, ZoomIn, ArrowLeft } from "lucide-react";
 
-// Impor React Cropper & CSS bawaannya
 import Cropper, { ReactCropperElement } from "react-cropper";
 import "cropperjs/dist/cropper.css";
 
@@ -36,14 +34,12 @@ export function ImageCropperDialog({
   const cropperRef = useRef<ReactCropperElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // State Manajemen Pemuatan Berkas
   const [imageSrc, setImageSrc] = useState<string | null>(initialImageSrc ?? null);
   const [urlInput, setUrlInput] = useState("");
   const [urlPreview, setUrlPreview] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [isDragging, setIsDragging] = useState(false);
 
-  // State Sliders Kontrol
   const [zoom, setZoom] = useState(1);
   const [minZoom, setMinZoom] = useState(0.1);
   const [maxZoom, setMaxZoom] = useState(3);
@@ -51,7 +47,6 @@ export function ImageCropperDialog({
   const [rotation, setRotation] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Reset seluruh state ketika modal ditutup atau gambar diganti
   useEffect(() => {
     if (!open) {
       setImageSrc(null);
@@ -67,7 +62,6 @@ export function ImageCropperDialog({
     }
   }, [open, initialImageSrc]);
 
-  // Menangkap aksi Tempel Gambar secara global (Ctrl + V) saat modal terbuka
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
       if (!open) return;
@@ -88,7 +82,6 @@ export function ImageCropperDialog({
     return () => window.removeEventListener("paste", handleGlobalPaste);
   }, [open]);
 
-  // Menghitung rasio zoom minimal agar gambar tidak lebih kecil dari KOTAK HIJAU
   const getMinRatioLimit = (): number => {
     const cropper = cropperRef.current?.cropper;
     if (!cropper) return 0.1;
@@ -102,7 +95,6 @@ export function ImageCropperDialog({
     );
   };
 
-  // Handler saat Cropper selesai memuat gambar
   const handleCropperReady = () => {
     const cropper = cropperRef.current?.cropper;
     if (cropper) {
@@ -127,7 +119,6 @@ export function ImageCropperDialog({
     }
   };
 
-  // Drag & Drop handlers
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -166,7 +157,6 @@ export function ImageCropperDialog({
     }
   };
 
-  // Handler pergeseran slider Zoom
   const handleZoomSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
     setZoom(val);
@@ -176,7 +166,6 @@ export function ImageCropperDialog({
     }
   };
 
-  // Batalkan aksi perkecil jika melewati batas minimal
   const handleZoomEvent = (e: CustomEvent<any>) => {
     const cropper = cropperRef.current?.cropper;
     if (!cropper) return;
@@ -192,7 +181,6 @@ export function ImageCropperDialog({
     }
   };
 
-  // Handler perubahan nilai slider Rotasi secara reaktif (0° - 360°)
   const handleRotateSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value);
     setRotation(val);
@@ -202,7 +190,6 @@ export function ImageCropperDialog({
     }
   };
 
-  // Memotong ke 300x300px, mengompresi ke WebP, lalu mengirimkan Blob hasilnya
   const handleSave = () => {
     const cropper = cropperRef.current?.cropper;
     if (!cropper) return;
@@ -235,18 +222,18 @@ export function ImageCropperDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Gaya CSS Khusus untuk menampilkan kotak luar dan lingkaran transparan di dalam */}
+      {}
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        /* Tetap tampilkan garis luar persegi berwarna hijau */
+        
         .circular-cropper .cropper-view-box {
           outline: 2px solid #22c55e !important;
           outline-offset: -1px;
           position: relative;
         }
 
-        /* Buat area lingkaran di dalam persegi dengan sudut luar setengah transparan */
+        
         .circular-cropper .cropper-view-box::before {
           content: '';
           position: absolute;
@@ -255,15 +242,15 @@ export function ImageCropperDialog({
           width: 100%;
           height: 100%;
           border-radius: 50%;
-          /* Bayangan hitam menyebar ke luar lingkaran untuk menggelapkan sudut persegi */
+          
           box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5) !important; 
           pointer-events: none;
           z-index: 1;
-          /* Garis bantu lingkaran tipis */
+          
           border: 1px dashed rgba(255, 255, 255, 0.4);
         }
 
-        /* Pastikan elemen garis bantu (petak penolong) bawaan cropper tetap terlihat */
+        
         .circular-cropper .cropper-dashed {
           opacity: 0.4 !important;
         }
@@ -298,7 +285,7 @@ export function ImageCropperDialog({
           </div>
         </DialogHeader>
 
-        {/* TAMPILAN 1: PILIH GAMBAR */}
+        {}
         {!imageSrc ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-5">
             <TabsList className="bg-muted/60 grid h-11 w-full grid-cols-2 rounded-xl p-1">
@@ -397,7 +384,6 @@ export function ImageCropperDialog({
             </TabsContent>
           </Tabs>
         ) : (
-          /* TAMPILAN 2: AREA CROPPER & SLIDERS */
           <div className="space-y-6">
             <div className="border-border/60 overflow-hidden rounded-xl border bg-neutral-900">
               <Cropper
@@ -422,9 +408,9 @@ export function ImageCropperDialog({
               />
             </div>
 
-            {/* AREA DUA SLIDER KONTROL */}
+            {}
             <div className="space-y-4 px-1">
-              {/* Slider 1: Zoom */}
+              {}
               <div className="space-y-1">
                 <div className="text-muted-foreground flex items-center justify-between text-xs font-semibold">
                   <span className="flex items-center gap-1.5">
@@ -444,7 +430,7 @@ export function ImageCropperDialog({
                 />
               </div>
 
-              {/* Slider 2: Rotasi */}
+              {}
               <div className="space-y-1">
                 <div className="text-muted-foreground flex items-center justify-between text-xs font-semibold">
                   <span className="flex items-center gap-1.5">
@@ -465,7 +451,7 @@ export function ImageCropperDialog({
               </div>
             </div>
 
-            {/* Tombol Simpan */}
+            {}
             <div className="flex justify-end border-t pt-3">
               <Button
                 onClick={handleSave}

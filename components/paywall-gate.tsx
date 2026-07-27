@@ -13,7 +13,7 @@ import { billingConfig } from "@/config/payment";
 
 interface PaywallGateProps {
   children: React.ReactNode;
-  allowedPlans: string[]; // Contoh: ["starter", "pro"]
+  allowedPlans: string[];
   fallback?: React.ReactNode;
 }
 
@@ -41,13 +41,9 @@ export function PaywallGate({ children, allowedPlans, fallback }: PaywallGatePro
 
         if (error) throw error;
 
-        // Ambil ID paket aktif dari database, jika tidak ada fallback ke "free"
         const endsAt = data?.ends_at ? new Date(data.ends_at) : null;
         const isExpired = endsAt ? new Date() > endsAt : false;
 
-        // --- INTEGRASI LAZY EXPIRATION (DEGRADASI OTOMATATIS) ---
-        // Jika masa berlaku habis tetapi status di database masih 'active'/'trialing',
-        // perbarui ke 'expired' secara asinkron di latar belakang.
         if (isExpired && data && (data.status === "active" || data.status === "trialing")) {
           subscriptionRepo
             .query()
@@ -60,14 +56,9 @@ export function PaywallGate({ children, allowedPlans, fallback }: PaywallGatePro
             });
         }
 
-        // "active" & "trialing" (trial free-window) dianggap aktif sampai ends_at.
         const isActiveLike =
           !!data && (data.status === "active" || data.status === "trialing") && !isExpired;
 
-        // Otorisasi:
-        //  - sub aktif → cek plan di allowedPlans
-        //  - tanpa sub aktif & requireActiveSubscription → tolak (tidak ada free plan)
-        //  - tanpa sub aktif & mode free → boleh jika "free" masuk allowedPlans
         let isAuthorized: boolean;
         if (isActiveLike) {
           isAuthorized = allowedPlans.includes(data?.plan_id || "free");

@@ -1,11 +1,10 @@
-// components/data-table/data-table-pagination.tsx
 "use client";
 
 import * as React from "react";
 import { Table as TanstackTable } from "@tanstack/react-table";
-import { useLocale } from "next-intl"; // IMPORT: Hook Bahasa Aktif
-import { formatNumber } from "@/lib/i18n/format"; // IMPORT: Helper Angka Kultur
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"; // IMPORT: Ikon Panah
+import { useLocale } from "next-intl";
+import { formatNumber } from "@/lib/i18n/format";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import {
   Select,
@@ -28,8 +27,8 @@ interface DataTablePaginationProps<TData> {
   pageSizeOptions?: number[];
   selectedLabel?: (selected: string, total: string) => string;
   rowsPerPageLabel?: string;
-  previousLabel?: string; // SOLUSI: Label tombol Sebelumnya dinamis
-  nextLabel?: string; // SOLUSI: Label tombol Berikutnya dinamis
+  previousLabel?: string;
+  nextLabel?: string;
 }
 
 export function DataTablePagination<TData>({
@@ -37,8 +36,8 @@ export function DataTablePagination<TData>({
   pageSizeOptions = [10, 20, 50, 100],
   selectedLabel = (selected, total) => `${selected} of ${total} row(s) selected.`,
   rowsPerPageLabel = "Rows per page:",
-  previousLabel = "Previous", // Fallback default bahasa Inggris jika tidak dioper
-  nextLabel = "Next" // Fallback default bahasa Inggris jika tidak dioper
+  previousLabel = "Previous",
+  nextLabel = "Next"
 }: DataTablePaginationProps<TData>) {
   const locale = useLocale();
 
@@ -125,7 +124,7 @@ export function DataTablePagination<TData>({
         {table.getPageCount() > 1 && (
           <Pagination>
             <PaginationContent className="flex-wrap gap-1">
-              {/* Tombol SEBELUMNYA - Murni mencetak properti previousLabel dinamis */}
+              {}
               <PaginationItem>
                 <PaginationLink
                   aria-label="Go to previous page"
@@ -142,7 +141,7 @@ export function DataTablePagination<TData>({
 
               {renderPaginationItems()}
 
-              {/* Tombol BERIKUTNYA - Murni mencetak properti nextLabel dinamis */}
+              {}
               <PaginationItem>
                 <PaginationLink
                   aria-label="Go to next page"

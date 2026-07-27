@@ -1,12 +1,9 @@
-// services/exchange-rate.ts
-
 interface ExchangeRateResult {
-  convertedAmount: number; // Hasil konversi nominal ke target currency (misal: USD)
-  rate: number; // Nilai kurs 1 unit target_currency terhadap IDR (misal: 1 USD = 15800 IDR)
+  convertedAmount: number;
+  rate: number;
   providerUsed: "frankfurter" | "exchangerate_api" | "hardcoded";
 }
 
-// In-Memory Cache untuk menghindari spamming ke API pihak ketiga
 interface ExchangeCache {
   rate: number;
   provider: "frankfurter" | "exchangerate_api" | "hardcoded";
@@ -15,23 +12,17 @@ interface ExchangeCache {
 
 let rateCache: Record<string, ExchangeCache> = {};
 
-// Ambil durasi TTL dari .env (default: 6 jam)
 const CACHE_TTL = process.env.EXCHANGE_RATE_CACHE_TTL
   ? parseInt(process.env.EXCHANGE_RATE_CACHE_TTL)
   : 6 * 60 * 60 * 1000;
 
-// Nilai Kurs Cadangan (Hardcoded) jika semua API down
 const HARDCODED_RATE = process.env.HARDCODED_USD_TO_IDR_RATE
   ? parseFloat(process.env.HARDCODED_USD_TO_IDR_RATE)
   : 15800;
 
-/**
- * 1. Ambil Kurs dari Frankfurter API (Primary)
- * Mengambil kurs 1 unit Target Currency (misal: USD) ke IDR
- */
 async function fetchFromFrankfurter(targetCurrency: string): Promise<number> {
   const url = `https://api.frankfurter.app/latest?from=${targetCurrency}&to=IDR`;
-  const response = await fetch(url, { next: { revalidate: 3600 } }); // Next.js fetch cache (opsional)
+  const response = await fetch(url, { next: { revalidate: 3600 } });
 
   if (!response.ok) {
     throw new Error("Frankfurter API failed");
@@ -47,9 +38,6 @@ async function fetchFromFrankfurter(targetCurrency: string): Promise<number> {
   return rate;
 }
 
-/**
- * 2. Ambil Kurs dari ExchangeRate-API (Fallback jika Primary gagal)
- */
 async function fetchFromExchangeRateApi(targetCurrency: string): Promise<number> {
   const apiKey = process.env.EXCHANGERATE_API_KEY;
   if (!apiKey) {
@@ -73,11 +61,6 @@ async function fetchFromExchangeRateApi(targetCurrency: string): Promise<number>
   return rate;
 }
 
-/**
- * Fungsi Utama: Konversi IDR ke Mata Uang Asing secara Real-time
- * @param amountInIdr Nominal uang dalam Rupiah (IDR)
- * @param targetCurrency Mata uang asing tujuan (default: 'USD')
- */
 export async function convertIdrToCurrency(
   amountInIdr: number,
   targetCurrency: string = "USD"
@@ -86,7 +69,6 @@ export async function convertIdrToCurrency(
   const cacheKey = targetCurrency.toUpperCase();
   const cached = rateCache[cacheKey];
 
-  // A. Gunakan data dari Cache jika masih berlaku (belum kedaluwarsa)
   if (cached && now - cached.timestamp < CACHE_TTL) {
     const convertedAmount = parseFloat((amountInIdr / cached.rate).toFixed(2));
     return {
@@ -96,13 +78,9 @@ export async function convertIdrToCurrency(
     };
   }
 
-  // B. Jika cache kosong atau kedaluwarsa, lakukan Fetch ke API
-
-  // Percobaan 1: Coba Frankfurter (Primary)
   try {
     const rate = await fetchFromFrankfurter(targetCurrency);
 
-    // Simpan ke Cache
     rateCache[cacheKey] = { rate, provider: "frankfurter", timestamp: now };
 
     return {
@@ -114,11 +92,9 @@ export async function convertIdrToCurrency(
     console.warn("Primary Exchange Rate API (Frankfurter) failed, switching to fallback...", error);
   }
 
-  // Percobaan 2: Coba ExchangeRate-API (Fallback)
   try {
     const rate = await fetchFromExchangeRateApi(targetCurrency);
 
-    // Simpan ke Cache
     rateCache[cacheKey] = { rate, provider: "exchangerate_api", timestamp: now };
 
     return {
@@ -130,8 +106,6 @@ export async function convertIdrToCurrency(
     console.error("All Exchange Rate APIs failed. Using hardcoded fallback rate.", error);
   }
 
-  // Percobaan 3: Gunakan nilai hardcoded jika seluruh koneksi API gagal
-  // Ini adalah pertahanan terakhir agar aplikasi tidak mengalami crash/error 500 saat transaksi
   return {
     convertedAmount: parseFloat((amountInIdr / HARDCODED_RATE).toFixed(2)),
     rate: HARDCODED_RATE,
@@ -139,11 +113,6 @@ export async function convertIdrToCurrency(
   };
 }
 
-/**
- * Inverse: konversi mata uang asing → IDR.
- * Dipakai webhook untuk mengisi transactions.amount_in_idr saat provider charge dlm valuta asing (mis. PayPal/USD).
- * Memakai rate yg sama (cache) dgn convertIdrToCurrency: rate = IDR per 1 unit foreign.
- */
 export async function convertToIdr(
   amount: number,
   fromCurrency: string
@@ -152,7 +121,7 @@ export async function convertToIdr(
   if (cur === "IDR") {
     return { amountInIdr: amount, rate: 1, providerUsed: "base" };
   }
-  // Ambil rate (IDR per 1 unit foreign) lewat cache yg sama
+
   const { rate, providerUsed } = await convertIdrToCurrency(1, cur);
   return {
     amountInIdr: parseFloat((amount * rate).toFixed(2)),
