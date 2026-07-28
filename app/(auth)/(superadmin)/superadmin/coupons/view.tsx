@@ -1,4 +1,3 @@
-// app/(auth)/(superadmin)/superadmin/coupons/view.tsx
 "use client";
 
 import React, { useMemo } from "react";
@@ -49,13 +48,19 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { actionCol, dateCol, numCol, textCol } from "@/components/data-table/columns";
 import { createSelectColumn } from "@/components/data-table/data-table-select-column";
 import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
 
-// MENGIMPOR DATETIME PICKER KUSTOM
 import { DateTimePicker } from "@/components/date-time-picker";
 
 import { useAdminCoupons, getExpiryStatus, DBCoupon } from "./logic";
+
+interface DBRedemption {
+  id: string;
+  tenant_name: string;
+  redeemed_at: string;
+}
 
 const containsFilterFn = (row: any, columnId: string, filterValue: string) => {
   if (!filterValue) return true;
@@ -98,7 +103,6 @@ export function AdminCouponsPage() {
     setIsMounted(true);
   }, []);
 
-  // State untuk mengontrol Accordion pada Detail Tampilan Kupon
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
     details: true,
     redemptionsList: true
@@ -108,159 +112,125 @@ export function AdminCouponsPage() {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const columns: ColumnDef<DBCoupon, unknown>[] = useMemo(
-    () => [
-      createSelectColumn<DBCoupon>(),
-      {
-        accessorKey: "code",
-        meta: {
-          label: t("table.code")
-        },
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.code")} />,
-        filterFn: containsFilterFn,
-        cell: ({ row }) => (
-          <button
-            onClick={() => handleOpenView(row.original)}
-            className="flex items-center gap-2 text-left select-none focus:outline-none">
-            <Ticket className="text-muted-foreground h-4 w-4" />
-            <span className="text-primary font-mono font-bold tracking-wider">
-              {row.original.code}
-            </span>
-          </button>
-        )
-      },
-      {
-        accessorKey: "discount_type",
-        meta: {
-          label: t("table.discount-type")
-        },
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("form.typeLabel")} />
-        ),
-        filterFn: multiSelectFilterFn,
-        cell: ({ row }) => (
-          <div onClick={() => handleOpenView(row.original)} className="cursor-pointer select-none">
-            <Badge variant="outline" className="capitalize">
-              {row.original.discount_type === "percentage"
-                ? t("form.percentage")
-                : t("form.fixedAmount")}
-            </Badge>
-          </div>
-        )
-      },
-      {
-        accessorKey: "discount_value",
-        meta: {
-          label: t("table.discount")
-        },
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("table.discount")} />
-        ),
-        cell: ({ row }) => (
+  const columns: ColumnDef<DBCoupon>[] = [
+    createSelectColumn<DBCoupon>(),
+    textCol<DBCoupon>({
+      key: "code",
+      header: t("table.code"),
+      enableHiding: true,
+      cell: (row) => (
+        <button
+          onClick={() => handleOpenView(row)}
+          className="flex items-center gap-2 text-left select-none focus:outline-none">
+          <Ticket className="text-muted-foreground h-4 w-4" />
+          <span className="text-primary font-mono font-bold tracking-wider">{row.code}</span>
+        </button>
+      )
+    }),
+    textCol<DBCoupon>({
+      key: "discount_type",
+      header: t("form.typeLabel"),
+      enableHiding: true,
+      cell: (row) => (
+        <div onClick={() => handleOpenView(row)} className="cursor-pointer select-none">
+          <Badge variant="outline" className="capitalize">
+            {row.discount_type === "percentage" ? t("form.percentage") : t("form.fixedAmount")}
+          </Badge>
+        </div>
+      )
+    }),
+    numCol<DBCoupon>({
+      key: "discount_value",
+      header: t("table.discount"),
+      enableHiding: true
+    }),
+    dateCol<DBCoupon>({
+      key: "valid_until",
+      header: t("table.expiry"),
+      enableHiding: true,
+      format: (v) => formatDateTime(v, locale),
+      locale: locale
+    }),
+    textCol<DBCoupon>({
+      key: "expiryStatus",
+      header: t("table.expiry-status"),
+      enableHiding: true,
+      cell: (row) => <span className="capitalize">{getExpiryStatus(row)}</span>
+    }),
+    textCol<DBCoupon>({
+      key: "redeemed_count",
+      header: t("table.quota"),
+      enableHiding: true,
+      cell: (row) => {
+        const c = row;
+        const pct = c.max_redemptions
+          ? Math.min(100, (c.redeemed_count / c.max_redemptions) * 100)
+          : 0;
+        return (
           <div
-            onClick={() => handleOpenView(row.original)}
-            className="cursor-pointer font-semibold select-none">
-            {formatDiscount(row.original)}
-          </div>
-        )
-      },
-      {
-        accessorKey: "valid_until",
-        meta: {
-          label: t("table.expiry")
-        },
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.expiry")} />,
-        cell: ({ row }) => {
-          const c = row.original;
-          const isExpired = getExpiryStatus(c) === "expired";
-          return (
-            <div onClick={() => handleOpenView(c)} className="cursor-pointer select-none">
-              {!c.valid_until ? (
-                <span className="text-muted-foreground text-xs">— {t("table.noExpiry")} —</span>
-              ) : (
-                <div className="flex items-center gap-1.5 text-xs">
-                  <Calendar className="text-muted-foreground h-3.5 w-3.5" />
-                  <span
-                    className={
-                      isExpired ? "text-destructive font-semibold" : "text-muted-foreground"
-                    }>
-                    {formatDateTime(c.valid_until, locale)}
-                  </span>
-                </div>
-              )}
+            onClick={() => handleOpenView(c)}
+            className="max-w-50 cursor-pointer space-y-1 select-none">
+            <div className="text-muted-foreground flex items-center justify-between text-xs font-medium">
+              <span className="flex items-center gap-1">
+                <Users className="h-3.5 w-3.5" /> {formatNumber(c.redeemed_count, locale)}{" "}
+                {t("table.redeemed")}
+              </span>
+              <span>
+                {c.max_redemptions !== null && c.max_redemptions !== undefined
+                  ? `${formatNumber(c.max_redemptions, locale)} ${t("table.limit")}`
+                  : t("table.unlimited")}
+              </span>
             </div>
-          );
-        }
-      },
-      {
-        id: "expiryStatus",
-        meta: {
-          label: t("table.expiry-status")
-        },
-        accessorFn: (row) => getExpiryStatus(row),
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("table.expiry-status")} />
-        ),
-        filterFn: multiSelectFilterFn,
-        cell: ({ row }) => <span className="capitalize">{getExpiryStatus(row.original)}</span>
-      },
-      {
-        accessorKey: "redeemed_count",
-        meta: {
-          label: t("table.quota")
-        },
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.quota")} />,
-        cell: ({ row }) => {
-          const c = row.original;
-          const pct = c.max_redemptions
-            ? Math.min(100, (c.redeemed_count / c.max_redemptions) * 100)
-            : 0;
-          return (
-            <div
-              onClick={() => handleOpenView(c)}
-              className="max-w-50 cursor-pointer space-y-1 select-none">
-              <div className="text-muted-foreground flex items-center justify-between text-xs font-medium">
-                <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" /> {formatNumber(c.redeemed_count, locale)}{" "}
-                  {t("table.redeemed")}
-                </span>
-                <span>
-                  {c.max_redemptions !== null && c.max_redemptions !== undefined
-                    ? `${formatNumber(c.max_redemptions, locale)} ${t("table.limit")}`
-                    : t("table.unlimited")}
-                </span>
-              </div>
-              {c.max_redemptions ? (
-                <Progress value={pct} className="bg-muted h-1.5 w-full" />
-              ) : null}
-            </div>
-          );
-        }
-      },
-      {
-        id: "actions",
-        header: () => <div className="text-end">{t("table.actions")}</div>,
-        enableHiding: false,
-        cell: ({ row }) => (
-          <div className="flex justify-end gap-1.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDeleteTarget(row.original)}
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive">
-              <Trash2 className="me-1 h-4 w-4" />
-            </Button>
+            {c.max_redemptions ? <Progress value={pct} className="bg-muted h-1.5 w-full" /> : null}
           </div>
-        )
+        );
       }
-    ],
-    [t, locale, formatDiscount, setDeleteTarget]
-  );
+    }),
+    actionCol<DBCoupon>({
+      header: t("table.actions"),
+      enableSorting: false,
+      cell: (row) => (
+        <div className="flex justify-end gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDeleteTarget(row)}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+            <Trash2 className="me-1 h-4 w-4" />
+          </Button>
+        </div>
+      )
+    })
+  ];
 
   const table = useDataTable({
     columns,
     data: coupons,
     initialColumnVisibility: { expiryStatus: false }
+  });
+
+  const redemptionColumns: ColumnDef<DBRedemption>[] = [
+    textCol<DBRedemption>({
+      key: "tenant_name",
+      header: t("detail.tenantName"),
+      cell: (row) => (
+        <span className="text-foreground text-xs font-semibold">{row.tenant_name}</span>
+      )
+    }),
+    textCol<DBRedemption>({
+      key: "redeemed_at",
+      header: t("detail.redeemedAt"),
+      cell: (row) => (
+        <span className="text-muted-foreground text-xs">
+          {formatDateTime(row.redeemed_at, locale)}
+        </span>
+      )
+    })
+  ];
+
+  const redemptionsTable = useDataTable({
+    columns: redemptionColumns,
+    data: redemptions || []
   });
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
@@ -350,8 +320,6 @@ export function AdminCouponsPage() {
         </>
       )}
 
-      {/* PANEL INPUT SAMPING (SLIDE-OVER / SHEET) */}
-      {/* 1. Backdrop Overlay */}
       {dialogOpen && (
         <div
           className="animate-in fade-in fixed inset-0 z-50 min-h-full bg-black/40 transition-opacity duration-300"
@@ -359,7 +327,6 @@ export function AdminCouponsPage() {
         />
       )}
 
-      {/* 2. Container Panel Geser (Mendukung Arah RTL / LTR dan Animasi Sempurna) */}
       <div
         className={`border-border bg-background fixed inset-y-0 z-50 flex h-full w-full flex-col shadow-2xl transition-[transform,opacity] duration-300 ease-in-out sm:max-w-lg md:max-w-xl ${
           isRtl ? "left-0 border-r" : "right-0 border-l"
@@ -370,7 +337,6 @@ export function AdminCouponsPage() {
               ? "pointer-events-none -translate-x-full opacity-0"
               : "pointer-events-none translate-x-full opacity-0"
         }`}>
-        {/* Header Panel */}
         <div className="border-border flex items-center justify-between border-b p-6">
           <div className="space-y-1.5">
             <h2 className="text-foreground text-xl font-bold">
@@ -389,10 +355,8 @@ export function AdminCouponsPage() {
           </Button>
         </div>
 
-        {/* Scrollable Content (Dinamis: Mode Create atau Mode View) */}
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
           {!selectedCoupon ? (
-            // MODE TAMBAH DATA (CREATE NEW COUPON)
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="coupon-code">{t("form.codeLabel")}</Label>
@@ -445,7 +409,7 @@ export function AdminCouponsPage() {
                     placeholder={t("form.quotaPlaceholder")}
                   />
                 </div>
-                {/* MODIFIKASI: MENGGUNAKAN DATETIME PICKER KUSTOM UNTUK PEMILIH EXPIRED */}
+
                 <div className="space-y-1.5">
                   <Label htmlFor="valid-until">{t("form.expiryLabel")}</Label>
                   <DateTimePicker
@@ -461,14 +425,12 @@ export function AdminCouponsPage() {
               </div>
             </div>
           ) : (
-            // MODE LIHAT DATA (VIEW COUPON DETAILS & REDEMPTIONS LIST)
             <div className="space-y-4">
-              {/* ACCORDION 1: DETAIL KUPON */}
-              <div className="border-border bg-background overflow-hidden rounded-xl border">
-                <button
+              <div className="overflow-hidden">
+                <Button
                   type="button"
                   onClick={() => toggleSection("details")}
-                  className="bg-muted/20 hover:bg-muted/40 border-border/40 flex w-full items-center justify-between border-b p-4 text-left transition-colors">
+                  className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
                   <span className="text-foreground text-sm font-semibold">
                     {t("detail.detail-coupon")}
                   </span>
@@ -477,7 +439,7 @@ export function AdminCouponsPage() {
                   ) : (
                     <ChevronDown className="text-muted-foreground h-4 w-4" />
                   )}
-                </button>
+                </Button>
 
                 {openSections.details && (
                   <div className="space-y-4 p-5">
@@ -552,12 +514,11 @@ export function AdminCouponsPage() {
                 )}
               </div>
 
-              {/* ACCORDION 2: DAFTAR PENGGUNA KUPON (TENANT LIST) */}
-              <div className="border-border bg-background overflow-hidden rounded-xl border">
-                <button
+              <div className="overflow-hidden">
+                <Button
                   type="button"
                   onClick={() => toggleSection("redemptionsList")}
-                  className="bg-muted/20 hover:bg-muted/40 border-border/40 flex w-full items-center justify-between border-b p-4 text-left transition-colors">
+                  className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
                   <span className="text-foreground text-sm font-semibold">
                     {t("detail.coupon-users")}
                   </span>
@@ -566,7 +527,7 @@ export function AdminCouponsPage() {
                   ) : (
                     <ChevronDown className="text-muted-foreground h-4 w-4" />
                   )}
-                </button>
+                </Button>
 
                 {openSections.redemptionsList && (
                   <div className="space-y-3 p-4">
@@ -579,19 +540,20 @@ export function AdminCouponsPage() {
                         {t("detail.nousage")}
                       </p>
                     ) : (
-                      <div className="divide-border/60 border-border bg-muted/5 divide-y overflow-hidden rounded-xl border">
-                        {redemptions.map((redemption) => (
-                          <div
-                            key={redemption.id}
-                            className="flex items-center justify-between p-3 text-xs">
-                            <span className="text-foreground font-semibold">
-                              {redemption.tenant_name}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {formatDateTime(redemption.redeemed_at, locale)}
-                            </span>
-                          </div>
-                        ))}
+                      <div className="space-y-2">
+                        <DataTable
+                          table={redemptionsTable}
+                          columns={redemptionColumns}
+                          noResultsText={t("table.noData")}
+                        />
+                        <DataTablePagination
+                          table={redemptionsTable}
+                          pageSizeOptions={[5, 10, 25]}
+                          rowsPerPageLabel={t("table.rowsPerPage")}
+                          selectedLabel={(selected, total) =>
+                            `${selected} / ${total} ${t("selected")}`
+                          }
+                        />
                       </div>
                     )}
                   </div>
@@ -601,7 +563,6 @@ export function AdminCouponsPage() {
           )}
         </div>
 
-        {/* Footer Panel */}
         <div className="border-border bg-muted/20 flex items-center justify-end gap-3 border-t p-6">
           <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>
             {t("buttons.cancel")}
@@ -614,7 +575,6 @@ export function AdminCouponsPage() {
         </div>
       </div>
 
-      {/* CONFIRM DELETE (single row) */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -634,7 +594,6 @@ export function AdminCouponsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* CONFIRM DELETE (bulk, from checkbox selection) */}
       <AlertDialog
         open={bulkConfirmOpen}
         onOpenChange={(open) => !open && setBulkConfirmOpen(false)}>

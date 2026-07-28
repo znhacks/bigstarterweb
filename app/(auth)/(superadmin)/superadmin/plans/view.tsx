@@ -1,4 +1,3 @@
-// app/(auth)/(superadmin)/superadmin/plans/view.tsx
 "use client";
 
 import React from "react";
@@ -167,7 +166,7 @@ export function AdminPlansPage() {
         </>
       )}
 
-      {/* PANEL INPUT SAMPING */}
+      {}
       {dialogOpen && (
         <div
           className="animate-in fade-in fixed inset-0 z-50 min-h-full bg-black/40 transition-opacity duration-300"
@@ -202,19 +201,18 @@ export function AdminPlansPage() {
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
-          {/* ACCORDION: GENERAL */}
-          <div className="bg-background overflow-hidden rounded-xl">
-            <button
+          <div className="overflow-hidden">
+            <Button
               type="button"
               onClick={() => toggleSection("general")}
-              className="hover:bg-muted/40 border-border bg-background flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
+              className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
               <span className="text-foreground text-sm font-semibold">{t("form.general")}</span>
               {openSections.general ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />
               ) : (
                 <ChevronDown className="text-muted-foreground h-4 w-4" />
               )}
-            </button>
+            </Button>
 
             {openSections.general && (
               <div className="space-y-6 p-5">
@@ -306,7 +304,7 @@ export function AdminPlansPage() {
                   />
                 </div>
 
-                {/* Opsi plan: recommended / enterprise / trial / sort order */}
+                {}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="plan-recommended" className="cursor-pointer">
@@ -318,16 +316,6 @@ export function AdminPlansPage() {
                       onCheckedChange={(v) => setForm((f) => ({ ...f, isRecommended: !!v }))}
                     />
                   </div>
-                  {/* <div className="space-y-1.5">
-                    <Label htmlFor="plan-enterprise" className="cursor-pointer">
-                      {t("form.enterprise") || "Enterprise (Contact)"}
-                    </Label>
-                    <Switch
-                      id="plan-enterprise"
-                      checked={!!form.isEnterprise}
-                      onCheckedChange={(v) => setForm((f) => ({ ...f, isEnterprise: !!v }))}
-                    />
-                  </div> */}
                   <div className="space-y-1.5">
                     <Label htmlFor="plan-trial">{t("form.trialDays") || "Trial (hari)"}</Label>
                     <Input
@@ -358,12 +346,11 @@ export function AdminPlansPage() {
             )}
           </div>
 
-          {/* ACCORDION: KONFIGURASI FITUR */}
-          <div className="overflow-hidden rounded-xl">
-            <button
+          <div className="overflow-hidden">
+            <Button
               type="button"
               onClick={() => toggleSection("features")}
-              className="hover:bg-muted/40 border-border bg-background flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
+              className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
               <span className="text-foreground text-sm font-semibold">
                 {t("form.features-configuration")}
               </span>
@@ -372,7 +359,7 @@ export function AdminPlansPage() {
               ) : (
                 <ChevronDown className="text-muted-foreground h-4 w-4" />
               )}
-            </button>
+            </Button>
 
             {openSections.features && (
               <div className="space-y-4 p-5">
@@ -418,12 +405,11 @@ export function AdminPlansPage() {
             )}
           </div>
 
-          {/* ACCORDION: GATEWAY PEMBAYARAN */}
-          <div className="overflow-hidden rounded-xl">
-            <button
+          <div className="overflow-hidden">
+            <Button
               type="button"
               onClick={() => toggleSection("billing")}
-              className="bg-background hover:bg-muted/40 border-border flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
+              className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
               <span className="text-foreground text-sm font-semibold">
                 {t("form.payment-gateway")}
               </span>
@@ -432,7 +418,7 @@ export function AdminPlansPage() {
               ) : (
                 <ChevronDown className="text-muted-foreground h-4 w-4" />
               )}
-            </button>
+            </Button>
 
             {openSections.billing && (
               <div className="space-y-6 p-5">
@@ -517,7 +503,7 @@ export function AdminPlansPage() {
                     </div>
                   </div>
 
-                  {/* BLOK TAHUNAN */}
+                  {}
                   <div className="border-border/60 bg-muted/5 space-y-4 rounded-xl border p-5">
                     <div className="border-border/40 flex items-center space-x-2 border-b pb-3">
                       <Checkbox
@@ -613,7 +599,7 @@ export function AdminPlansPage() {
         </div>
       </div>
 
-      {/* CONFIRM DEACTIVATE (single row) */}
+      {}
       <AlertDialog
         open={!!deactivateTarget}
         onOpenChange={(open) => !open && setDeactivateTarget(null)}>
@@ -637,7 +623,7 @@ export function AdminPlansPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* CONFIRM DELETE (single row) */}
+      {}
       <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && !isDeleting && setDeleteTarget(null)}>
@@ -663,7 +649,7 @@ export function AdminPlansPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* CONFIRM DEACTIVATE (bulk) */}
+      {}
       <AlertDialog
         open={bulkConfirmOpen}
         onOpenChange={(open) => !open && setBulkConfirmOpen(false)}>
@@ -689,7 +675,7 @@ export function AdminPlansPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* MODAL PERINGATAN BENTROK URUTAN (SORT_ORDER CONFLICT RESOLUTION) */}
+      {}
       <AlertDialog
         open={!!conflictTarget}
         onOpenChange={(open) => !open && setConflictTarget(null)}>
@@ -716,7 +702,7 @@ export function AdminPlansPage() {
             <AlertDialogAction
               onClick={() => {
                 setConflictTarget(null);
-                handleSavePlan(true); // Kirim kembali dengan bypassConflict = true
+                handleSavePlan(true);
               }}
               className="bg-amber-600 text-white hover:bg-amber-700">
               Lanjutkan & Geser Paket

@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { type ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2, Loader2, Plus, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Pencil, Trash2, Loader2, Plus, ChevronDown, ChevronUp, X, CircleHelp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PERMISSION_GROUPS } from "@/lib/rbac";
 
-// Mengimpor aksi server untuk manipulasi peran (role) dan hak akses (permissions)
 import {
   deleteRole,
   updateRole,
@@ -23,7 +22,7 @@ import {
 
 import { useDataTable } from "@/components/data-table/use-data-table";
 import { DataTable } from "@/components/data-table/data-table";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { numCol, actionCol, textCol } from "@/components/data-table/columns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface RoleRow {
   id: string;
@@ -63,19 +63,16 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  // State untuk Panel Samping (Slide-over)
   const [panelOpen, setPanelOpen] = React.useState(false);
   const [selectedRole, setSelectedRole] = React.useState<RoleRow | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [loadingPerms, setLoadingPerms] = React.useState(false);
 
-  // Form States
   const [formName, setFormName] = React.useState("");
   const [formHierarchy, setFormHierarchy] = React.useState(0);
   const [selectedPerms, setSelectedPerms] = React.useState<Set<string>>(new Set());
   const [deleteTargetId, setDeleteTargetId] = React.useState<string | null>(null);
 
-  // State untuk memastikan transisi dinonaktifkan sebelum komponen terpasang di browser (mencegah flash)
   const [isMounted, setIsMounted] = React.useState(false);
   const isRtl = locale === "ar";
 
@@ -83,7 +80,6 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
     setIsMounted(true);
   }, []);
 
-  // State untuk mengontrol buka-tutup dropdown menu (accordion) di panel samping
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
     general: true,
     permissions: false
@@ -124,7 +120,6 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
     setOpenSections({ general: true, permissions: false });
     setPanelOpen(true);
 
-    // Memuat data hak akses yang sudah dimiliki peran secara asinkron
     if (getRolePermissions) {
       setLoadingPerms(true);
       try {
@@ -155,18 +150,15 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
       let roleId = selectedRole?.id;
 
       if (selectedRole) {
-        // Mode Edit Role
         fd.set("id", selectedRole.id);
         const res = await updateRole(fd);
         if (!res.success) throw new Error(res.error);
       } else {
-        // Mode Tambah Role Baru
         const res = await createRole(fd);
         if (!res.success) throw new Error(res.error);
-        roleId = res.roleId; // Ambil ID hasil pembuatan role baru
+        roleId = res.roleId;
       }
 
-      // Simpan Hak Akses (Permissions) ke Peran Terkait
       if (roleId) {
         const permsRes = await setRolePermissions(roleId, Array.from(selectedPerms));
         if (!permsRes.success) throw new Error(permsRes.error);
@@ -175,7 +167,6 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
       setPanelOpen(false);
       router.refresh();
 
-      // Update state lokal untuk sinkronisasi antarmuka secara instan
       if (selectedRole) {
         setRows((prev) =>
           prev.map((r) =>
@@ -190,7 +181,6 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
           )
         );
       } else {
-        // Refresh seluruh data dari server untuk mendapatkan baris peran baru secara lengkap
         window.location.reload();
       }
     } catch (err: any) {
@@ -204,7 +194,7 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
     if (!deleteTargetId) return;
 
     const idToDelete = deleteTargetId;
-    setDeleteTargetId(null); // Tutup dialog konfirmasi secara instan
+    setDeleteTargetId(null);
 
     setPendingId(idToDelete);
     setError(null);
@@ -221,50 +211,44 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
     }
   };
 
-  const columns: ColumnDef<RoleRow, unknown>[] = [
-    {
-      accessorKey: "name",
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t("list.name")} />,
-      cell: ({ row }) => <span className="text-foreground font-semibold">{row.original.name}</span>
-    },
-    {
-      accessorKey: "hierarchy_level",
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t("list.hierarchy")} />,
-      cell: ({ row }) => <Badge variant="secondary">h{row.original.hierarchy_level}</Badge>
-    },
-    {
-      accessorKey: "members_count",
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t("list.members")} />,
-      cell: ({ row }) => <span>{row.original.members_count}</span>
-    },
-    {
-      accessorKey: "permissions_count",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t("list.permissions")} />
-      ),
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.permissions_count}</span>
-    },
-    {
-      id: "actions",
-      header: () => <div className="text-end">{t("list.actions")}</div>,
-      enableHiding: false,
-      cell: ({ row }) => (
+  const columns: ColumnDef<RoleRow>[] = [
+    textCol<RoleRow>({
+      key: "name",
+      header: t("list.name"),
+      cell: (row) => <span className="text-foreground font-semibold">{row.name}</span>
+    }),
+    textCol<RoleRow>({
+      key: "hierarchy_level",
+      header: t("list.hierarchy"),
+      cell: (row) => <Badge variant="secondary">h{row.hierarchy_level}</Badge>
+    }),
+    numCol<RoleRow>({
+      key: "members_count",
+      header: t("list.members")
+    }),
+    numCol<RoleRow>({
+      key: "permissions_count",
+      header: t("list.permissions")
+    }),
+    actionCol<RoleRow>({
+      header: t("list.actions"),
+      enableSorting: false,
+      cell: (row) => (
         <div className="flex justify-end gap-1">
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => handleOpenEdit(row.original)}
+            onClick={() => handleOpenEdit(row)}
             title={t("detail.edit")}>
             <Pencil className="h-4 w-4" />
           </Button>
           <Button
             size="icon"
             variant="ghost"
-            // UBAH: Isi target ID penghapusan untuk membuka AlertDialog
-            onClick={() => setDeleteTargetId(row.original.id)}
-            disabled={pendingId === row.original.id}
+            onClick={() => setDeleteTargetId(row.id)}
+            disabled={pendingId === row.id}
             title={t("messages.delete")}>
-            {pendingId === row.original.id ? (
+            {pendingId === row.id ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Trash2 className="text-destructive h-4 w-4" />
@@ -272,7 +256,7 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
           </Button>
         </div>
       )
-    }
+    })
   ];
 
   const table = useDataTable({ columns, data: rows });
@@ -319,8 +303,6 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* PANEL INPUT SAMPING (SLIDE-OVER / SHEET) */}
-      {/* 1. Backdrop Overlay */}
       {panelOpen && (
         <div
           className="animate-in fade-in fixed inset-0 z-50 min-h-full bg-black/40 transition-opacity duration-300"
@@ -328,7 +310,6 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
         />
       )}
 
-      {/* 2. Container Panel Geser */}
       <div
         className={`border-border bg-background fixed inset-y-0 z-50 flex h-full w-full flex-col shadow-2xl transition-[transform,opacity] duration-300 ease-in-out sm:max-w-lg md:max-w-xl ${
           isRtl ? "left-0 border-r" : "right-0 border-l"
@@ -339,7 +320,6 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
               ? "pointer-events-none -translate-x-full opacity-0"
               : "pointer-events-none translate-x-full opacity-0"
         }`}>
-        {/* Header Panel */}
         <div className="border-border flex items-center justify-between border-b p-6">
           <div className="space-y-1.5">
             <h2 className="text-foreground text-xl font-bold">
@@ -360,21 +340,19 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
           </Button>
         </div>
 
-        {/* Scrollable Form Content */}
         <form onSubmit={handleSave} className="flex-1 space-y-4 overflow-y-auto p-6">
-          {/* DROPDOWN 1: GENERAL */}
-          <div className="animate-in fade-in overflow-hidden rounded-xl">
-            <button
+          <div className="animate-in fade-in overflow-hidden">
+            <Button
               type="button"
               onClick={() => toggleSection("general")}
-              className="bg-background hover:bg-muted/40 border-border flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
+              className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
               <span className="text-foreground text-sm font-semibold">General</span>
               {openSections.general ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />
               ) : (
                 <ChevronDown className="text-muted-foreground h-4 w-4" />
               )}
-            </button>
+            </Button>
 
             {openSections.general && (
               <div className="space-y-4 p-5">
@@ -403,19 +381,18 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
             )}
           </div>
 
-          {/* DROPDOWN 2: KONFIGURASI HAK AKSES */}
-          <div className="overflow-hidden rounded-xl">
-            <button
+          <div className="animate-in fade-in overflow-hidden">
+            <Button
               type="button"
               onClick={() => toggleSection("permissions")}
-              className="bg-background hover:bg-muted/40 border-border flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors">
+              className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
               <span className="text-foreground text-sm font-semibold">Konfigurasi Hak Akses</span>
               {openSections.permissions ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />
               ) : (
                 <ChevronDown className="text-muted-foreground h-4 w-4" />
               )}
-            </button>
+            </Button>
 
             {openSections.permissions && (
               <div className="space-y-6 p-5">
@@ -425,32 +402,66 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
                   </div>
                 ) : (
                   PERMISSION_GROUPS.map((group) => {
-                    // SOLUSI: Menggunakan (permissions || []) untuk mencegah error undefined
                     const groupPerms = (permissions || []).filter((p) =>
                       group.names.includes(p.name as any)
                     );
+                    const allSelected = groupPerms.every((p) => selectedPerms.has(p.id));
+                    const someSelected =
+                      groupPerms.some((p) => selectedPerms.has(p.id)) && !allSelected;
                     if (groupPerms.length === 0) return null;
                     return (
-                      <div key={group.domain} className="space-y-3">
-                        <h4 className="text-foreground text-sm font-semibold">{group.label}</h4>
-                        <div className="grid gap-3 sm:grid-cols-1">
+                      <div key={group.domain} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-foreground text-sm font-semibold">{group.label}</h4>
+                          <Checkbox
+                            checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                            onCheckedChange={(checked) => {
+                              const next = new Set(selectedPerms);
+
+                              if (checked) {
+                                groupPerms.forEach((p) => next.add(p.id));
+                              } else {
+                                groupPerms.forEach((p) => next.delete(p.id));
+                              }
+
+                              setSelectedPerms(next);
+                            }}
+                          />
+                        </div>
+
+                        <div className="grid gap-1">
                           {groupPerms.map((p) => (
                             <label
                               key={p.id}
                               htmlFor={`perm-${p.id}`}
-                              className="border-border/60 hover:bg-accent/40 flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors">
+                              className="hover:bg-accent/40 flex cursor-pointer items-center justify-between rounded-lg py-1 pl-2 transition-colors">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-foreground text-sm font-medium">
+                                  {p.name}
+                                </span>
+
+                                {p.description && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="text-muted-foreground hover:text-foreground"
+                                        onClick={(e) => e.preventDefault()}>
+                                        <CircleHelp className="h-4 w-4" />
+                                      </button>
+                                    </TooltipTrigger>
+
+                                    <TooltipContent side="top">
+                                      <p>{p.description}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
                               <Checkbox
                                 id={`perm-${p.id}`}
                                 checked={selectedPerms.has(p.id)}
                                 onCheckedChange={() => togglePermission(p.id)}
-                                className="mt-0.5"
                               />
-                              <div className="space-y-0.5">
-                                <p className="text-foreground text-sm font-medium">{p.name}</p>
-                                {p.description && (
-                                  <p className="text-muted-foreground text-xs">{p.description}</p>
-                                )}
-                              </div>
                             </label>
                           ))}
                         </div>
@@ -462,7 +473,6 @@ export function RolesList({ rows: initialRows, permissions = [] }: RolesListProp
             )}
           </div>
 
-          {/* Sticky/Fixed Footer Panel */}
           <div className="border-border bg-background/90 absolute right-0 bottom-0 left-0 z-10 flex items-center justify-end gap-3 border-t p-6 backdrop-blur-sm">
             <Button
               type="button"

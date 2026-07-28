@@ -22,7 +22,7 @@ import { DataTableViewOptions } from "@/components/data-table/data-table-view-op
 import { createSelectColumn } from "@/components/data-table/data-table-select-column";
 import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 export interface SuperadminOrganization {
   id: string;
@@ -41,33 +41,47 @@ interface AlertState {
   variant?: "default" | "destructive";
 }
 
+const getLocalizedValue = (value: any, locale: string): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    return value[locale] || value["en"] || Object.values(value)[0] || "";
+  }
+  return String(value);
+};
+
 export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("superadmin.organizations.list");
+
   const formatPrice = (amount: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
       maximumFractionDigits: 0
     }).format(amount);
-  const t = useTranslations("superadmin.organizations.list");
 
-  const [orgs, setOrgs] = useState<SuperadminOrganization[]>(data);
+  const [orgs, setOrgs] = useState<SuperadminOrganization[]>([]);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [orgToDelete, setOrgToDelete] = useState<SuperadminOrganization | null>(null);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
 
-  // KPIs Metrics
+  useEffect(() => {
+    const formatted = (data || []).map((org) => ({
+      ...org,
+      planName: getLocalizedValue(org.planName, locale)
+    }));
+    setOrgs(formatted);
+  }, [data, locale]);
+
   const totalOrgs = orgs.length;
   const activePremiumOrgs = orgs.filter(
     (o) => o.planStatus === "active" && o.planName !== "Free"
   ).length;
   const totalMembers = orgs.reduce((sum, o) => sum + o.memberCount, 0);
-
-  useEffect(() => {
-    setOrgs(data);
-  }, [data]);
 
   useEffect(() => {
     if (alertMessage) {
@@ -89,7 +103,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
 
       setAlertMessage({
         title: t("alerts.deletedTitle"),
-        description: t("alerts.deletedDesc").replace("{orgName}", orgToDelete.name),
+        description: t("alerts.deletedDesc", { orgName: orgToDelete.name ?? "" }),
         variant: "default"
       });
 
@@ -107,7 +121,6 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
     }
   };
 
-  // Columns are hardcoded for this feature, one real column per field.
   const columns: ColumnDef<SuperadminOrganization, unknown>[] = [
     createSelectColumn<SuperadminOrganization>(),
     {
@@ -161,8 +174,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
         );
       }
     },
-    // Not rendered as its own visible column (hidden by default below) —
-    // exists purely so the Status faceted filter has a column to filter on.
+
     {
       id: "planStatus",
       accessorFn: (row) => row.planStatus,
@@ -209,8 +221,6 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
     }
   ];
 
-  // You own this instance — read/mutate it however this page needs.
-  // planStatus starts hidden: it only exists to back the Status filter.
   const table = useDataTable({
     columns,
     data: orgs,
@@ -282,7 +292,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
 
   return (
     <div className="space-y-8">
-      {/* Toolbar — hardcoded here, free to add/remove/reorder anything. */}
+      {}
       <div className="flex flex-row flex-wrap items-center gap-2">
         <DataTableSearch table={table} columnId="name" placeholder={t("searchPlaceholder")} />
 
@@ -321,7 +331,7 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
         <DataTableViewOptions table={table} className="md:ms-auto" />
       </div>
 
-      {/* NOTIFICATION ALERT */}
+      {}
       {alertMessage && (
         <Alert
           variant={alertMessage.variant === "destructive" ? "destructive" : "default"}
@@ -345,24 +355,24 @@ export function OrganizationsList({ data }: { data: SuperadminOrganization[] }) 
         </Alert>
       )}
 
-      {/* ORGANIZATIONS TABLE */}
+      {}
       <DataTable table={table} columns={columns} noResultsText={t("placeholders.noOrgs")} />
 
       <DataTablePagination table={table} />
 
-      {/* DIALOG TYPE-TO-CONFIRM HAPUS ORGANISASI (single row) */}
+      {}
       <ConfirmDeleteDialog
         open={!!orgToDelete}
         onOpenChange={(open) => !open && setOrgToDelete(null)}
         confirmName={orgToDelete?.name || ""}
         title={t("dialogDelete.title")}
-        description={t("dialogDelete.desc").replace("{orgName}", orgToDelete?.name || "")}
+        description={t("dialogDelete.desc", { orgName: orgToDelete?.name ?? "" })}
         actionLabel={t("buttons.delete")}
         loading={isDeletingId !== null}
         onConfirm={handleConfirmDeleteOrg}
       />
 
-      {/* TRASH — restore organisasi terhapus */}
+      {}
       <RestoreDialog
         open={restoreOpen}
         onOpenChange={setRestoreOpen}

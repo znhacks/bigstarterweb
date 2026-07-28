@@ -1,24 +1,12 @@
 "use client";
 
-// app/(auth)/(superadmin)/superadmin/enterprise/page.tsx
-//
-// Inbox inquiry paket enterprise untuk Superadmin. Client component:
-// auth via browser session (@/lib/supabase), fetch GET /api/admin/enterprise
-// dengan Bearer token, lalu PATCH status per inquiry.
-
 import * as React from "react";
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, Mail, RefreshCw, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -124,9 +112,7 @@ export default function SuperadminEnterprisePage() {
         throw new Error(json.error || "Gagal memperbarui status");
       }
 
-      setInquiries((prev) =>
-        prev.map((inq) => (inq.id === id ? { ...inq, status } : inq))
-      );
+      setInquiries((prev) => prev.map((inq) => (inq.id === id ? { ...inq, status } : inq)));
     } catch (e: any) {
       setError(e.message || "Terjadi kesalahan");
     } finally {
@@ -161,7 +147,7 @@ export default function SuperadminEnterprisePage() {
       </div>
 
       {error && (
-        <div className="border-destructive/30 text-destructive flex items-center gap-2 rounded-lg border bg-destructive/5 px-4 py-3 text-sm">
+        <div className="border-destructive/30 text-destructive bg-destructive/5 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
@@ -191,9 +177,7 @@ export default function SuperadminEnterprisePage() {
                       <CardTitle className="text-base font-semibold">
                         {inq.name || "Tanpa nama"}
                       </CardTitle>
-                      <CardDescription className="text-xs">
-                        {inq.email || "-"}
-                      </CardDescription>
+                      <CardDescription className="text-xs">{inq.email || "-"}</CardDescription>
                     </div>
                   </div>
                   <Badge
@@ -207,17 +191,15 @@ export default function SuperadminEnterprisePage() {
               <CardContent className="space-y-4">
                 <div className="text-muted-foreground grid gap-1 text-xs sm:grid-cols-3">
                   <div>
-                    <span className="font-medium text-foreground">Paket: </span>
+                    <span className="text-foreground font-medium">Paket: </span>
                     {inq.plan_id || "-"}
                   </div>
                   <div>
-                    <span className="font-medium text-foreground">Dikirim: </span>
-                    {inq.created_at
-                      ? new Date(inq.created_at).toLocaleString("id-ID")
-                      : "-"}
+                    <span className="text-foreground font-medium">Dikirim: </span>
+                    {inq.created_at ? new Date(inq.created_at).toLocaleString("id-ID") : "-"}
                   </div>
                   <div>
-                    <span className="font-medium text-foreground">Tenant: </span>
+                    <span className="text-foreground font-medium">Tenant: </span>
                     <span className="font-mono">{inq.tenant_id || "-"}</span>
                   </div>
                 </div>

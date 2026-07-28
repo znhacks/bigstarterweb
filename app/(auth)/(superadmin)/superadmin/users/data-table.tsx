@@ -77,6 +77,15 @@ export type User = {
   bannedReason?: string | null;
 };
 
+const getLocalizedValue = (value: any, locale: string): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    return value[locale] || value["en"] || Object.values(value)[0] || "";
+  }
+  return String(value);
+};
+
 export default function UsersDataTable({ data: initialData }: { data?: User[] }) {
   const t = useTranslations("superadmin.users.data-table");
   const tMod = useTranslations("moderation");
@@ -84,17 +93,18 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   const locale = useLocale();
 
   const [users, setUsers] = useState<User[]>(initialData || []);
+  const [rawProfiles, setRawProfiles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(!initialData);
   const [timeZone, setTimeZone] = useState("UTC");
 
   const [roles, setRoles] = useState<{ value: string; label: string }[]>([]);
-  const [planNameMap, setPlanNameMap] = useState<Map<string, string>>(new Map());
+  const [planNameMap, setPlanNameMap] = useState<Map<string, any>>(new Map());
 
   useEffect(() => {
     fetch("/api/billing/plans")
       .then((r) => r.json())
       .then((res) => {
-        const map = new Map<string, string>();
+        const map = new Map<string, any>();
         (res?.plans || []).forEach((p: any) => map.set(p.id, p.name));
         setPlanNameMap(map);
       })
@@ -123,17 +133,22 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
         .select("name")
         .order("hierarchy_level", { ascending: false })
         .then(({ data }) => {
-          if (data) setRoles(data.map((r: any) => ({ value: r.name, label: r.name })));
+          if (data) {
+            setRoles(
+              data.map((r: any) => {
+                const localizedRole = getLocalizedValue(r.name, locale);
+                return { value: localizedRole, label: localizedRole };
+              })
+            );
+          }
         });
     })();
-  }, []);
+  }, [locale]);
 
   const loadUsersFromSupabase = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (await profileRepository(supabase))
-        .query()
-        .select(`
+      const { data, error } = await (await profileRepository(supabase)).query().select(`
           id,
           full_name,
           avatar,
@@ -160,38 +175,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
         `);
 
       if (error) throw error;
-
-      const formatted: User[] = (data || []).map((prof: any, index: number) => {
-        const fullName = prof.full_name || "Unknown User";
-        const firstMembership = prof.memberships?.[0];
-        const tenant = firstMembership?.tenants;
-        const firstSub = tenant?.subscriptions?.[0];
-
-        const planName = planNameMap.get(firstSub?.plan_id) || "Free";
-        const statusVal = firstSub?.status === "active" ? "active" : "inactive";
-
-        return {
-          id: index + 1,
-          dbId: prof.id,
-          firstName: fullName.split(" ")[0] || "",
-          lastName: fullName.split(" ").slice(1).join(" ") || "",
-          name: fullName,
-          role: firstMembership?.roles?.name || "Member",
-          email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
-          country: "United States",
-          plan_name: planName,
-          status: statusVal as "active" | "inactive" | "pending",
-          image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`,
-          created_at: prof.created_at,
-          updated_at: prof.updated_at,
-          lastSignIn: prof.last_sign_in || null,
-          accountStatus: (prof.status as User["accountStatus"]) || "active",
-          bannedUntil: prof.banned_until || null,
-          bannedReason: prof.banned_reason || null
-        };
-      });
-
-      setUsers(formatted);
+      setRawProfiles(data || []);
     } catch (e) {
       console.error("Gagal memuat pengguna dari Supabase:", e);
     } finally {
@@ -199,7 +183,44 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   };
 
-  // ---- Moderation state (soft-delete + ban) ----
+  useEffect(() => {
+    if (initialData) return;
+
+    const formatted: User[] = rawProfiles.map((prof: any, index: number) => {
+      const fullName = prof.full_name || "Unknown User";
+      const firstMembership = prof.memberships?.[0];
+      const tenant = firstMembership?.tenants;
+      const firstSub = tenant?.subscriptions?.[0];
+
+      const rawPlanName = planNameMap.get(firstSub?.plan_id);
+      const planName = rawPlanName ? getLocalizedValue(rawPlanName, locale) : "Free";
+      const roleVal = getLocalizedValue(firstMembership?.roles?.name, locale) || "Member";
+      const statusVal = firstSub?.status === "active" ? "active" : "inactive";
+
+      return {
+        id: index + 1,
+        dbId: prof.id,
+        firstName: fullName.split(" ")[0] || "",
+        lastName: fullName.split(" ").slice(1).join(" ") || "",
+        name: fullName,
+        role: roleVal,
+        email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
+        country: "United States",
+        plan_name: planName,
+        status: statusVal as "active" | "inactive" | "pending",
+        image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`,
+        created_at: prof.created_at,
+        updated_at: prof.updated_at,
+        lastSignIn: prof.last_sign_in || null,
+        accountStatus: (prof.status as User["accountStatus"]) || "active",
+        bannedUntil: prof.banned_until || null,
+        bannedReason: prof.banned_reason || null
+      };
+    });
+
+    setUsers(formatted);
+  }, [rawProfiles, planNameMap, locale, initialData]);
+
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [userToBan, setUserToBan] = useState<User | null>(null);
   const [banDuration, setBanDuration] = useState<string>(DEFAULT_BAN_KEY);
@@ -219,7 +240,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
       console.error("Gagal soft-delete user:", res.error);
       return;
     }
-    setUsers((prev) => prev.filter((u) => u.dbId !== userToDelete.dbId));
+    setRawProfiles((prev) => prev.filter((u) => u.id !== userToDelete.dbId));
     setUserToDelete(null);
   };
 
@@ -243,14 +264,14 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
       return;
     }
     const until = computeBannedUntil(banDuration);
-    setUsers((prev) =>
+    setRawProfiles((prev) =>
       prev.map((u) =>
-        u.dbId === userToBan.dbId
+        u.id === userToBan.dbId
           ? {
               ...u,
-              accountStatus: "banned",
-              bannedUntil: until,
-              bannedReason: banReason.trim() || null
+              status: "banned",
+              banned_until: until,
+              banned_reason: banReason.trim() || null
             }
           : u
       )
@@ -264,16 +285,13 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
       console.error("Gagal unban user:", res.error);
       return;
     }
-    setUsers((prev) =>
+    setRawProfiles((prev) =>
       prev.map((u) =>
-        u.dbId === userId
-          ? { ...u, accountStatus: "active", bannedUntil: null, bannedReason: null }
-          : u
+        u.id === userId ? { ...u, status: "active", banned_until: null, banned_reason: null } : u
       )
     );
   };
 
-  // Columns are hardcoded for this feature — nothing generic about them.
   const columns: ColumnDef<User, unknown>[] = [
     createSelectColumn<User>(),
     {
@@ -460,7 +478,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     }
   ];
 
-  // You own this instance — read/mutate it however this page needs.
   const table = useDataTable({ columns, data: users });
 
   const statuses = [
@@ -486,7 +503,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
 
   return (
     <div className="w-full">
-      {/* Toolbar is hardcoded here — free to add/remove/reorder anything. */}
       <div className="flex flex-row flex-wrap items-center gap-2 py-4">
         <DataTableSearch table={table} columnId="name" placeholder={t("filters.search")} />
 
@@ -524,11 +540,10 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
       <DataTablePagination
         table={table}
         selectedLabel={(selected, total) => t("footer.selected", { selected, total })}
-        previousLabel={ttable("pagination.previous")} // Dikirim dinamis
+        previousLabel={ttable("pagination.previous")}
         nextLabel={ttable("pagination.next")}
       />
 
-      {/* Soft-delete user — type-to-confirm */}
       <ConfirmDeleteDialog
         open={!!userToDelete}
         onOpenChange={(o) => !o && setUserToDelete(null)}
@@ -537,7 +552,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
         onConfirm={confirmDeleteUser}
       />
 
-      {/* Ban/suspend user */}
       <Dialog open={!!userToBan} onOpenChange={(o) => !o && setUserToBan(null)}>
         <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
@@ -581,7 +595,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
         </DialogContent>
       </Dialog>
 
-      {/* Trash — restore user terhapus */}
       <RestoreDialog
         open={restoreOpen}
         onOpenChange={setRestoreOpen}
