@@ -17,14 +17,11 @@ export function DataTableColumnHeader<TData, TValue>({
   title,
   className
 }: DataTableColumnHeaderProps<TData, TValue>) {
-  // Alignment via column meta (e.g., meta: { align: "right" } for numeric/currency columns).
   const align = (column.columnDef.meta as any)?.align as string | undefined;
-  const alignClass = align === "right" ? "justify-end text-right w-full" : "";
+  const alignClass = align === "right" ? "justify-end text-end w-full" : "";
 
   if (!column.getCanSort()) {
-    return (
-      <div className={cn("text-xs", alignClass, className)}>{title}</div>
-    );
+    return <div className={cn("text-xs", alignClass, className)}>{title}</div>;
   }
 
   const isSorted = column.getIsSorted();

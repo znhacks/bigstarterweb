@@ -46,7 +46,7 @@ export function DataTableViewOptions<TData>({
           const parsed = JSON.parse(savedState);
           table.setColumnVisibility(parsed);
         } catch (error) {
-          console.error("Gagal memulihkan status visibilitas kolom:", error);
+          console.error("Failed to restore column visibility state:", error);
         }
       }
       setIsLoaded(true);
@@ -79,7 +79,7 @@ export function DataTableViewOptions<TData>({
               checked={column.getIsVisible()}
               onCheckedChange={(value) => column.toggleVisibility(!!value)}
               onSelect={(event) => event.preventDefault()}>
-              {(column.columnDef.meta as { label?: string })?.label ?? column.id}
+              {column.columnDef.meta?.label ?? column.id}
             </DropdownMenuCheckboxItem>
           ))}
       </DropdownMenuContent>

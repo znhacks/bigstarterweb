@@ -35,7 +35,7 @@ interface NumericCellProps {
 export function NumericCell({ value, format, locale = "en", className }: NumericCellProps) {
   if (value === null || value === undefined || value === "") {
     return (
-      <div className={cn("text-right font-mono tabular-nums text-muted-foreground", className)}>
+      <div className={cn("text-end font-mono tabular-nums text-muted-foreground", className)}>
         -
       </div>
     );
@@ -49,6 +49,6 @@ export function NumericCell({ value, format, locale = "en", className }: Numeric
   const formatted = format ? format(n) : n.toLocaleString(locale);
 
   return (
-    <div className={cn("text-right font-mono tabular-nums", className)}>{formatted}</div>
+    <div className={cn("text-end font-mono tabular-nums", className)}>{formatted}</div>
   );
 }
