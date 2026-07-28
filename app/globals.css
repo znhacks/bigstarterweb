@@ -55,6 +55,9 @@
 
   /* Default Semantic Variables (Forest Whisper - Light Mode) */
   --background: var(--base-50);
+  --dropdown: var(--base-200);
+  --table: var(--base-100);
+  --table-head: var(--base-200);
   --foreground: var(--base-800);
   --card: var(--color-white);
   --card-foreground: var(--base-800);
@@ -112,6 +115,9 @@ html[lang="ar"] {
 .dark {
   /* Default Semantic Variables (Forest Whisper - Dark Mode) */
   --background: var(--base-950);
+  --dropdown: var(--base-70);
+  --table: var(--base-800);
+  --table-head: var(--base-900);
   --foreground: var(--base-200);
   --card: var(--base-900);
   --card-foreground: var(--base-200);
@@ -171,6 +177,9 @@ html[lang="ar"] {
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --color-background: var(--background);
+  --color-dropdown: var(--dropdown);
+  --color-table: var(--table);
+  --color-table-head: var(--table-head);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);

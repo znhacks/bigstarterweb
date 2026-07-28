@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Check, X, CheckCircle2, AlertCircle, Loader2, ArrowUpRight } from "lucide-react";
+import { Check, X, CheckCircle2, AlertCircle, Loader2, ArrowUpRight, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -131,9 +131,7 @@ export function OrganizationBilling() {
       {isVerifyingPayment && (
         <div className="fixed inset-0 z-[9999] flex h-full flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
           <Loader2 className="h-10 w-10 animate-spin text-white" />
-          <p className="mt-4 text-sm font-semibold text-white">
-            Menghubungkan ke gateway pembayaran eksternal...
-          </p>
+          <p className="mt-4 text-sm font-semibold text-white">{t("connectToGateway")}</p>
         </div>
       )}
 
@@ -160,7 +158,6 @@ export function OrganizationBilling() {
         </Alert>
       )}
 
-      {}
       <div className="space-y-6">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="space-y-1">
@@ -196,208 +193,227 @@ export function OrganizationBilling() {
           </div>
         </div>
 
-        {}
-        <div className="flex flex-wrap items-stretch justify-center gap-6 pt-4">
-          {convertedPlans.map((plan) => {
-            const actionType = getPlanActionType(plan.id);
+        <div className="flex flex-wrap items-stretch justify-center gap-3 pt-4">
+          {convertedPlans
+            .filter((plan) => {
+              if (plan.id === "free" || plan.isEnterprise) return true;
 
-            const isThisPlanActive =
-              (plan.id === "free" && (!isSubActive || !activeSub)) ||
-              (isSubActive && activeSub?.planId === plan.id) ||
-              actionType === "active";
+              const price =
+                billingCycle === "yearly"
+                  ? plan.prices?.yearly?.amount
+                  : plan.prices?.monthly?.amount;
 
-            const isDisabled = activeSub?.status === "refund_requested" || isLoading;
+              return price !== undefined && price !== null && price > 0;
+            })
+            .map((plan) => {
+              const actionType = getPlanActionType(plan.id);
 
-            const planPrice =
-              billingCycle === "yearly"
-                ? plan.prices.yearly.convertedAmount
-                : plan.prices.monthly.convertedAmount;
+              const isThisPlanActive =
+                (plan.id === "free" && (!isSubActive || !activeSub)) ||
+                (isSubActive && activeSub?.planId === plan.id) ||
+                actionType === "active";
 
-            const localizedName = plan.name;
-            const localizedDescription = plan.description;
-            const localizedFeatures = plan.features || [];
+              const isDisabled = activeSub?.status === "refund_requested" || isLoading;
 
-            return (
-              <Card
-                key={plan.id}
-                className={`flex w-full max-w-md flex-col justify-between overflow-hidden bg-white py-0 transition-all hover:shadow-md sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] ${
-                  plan.isRecommended ? "shadow-md ring-2 ring-slate-900" : ""
-                }`}>
-                <CardContent className="flex h-full flex-col justify-between gap-0 p-6">
-                  <div className="min-w-0 space-y-5">
-                    <div className="space-y-1.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h3 className="truncate text-xl font-bold tracking-tight text-slate-900">
-                          {localizedName}
-                        </h3>
-                        {billingCycle === "yearly" && plan.id !== "free" && (
-                          <span className="inline-flex shrink-0 items-center rounded-full border border-emerald-500/30 bg-emerald-50/50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                            {t("saveDiscount", { discount: getYearlyDiscountPercent(plan) })}
-                          </span>
-                        )}
-                        {plan.isRecommended && (
-                          <span className="inline-flex shrink-0 items-center rounded-full bg-slate-900 px-2.5 py-0.5 text-[11px] font-semibold text-white">
-                            {t("recommended")}
-                          </span>
-                        )}
+              const planPrice =
+                billingCycle === "yearly"
+                  ? plan.prices.yearly.convertedAmount
+                  : plan.prices.monthly.convertedAmount;
+
+              const localizedName = plan.name;
+              const localizedDescription = plan.description;
+              const localizedFeatures = plan.features || [];
+
+              return (
+                <Card
+                  key={plan.id}
+                  className={`relative flex w-full max-w-md flex-col justify-between overflow-hidden py-0 transition-all hover:shadow-md sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] ${
+                    plan.isRecommended
+                      ? "ring-ring border-border border py-0 ring-3 hover:shadow-xl"
+                      : ""
+                  }`}>
+                  {plan.isRecommended && (
+                    <div className="from-primary/50 via-primary/80 to-primary absolute top-0 right-0 left-0 h-1.5 bg-gradient-to-r" />
+                  )}
+
+                  {plan.isRecommended && (
+                    <div className="absolute -top-px -right-px">
+                      <div className="bg-primary flex h-9 w-9 items-center justify-center rounded-bl-2xl">
+                        <Star className="h-4 w-4 fill-white text-white" />
                       </div>
-                      <p className="min-h-[40px] text-sm leading-relaxed break-words text-slate-500">
-                        {localizedDescription}
-                      </p>
                     </div>
+                  )}
 
-                    <div className="flex min-w-0 flex-wrap items-baseline gap-1 pt-1">
-                      {plan.isEnterprise ? (
-                        <span className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-                          Hubungi Kami
-                        </span>
-                      ) : (
-                        <>
-                          <span className="text-3xl font-extrabold tracking-tight break-all text-slate-900 sm:text-4xl">
-                            {formatPrice(planPrice)}
-                          </span>
-                          <span className="shrink-0 text-sm font-medium text-slate-500">
-                            /{billingCycle === "yearly" ? "year" : "month"}
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="space-y-3 border-t border-slate-100 pt-2">
-                      <ul className="space-y-2.5 text-sm text-slate-700">
-                        {localizedFeatures.map((feature: string, idx: number) => (
-                          <li key={idx} className="flex min-w-0 items-start gap-2.5">
-                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                            <span className="text-[13px] leading-relaxed break-words text-slate-600">
-                              {feature}
+                  <CardContent className="flex h-full flex-col justify-between gap-0 p-6 pt-7">
+                    <div className="min-w-0 space-y-5">
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2 pr-8">
+                          <h3 className="truncate text-xl font-bold tracking-tight">
+                            {localizedName}
+                          </h3>
+                          {billingCycle === "yearly" && plan.id !== "free" && (
+                            <span className="border-border/30 text-primary bg-primary/10 inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold">
+                              {t("saveDiscount", { discount: getYearlyDiscountPercent(plan) })}
                             </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 pt-4">
-                    <div className="shrink-0 pt-4">
-                      {plan.isEnterprise ? (
-                        <Button
-                          onClick={() => handleOpenEnterprise(plan)}
-                          className="w-full bg-slate-950 py-5 font-semibold text-white hover:bg-slate-800">
-                          Hubungi Kami
-                        </Button>
-                      ) : activeSub && activeSub.pendingPlanId === plan.id ? (
-                        <Button
-                          disabled
-                          className="w-full cursor-default border border-amber-500/20 bg-amber-500/10 py-5 font-semibold text-amber-600 hover:bg-amber-500/10">
-                          {t("buttons.schedule-downgrade")}
-                        </Button>
-                      ) : isThisPlanActive &&
-                        getPlanActionType(plan.id) !== "upgrade_cycle" &&
-                        getPlanActionType(plan.id) !== "downgrade_cycle" ? (
-                        <div className="w-full space-y-2">
-                          <Button
-                            disabled
-                            className="w-full cursor-default border border-emerald-500/20 bg-emerald-500/10 py-5 font-semibold text-emerald-600 hover:bg-emerald-500/10">
-                            {t("buttons.planActive")}
-                          </Button>
-                          {activeSub?.pendingPlanId && (
-                            <p className="px-2 text-center text-[10px] leading-normal font-semibold text-amber-600">
-                              *Active until{" "}
-                              {activeSub.endsAt
-                                ? new Date(activeSub.endsAt).toLocaleDateString(locale)
-                                : ""}{" "}
-                            </p>
                           )}
                         </div>
-                      ) : getPlanActionType(plan.id) === "upgrade_cycle" ? (
-                        <Button
-                          onClick={() => handleChoosePlan(plan)}
-                          disabled={isDisabled}
-                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
-                          <ArrowUpRight className="h-4 w-4 shrink-0" />
-                          <span>{t("buttons.switchToYearly")}</span>
-                        </Button>
-                      ) : getPlanActionType(plan.id) === "downgrade_cycle" ? (
-                        <div className="w-full space-y-2">
-                          <Button
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  `Apakah Anda yakin ingin menjadwalkan peralihan ke tagihan Bulanan? Paket Tahunan Anda saat ini tetap aktif sampai akhir periode tanpa tagihan tahunan baru.`
-                                )
-                              ) {
-                                handleDowngrade(plan.id);
-                              }
-                            }}
-                            disabled={isDisabled || isDowngrading}
-                            variant="outline"
-                            className="w-full border-slate-200 py-5 font-semibold text-slate-700 transition-all hover:bg-slate-50">
-                            {isDowngrading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                            <span>{t("buttons.switchToMonthly")}</span>
-                          </Button>
-                          <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
-                            *Paket tahunan Anda tetap aktif sampai masa berakhir, baru kemudian
-                            beralih ke bulanan.
-                          </p>
-                        </div>
-                      ) : actionType === "upgrade" && isSubActive ? (
-                        <Button
-                          onClick={() => handleChoosePlan(plan)}
-                          disabled={isDisabled}
-                          className="inline-flex w-full items-center justify-center gap-1.5 py-5 font-semibold">
-                          <ArrowUpRight className="h-4 w-4 shrink-0" />
-                          <span className="truncate">{t("buttons.upgrade")}</span>
-                        </Button>
-                      ) : actionType === "downgrade" && isSubActive ? (
-                        <div className="w-full space-y-2">
-                          <Button
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  `Apakah Anda yakin ingin menjadwalkan penurunan paket ke ${localizedName}? Paket aktif Anda tetap bisa digunakan hingga jatuh tempo.`
-                                )
-                              ) {
-                                handleDowngrade(plan.id);
-                              }
-                            }}
-                            disabled={isDisabled || isDowngrading}
-                            variant="outline"
-                            className="w-full border-slate-200 py-5 font-semibold text-slate-700 transition-all hover:bg-slate-50">
-                            {isDowngrading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                            {t("buttons.downgrade") || "Downgrade Plan"}
-                          </Button>
-                          <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
-                            *{t("downgradeinfo")}
-                          </p>
-                        </div>
-                      ) : (
-                        <Button
-                          onClick={() => handleChoosePlan(plan)}
-                          disabled={isDisabled}
-                          className="w-full truncate bg-slate-950 py-5 font-semibold text-white transition-all hover:bg-slate-800">
-                          {t("buttons.choose")}
-                        </Button>
-                      )}
+                        <p className="min-h-[40px] text-sm leading-relaxed break-words text-slate-500">
+                          {localizedDescription}
+                        </p>
+                      </div>
+
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-1 pt-1">
+                        {plan.isEnterprise ? (
+                          <span className="text-2xl font-bold tracking-tight sm:text-2xl">
+                            Hubungi Kami
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-3xl font-extrabold tracking-tight break-all text-slate-900 sm:text-4xl">
+                              {formatPrice(planPrice)}
+                            </span>
+                            <span className="shrink-0 text-sm font-medium text-slate-500">
+                              /{billingCycle === "yearly" ? "year" : "month"}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="space-y-3 border-t border-slate-100 pt-2">
+                        <ul className="space-y-2.5 text-sm text-slate-700">
+                          {localizedFeatures.map((feature: string, idx: number) => (
+                            <li key={idx} className="flex min-w-0 items-start gap-2.5">
+                              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                              <span className="text-[13px] leading-relaxed break-words text-slate-600">
+                                {feature}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
-                    {!plan.isEnterprise &&
-                      !!plan.trialDays &&
-                      plan.trialDays > 0 &&
-                      !isSubActive &&
-                      !hasUsedTrial && (
-                        <Button
-                          variant="outline"
-                          onClick={() => handleStartTrial(plan.id)}
-                          disabled={isStartingTrial}
-                          className="mt-2 w-full text-xs font-semibold text-slate-700">
-                          {isStartingTrial && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                          Mulai Trial {plan.trialDays} Hari
-                        </Button>
-                      )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+
+                    <div className="shrink-0 pt-4">
+                      <div className="shrink-0 pt-4">
+                        {plan.isEnterprise ? (
+                          <Button
+                            onClick={() => handleOpenEnterprise(plan)}
+                            className="w-full font-semibold">
+                            Hubungi Kami
+                          </Button>
+                        ) : activeSub && activeSub.pendingPlanId === plan.id ? (
+                          <Button
+                            disabled
+                            className="border-secondary/20 bg-secondary/10 text-secondary/500 w-full cursor-default border font-semibold">
+                            {t("buttons.schedule-downgrade")}
+                          </Button>
+                        ) : isThisPlanActive &&
+                          getPlanActionType(plan.id) !== "upgrade_cycle" &&
+                          getPlanActionType(plan.id) !== "downgrade_cycle" ? (
+                          <div className="w-full space-y-2">
+                            <Button
+                              disabled
+                              className="border-primary-/20 bg-primary/10 text-primary hover:bg-primary/20 w-full cursor-default border font-semibold">
+                              {t("buttons.planActive")}
+                            </Button>
+                            {activeSub?.pendingPlanId && (
+                              <p className="text-secondary px-2 text-center text-[10px] leading-normal font-semibold">
+                                *Active until{" "}
+                                {activeSub.endsAt
+                                  ? new Date(activeSub.endsAt).toLocaleDateString(locale)
+                                  : ""}{" "}
+                              </p>
+                            )}
+                          </div>
+                        ) : getPlanActionType(plan.id) === "upgrade_cycle" ? (
+                          <Button
+                            onClick={() => handleChoosePlan(plan)}
+                            disabled={isDisabled}
+                            className="inline-flex w-full items-center justify-center gap-1.5 font-semibold text-white transition-all">
+                            <ArrowUpRight className="h-4 w-4 shrink-0" />
+                            <span>{t("buttons.switchToYearly")}</span>
+                          </Button>
+                        ) : getPlanActionType(plan.id) === "downgrade_cycle" ? (
+                          <div className="w-full space-y-2">
+                            <Button
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    `Apakah Anda yakin ingin menjadwalkan peralihan ke tagihan Bulanan? Paket Tahunan Anda saat ini tetap aktif sampai akhir periode tanpa tagihan tahunan baru.`
+                                  )
+                                ) {
+                                  handleDowngrade(plan.id);
+                                }
+                              }}
+                              disabled={isDisabled || isDowngrading}
+                              variant="outline"
+                              className="border-secondary w-full font-semibold transition-all hover:bg-slate-50">
+                              {isDowngrading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                              <span>{t("buttons.switchToMonthly")}</span>
+                            </Button>
+                            <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
+                              *Paket tahunan Anda tetap aktif sampai masa berakhir, baru kemudian
+                              beralih ke bulanan.
+                            </p>
+                          </div>
+                        ) : actionType === "upgrade" && isSubActive ? (
+                          <Button
+                            onClick={() => handleChoosePlan(plan)}
+                            disabled={isDisabled}
+                            className="inline-flex w-full items-center justify-center gap-1.5 font-semibold">
+                            <ArrowUpRight className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{t("buttons.upgrade")}</span>
+                          </Button>
+                        ) : actionType === "downgrade" && isSubActive ? (
+                          <div className="w-full space-y-2">
+                            <Button
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    `Apakah Anda yakin ingin menjadwalkan penurunan paket ke ${localizedName}? Paket aktif Anda tetap bisa digunakan hingga jatuh tempo.`
+                                  )
+                                ) {
+                                  handleDowngrade(plan.id);
+                                }
+                              }}
+                              disabled={isDisabled || isDowngrading}
+                              variant="outline"
+                              className="border-secondary hover:bg-secondary/10 w-full font-semibold transition-all">
+                              {isDowngrading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                              {t("buttons.downgrade") || "Downgrade Plan"}
+                            </Button>
+                            <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
+                              *{t("downgradeinfo")}
+                            </p>
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={() => handleChoosePlan(plan)}
+                            disabled={isDisabled}
+                            className="w-full truncate font-semibold transition-all">
+                            {t("buttons.choose")}
+                          </Button>
+                        )}
+                      </div>
+                      {!plan.isEnterprise &&
+                        !!plan.trialDays &&
+                        plan.trialDays > 0 &&
+                        !isSubActive &&
+                        !hasUsedTrial && (
+                          <Button
+                            variant="outline"
+                            onClick={() => handleStartTrial(plan.id)}
+                            disabled={isStartingTrial}
+                            className="mt-2 w-full text-xs font-semibold text-slate-700">
+                            {isStartingTrial && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                            Mulai Trial {plan.trialDays} Hari
+                          </Button>
+                        )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
         </div>
       </div>
 
