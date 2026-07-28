@@ -31,23 +31,19 @@ export default function MagicLoginHandler() {
       }
 
       try {
-        // 1. Dekripsi data token Base64
         const decodedString = Buffer.from(token, "base64").toString("utf-8");
         const { email, timestamp } = JSON.parse(decodedString);
 
-        // Validasi kadaluarsa token lokal (misal: maksimal 15 menit)
         if (Date.now() - timestamp > 15 * 60 * 1000) {
           throw new Error("Tautan ajaib telah kadaluarsa. Silakan buat tautan baru.");
         }
 
-        // 2. Lakukan login instan menggunakan passwordless otp di sisi client
         const { error } = await supabase.auth.signInWithOtp({ email });
 
         if (error) throw error;
 
         setStatus("success");
 
-        // Alihkan halaman setelah sukses
         setTimeout(() => {
           router.push(next);
           router.refresh();

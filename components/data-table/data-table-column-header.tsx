@@ -17,8 +17,14 @@ export function DataTableColumnHeader<TData, TValue>({
   title,
   className
 }: DataTableColumnHeaderProps<TData, TValue>) {
+  // Alignment via column meta (e.g., meta: { align: "right" } for numeric/currency columns).
+  const align = (column.columnDef.meta as any)?.align as string | undefined;
+  const alignClass = align === "right" ? "justify-end text-right w-full" : "";
+
   if (!column.getCanSort()) {
-    return <div className={cn("text-xs", className)}>{title}</div>;
+    return (
+      <div className={cn("text-xs", alignClass, className)}>{title}</div>
+    );
   }
 
   const isSorted = column.getIsSorted();
@@ -28,6 +34,7 @@ export function DataTableColumnHeader<TData, TValue>({
       variant="ghost"
       className={cn(
         "-ms-3 text-xs hover:bg-transparent hover:text-current focus-visible:bg-transparent active:bg-transparent",
+        alignClass,
         className
       )}
       onClick={() => column.toggleSorting(isSorted === "asc")}>

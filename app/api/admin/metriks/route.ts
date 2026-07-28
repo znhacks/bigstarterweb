@@ -1,5 +1,3 @@
-// app/api/admin/metrics/route.ts
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { profileRepository } from "@/supabase/repositories/profiles";
@@ -13,7 +11,6 @@ const supabaseAdmin = createClient(
 
 export async function GET(req: Request) {
   try {
-    // 1. OTORISASI AMAN: Memastikan pemanggil adalah Superadmin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -29,8 +26,9 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    // KOREKSI ARSITEKTUR: Membaca kolom is_superadmin langsung dari tabel profiles (System Role)
-    const { data: profile, error: profileErr } = await (await profileRepository(supabaseAdmin))
+    const { data: profile, error: profileErr } = await (
+      await profileRepository(supabaseAdmin)
+    )
       .query()
       .select("is_superadmin")
       .eq("id", user.id)
@@ -43,7 +41,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // 2. QUERY AGREGASI FINANSIAL: Menghitung Gross, Net, dan Tax
     const transactionRepo = await transactionRepository(supabaseAdmin);
     const { data: txMetrics, error: txErr } = await transactionRepo
       .query()
@@ -64,8 +61,9 @@ export async function GET(req: Request) {
       });
     }
 
-    // 3. QUERY LANGGANAN AKTIF: Jumlah pelanggan aktif per paket (Free, Starter, Pro)
-    const { data: subMetrics, error: subErr } = await (await subscriptionRepository(supabaseAdmin))
+    const { data: subMetrics, error: subErr } = await (
+      await subscriptionRepository(supabaseAdmin)
+    )
       .query()
       .select("plan_id, status")
       .eq("status", "active");
@@ -83,7 +81,6 @@ export async function GET(req: Request) {
       });
     }
 
-    // 4. QUERY DAFTAR TRANSAKSI TERBARU (AUDIT HISTORY)
     const { data: recentTransactions, error: recErr } = await transactionRepo
       .query()
       .select("id, tenant_id, amount, currency, plan_name, status, created_at, provider")
@@ -92,7 +89,6 @@ export async function GET(req: Request) {
 
     if (recErr) throw recErr;
 
-    // 5. Kembalikan data metrik terstruktur
     return NextResponse.json({
       success: true,
       metrics: {

@@ -142,6 +142,35 @@ export function useOrganizationBilling() {
       return isNaN(parsed) ? 9999 : parsed;
     };
 
+    // Fungsi pengurutan kustom baru untuk memprioritaskan free plan di awal dan enterprise di akhir
+    const sortPlans = (a: any, b: any) => {
+      const isFreeA = a.id === "free";
+      const isFreeB = b.id === "free";
+
+      // Letakkan paket 'free' di paling atas
+      if (isFreeA && !isFreeB) return -1;
+      if (!isFreeA && isFreeB) return 1;
+
+      const isEnterpriseA = !!a.isEnterprise;
+      const isEnterpriseB = !!b.isEnterprise;
+
+      // Letakkan paket 'enterprise' di paling bawah
+      if (isEnterpriseA && !isEnterpriseB) return 1;
+      if (!isEnterpriseA && isEnterpriseB) return -1;
+
+      // Sisanya diurutkan sesuai sort_order / weight / price
+      const orderA = getOrderValue(a);
+      const orderB = getOrderValue(b);
+
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      const priceA = a.prices?.monthly?.amount ?? 0;
+      const priceB = b.prices?.monthly?.amount ?? 0;
+      return priceA - priceB;
+    };
+
     const resolvePlansAndPricesLocally = async () => {
       try {
         const rateResult = await convertCurrency(1, targetCurrency, CURRENCY.base);
@@ -171,18 +200,7 @@ export function useOrganizationBilling() {
               }
             } as ConvertedPlan;
           })
-          .sort((a, b) => {
-            const orderA = getOrderValue(a);
-            const orderB = getOrderValue(b);
-
-            if (orderA !== orderB) {
-              return orderA - orderB;
-            }
-
-            const priceA = a.prices.monthly.amount;
-            const priceB = b.prices.monthly.amount;
-            return priceA - priceB;
-          });
+          .sort(sortPlans); // Menggunakan fungsi sortPlans baru
 
         if (isMounted) {
           setConvertedPlans(updated);
@@ -209,18 +227,7 @@ export function useOrganizationBilling() {
                 }
               }
             }))
-            .sort((a, b) => {
-              const orderA = getOrderValue(a);
-              const orderB = getOrderValue(b);
-
-              if (orderA !== orderB) {
-                return orderA - orderB;
-              }
-
-              const priceA = a.prices?.monthly?.amount ?? 0;
-              const priceB = b.prices?.monthly?.amount ?? 0;
-              return priceA - priceB;
-            });
+            .sort(sortPlans); // Menggunakan fungsi sortPlans baru pada fallback
 
           setConvertedPlans(fallbackSorted as ConvertedPlan[]);
         }

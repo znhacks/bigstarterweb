@@ -318,7 +318,7 @@ export function AdminPlansPage() {
                       onCheckedChange={(v) => setForm((f) => ({ ...f, isRecommended: !!v }))}
                     />
                   </div>
-                  <div className="space-y-1.5">
+                  {/* <div className="space-y-1.5">
                     <Label htmlFor="plan-enterprise" className="cursor-pointer">
                       {t("form.enterprise") || "Enterprise (Contact)"}
                     </Label>
@@ -327,7 +327,7 @@ export function AdminPlansPage() {
                       checked={!!form.isEnterprise}
                       onCheckedChange={(v) => setForm((f) => ({ ...f, isEnterprise: !!v }))}
                     />
-                  </div>
+                  </div> */}
                   <div className="space-y-1.5">
                     <Label htmlFor="plan-trial">{t("form.trialDays") || "Trial (hari)"}</Label>
                     <Input

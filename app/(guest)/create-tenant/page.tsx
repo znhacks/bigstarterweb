@@ -1,6 +1,5 @@
 import React from "react";
-import { redirect } from "next/navigation";
-import { requireAuth, requireSuperadmin } from "@/lib/auth";
+import { requireAuth, getUser } from "@/lib/auth";
 import { CreateTenantForm } from "@/components/create-tenant-form";
 import { getTranslations } from "next-intl/server"; // Menggunakan getTranslations untuk Server Component
 import { constructMetadata } from "@/lib/metadata";
@@ -22,12 +21,23 @@ export default async function CreateTenantPage() {
   // Wajibkan autentikasi sesi sebelum masuk halaman ini
   await requireAuth();
 
-  // Gate: bila user tak boleh create org → hanya superadmin yang diizinkan.
+  // Gate: bila user tak boleh create org → hanya superadmin. Non-superadmin
+  // mendapat pesan "perlu diundang" (TIDAK redirect → hindari loop dgn middleware).
   if (!tenantConfig.organizations.enableUsersToCreateOrganizations) {
-    try {
-      await requireSuperadmin();
-    } catch {
-      redirect("/login");
+    const user = await getUser();
+    const isSuperadmin = user?.app_metadata?.role === "superadmin";
+    if (!isSuperadmin) {
+      return (
+        <div className="bg-muted/40 flex min-h-screen flex-col items-center justify-center p-4">
+          <div className="w-full max-w-md space-y-4 rounded-md border bg-white p-8 text-center">
+            <h1 className="text-2xl font-bold tracking-tight">Anda perlu diundang</h1>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Pembuatan organisasi dinonaktifkan. Hubungi administrator untuk diundang
+              ke organisasi yang sudah ada, atau keluar dan masuk kembali dengan akun lain.
+            </p>
+          </div>
+        </div>
+      );
     }
   }
 

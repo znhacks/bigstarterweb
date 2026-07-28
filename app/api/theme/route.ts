@@ -1,9 +1,3 @@
-// app/api/theme/route.ts
-//
-// Per-entity theme resolution & save.
-// Priority: custom profiles.theme > tenants.theme > DEFAULT_THEME.
-// Client passes X-Tenant-Id header for tenant resolution.
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_THEME, type ThemeType } from "@/lib/themes";
@@ -36,7 +30,6 @@ function isCustomTheme(obj: unknown): boolean {
   );
 }
 
-/** GET /api/theme — resolve effective theme (custom user > tenant > default). */
 export async function GET(req: Request) {
   try {
     const authHeader = req.headers.get("Authorization");
@@ -51,8 +44,9 @@ export async function GET(req: Request) {
     } = await supabaseAdmin.auth.getUser(token);
     if (!user) return NextResponse.json({ theme: DEFAULT_THEME });
 
-    // 1. A custom user theme always wins. An all-default user theme inherits the tenant.
-    const { data: profile } = await (await profileRepository(supabaseAdmin))
+    const { data: profile } = await (
+      await profileRepository(supabaseAdmin)
+    )
       .query()
       .select("theme")
       .eq("id", user.id)
@@ -63,16 +57,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ theme: resolveTheme(userTheme), source: "user" });
     }
 
-    // 2. Tenant theme — prefer the explicit id during a sidebar switch because the URL may
-    // still contain the previous tenant slug.
     const tenantRepo = await tenantRepository(supabaseAdmin);
     let tenantData: any = null;
     if (isTenantSwitch && tenantId) {
-      const { data } = await tenantRepo
-        .query()
-        .select("theme")
-        .eq("id", tenantId)
-        .maybeSingle();
+      const { data } = await tenantRepo.query().select("theme").eq("id", tenantId).maybeSingle();
       tenantData = data;
     } else if (tenantSlug) {
       const { data } = await tenantRepo
@@ -82,11 +70,7 @@ export async function GET(req: Request) {
         .maybeSingle();
       tenantData = data;
     } else if (tenantId) {
-      const { data } = await tenantRepo
-        .query()
-        .select("theme")
-        .eq("id", tenantId)
-        .maybeSingle();
+      const { data } = await tenantRepo.query().select("theme").eq("id", tenantId).maybeSingle();
       tenantData = data;
     }
 
@@ -94,14 +78,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ theme: resolveTheme(tenantData.theme), source: "tenant" });
     }
 
-    // 3. Default
     return NextResponse.json({ theme: DEFAULT_THEME, source: "default" });
   } catch {
     return NextResponse.json({ theme: DEFAULT_THEME });
   }
 }
 
-/** POST /api/theme — save theme to profiles.theme or tenants.theme. */
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get("Authorization");
@@ -119,11 +101,11 @@ export async function POST(req: Request) {
     if (!theme || typeof theme !== "object") {
       return NextResponse.json({ error: "Invalid theme shape" }, { status: 400 });
     }
-    // {} (kosong) = reset ke default → valid.
 
     if (scope === "tenant" && tenantId) {
-      // Verify user is member of this tenant (basic guard)
-      const { data: membership } = await (await membershipRepository(supabaseAdmin))
+      const { data: membership } = await (
+        await membershipRepository(supabaseAdmin)
+      )
         .query()
         .select("id")
         .eq("user_id", user.id)
@@ -133,14 +115,17 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Not a member of this tenant" }, { status: 403 });
       }
 
-      const { error } = await (await tenantRepository(supabaseAdmin))
+      const { error } = await (
+        await tenantRepository(supabaseAdmin)
+      )
         .query()
         .update({ theme })
         .eq("id", tenantId);
       if (error) throw error;
     } else {
-      // Default: save to user profile
-      const { error } = await (await profileRepository(supabaseAdmin))
+      const { error } = await (
+        await profileRepository(supabaseAdmin)
+      )
         .query()
         .update({ theme })
         .eq("id", user.id);

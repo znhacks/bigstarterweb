@@ -1,4 +1,3 @@
-// app/api/webhooks/welcome-email/route.ts
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/mail/dispatcher";
 

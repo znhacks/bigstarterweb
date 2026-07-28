@@ -6,7 +6,6 @@ import { onError } from "@orpc/server";
 import { apiRouter } from "@/lib/api/router";
 import { resolveAuth } from "@/lib/api/auth";
 
-// Public API runs on Node (uses node:crypto + service-role client) and must never be cached.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -20,10 +19,8 @@ const openApiHandler = new OpenAPIHandler(apiRouter, {
 
 const app = new Hono();
 
-// CORS for the whole API surface (preflight + response headers).
 app.use("*", cors());
 
-// Type-safe oRPC RPC endpoint → /api/rpc/**
 app.use("/api/rpc/*", async (c, next) => {
   const { matched, response } = await rpcHandler.handle(c.req.raw, {
     prefix: "/api/rpc",
@@ -33,7 +30,6 @@ app.use("/api/rpc/*", async (c, next) => {
   await next();
 });
 
-// REST/OpenAPI endpoint → /api/v1/**
 app.use("/api/v1/*", async (c, next) => {
   const { matched, response } = await openApiHandler.handle(c.req.raw, {
     prefix: "/api/v1",
@@ -45,7 +41,13 @@ app.use("/api/v1/*", async (c, next) => {
 
 app.all("*", (c) => c.text("Not Found", 404));
 
-// Delegate every HTTP method to the Hono app.
 const handler = (req: Request) => app.fetch(req);
 
-export { handler as GET, handler as POST, handler as PUT, handler as PATCH, handler as DELETE, handler as OPTIONS };
+export {
+  handler as GET,
+  handler as POST,
+  handler as PUT,
+  handler as PATCH,
+  handler as DELETE,
+  handler as OPTIONS
+};

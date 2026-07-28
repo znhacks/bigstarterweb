@@ -542,6 +542,19 @@ export function useAdminPlans() {
       return;
     }
 
+    // Non-enterprise plan wajib punya minimal 1 siklus dgn harga > 0.
+    if (!form.isEnterprise) {
+      const hasMonthly = isMonthlyEnabled && form.monthlyAmount > 0;
+      const hasYearly = isYearlyEnabled && form.yearlyAmount > 0;
+      if (!hasMonthly && !hasYearly) {
+        showAlert(
+          "error",
+          "Minimal satu siklus (bulanan/tahunan) harus diisi dengan harga > 0."
+        );
+        return;
+      }
+    }
+
     // LOGIKA URUTAN: Ambil nilai input atau hitung urutan maksimum selanjutnya
     let calculatedSortOrder = form.sortOrder.trim() !== "" ? parseInt(form.sortOrder, 10) : null;
     if (calculatedSortOrder === null || isNaN(calculatedSortOrder)) {

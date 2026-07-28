@@ -3,7 +3,6 @@ export const siteConfig = {
   description: "Website Sass dengan fitur yang super lengkap.",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   ogImage: "/logo.png",
-  /** Logo app utk branding (sidebar superadmin, header). Default: /logo.png */
   logo: "/logo.png",
   links: {
     twitter: "https://twitter.com/username",

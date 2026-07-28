@@ -2,7 +2,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { profileRepository } from "@/supabase/repositories/profiles";
 import { getActiveTenant } from "@/services/tenant";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import type { PermissionName } from "@/lib/rbac/permissions";
 import { hasAnyPermission } from "@/lib/rbac";
 import type { ActiveTenantContext } from "@/lib/rbac/types";
@@ -77,10 +77,10 @@ export async function requirePermission(
   await requireAuth();
 
   const ctx = await getActiveTenant(tenantSlug);
-  if (!ctx) redirect("/");
+  if (!ctx) notFound();
 
   if (!ctx.permissions.includes(required)) {
-    redirect(`/${tenantSlug}`);
+    notFound();
   }
 
   return ctx;
@@ -97,10 +97,10 @@ export async function requireAnyPermission(
   await requireAuth();
 
   const ctx = await getActiveTenant(tenantSlug);
-  if (!ctx) redirect("/");
+  if (!ctx) notFound();
 
   if (!hasAnyPermission(ctx.permissions, required)) {
-    redirect(`/${tenantSlug}`);
+    notFound();
   }
 
   return ctx;
@@ -172,5 +172,6 @@ export async function requireSuperadmin(redirectTo: string = "/") {
 
   if (profile?.is_superadmin === true) return user;
 
-  redirect(redirectTo);
+  // Non-superadmin mencoba akses halaman superadmin → 404 (sembunyikan keberadaan halaman).
+  notFound();
 }

@@ -22,7 +22,6 @@ export async function GET() {
     servers: [{ url: "/api/v1", description: "Current host" }]
   });
 
-  // Expose a global Bearer security scheme so the docs UI has an "Authorize" button.
   spec.components ??= {};
   spec.components.securitySchemes = {
     apiKey: {

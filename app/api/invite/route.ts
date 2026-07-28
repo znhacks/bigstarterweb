@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
-import { checkSeatLimit } from "@/lib/billing/enforcer"; // Import Seat-Based Enforcer
+import { checkSeatLimit } from "@/lib/billing/enforcer";
 import { getUser } from "@/lib/auth";
 import { isTenantAdmin } from "@/lib/billing/tenant-auth";
 import { signInviteToken } from "@/lib/invite/token";
-import { createClient } from "@/lib/supabase/server"; // UBAH: Gunakan helper server SSR kita
+import { createClient } from "@/lib/supabase/server";
 import { roleRepository } from "@/supabase/repositories/roles";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { invitationRepository } from "@/supabase/repositories/invitations";
@@ -14,7 +14,6 @@ const mailersend = new MailerSend({
 });
 
 export async function POST(req: Request) {
-  // 1. Ambil user aktif dari sesi cookie aman
   const user = await getUser();
 
   if (!user) {
@@ -32,12 +31,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing email, roleId, or orgName" }, { status: 400 });
     }
 
-    // UBAH: Inisialisasi klien Supabase Server yang membawa sesi cookie aktif
     const supabase = await createClient();
 
-    // Validasi roleId benar-benar ada di tabel roles, sekaligus ambil nama role
-    // untuk ditampilkan di email & disematkan ke token.
-    const { data: roleData, error: roleError } = await (await roleRepository(supabase))
+    const { data: roleData, error: roleError } = await (
+      await roleRepository(supabase)
+    )
       .query()
       .select("name")
       .eq("id", roleId)
@@ -48,8 +46,9 @@ export async function POST(req: Request) {
     }
     const role = roleData.name;
 
-    // 2. Dapatkan ID organisasi (tenant_id) berdasarkan nama organisasi
-    const { data: tenantData, error: tenantError } = await (await tenantRepository(supabase))
+    const { data: tenantData, error: tenantError } = await (
+      await tenantRepository(supabase)
+    )
       .query()
       .select("id")
       .eq("name", orgName)
@@ -62,8 +61,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Authorization: hanya admin/owner tenant yang boleh mengundang anggota.
-    // (Kebijakan RLS `invitations` INSERT juga menuntut is_tenant_admin + invited_by = auth.uid.)
     const canInvite = await isTenantAdmin(supabase, user.id, tenantData.id);
     if (!canInvite) {
       return NextResponse.json(
@@ -72,7 +69,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // --- INTEGRASI SEAT-BASED LIMIT CHECK (TAHAP 7) ---
     const seatCheck = await checkSeatLimit(tenantData.id);
 
     if (!seatCheck.allowed) {
@@ -85,9 +81,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Kelola penyimpanan data undangan ke tabel 'invitations'.
-    //    invited_by WAJIB diisi agar memenuhi WITH CHECK RLS
-    //    (is_tenant_admin AND invited_by = auth.uid()).
     const invitationRepo = await invitationRepository(supabase);
     const { data: existingInvite } = await invitationRepo
       .query()
@@ -100,7 +93,7 @@ export async function POST(req: Request) {
     if (existingInvite) {
       const { error: updateError } = await invitationRepo
         .query()
-        // role_id adalah sumber kebenaran (kolom role string sudah tidak ada).
+
         .update({ role_id: roleId, invited_by: user.id })
         .eq("id", existingInvite.id);
 
@@ -122,10 +115,6 @@ export async function POST(req: Request) {
       invitationId = inserted.id;
     }
 
-    // 4. Tanda tangani token undangan (HMAC-SHA256) — menggantikan Base64 JSON
-    //    tanpa tanda yang dapat di-forging. Payload: id invitation (otoritatif),
-    //    email, orgName, roleName (display) + kedaluwarsa 7 hari. Validasi &
-    //    pencocokan email dilakukan server-side saat accept.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const token = signInviteToken(invitationId, email.trim().toLowerCase(), orgName, role);
     const joinLink = `${appUrl}/join?token=${token}`;

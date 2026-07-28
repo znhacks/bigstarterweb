@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { decodeFeatureGates } from "@/config/feature-definitions";
 import { planRepository } from "@/supabase/repositories/plans";
 import { planPriceRepository } from "@/supabase/repositories/plan-pices";
+import { getActiveVirtualPlans } from "@/config/virtual-plans";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -69,7 +70,11 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ success: true, plans: formattedPlans });
+    // Merge virtual plans (free/enterprise via config) — skip bila id sudah ada di DB.
+    const dbPlanIds = new Set(formattedPlans.map((p: any) => p.id));
+    const virtualPlans = getActiveVirtualPlans().filter((p) => !dbPlanIds.has(p.id));
+
+    return NextResponse.json({ success: true, plans: [...formattedPlans, ...virtualPlans] });
   } catch (error: any) {
     console.error("Failed to fetch dynamic plans:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });

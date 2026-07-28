@@ -1,5 +1,3 @@
-// app/api/admin/plans/route.ts
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { invalidatePlanCache } from "@/services/payment/billing/gating";
@@ -13,9 +11,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
-/**
- * FUNGSI PEMBANTU: Memvalidasi apakah pemanggil adalah Superadmin
- */
 async function validateSuperadmin(req: Request) {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) throw new Error("Unauthorized");
@@ -28,7 +23,6 @@ async function validateSuperadmin(req: Request) {
 
   if (authError || !user) throw new Error("Invalid token");
 
-  // KOREKSI ARSITEKTUR: Membaca kolom is_superadmin langsung dari tabel profiles (System Role)
   const { data: profile, error: profileErr } = await (
     await profileRepository(supabaseAdmin)
   )
@@ -44,14 +38,10 @@ async function validateSuperadmin(req: Request) {
   return user;
 }
 
-/**
- * 1. GET: Menarik seluruh paket (aktif maupun non-aktif) untuk Konsol Admin
- */
 export async function GET(req: Request) {
   try {
     await validateSuperadmin(req);
 
-    // Ambil seluruh plans
     const { data: plans, error: plansErr } = await (
       await planRepository(supabaseAdmin)
     )
@@ -61,7 +51,6 @@ export async function GET(req: Request) {
 
     if (plansErr) throw plansErr;
 
-    // Ambil seluruh plan_prices
     const { data: prices, error: pricesErr } = await (
       await planPriceRepository(supabaseAdmin)
     )
@@ -86,9 +75,6 @@ export async function GET(req: Request) {
   }
 }
 
-/**
- * 2. POST: Menyimpan paket baru atau memperbarui paket lama beserta harga & gateway-nya (UPSERT)
- */
 export async function POST(req: Request) {
   try {
     await validateSuperadmin(req);
@@ -105,10 +91,10 @@ export async function POST(req: Request) {
       isEnterprise,
       isRecommended,
       trialDays,
-      sortOrder, // CamelCase dari client
-      sort_order, // SnakeCase dari client
-      weight, // Sebagai cadangan
-      resolveConflict // Flag instruksi penanganan konflik pengurutan berantai
+      sortOrder,
+      sort_order,
+      weight,
+      resolveConflict
     } = body;
 
     if (!id || !name || !description) {
@@ -120,7 +106,6 @@ export async function POST(req: Request) {
 
     const normalizedId = id.toLowerCase().trim();
 
-    // Resolusi nilai urutan (sort order) dari request
     const resolvedSortOrder =
       sort_order !== undefined
         ? sort_order
@@ -130,20 +115,16 @@ export async function POST(req: Request) {
             ? weight
             : 0;
 
-    // RESOLUSI KONFLIK: Jika disetujui untuk menggeser duplikasi
     if (resolveConflict === true && resolvedSortOrder > 0) {
-      // Dapatkan semua paket lain yang berbenturan atau memiliki urutan lebih besar dari target baru
       const { data: conflictingPlans, error: getConflictingErr } = await supabaseAdmin
         .from("plans")
         .select("id, sort_order, weight")
         .gte("sort_order", resolvedSortOrder)
-        .neq("id", normalizedId); // Kecualikan data paket yang sedang di-edit itu sendiri
+        .neq("id", normalizedId);
 
       if (getConflictingErr) throw getConflictingErr;
 
       if (conflictingPlans && conflictingPlans.length > 0) {
-        // Urutkan data secara menurun (terbesar ke terkecil) sebelum melakukan update
-        // demi menghindari konflik unique index sementara saat proses penyesuaian nilai
         const sortedConflicting = conflictingPlans.sort(
           (a, b) => (b.sort_order ?? b.weight ?? 0) - (a.sort_order ?? a.weight ?? 0)
         );
@@ -163,7 +144,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // A. Upsert ke tabel 'plans'
     const { error: planErr } = await (await planRepository(supabaseAdmin)).query().upsert({
       id: normalizedId,
       name,
@@ -172,19 +152,17 @@ export async function POST(req: Request) {
       is_enterprise: isEnterprise ?? false,
       is_recommended: isRecommended ?? false,
       trial_days: trialDays ?? 0,
-      sort_order: resolvedSortOrder, // Menyimpan ke kolom 'sort_order'
-      weight: resolvedSortOrder, // Menyimpan ke kolom 'weight' sebagai fallback database
+      sort_order: resolvedSortOrder,
+      weight: resolvedSortOrder,
       display_features: displayFeatures || [],
-      features: features || [], // Menyimpan array rbac terpadu: ['allowPdfFormat', 'limit:maxTasks:2000']
+      features: features || [],
       updated_at: new Date().toISOString()
     });
 
     if (planErr) throw planErr;
 
-    // Invalidasi cache gating agar perubahan fitur langsung efektif (best-effort, per-instance)
     invalidatePlanCache(normalizedId);
 
-    // B. Upsert harga Bulanan (monthly) ke tabel 'plan_prices'
     const planPriceRepo = await planPriceRepository(supabaseAdmin);
     if (prices?.monthly) {
       const { error: mPriceErr } = await planPriceRepo.query().upsert(
@@ -201,7 +179,6 @@ export async function POST(req: Request) {
       if (mPriceErr) throw mPriceErr;
     }
 
-    // C. Upsert harga Tahunan (yearly) ke tabel 'plan_prices'
     if (prices?.yearly) {
       const { error: yPriceErr } = await planPriceRepo.query().upsert(
         {
@@ -224,21 +201,17 @@ export async function POST(req: Request) {
   }
 }
 
-/**
- * 3. DELETE: Menonaktifkan paket (soft-delete) atau menghapusnya secara permanen dari database
- */
 export async function DELETE(req: Request) {
   try {
     await validateSuperadmin(req);
     const { searchParams } = new URL(req.url);
     const planId = searchParams.get("id");
-    const action = searchParams.get("action"); // Mengambil parameter aksi
+    const action = searchParams.get("action");
 
     if (!planId) {
       return NextResponse.json({ error: "ID paket wajib dikirimkan" }, { status: 400 });
     }
 
-    // Proteksi keamanan: Periksa apakah ada pelanggan yang sedang aktif di paket ini
     const { count, error: countErr } = await (
       await subscriptionRepository(supabaseAdmin)
     )
@@ -257,7 +230,6 @@ export async function DELETE(req: Request) {
     }
 
     if (action === "delete") {
-      // PROSES HAPUS FISIK PERMANEN DARI DATABASE
       const { error: deleteErr } = await (
         await planRepository(supabaseAdmin)
       )
@@ -267,7 +239,6 @@ export async function DELETE(req: Request) {
 
       if (deleteErr) throw deleteErr;
     } else {
-      // PROSES NON-AKTIFKAN SAJA (SOFT-DELETE)
       const { error: deactivateErr } = await (
         await planRepository(supabaseAdmin)
       )
@@ -278,7 +249,6 @@ export async function DELETE(req: Request) {
       if (deactivateErr) throw deactivateErr;
     }
 
-    // Invalidasi cache gating (konsistensi, best-effort per-instance)
     invalidatePlanCache(planId);
 
     return NextResponse.json({ success: true });

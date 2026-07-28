@@ -78,7 +78,14 @@ export async function POST(req: Request) {
       .select("name")
       .eq("id", planId)
       .maybeSingle();
-    const planName = planRow?.name || planId;
+    // planRow.name bisa objek multibahasa (JSON di text column) → flatten ke string.
+    const rawName = planRow?.name;
+    const planName =
+      typeof rawName === "string"
+        ? rawName
+        : (rawName as any)?.en ||
+          (rawName && typeof rawName === "object" ? Object.values(rawName as any)[0] : null) ||
+          planId;
 
     const chargeAmountIdr = await convertToIdrSafe(targetPrice, planCurrency);
 

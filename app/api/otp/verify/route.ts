@@ -24,10 +24,6 @@ export async function POST(req: Request) {
       return NextResponse.json(res, { status: 400 });
     }
 
-    // LOGIN via email: generate token_hash, JANGAN redirect ke action_link.
-    // Client akan memanggil supabase.auth.verifyOtp({ token_hash, type: "magiclink" })
-    // sendiri di sisi browser — tidak ada redirect, tidak ada hash fragment,
-    // tidak butuh route /auth/callback sama sekali.
     if (purpose === "login" && channel === "email") {
       const { data, error } = await supabaseAdmin.auth.admin.generateLink({
         type: "magiclink",
@@ -49,7 +45,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // purpose lain (verify_email/phone/custom): cukup kembalikan valid=true; caller menandai kontak.
     return NextResponse.json({ ok: true, valid: true });
   } catch (e: any) {
     console.error("OTP verify error:", e);

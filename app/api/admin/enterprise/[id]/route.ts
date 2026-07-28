@@ -1,7 +1,3 @@
-// app/api/admin/enterprise/[id]/route.ts
-//
-// Superadmin: memperbarui status inquiry enterprise (new → contacted → closed).
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { profileRepository } from "@/supabase/repositories/profiles";
@@ -12,9 +8,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
-/**
- * FUNGSI PEMBANTU: Memvalidasi apakah pemanggil adalah Superadmin
- */
 async function validateSuperadmin(req: Request) {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) throw new Error("Unauthorized");
@@ -44,10 +37,7 @@ async function validateSuperadmin(req: Request) {
 
 const VALID_STATUSES = ["new", "contacted", "closed"];
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await validateSuperadmin(req);
 

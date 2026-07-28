@@ -1,4 +1,3 @@
-// /actions/currency.ts
 "use server";
 
 import { CURRENCY } from "@/config/i18n-culture";
@@ -11,7 +10,7 @@ interface CacheEntry {
 }
 
 const currencyCache: Record<string, CacheEntry> = {};
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 jam
+const CACHE_TTL_MS = 60 * 60 * 1000;
 
 async function fetchRatesWithCache(base: string): Promise<CurrencyRates> {
   const now = Date.now();
@@ -30,7 +29,6 @@ async function fetchRatesWithCache(base: string): Promise<CurrencyRates> {
     };
     return freshRates;
   } catch (error) {
-    // FIX: Gunakan "as string" untuk memperluas tipe kompilasi literal
     if ((CURRENCY.activeProvider as string) !== "mock") {
       console.warn("Mengaktifkan mock provider karena kendala jaringan...");
       const { MockCurrencyService } = await import("@/services/currency/mock-service");

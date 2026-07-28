@@ -15,12 +15,10 @@ export async function createProjectAction(formData: FormData) {
     const dbProvider = getDatabaseService();
     const storageProvider = getStorageService();
 
-    // 1. Ambil client database yang aktif (SupabaseClient)
     const { client: supabase, tenantId, dbModel } = await dbProvider.getClient(subdomain);
 
     let logoUrl = "";
 
-    // 2. Unggah file menggunakan storage provider yang aktif
     if (file && file.size > 0) {
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
@@ -35,17 +33,18 @@ export async function createProjectAction(formData: FormData) {
       );
     }
 
-    // 3. Simpan data menggunakan sintaksis Supabase Client
     const insertData: any = {
       name: projectName,
       logo_url: logoUrl
     };
 
     if (dbModel === "SHARED") {
-      insertData.tenant_id = tenantId; // Wajib diisi jika Model 1 (Shared)
+      insertData.tenant_id = tenantId;
     }
 
-    const { data, error } = await (await projectRepository(supabase))
+    const { data, error } = await (
+      await projectRepository(supabase)
+    )
       .query()
       .insert(insertData)
       .select();
