@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "auth:migrate": "better-auth migrate",
-    "db:sync-rbac": "tsx scripts/sync-rbac.ts",
+    "db:sync-rbac": "tsx --env-file=.env scripts/sync-rbac.ts",
     "create:user": "tsx --env-file=.env scripts/create-user.ts"
   },
   "dependencies": {

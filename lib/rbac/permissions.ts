@@ -2,6 +2,7 @@ export const PERMISSIONS = {
   organizationRead: "organization.read",
   organizationUpdate: "organization.update",
   organizationDelete: "organization.delete",
+  organizationView: "organization.view",
 
   membersRead: "members.read",
   membersInvite: "members.invite",
@@ -25,6 +26,27 @@ export const PERMISSIONS = {
 export type PermissionName = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
 export const ALL_PERMISSIONS: PermissionName[] = Object.values(PERMISSIONS);
+
+/** Deskripsi tiap permission (di-sync ke DB oleh syncRbacToDb). */
+export const PERMISSION_DESCRIPTIONS: Record<PermissionName, string> = {
+  "organization.read": "View organization details",
+  "organization.update": "Update organization settings",
+  "organization.delete": "Delete the organization",
+  "members.read": "View organization members",
+  "members.invite": "Invite new members",
+  "members.manage": "Change member roles",
+  "members.remove": "Remove members from the organization",
+  "billing.read": "View billing and transaction history",
+  "billing.manage": "Manage subscription, cancel, resume, downgrade",
+  "api_keys.manage": "Create, rotate, and revoke API keys",
+  "tasks.read": "View tasks",
+  "tasks.create": "Create new tasks",
+  "tasks.update": "Edit existing tasks",
+  "tasks.delete": "Delete tasks",
+  "dashboard.view": "Access the organization dashboard",
+  "settings.view": "Access organization and account settings",
+  "organization.view": "Can View Organization"
+};
 
 export const PERMISSION_GROUPS: {
   domain: string;

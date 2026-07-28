@@ -1,4 +1,4 @@
-import { ALL_PERMISSIONS, PERMISSIONS, type PermissionName } from "@/lib/rbac/permissions";
+import { ALL_PERMISSIONS, PERMISSIONS, PERMISSION_DESCRIPTIONS, type PermissionName } from "@/lib/rbac/permissions";
 import { roleRepository } from "@/supabase/repositories/roles";
 import { permissionRepository } from "@/supabase/repositories/permissions";
 import { rolePermissionRepository } from "@/supabase/repositories/role-permissions";
@@ -105,7 +105,7 @@ export async function syncRbacToDb(supabaseAdmin: any): Promise<SyncResult> {
     for (const perm of ALL_PERMISSIONS) {
       const { error: permError } = await permissionRepo
         .query()
-        .upsert({ name: perm }, { onConflict: "name" });
+        .upsert({ name: perm, description: PERMISSION_DESCRIPTIONS[perm] || "" }, { onConflict: "name" });
 
       if (permError) throw permError;
     }
