@@ -634,6 +634,7 @@
       }
     },
     "organization-billing": {
+      "connectToGateway": "Connecting to the payment gateway...",
       "alert": {
         "title": "No Active Organization",
         "desc": "Please select an organization from the left sidebar before managing billing."
@@ -1105,7 +1106,9 @@
         "usage": "Usage",
         "unlimited": "Unlimited",
         "coupon-users": "Coupon Users",
-        "nousage": "No tenants have redeemed this coupon yet."
+        "nousage": "No tenants have redeemed this coupon yet.",
+        "tenantName": "Organization Name",
+        "redeemedAt": "Redeemed At"
       }
     },
     "plans": {

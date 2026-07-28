@@ -634,6 +634,7 @@
       }
     },
     "organization-billing": {
+      "connectToGateway": "Menghubungkan ke gateway pembayaran...",
       "alert": {
         "title": "Tidak Ada Organisasi Aktif",
         "desc": "Silakan pilih organisasi dari bilah sisi kiri sebelum mengelola tagihan."
@@ -1105,7 +1106,9 @@
         "usage": "Penggunaan Kuota",
         "unlimited": "Tak Terbatas",
         "coupon-users": "Pengguna Kupon",
-        "nousage": "Belum ada tenant yang menggunakan kupon ini."
+        "nousage": "Belum ada tenant yang menggunakan kupon ini.",
+        "tenantName": "Nama Organisasi",
+        "redeemedAt": "Tanggal Penukaran"
       }
     },
     "plans": {
