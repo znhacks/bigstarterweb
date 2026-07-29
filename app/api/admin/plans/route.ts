@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 import { invalidatePlanCache } from "@/services/payment/billing/gating";
 import { profileRepository } from "@/supabase/repositories/profiles";
 import { planRepository } from "@/supabase/repositories/plans";
-import { planPriceRepository } from "@/supabase/repositories/plan-pices";
+
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
+import { planPriceRepository } from "@/supabase/repositories/plan-pices";
+
+function getErrorStatus(message: string): number {
+  if (message === "Unauthorized") return 401;
+  if (message.includes("Hanya Superadmin")) return 403;
+  return 500;
+}
 
 async function validateSuperadmin(req: Request) {
   const authHeader = req.headers.get("Authorization");
@@ -58,14 +65,7 @@ export async function GET(req: Request) {
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Internal Server Error" },
-      {
-        status:
-          error.message === "Unauthorized"
-            ? 401
-            : error.message.includes("Hanya Superadmin")
-              ? 403
-              : 500
-      }
+      { status: getErrorStatus(error.message || "") }
     );
   }
 }
@@ -110,9 +110,12 @@ export async function POST(req: Request) {
             ? weight
             : 0;
 
+    const planRepo = await planRepository(supabaseAdmin);
+
+    // Diubah agar menggunakan pola Repository
     if (resolveConflict === true && resolvedSortOrder > 0) {
-      const { data: conflictingPlans, error: getConflictingErr } = await supabaseAdmin
-        .from("plans")
+      const { data: conflictingPlans, error: getConflictingErr } = await planRepo
+        .query()
         .select("id, sort_order, weight")
         .gte("sort_order", resolvedSortOrder)
         .neq("id", normalizedId);
@@ -128,8 +131,8 @@ export async function POST(req: Request) {
           const currentOrder = plan.sort_order ?? plan.weight ?? resolvedSortOrder;
           const nextOrder = currentOrder + 1;
 
-          await supabaseAdmin
-            .from("plans")
+          await planRepo
+            .query()
             .update({
               sort_order: nextOrder,
               weight: nextOrder
@@ -139,7 +142,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const { error: planErr } = await (await planRepository(supabaseAdmin)).query().upsert({
+    const { error: planErr } = await planRepo.query().upsert({
       id: normalizedId,
       name,
       description,
@@ -192,7 +195,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Admin Plans Save Error:", error);
-    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Internal Server Error" },
+      { status: getErrorStatus(error.message || "") }
+    );
   }
 }
 
@@ -224,19 +230,14 @@ export async function DELETE(req: Request) {
       );
     }
 
+    const planRepo = await planRepository(supabaseAdmin);
+
     if (action === "delete") {
-      const { error: deleteErr } = await (
-        await planRepository(supabaseAdmin)
-      )
-        .query()
-        .delete()
-        .eq("id", planId);
+      const { error: deleteErr } = await planRepo.query().delete().eq("id", planId);
 
       if (deleteErr) throw deleteErr;
     } else {
-      const { error: deactivateErr } = await (
-        await planRepository(supabaseAdmin)
-      )
+      const { error: deactivateErr } = await planRepo
         .query()
         .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq("id", planId);
@@ -249,6 +250,9 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Admin Plans Delete Error:", error);
-    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Internal Server Error" },
+      { status: getErrorStatus(error.message || "") }
+    );
   }
 }
