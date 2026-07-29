@@ -5,15 +5,17 @@ import { useState, useEffect } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal, Loader2, Trash2 } from "lucide-react";
 
-import { useDataTable } from "@/components/data-table/use-data-table";
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableSearch } from "@/components/data-table/data-table-search";
-import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { createSelectColumn } from "@/components/data-table/data-table-select-column";
-import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
+import {
+  useDataTable,
+  DataTable,
+  DataTableSearch,
+  DataTableFacetedFilter,
+  DataTableViewOptions,
+  DataTablePagination,
+  DataTableColumnHeader,
+  createSelectColumn,
+  multiSelectFilterFn
+} from "@/components/data-table";
 
 import { Button } from "@/components/ui/button";
 import {

@@ -40,10 +40,12 @@ import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 import type { DateRange } from "react-day-picker";
 
 // Reusable Table Components
-import { useDataTable } from "@/components/data-table/use-data-table";
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import {
+  useDataTable,
+  DataTable,
+  DataTableColumnHeader,
+  DataTablePagination
+} from "@/components/data-table";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
 const COLORS = ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6b7280"];

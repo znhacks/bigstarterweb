@@ -1,4 +1,3 @@
-// app/(auth)/(superadmin)/superadmin/plans/logic.ts
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
@@ -24,6 +23,7 @@ import {
 
 import { routing } from "@/i18n/routing";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
+import { actionCol, numCol, textCol } from "@/components/data-table/columns";
 
 export interface DBPlan {
   id: string;
@@ -58,7 +58,17 @@ const LOCALE_METADATA: Record<string, { label: string; placeholder: string }> = 
   en: { label: "English", placeholder: "Inggris" },
   id: { label: "Indonesia", placeholder: "Indonesia" },
   ar: { label: "العربية", placeholder: "Arab" },
-  ja: { label: "日本語", placeholder: "Jepang" }
+  ja: { label: "日本語", placeholder: "Jepang" },
+  zh: { label: "中文", placeholder: "Mandarin" },
+  ko: { label: "한국어", placeholder: "Korea" },
+  fr: { label: "Français", placeholder: "Prancis" },
+  de: { label: "Deutsch", placeholder: "Jerman" },
+  es: { label: "Español", placeholder: "Spanyol" },
+  pt: { label: "Português", placeholder: "Portugis" },
+  ru: { label: "Русский", placeholder: "Rusia" },
+  it: { label: "Italiano", placeholder: "Italia" },
+  th: { label: "ไทย", placeholder: "Thailand" },
+  vi: { label: "Tiếng Việt", placeholder: "Vietnam" }
 };
 
 export const SUPPORTED_LOCALES = routing.locales.map((code) => {
@@ -153,6 +163,20 @@ export function useAdminPlans() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [formGates, setFormGates] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    general: true,
+    features: false,
+    billing: false
+  });
+
+  const toggleSection = (section: string) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   const [deactivateTarget, setDeactivateTarget] = useState<DBPlan | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DBPlan | null>(null);
@@ -163,6 +187,9 @@ export function useAdminPlans() {
 
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [isBulkDeactivating, setIsBulkDeactivating] = useState(false);
+
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const [activeFormTab, setActiveFormTab] = useState<SupportedLocale>(
     SUPPORTED_LOCALES[0]?.code || "en"
@@ -239,6 +266,9 @@ export function useAdminPlans() {
   const handleOpenEdit = useCallback(
     (plan: DBPlan) => {
       setIsEditMode(true);
+      setErrors({});
+      setOpenSections({ general: true, features: false, billing: false });
+
       const mPrice = prices.find((p) => p.plan_id === plan.id && p.interval === "monthly");
       const yPrice = prices.find((p) => p.plan_id === plan.id && p.interval === "yearly");
 
@@ -335,136 +365,112 @@ export function useAdminPlans() {
     [prices]
   );
 
-  const columns: ColumnDef<PlanRow, unknown>[] = useMemo(
-    () => [
-      {
-        ...createSelectColumn<PlanRow>(),
-        cell: (props) => {
-          const baseSelect = createSelectColumn<PlanRow>();
-          return (
-            <div onClick={(e) => e.stopPropagation()}>
-              {typeof baseSelect.cell === "function"
-                ? (baseSelect.cell as any)(props)
-                : (baseSelect.cell as any)}
-            </div>
-          );
-        }
-      },
-      {
-        accessorKey: "name",
-        meta: {
-          label: t("table.name")
-        },
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.name")} />,
-        filterFn: containsFilterFn,
-        cell: ({ row }) => {
-          const nameStr = getLocalizedValue(row.original.name, locale);
-          return (
-            <div
-              className="w-full cursor-pointer space-y-0.5 select-none"
-              onClick={() => handleOpenEdit(row.original)}>
-              <div className="flex items-center gap-2">
-                <p className="font-bold">{nameStr}</p>
-                {(row.original.sort_order !== undefined || row.original.weight !== undefined) && (
-                  <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-                    Order: {row.original.sort_order ?? row.original.weight}
-                  </Badge>
-                )}
-              </div>
-              <p className="text-muted-foreground font-mono text-xs">{row.original.id}</p>
-            </div>
-          );
-        }
-      },
-      {
-        accessorKey: "monthlyAmount",
-        meta: {
-          label: t("table.monthly")
-        },
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("table.monthly")} />
-        ),
-        cell: ({ row }) => (
-          <div
-            className="w-full cursor-pointer font-semibold select-none"
-            onClick={() => handleOpenEdit(row.original)}>
-            {fmtPrice(row.original.monthlyAmount, row.original.monthlyCurrency)}
+  const columns: ColumnDef<PlanRow>[] = [
+    {
+      ...createSelectColumn<PlanRow>(),
+      cell: (props) => {
+        const baseSelect = createSelectColumn<PlanRow>();
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            {typeof baseSelect.cell === "function"
+              ? (baseSelect.cell as any)(props)
+              : (baseSelect.cell as any)}
           </div>
-        )
-      },
-      {
-        accessorKey: "yearlyAmount",
-        meta: {
-          label: t("table.yearly")
-        },
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.yearly")} />,
-        cell: ({ row }) => (
-          <div
-            className="w-full cursor-pointer font-semibold select-none"
-            onClick={() => handleOpenEdit(row.original)}>
-            {fmtPrice(row.original.yearlyAmount, row.original.yearlyCurrency)}
-          </div>
-        )
-      },
-      {
-        accessorKey: "is_active",
-        meta: {
-          label: t("table.status")
-        },
-        header: ({ column }) => <DataTableColumnHeader column={column} title={t("table.status")} />,
-        cell: ({ row }) => (
-          <div
-            className="w-full cursor-pointer select-none"
-            onClick={() => handleOpenEdit(row.original)}>
-            <Badge
-              variant={row.original.is_active ? "default" : "secondary"}
-              className={
-                row.original.is_active
-                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
-                  : ""
-              }>
-              {row.original.is_active ? t("table.active") : t("table.inactive")}
-            </Badge>
-          </div>
-        )
-      },
-      {
-        id: "actions",
-        meta: {
-          label: t("table.actions")
-        },
-        header: () => <div className="text-end">{t("table.actions")}</div>,
-        enableHiding: false,
-        cell: ({ row }) => (
-          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only"></span>
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem
-                  disabled={!row.original.is_active}
-                  onClick={() => setDeactivateTarget(row.original)}
-                  className="text-amber-600 focus:text-amber-600 dark:text-amber-500">
-                  <Ban className="me-2 h-4 w-4" /> {t("buttons.deactivate")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => setDeleteTarget(row.original)}
-                  className="text-destructive focus:text-destructive">
-                  <Trash2 className="me-2 h-4 w-4" /> {t("buttons.delete") || "Hapus"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )
+        );
       }
-    ],
-    [t, fmtPrice, handleOpenEdit, locale]
-  );
+    },
+    textCol<PlanRow>({
+      key: "name",
+      header: t("table.name"),
+      cell: (row) => {
+        const nameStr = getLocalizedValue(row.name, locale);
+        return (
+          <div
+            className="w-full cursor-pointer space-y-0.5 select-none"
+            onClick={() => handleOpenEdit(row)}>
+            <div className="flex items-center gap-2">
+              <p className="font-bold">{nameStr}</p>
+              {(row.sort_order !== undefined || row.weight !== undefined) && (
+                <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                  Order: {row.sort_order ?? row.weight}
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground font-mono text-xs">{row.id}</p>
+          </div>
+        );
+      }
+    }),
+    numCol<PlanRow>({
+      key: "monthlyAmount",
+      header: t("table.monthly"),
+      cell: (row) => (
+        <div
+          className="w-full cursor-pointer font-semibold select-none"
+          onClick={() => handleOpenEdit(row)}>
+          {fmtPrice(row.monthlyAmount, row.monthlyCurrency)}
+        </div>
+      )
+    }),
+    numCol<PlanRow>({
+      key: "yearlyAmount",
+      header: t("table.yearly"),
+      cell: (row) => (
+        <div
+          className="w-full cursor-pointer font-semibold select-none"
+          onClick={() => handleOpenEdit(row)}>
+          {fmtPrice(row.yearlyAmount, row.yearlyCurrency)}
+        </div>
+      )
+    }),
+    textCol<PlanRow>({
+      key: "is_active",
+      header: t("table.status"),
+      cell: (row) => (
+        <div className="w-full cursor-pointer select-none" onClick={() => handleOpenEdit(row)}>
+          <Badge
+            variant={row.is_active ? "default" : "secondary"}
+            className={
+              row.is_active
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
+                : ""
+            }>
+            {row.is_active ? t("table.active") : t("table.inactive")}
+          </Badge>
+        </div>
+      )
+    }),
+    actionCol<PlanRow>({
+      header: t("table.actions"),
+      enableHiding: false,
+      cell: (row) => (
+        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only"></span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem
+                disabled={!row.is_active}
+                onClick={() => setDeactivateTarget(row)}
+                className="text-amber-600 focus:text-amber-600 dark:text-amber-500">
+                <Ban className="me-2 h-4 w-4" /> {t("buttons.deactivate")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setDeleteTarget(row)}
+                className="text-destructive focus:text-destructive">
+                <Trash2 className="me-2 h-4 w-4" /> {t("buttons.delete") || "Hapus"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )
+    })
+  ];
 
   const table = useDataTable({ columns, data: rows });
 
@@ -496,7 +502,10 @@ export function useAdminPlans() {
       if (failedCount > 0) {
         showAlert(
           "error",
-          `${targets.length - failedCount} berhasil dinonaktifkan, ${failedCount} gagal.`
+          t("successDeactive", {
+            result: targets.length - failedCount,
+            failedCount: failedCount
+          })
         );
       } else {
         showAlert("success", t("alerts.deactivateSuccess"));
@@ -512,10 +521,56 @@ export function useAdminPlans() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    const targets = selectedRows.map((r) => r.original);
+    if (targets.length === 0) return;
+
+    setIsBulkDeleting(true);
+    setErrorMsg(null);
+    try {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("Unauthorized");
+
+      const results = await Promise.all(
+        targets.map((p) =>
+          fetch(`/api/admin/plans?id=${p.id}&action=delete`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          }).then((r) => r.json().then((data) => ({ ok: r.ok && !data.error, id: p.id })))
+        )
+      );
+      const failedCount = results.filter((r) => !r.ok).length;
+
+      if (failedCount > 0) {
+        showAlert(
+          "error",
+          t("successDeleted", {
+            result: targets.length - failedCount,
+            failedCount: failedCount
+          })
+        );
+      } else {
+        showAlert("success", t("alerts.deleteSuccess"));
+      }
+
+      table.resetRowSelection();
+      fetchAdminData();
+    } catch (err: any) {
+      setErrorMsg(err.message || t("alerts.error"));
+    } finally {
+      setIsBulkDeleting(false);
+      setBulkDeleteConfirmOpen(false);
+    }
+  };
+
   const handleOpenCreate = () => {
     setIsEditMode(false);
     setIsMonthlyEnabled(false);
     setIsYearlyEnabled(false);
+    setErrors({});
+    setOpenSections({ general: true, features: false, billing: false });
 
     const emptyProvs: Record<string, boolean> = {};
     PROVIDER_FIELDS.forEach((pf) => {
@@ -537,25 +592,40 @@ export function useAdminPlans() {
 
   const handleSavePlan = async (bypassConflict = false) => {
     const primaryLocale = SUPPORTED_LOCALES[0]?.code || "en";
-    if (!form.id || !form.name[primaryLocale] || !form.description[primaryLocale]) {
-      showAlert("error", t("form.required"));
-      return;
+    const validationErrors: Record<string, string> = {};
+
+    if (!form.id || form.id.trim() === "") {
+      validationErrors.id = t("form.errors.idRequired");
     }
 
-    // Non-enterprise plan wajib punya minimal 1 siklus dgn harga > 0.
+    if (!form.name[primaryLocale] || form.name[primaryLocale].trim() === "") {
+      validationErrors.name = t("form.errors.nameRequired");
+    }
+
+    if (!form.description[primaryLocale] || form.description[primaryLocale].trim() === "") {
+      validationErrors.description = t("form.errors.descRequired");
+    }
+
     if (!form.isEnterprise) {
       const hasMonthly = isMonthlyEnabled && form.monthlyAmount > 0;
       const hasYearly = isYearlyEnabled && form.yearlyAmount > 0;
       if (!hasMonthly && !hasYearly) {
-        showAlert(
-          "error",
-          "Minimal satu siklus (bulanan/tahunan) harus diisi dengan harga > 0."
-        );
-        return;
+        validationErrors.billing = t("form.errors.billingRequired");
       }
     }
 
-    // LOGIKA URUTAN: Ambil nilai input atau hitung urutan maksimum selanjutnya
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      setOpenSections((prev) => ({
+        ...prev,
+        general: !!(validationErrors.id || validationErrors.name || validationErrors.description),
+        billing: !!validationErrors.billing
+      }));
+      return;
+    }
+
+    setErrors({});
+
     let calculatedSortOrder = form.sortOrder.trim() !== "" ? parseInt(form.sortOrder, 10) : null;
     if (calculatedSortOrder === null || isNaN(calculatedSortOrder)) {
       const maxSortOrder = plans.reduce((max, p) => {
@@ -565,7 +635,6 @@ export function useAdminPlans() {
       calculatedSortOrder = maxSortOrder + 1;
     }
 
-    // DETEKSI BENTROK: Cek duplikasi sort_order di luar data yang sedang diedit
     if (!bypassConflict) {
       const conflictingPlan = plans.find(
         (p) =>
@@ -578,7 +647,7 @@ export function useAdminPlans() {
           order: calculatedSortOrder,
           planName: getLocalizedValue(conflictingPlan.name, locale)
         });
-        return; // Hentikan dan tampilkan dialog persetujuan geser urutan
+        return;
       }
     }
 
@@ -594,9 +663,15 @@ export function useAdminPlans() {
       FEATURE_DEFINITIONS.forEach((def) => {
         const value = formGates[def.key];
         if (def.type === "boolean") {
-          if (value === true) compiledFeatures.push(def.key);
-        } else {
-          compiledFeatures.push(`limit:${def.key}:${value || 0}`);
+          if (value === true) {
+            compiledFeatures.push(def.key);
+          }
+        } else if (def.type === "number") {
+          compiledFeatures.push(`limit:${def.key}:${value ?? def.defaultValue}`);
+        } else if (def.type === "select") {
+          compiledFeatures.push(`select:${def.key}:${value ?? def.defaultValue}`);
+        } else if (def.type === "string") {
+          compiledFeatures.push(`string:${def.key}:${value ?? def.defaultValue}`);
         }
       });
 
@@ -632,7 +707,7 @@ export function useAdminPlans() {
         sortOrder: calculatedSortOrder,
         sort_order: calculatedSortOrder,
         weight: calculatedSortOrder,
-        resolveConflict: bypassConflict, // Mengirim flag instruksi resolusi konflik pengurutan
+        resolveConflict: bypassConflict,
         displayFeatures: displayFeaturesCompiled,
         features: compiledFeatures,
         prices: {
@@ -721,6 +796,46 @@ export function useAdminPlans() {
     }
   };
 
+  const translationStatus = useMemo(() => {
+    return SUPPORTED_LOCALES.map((lang) => {
+      const isNameFilled = !!form.name[lang.code]?.trim();
+      const isDescFilled = !!form.description[lang.code]?.trim();
+      return {
+        code: lang.code,
+        label: lang.label,
+        isFilled: isNameFilled && isDescFilled
+      };
+    });
+  }, [form.name, form.description]);
+
+  const completedLanguagesCount = useMemo(() => {
+    return translationStatus.filter((s) => s.isFilled).length;
+  }, [translationStatus]);
+
+  const activeLangMeta = SUPPORTED_LOCALES.find((lang) => lang.code === activeFormTab);
+  const activePlaceholderLabel = activeLangMeta?.placeholder || activeFormTab;
+
+  const [featureSearch, setFeatureSearch] = React.useState("");
+
+  const filteredFeatures = React.useMemo(() => {
+    if (!featureSearch.trim()) return FEATURE_DEFINITIONS;
+    return FEATURE_DEFINITIONS.filter((def) =>
+      def.label.toLowerCase().includes(featureSearch.toLowerCase())
+    );
+  }, [featureSearch]);
+
+  const numericFeatures = React.useMemo(() => {
+    return filteredFeatures.filter((def) => def.type !== "boolean");
+  }, [filteredFeatures]);
+
+  const booleanFeatures = React.useMemo(() => {
+    return filteredFeatures.filter((def) => def.type === "boolean");
+  }, [filteredFeatures]);
+
+  const customFeatures = React.useMemo(() => {
+    return filteredFeatures.filter((def) => def.type === "select" || def.type === "string");
+  }, [filteredFeatures]);
+
   return {
     t,
     locale,
@@ -736,6 +851,10 @@ export function useAdminPlans() {
     setForm,
     formGates,
     setFormGates,
+    errors,
+    setErrors,
+    openSections,
+    toggleSection,
     deactivateTarget,
     setDeactivateTarget,
     deleteTarget,
@@ -764,6 +883,19 @@ export function useAdminPlans() {
     confirmDelete,
     handleBulkDeactivate,
     activeFormTab,
-    setActiveFormTab
+    setActiveFormTab,
+    translationStatus,
+    completedLanguagesCount,
+    featureSearch,
+    setFeatureSearch,
+    filteredFeatures,
+    numericFeatures,
+    booleanFeatures,
+    customFeatures,
+
+    bulkDeleteConfirmOpen,
+    setBulkDeleteConfirmOpen,
+    isBulkDeleting,
+    handleBulkDelete
   };
 }

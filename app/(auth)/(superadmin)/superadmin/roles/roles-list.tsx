@@ -20,9 +20,7 @@ import {
   getRolePermissions
 } from "./actions";
 
-import { useDataTable } from "@/components/data-table/use-data-table";
-import { DataTable } from "@/components/data-table/data-table";
-import { numCol, actionCol, textCol } from "@/components/data-table/columns";
+import { useDataTable, DataTable, numCol, actionCol, textCol } from "@/components/data-table";
 import {
   AlertDialog,
   AlertDialogAction,

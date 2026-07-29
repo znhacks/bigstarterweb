@@ -14,14 +14,16 @@ import { useLocale, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/i18n/currency";
 
 // Reusable Table Components
-import { useDataTable } from "@/components/data-table/use-data-table";
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableSearch } from "@/components/data-table/data-table-search";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
-import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
+import {
+  useDataTable,
+  DataTable,
+  DataTableSearch,
+  DataTablePagination,
+  DataTableColumnHeader,
+  DataTableFacetedFilter,
+  DataTableViewOptions,
+  multiSelectFilterFn
+} from "@/components/data-table";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
 interface SuperadminSubscription {

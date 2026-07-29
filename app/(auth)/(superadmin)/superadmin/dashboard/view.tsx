@@ -47,9 +47,7 @@ import { useSuperadminMainDashboard } from "./logic";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
 // Reusable table pieces — the same ones every other table in the app uses.
-import { useDataTable } from "@/components/data-table/use-data-table";
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { useDataTable, DataTable, DataTableColumnHeader } from "@/components/data-table";
 
 const COLORS = ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6b7280"];
 

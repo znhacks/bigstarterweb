@@ -19,11 +19,13 @@ import {
 import { formatDateTime } from "@/lib/i18n/format";
 import { formatTransactionAmount } from "@/lib/i18n/currency";
 
-import { useDataTable } from "@/components/data-table/use-data-table";
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableSearch } from "@/components/data-table/data-table-search";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import {
+  useDataTable,
+  DataTable,
+  DataTableSearch,
+  DataTablePagination,
+  DataTableColumnHeader
+} from "@/components/data-table";
 
 import { useBillingHistory, Transaction } from "./logic";
 

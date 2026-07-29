@@ -41,16 +41,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime, formatNumber } from "@/lib/i18n/format";
 
-import { useDataTable } from "@/components/data-table/use-data-table";
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableSearch } from "@/components/data-table/data-table-search";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
-import { actionCol, dateCol, numCol, textCol } from "@/components/data-table/columns";
-import { createSelectColumn } from "@/components/data-table/data-table-select-column";
-import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
+import {
+  useDataTable,
+  DataTable,
+  DataTableSearch,
+  DataTablePagination,
+  DataTableColumnHeader,
+  DataTableFacetedFilter,
+  DataTableViewOptions,
+  actionCol,
+  dateCol,
+  numCol,
+  textCol,
+  createSelectColumn,
+  multiSelectFilterFn
+} from "@/components/data-table";
 
 import { DateTimePicker } from "@/components/date-time-picker";
 

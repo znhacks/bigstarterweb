@@ -1,7 +1,20 @@
 "use client";
 
 import React from "react";
-import { Loader2, Plus, ShieldAlert, Check, Info, ChevronDown, ChevronUp, X } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  ShieldAlert,
+  Check,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  X,
+  InfoIcon,
+  Search,
+  Ban,
+  Trash2
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +32,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -28,16 +40,29 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { tenantConfig } from "@/config/tenant";
 import { FEATURE_DEFINITIONS, FeatureDefinition } from "@/config/feature-definitions";
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableSearch } from "@/components/data-table/data-table-search";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 
 import { useAdminPlans, PROVIDER_FIELDS, getLocalizedValue, SUPPORTED_LOCALES } from "./logic";
 import { formatNumber } from "@/lib/i18n/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import Link from "next/link";
+import {
+  DataGrid,
+  DataGridBulkActions,
+  DataGridPagination,
+  DataGridSearch,
+  DataGridTable,
+  DataGridToolbar,
+  DataGridViewOptions
+} from "@/components/data-table";
 
 export function AdminPlansPage() {
   const {
@@ -55,6 +80,10 @@ export function AdminPlansPage() {
     setForm,
     formGates,
     setFormGates,
+    errors,
+    setErrors,
+    openSections,
+    toggleSection,
     deactivateTarget,
     setDeactivateTarget,
     deleteTarget,
@@ -83,23 +112,23 @@ export function AdminPlansPage() {
     confirmDelete,
     handleBulkDeactivate,
     activeFormTab,
-    setActiveFormTab
+    setActiveFormTab,
+    translationStatus,
+    completedLanguagesCount,
+    featureSearch,
+    setFeatureSearch,
+    filteredFeatures,
+    numericFeatures,
+    booleanFeatures,
+    customFeatures,
+
+    bulkDeleteConfirmOpen,
+    setBulkDeleteConfirmOpen,
+    isBulkDeleting,
+    handleBulkDelete
   } = useAdminPlans();
 
   const isRtl = locale === "ar";
-
-  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
-    general: true,
-    features: false,
-    billing: false
-  });
-
-  const toggleSection = (section: string) => {
-    setOpenSections((prev) => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
 
   const activeLangMeta = SUPPORTED_LOCALES.find((lang) => lang.code === activeFormTab);
   const activePlaceholderLabel = activeLangMeta?.placeholder || activeFormTab;
@@ -111,7 +140,6 @@ export function AdminPlansPage() {
           <h1 className="text-foreground text-2xl font-bold tracking-tight md:text-3xl">
             {t("title")}
           </h1>
-          <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
         </div>
         <Button onClick={handleOpenCreate}>
           <Plus className="me-1.5 h-4 w-4" /> {t("buttons.create")}
@@ -134,39 +162,50 @@ export function AdminPlansPage() {
         </Alert>
       )}
 
-      <div className="flex flex-row flex-wrap items-center gap-2">
-        <DataTableSearch table={table} columnId="name" placeholder={t("table.search")} />
+      <DataGrid table={table} columns={columns} noResultsText={t("table.noData")}>
+        <DataGridToolbar>
+          <DataGridSearch columnId="name" placeholder={t("table.search")} />
 
-        {selectedRows.length > 0 && (
-          <Button
-            variant="destructive"
-            className="h-9 text-xs"
-            onClick={() => setBulkConfirmOpen(true)}
-            disabled={selectedActiveCount === 0}>
-            {t("buttons.deactiveselected", { length: formatNumber(selectedRows.length, locale) })}
-          </Button>
-        )}
-
-        <DataTableViewOptions table={table} className="md:ms-auto" label={t("column")} />
-      </div>
-
-      {isLoading ? (
-        <div className="flex min-h-80 items-center justify-center">
-          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-        </div>
-      ) : (
-        <>
-          <DataTable table={table} columns={columns} noResultsText={t("table.noData")} />
-          <DataTablePagination
+          <DataGridBulkActions
             table={table}
-            pageSizeOptions={[10, 20, 50, 100]}
-            rowsPerPageLabel={t("table.rowsPerPage")}
-            selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
+            label={t("buttons.bulkActions")}
+            actions={[
+              {
+                label: t("buttons.deactivate"),
+                icon: Ban,
+                tone: "warning",
+                disabled: (rows) => rows.every((r) => !r.is_active),
+                onSelect: () => setBulkConfirmOpen(true)
+              },
+              {
+                label: t("buttons.delete"),
+                icon: Trash2,
+                tone: "destructive",
+                separator: true,
+                onSelect: () => setBulkDeleteConfirmOpen(true)
+              }
+            ]}
           />
-        </>
-      )}
 
-      {}
+          <DataGridViewOptions className="md:ms-auto" label={t("column")} />
+        </DataGridToolbar>
+
+        {isLoading ? (
+          <div className="flex min-h-80 items-center justify-center">
+            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <>
+            <DataGridTable />
+            <DataGridPagination
+              pageSizeOptions={[10, 20, 50, 100]}
+              rowsPerPageLabel={t("table.rowsPerPage")}
+              selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
+            />
+          </>
+        )}
+      </DataGrid>
+
       {dialogOpen && (
         <div
           className="animate-in fade-in fixed inset-0 z-50 min-h-full bg-black/40 transition-opacity duration-300"
@@ -184,20 +223,26 @@ export function AdminPlansPage() {
               ? "pointer-events-none -translate-x-full opacity-0"
               : "pointer-events-none translate-x-full opacity-0"
         }`}>
-        <div className="border-border flex items-center justify-between border-b p-6">
-          <div className="space-y-1.5">
+        <div className="border-border space-y-3 border-b p-6">
+          <div className="flex items-center justify-between space-y-1.5">
             <h2 className="text-foreground text-xl font-bold">
               {isEditMode ? t("form.titleEdit") : t("form.titleCreate")}
             </h2>
-            <p className="text-muted-foreground text-sm">{t("form.desc")}</p>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => setDialogOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={() => setDialogOpen(false)}>
-            <X className="h-4 w-4" />
-          </Button>
+
+          <div className="flex flex-row items-center gap-1">
+            <p className="text-muted-foreground text-sm">{t("form.desc")}</p>
+            <Link href="" className="text-blue-700">
+              <InfoIcon size={15} />
+            </Link>
+          </div>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
@@ -205,8 +250,15 @@ export function AdminPlansPage() {
             <Button
               type="button"
               onClick={() => toggleSection("general")}
-              className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
-              <span className="text-foreground text-sm font-semibold">{t("form.general")}</span>
+              className={`bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors ${
+                errors.id || errors.name || errors.description ? "border-destructive/50" : ""
+              }`}>
+              <span className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                {t("form.general")}
+                {(errors.id || errors.name || errors.description) && (
+                  <span className="bg-destructive inline-block h-2 w-2 rounded-full" />
+                )}
+              </span>
               {openSections.general ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />
               ) : (
@@ -216,35 +268,75 @@ export function AdminPlansPage() {
 
             {openSections.general && (
               <div className="space-y-6 p-5">
-                <div className="space-y-1.5">
-                  <Label className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
-                    {t("form.language-plans")}
-                  </Label>
-                  <div className="border-border flex flex-wrap gap-2 border-b pb-3">
-                    {SUPPORTED_LOCALES.map((lang) => (
-                      <Button
-                        key={lang.code}
+                <div className="space-y-3 border-b pb-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-muted-foreground text-[11px] font-bold tracking-wider uppercase">
+                      {t("form.language-plans") || "Bahasa Paket"}
+                    </Label>
+                    <span className="text-muted-foreground text-xs font-semibold">
+                      {completedLanguagesCount} / {SUPPORTED_LOCALES.length}{" "}
+                      {t("form.filledLanguage")}
+                    </span>
+                  </div>
+
+                  {}
+                  <div className="bg-muted/40 h-1.5 w-full overflow-hidden rounded-full">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-300"
+                      style={{
+                        width: `${(completedLanguagesCount / SUPPORTED_LOCALES.length) * 100}%`
+                      }}
+                    />
+                  </div>
+
+                  {}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {translationStatus.map((status) => (
+                      <button
+                        key={status.code}
                         type="button"
-                        variant={activeFormTab === lang.code ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setActiveFormTab(lang.code)}
-                        className="text-xs font-semibold uppercase">
-                        {lang.label}
-                      </Button>
+                        onClick={() => setActiveFormTab(status.code)}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold uppercase transition-all ${
+                          activeFormTab === status.code
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-muted/20 hover:bg-muted/40 text-muted-foreground border-border/60"
+                        }`}>
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            status.isFilled ? "bg-emerald-500" : "bg-muted-foreground/30"
+                          }`}
+                        />
+                        {status.code}
+                      </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-1">
                   <div className="space-y-1.5">
-                    <Label htmlFor="plan-id">{t("form.planId")}</Label>
+                    <Label htmlFor="plan-id">
+                      {t("form.planId")} <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="plan-id"
                       disabled={isEditMode}
                       value={form.id}
-                      onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))}
+                      onChange={(e) => {
+                        setForm((f) => ({ ...f, id: e.target.value }));
+                        if (errors.id)
+                          setErrors((prev) => {
+                            const { id, ...r } = prev;
+                            return r;
+                          });
+                      }}
                       placeholder={t("form.planIdPlaceholder")}
+                      className={
+                        errors.id ? "border-destructive focus-visible:ring-destructive" : ""
+                      }
                     />
+                    {errors.id && (
+                      <p className="text-destructive text-xs font-medium">{errors.id}</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="plan-name">
@@ -253,16 +345,27 @@ export function AdminPlansPage() {
                     <Input
                       id="plan-name"
                       value={form.name[activeFormTab] || ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setForm((f) => ({
                           ...f,
                           name: { ...f.name, [activeFormTab]: e.target.value }
-                        }))
-                      }
+                        }));
+                        if (errors.name)
+                          setErrors((prev) => {
+                            const { name, ...r } = prev;
+                            return r;
+                          });
+                      }}
                       placeholder={t("form.placeholder.languageName", {
                         language: activePlaceholderLabel
                       })}
+                      className={
+                        errors.name ? "border-destructive focus-visible:ring-destructive" : ""
+                      }
                     />
+                    {errors.name && (
+                      <p className="text-destructive text-xs font-medium">{errors.name}</p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -272,16 +375,27 @@ export function AdminPlansPage() {
                   <Input
                     id="plan-desc"
                     value={form.description[activeFormTab] || ""}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setForm((f) => ({
                         ...f,
                         description: { ...f.description, [activeFormTab]: e.target.value }
-                      }))
-                    }
+                      }));
+                      if (errors.description)
+                        setErrors((prev) => {
+                          const { description, ...r } = prev;
+                          return r;
+                        });
+                    }}
                     placeholder={t("form.placeholder.desc", {
                       language: activePlaceholderLabel
                     })}
+                    className={
+                      errors.description ? "border-destructive focus-visible:ring-destructive" : ""
+                    }
                   />
+                  {errors.description && (
+                    <p className="text-destructive text-xs font-medium">{errors.description}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="plan-display">{t("form.displayFeatures")}</Label>
@@ -304,41 +418,49 @@ export function AdminPlansPage() {
                   />
                 </div>
 
-                {}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="plan-recommended" className="cursor-pointer">
-                      {t("form.recommended") || "Recommended"}
-                    </Label>
-                    <Switch
-                      id="plan-recommended"
-                      checked={!!form.isRecommended}
-                      onCheckedChange={(v) => setForm((f) => ({ ...f, isRecommended: !!v }))}
-                    />
+                    <Label htmlFor="plan-trial">{t("form.trialDays")}</Label>
+
+                    <div className="border-input focus-within:border-ring focus-within:ring-ring/20 flex h-9 overflow-hidden rounded-md border focus-within:ring-2">
+                      <Input
+                        id="plan-trial"
+                        type="number"
+                        min={0}
+                        value={form.trialDays}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            trialDays: parseInt(e.target.value) || 0
+                          }))
+                        }
+                        className="h-full flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
+                      />
+
+                      <div className="bg-muted text-muted-foreground flex items-center border-l px-3 text-sm font-medium">
+                        {t("form.days")}
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="plan-trial">{t("form.trialDays") || "Trial (hari)"}</Label>
-                    <Input
-                      id="plan-trial"
-                      type="number"
-                      min={0}
-                      value={form.trialDays || 0}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, trialDays: parseInt(e.target.value) || 0 }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="plan-sort-order">
-                      {t("form.sort-order") || "Urutan Tampilan"}
-                    </Label>
+                    <Label htmlFor="plan-sort-order">{t("form.sort-order")}</Label>
                     <Input
                       id="plan-sort-order"
                       type="number"
                       min={0}
                       value={form.sortOrder}
                       onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}
-                      placeholder={t("form.placeholder.sort-order") || "Otomatis"}
+                      placeholder={t("form.placeholder.sort-order")}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="plan-recommended" className="cursor-pointer">
+                      {t("form.recommended")}
+                    </Label>
+                    <Switch
+                      id="plan-recommended"
+                      checked={!!form.isRecommended}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, isRecommended: !!v }))}
                     />
                   </div>
                 </div>
@@ -363,43 +485,129 @@ export function AdminPlansPage() {
 
             {openSections.features && (
               <div className="space-y-4 p-5">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {FEATURE_DEFINITIONS.map((def: FeatureDefinition) => (
-                    <div
-                      key={def.key}
-                      className="border-border/60 bg-muted/10 flex flex-col justify-between gap-2 rounded-xl border p-3.5">
-                      <div className="space-y-0.5">
-                        <Label className="text-sm font-bold">{def.label}</Label>
+                <div className="grid grid-cols-1 gap-6 pt-1 md:grid-cols-1">
+                  <div className="space-y-6">
+                    {numericFeatures.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+                          {t("form.usageLimit")}
+                        </h4>
+                        <div className="border-border/50 divide-border/40 bg-muted/5 divide-y overflow-hidden rounded-xl border">
+                          {numericFeatures.map((def) => (
+                            <div
+                              key={def.key}
+                              className="hover:bg-muted/10 flex items-center justify-between p-3 transition-colors">
+                              <span className="text-foreground pr-2 text-xs font-semibold">
+                                {def.label}
+                              </span>
+                              <Input
+                                type="number"
+                                min={0}
+                                value={formGates[def.key] ?? 0}
+                                onChange={(e) =>
+                                  setFormGates((prev) => ({
+                                    ...prev,
+                                    [def.key]: parseInt(e.target.value) || 0
+                                  }))
+                                }
+                                className="h-8 w-20 text-right text-xs"
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="pt-2">
-                        {def.type === "boolean" ? (
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={!!formGates[def.key]}
-                              onCheckedChange={(checked) =>
-                                setFormGates((prev) => ({ ...prev, [def.key]: checked }))
-                              }
-                            />
-                            <span className="text-muted-foreground text-xs font-medium">
-                              {formGates[def.key] ? t("form.gateActive") : t("form.gateInactive")}
-                            </span>
-                          </div>
-                        ) : (
-                          <Input
-                            type="number"
-                            value={formGates[def.key] ?? 0}
-                            onChange={(e) =>
-                              setFormGates((prev) => ({
-                                ...prev,
-                                [def.key]: parseInt(e.target.value) || 0
-                              }))
-                            }
-                            className="h-8 max-w-30 text-xs"
-                          />
-                        )}
+                    )}
+                    {booleanFeatures.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+                          {t("form.featureAccess")}
+                        </h4>
+                        <div className="border-border/50 divide-border/40 bg-muted/5 divide-y overflow-hidden rounded-xl border">
+                          {booleanFeatures.map((def) => (
+                            <div
+                              key={def.key}
+                              className="hover:bg-muted/10 flex items-center justify-between p-3 transition-colors">
+                              <span className="text-foreground pr-2 text-xs font-semibold">
+                                {def.label}
+                              </span>
+                              <div className="flex shrink-0 items-center gap-2.5">
+                                <span
+                                  className={`text-[9px] font-bold tracking-wide transition-colors ${
+                                    formGates[def.key]
+                                      ? "text-emerald-500"
+                                      : "text-muted-foreground/60"
+                                  }`}>
+                                  {formGates[def.key] ? t("form.active") : t("form.inactive")}
+                                </span>
+                                <Switch
+                                  checked={!!formGates[def.key]}
+                                  onCheckedChange={(checked) =>
+                                    setFormGates((prev) => ({ ...prev, [def.key]: checked }))
+                                  }
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )}
+
+                    {}
+                    {customFeatures.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+                          {t("form.customSettings")}
+                        </h4>
+                        <div className="border-border/50 divide-border/40 bg-muted/5 divide-y overflow-hidden rounded-xl border">
+                          {customFeatures.map((def) => (
+                            <div
+                              key={def.key}
+                              className="hover:bg-muted/10 flex items-center justify-between p-3 transition-colors">
+                              <span className="text-foreground pr-2 text-xs font-semibold">
+                                {def.label}
+                              </span>
+
+                              {def.type === "select" && (
+                                <Select
+                                  value={formGates[def.key] ?? def.defaultValue}
+                                  onValueChange={(val) =>
+                                    setFormGates((prev) => ({ ...prev, [def.key]: val }))
+                                  }>
+                                  <SelectTrigger className="h-8 w-44 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {def.options?.map((opt) => (
+                                      <SelectItem
+                                        key={opt.value}
+                                        value={opt.value}
+                                        className="text-xs">
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+
+                              {def.type === "string" && (
+                                <Input
+                                  type="text"
+                                  value={formGates[def.key] ?? ""}
+                                  onChange={(e) =>
+                                    setFormGates((prev) => ({
+                                      ...prev,
+                                      [def.key]: e.target.value
+                                    }))
+                                  }
+                                  className="h-8 w-44 text-xs"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -409,9 +617,14 @@ export function AdminPlansPage() {
             <Button
               type="button"
               onClick={() => toggleSection("billing")}
-              className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
-              <span className="text-foreground text-sm font-semibold">
+              className={`bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors ${
+                errors.billing ? "border-destructive/50" : ""
+              }`}>
+              <span className="text-foreground flex items-center gap-2 text-sm font-semibold">
                 {t("form.payment-gateway")}
+                {errors.billing && (
+                  <span className="bg-destructive inline-block h-2 w-2 rounded-full" />
+                )}
               </span>
               {openSections.billing ? (
                 <ChevronUp className="text-muted-foreground h-4 w-4" />
@@ -422,6 +635,11 @@ export function AdminPlansPage() {
 
             {openSections.billing && (
               <div className="space-y-6 p-5">
+                {errors.billing && (
+                  <div className="border-destructive/20 bg-destructive/5 text-destructive rounded-lg border p-3 text-xs font-semibold">
+                    {errors.billing}
+                  </div>
+                )}
                 <div className="flex flex-col gap-6">
                   <div className="border-border/60 bg-muted/5 space-y-4 rounded-xl border p-5">
                     <div className="border-border/40 flex items-center space-x-2 border-b pb-3">
@@ -433,6 +651,11 @@ export function AdminPlansPage() {
                           if (!checked) {
                             setForm((f) => ({ ...f, monthlyAmount: 0 }));
                           }
+                          if (errors.billing)
+                            setErrors((prev) => {
+                              const { billing, ...r } = prev;
+                              return r;
+                            });
                         }}
                       />
                       <Label
@@ -456,12 +679,17 @@ export function AdminPlansPage() {
                             type="number"
                             disabled={!isMonthlyEnabled}
                             value={form.monthlyAmount || ""}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setForm((f) => ({
                                 ...f,
                                 monthlyAmount: parseFloat(e.target.value) || 0
-                              }))
-                            }
+                              }));
+                              if (errors.billing)
+                                setErrors((prev) => {
+                                  const { billing, ...r } = prev;
+                                  return r;
+                                });
+                            }}
                             placeholder="0"
                             className="flex-1"
                           />
@@ -503,7 +731,6 @@ export function AdminPlansPage() {
                     </div>
                   </div>
 
-                  {}
                   <div className="border-border/60 bg-muted/5 space-y-4 rounded-xl border p-5">
                     <div className="border-border/40 flex items-center space-x-2 border-b pb-3">
                       <Checkbox
@@ -514,6 +741,11 @@ export function AdminPlansPage() {
                           if (!checked) {
                             setForm((f) => ({ ...f, yearlyAmount: 0 }));
                           }
+                          if (errors.billing)
+                            setErrors((prev) => {
+                              const { billing, ...r } = prev;
+                              return r;
+                            });
                         }}
                       />
                       <Label
@@ -537,12 +769,17 @@ export function AdminPlansPage() {
                             type="number"
                             disabled={!isYearlyEnabled}
                             value={form.yearlyAmount || ""}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setForm((f) => ({
                                 ...f,
                                 yearlyAmount: parseFloat(e.target.value) || 0
-                              }))
-                            }
+                              }));
+                              if (errors.billing)
+                                setErrors((prev) => {
+                                  const { billing, ...r } = prev;
+                                  return r;
+                                });
+                            }}
                             placeholder="0"
                             className="flex-1"
                           />
@@ -599,7 +836,6 @@ export function AdminPlansPage() {
         </div>
       </div>
 
-      {}
       <AlertDialog
         open={!!deactivateTarget}
         onOpenChange={(open) => !open && setDeactivateTarget(null)}>
@@ -623,7 +859,6 @@ export function AdminPlansPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {}
       <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && !isDeleting && setDeleteTarget(null)}>
@@ -633,7 +868,7 @@ export function AdminPlansPage() {
             <AlertDialogDescription>
               {deleteTarget
                 ? t("alerts.deleteDesc", { name: getLocalizedValue(deleteTarget.name, locale) })
-                : "Apakah Anda yakin ingin menghapus paket ini secara permanen?"}
+                : t("alerts.permanentDelete")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -643,13 +878,12 @@ export function AdminPlansPage() {
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {isDeleting && <Loader2 className="me-1.5 h-4 w-4 animate-spin" />}
-              {t("buttons.confirmDelete") || "Hapus"}
+              {t("buttons.confirmDelete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {}
       <AlertDialog
         open={bulkConfirmOpen}
         onOpenChange={(open) => !open && setBulkConfirmOpen(false)}>
@@ -675,7 +909,31 @@ export function AdminPlansPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {}
+      <AlertDialog
+        open={bulkDeleteConfirmOpen}
+        onOpenChange={(open) => !open && setBulkDeleteConfirmOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("alerts.deleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("alerts.deleteSelected", {
+                selectedRows: formatNumber(selectedRows.length, locale)
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkDeleting}>{t("buttons.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={isBulkDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isBulkDeleting && <Loader2 className="me-1.5 h-4 w-4 animate-spin" />}
+              {t("buttons.confirmDelete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog
         open={!!conflictTarget}
         onOpenChange={(open) => !open && setConflictTarget(null)}>
@@ -683,17 +941,18 @@ export function AdminPlansPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
               <Info className="h-5 w-5 shrink-0 text-amber-500" />
-              <span>Peringatan Bentrok Urutan</span>
+              <span>{t("alerts.orderConflictWarning.title")}</span>
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                Urutan tampilan <strong>{conflictTarget?.order}</strong> sudah digunakan oleh paket{" "}
-                <strong>"{conflictTarget?.planName}"</strong>.
+                {t.rich("alerts.orderConflictWarning.desc", {
+                  order: conflictTarget?.order ?? "-",
+                  planName: conflictTarget?.planName ?? "-",
+                  strong: (chunks) => <strong>{chunks}</strong>
+                })}
               </p>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                Jika Anda menyetujui, sistem akan otomatis melakukan pergeseran berantai pada paket
-                tersebut serta paket-paket setelahnya dengan menaikkan nilai urutan mereka sebesar
-                (+1) agar susunan tetap konsisten dan tidak ada duplikasi.
+                {t("alerts.orderConflictWarning.detail")}
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -705,7 +964,7 @@ export function AdminPlansPage() {
                 handleSavePlan(true);
               }}
               className="bg-amber-600 text-white hover:bg-amber-700">
-              Lanjutkan & Geser Paket
+              {t("alerts.orderConflictWarning.continue")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
