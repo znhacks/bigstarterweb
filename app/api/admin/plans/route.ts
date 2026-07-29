@@ -5,11 +5,7 @@ import { profileRepository } from "@/supabase/repositories/profiles";
 import { planRepository } from "@/supabase/repositories/plans";
 import { planPriceRepository } from "@/supabase/repositories/plan-pices";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 
 async function validateSuperadmin(req: Request) {
   const authHeader = req.headers.get("Authorization");
