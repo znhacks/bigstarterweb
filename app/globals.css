@@ -115,7 +115,7 @@ html[lang="ar"] {
 .dark {
   /* Default Semantic Variables (Forest Whisper - Dark Mode) */
   --background: var(--base-950);
-  --dropdown: var(--base-70);
+  --dropdown: var(--base-700);
   --table: var(--base-800);
   --table-head: var(--base-900);
   --foreground: var(--base-200);

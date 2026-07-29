@@ -11,28 +11,20 @@ import { profileRepository } from "@/supabase/repositories/profiles";
 import { taskRepository } from "@/supabase/repositories/tasks";
 import type { Task, TaskInput, TaskProfile, ActionResult } from "./types";
 
-/**
- * Catatan arsitektur:
- * - Tabel `tasks` berada di schema data tenant (tenant_shared / tenant_<sub>),
- *   BUKAN public. Akses lewat createTenantServerClient (user-session + schema
- *   ter-scope) sehingga RLS berlaku (auth.uid() ter-resolve).
- * - Join `profiles` tidak bisa dari client ter-scope (PostgREST tidak melihat
- *   schema public), jadi profil assignee/creator di-fetch terpisah dari
- *   client public lalu di-merge.
- * - Tabel core (memberships, profiles, roles) tetap di public.
- */
-
-/** Ambil peta id -> profile (public schema) untuk kumpulan id tertentu. */
 async function fetchProfilesMap(ids: string[]): Promise<Map<string, TaskProfile>> {
   const map = new Map<string, TaskProfile>();
   const unique = Array.from(new Set(ids.filter(Boolean)));
   if (unique.length === 0) return map;
   const pub = await createClient();
-  const { data } = await (await profileRepository(pub))
+  const { data } = await (
+    await profileRepository(pub)
+  )
     .query()
     .select("id, full_name, avatar")
     .in("id", unique);
-  (data || []).forEach((p: any) => map.set(p.id, { id: p.id, full_name: p.full_name, avatar: p.avatar }));
+  (data || []).forEach((p: any) =>
+    map.set(p.id, { id: p.id, full_name: p.full_name, avatar: p.avatar })
+  );
   return map;
 }
 
@@ -44,7 +36,6 @@ function enrichTask(task: any, profiles: Map<string, TaskProfile>): Task {
   };
 }
 
-/** Ambil semua task organisasi (urut created_at desc) beserta profil. */
 export async function fetchTasksAction(tenantSlug: string): Promise<ActionResult<Task[]>> {
   try {
     const user = await requireAuth();
@@ -53,7 +44,9 @@ export async function fetchTasksAction(tenantSlug: string): Promise<ActionResult
     if (!ctx.permissions.includes(PERMISSIONS.tasksRead)) return { error: "Akses ditolak" };
 
     const { client } = await createTenantServerClient(ctx.tenant.id);
-    const { data, error } = await (await taskRepository(client))
+    const { data, error } = await (
+      await taskRepository(client)
+    )
       .query()
       .select("*")
       .eq("tenant_id", ctx.tenant.id)
@@ -71,7 +64,6 @@ export async function fetchTasksAction(tenantSlug: string): Promise<ActionResult
   }
 }
 
-/** Buat task baru. created_by diisi user yang login. */
 export async function createTaskAction(
   tenantSlug: string,
   input: TaskInput
@@ -94,10 +86,18 @@ export async function createTaskAction(
       created_by: user.id
     };
 
-    const { data, error } = await (await taskRepository(client)).query().insert(insert).select("*").single();
+    const { data, error } = await (
+      await taskRepository(client)
+    )
+      .query()
+      .insert(insert)
+      .select("*")
+      .single();
     if (error) throw error;
 
-    const profiles = await fetchProfilesMap([data.assignee_id, data.created_by].filter(Boolean) as string[]);
+    const profiles = await fetchProfilesMap(
+      [data.assignee_id, data.created_by].filter(Boolean) as string[]
+    );
     return { success: true, data: enrichTask(data, profiles) };
   } catch (err: any) {
     console.error("createTaskAction:", err);
@@ -105,12 +105,6 @@ export async function createTaskAction(
   }
 }
 
-/**
- * Update task. Boleh jika:
- *  - punya permission tasks.update (admin/owner), ATAU
- *  - user adalah assignee/creator task tsb.
- * RLS juga menegakkan aturan sama di level DB.
- */
 export async function updateTaskAction(
   tenantSlug: string,
   id: string,
@@ -124,7 +118,6 @@ export async function updateTaskAction(
     const { client } = await createTenantServerClient(ctx.tenant.id);
     const taskRepo = await taskRepository(client);
 
-    // Cek kepemilikan (RLS select mengizinkan member baca task org).
     const canUpdateAll = ctx.permissions.includes(PERMISSIONS.tasksUpdate);
     if (!canUpdateAll) {
       const { data: existing } = await taskRepo
@@ -133,8 +126,7 @@ export async function updateTaskAction(
         .eq("id", id)
         .eq("tenant_id", ctx.tenant.id)
         .maybeSingle();
-      const isOwner =
-        existing?.assignee_id === user.id || existing?.created_by === user.id;
+      const isOwner = existing?.assignee_id === user.id || existing?.created_by === user.id;
       if (!isOwner) return { error: "Akses ditolak" };
     }
 
@@ -143,7 +135,7 @@ export async function updateTaskAction(
     delete cleanPatch.assignee;
     delete cleanPatch.creator;
     delete cleanPatch.tenant_id;
-    delete cleanPatch.created_by; // created_by tidak boleh diubah sembarangan
+    delete cleanPatch.created_by;
 
     const { data, error } = await taskRepo
       .query()
@@ -153,7 +145,9 @@ export async function updateTaskAction(
       .single();
     if (error) throw error;
 
-    const profiles = await fetchProfilesMap([data.assignee_id, data.created_by].filter(Boolean) as string[]);
+    const profiles = await fetchProfilesMap(
+      [data.assignee_id, data.created_by].filter(Boolean) as string[]
+    );
     return { success: true, data: enrichTask(data, profiles) };
   } catch (err: any) {
     console.error("updateTaskAction:", err);
@@ -161,7 +155,6 @@ export async function updateTaskAction(
   }
 }
 
-/** Hapus task. Hanya pemegang tasks.delete (admin/owner). */
 export async function deleteTaskAction(
   tenantSlug: string,
   id: string

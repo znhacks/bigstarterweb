@@ -1,5 +1,3 @@
-// app/(auth)/(users)/[tenant_slug]/tasks/page.tsx
-
 import { constructMetadata } from "@/lib/metadata";
 import { getTranslations } from "next-intl/server";
 import { TasksView } from "./view";
@@ -22,10 +20,9 @@ interface PageProps {
 
 export default async function Page({ params }: PageProps) {
   const { tenant_slug } = await params;
-  // Gate RBAC: hanya yang punya tasks.read yang bisa mengakses halaman.
+
   const ctx = await requirePermission(PERMISSIONS.tasksRead, tenant_slug);
 
-  // Ambil paket aktif tenant (DB-driven: decode plans.features[] -> featureGates)
   const tenantPlan = await getActivePlan(ctx.tenant.id);
 
   return (

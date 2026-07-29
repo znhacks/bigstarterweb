@@ -19,7 +19,7 @@ interface UseTasksArgs {
 }
 
 interface Props {
-  featureGates: FeatureGates; // Ter-decode di server (getTenantPlan), diteruskan ke client
+  featureGates: FeatureGates;
   planName?: string | Record<string, string>;
 }
 
@@ -41,13 +41,11 @@ export function useTasks(
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-  // Localize planName if it is passed as a multilingual object
   const resolvedPlanName =
     typeof planName === "object" && planName !== null
       ? planName[locale] || planName["en"] || Object.values(planName)[0] || ""
       : planName || "";
 
-  // Pass the resolved string to useFeatureGate to resolve the TS2322 type error
   const { canUse, getLimit } = useFeatureGate({ featureGates, planName: resolvedPlanName });
 
   const currentUsageCount = tasks.length;

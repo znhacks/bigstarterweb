@@ -52,20 +52,19 @@ import { compareStrings } from "@/lib/i18n/collator";
 import { getLocaleMeta } from "@/config/i18n-culture";
 import { DateTimePicker } from "@/components/date-time-picker";
 
-// Reusable table pieces — the same ones every other table in the app uses.
-import { useDataTable } from "@/components/data-table/use-data-table";
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableSearch } from "@/components/data-table/data-table-search";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
-import { createSelectColumn } from "@/components/data-table/data-table-select-column";
-import { multiSelectFilterFn } from "@/components/data-table/data-table-filters";
 import {
+  useDataTable,
+  DataTable,
+  DataTableSearch,
+  DataTablePagination,
+  DataTableColumnHeader,
+  DataTableFacetedFilter,
+  createSelectColumn,
+  multiSelectFilterFn,
   EditableCell,
   ReadonlyCell,
   type SelectOption
-} from "@/components/data-table/editable-cell";
+} from "@/components/data-table";
 
 const STATUS_VALUES = ["todo", "in_progress", "done", "cancelled"] as const;
 const PRIORITY_VALUES = ["low", "medium", "high", "urgent"] as const;
@@ -454,7 +453,6 @@ export function TasksView({
         }
       }
     ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     t,
     locale,
@@ -495,14 +493,14 @@ export function TasksView({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8" dir={meta.dir}>
-      {/* Header */}
+      {}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("title")}</h1>
           <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
 
-        {/* Lencana Kuota Dinamis */}
+        {}
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="px-3 py-1 text-xs">
             Plan: {h.planName} ({currentUsageCount}/{h.limit} Tasks)
@@ -516,7 +514,7 @@ export function TasksView({
         </div>
       </div>
 
-      {/* Read-only banner */}
+      {}
       {h.isReadOnly && (
         <Alert>
           <AlertTitle>{t("readOnly.title")}</AlertTitle>
@@ -534,7 +532,7 @@ export function TasksView({
         </Alert>
       )}
 
-      {/* Alert hasil operasi */}
+      {}
       {h.alertMessage && (
         <Alert variant={h.alertMessage.variant === "destructive" ? "destructive" : "default"}>
           <AlertTitle>{h.alertMessage.title}</AlertTitle>
@@ -549,7 +547,7 @@ export function TasksView({
           </div>
         ) : (
           <div className="w-full">
-            {/* TOOLBAR */}
+            {}
             <div className="flex flex-col gap-4 py-4 md:flex-row md:items-center">
               <div className="flex flex-wrap items-center gap-2">
                 <DataTableSearch
@@ -648,7 +646,7 @@ export function TasksView({
         )}
       </div>
 
-      {/* DIALOG: PILIHAN GATEWAY PEMBAYARAN UNTUK UPGRADE */}
+      {}
       <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-md" dir={meta.dir}>
           <DialogHeader>
@@ -691,7 +689,7 @@ export function TasksView({
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: Create task */}
+      {}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-130" dir={meta.dir}>
           <DialogHeader>
@@ -801,7 +799,7 @@ export function TasksView({
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: Detail task */}
+      {}
       <Dialog open={!!detailTask} onOpenChange={(o) => !o && setDetailTask(null)}>
         <DialogContent className="sm:max-w-140" dir={meta.dir}>
           <DialogHeader>
@@ -872,7 +870,7 @@ export function TasksView({
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: Confirm delete */}
+      {}
       <AlertDialog open={!!h.taskToDelete} onOpenChange={(o) => !o && h.setTaskToDelete(null)}>
         <AlertDialogContent dir={meta.dir}>
           <AlertDialogHeader>
