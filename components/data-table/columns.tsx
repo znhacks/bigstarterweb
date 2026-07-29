@@ -33,6 +33,8 @@ interface NumColOpts<T> extends BaseOpts {
   key: string;
   format?: (v: number) => string;
   locale?: string;
+  /** Override render default (NumericCell). meta.align/label tetap dari factory. */
+  cell?: (row: T) => React.ReactNode;
 }
 
 export function numCol<T>(opts: NumColOpts<T>): ColumnDef<T> {
@@ -42,10 +44,12 @@ export function numCol<T>(opts: NumColOpts<T>): ColumnDef<T> {
     meta: { width: opts.width, align: "right", label: opts.header },
     enableSorting: opts.enableSorting ?? true,
     enableHiding: opts.enableHiding ?? true,
-    cell: ({ row }) => {
-      const value = (row.original as any)[opts.key];
-      return <NumericCell value={value} format={opts.format} locale={opts.locale} />;
-    }
+    cell: opts.cell
+      ? ({ row }) => opts.cell!(row.original as T)
+      : ({ row }) => {
+          const value = (row.original as any)[opts.key];
+          return <NumericCell value={value} format={opts.format} locale={opts.locale} />;
+        }
   };
 }
 
@@ -53,6 +57,8 @@ interface DateColOpts<T> extends BaseOpts {
   key: string;
   format?: (v: string | Date) => string;
   locale?: string;
+  /** Override render default. meta.align/label tetap dari factory. */
+  cell?: (row: T) => React.ReactNode;
 }
 
 export function dateCol<T>(opts: DateColOpts<T>): ColumnDef<T> {
@@ -62,7 +68,9 @@ export function dateCol<T>(opts: DateColOpts<T>): ColumnDef<T> {
     meta: { width: opts.width, align: "right", label: opts.header },
     enableSorting: opts.enableSorting ?? true,
     enableHiding: opts.enableHiding ?? true,
-    cell: ({ row }) => {
+    cell: opts.cell
+      ? ({ row }) => opts.cell!(row.original as T)
+      : ({ row }) => {
       const raw = (row.original as any)[opts.key];
       if (!raw) return <div className="text-muted-foreground text-end">-</div>;
       const formatted = opts.format

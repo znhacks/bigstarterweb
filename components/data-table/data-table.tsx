@@ -16,7 +16,6 @@ interface DataTableProps<TData, TValue> {
   table: TanstackTable<TData>;
   columns: ColumnDef<TData, TValue>[];
   noResultsText?: string;
-  /** Kepadatan baris: sm (compact), default, lg (spacious). */
   density?: "sm" | "default" | "lg";
 }
 
