@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { invalidatePlanCache } from "@/services/payment/billing/gating";
 import { profileRepository } from "@/supabase/repositories/profiles";
 import { planRepository } from "@/supabase/repositories/plans";

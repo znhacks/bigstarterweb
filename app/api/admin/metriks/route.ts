@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { profileRepository } from "@/supabase/repositories/profiles";
 import { transactionRepository } from "@/supabase/repositories/transactions";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
