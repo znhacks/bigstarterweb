@@ -104,6 +104,10 @@
       "plans": {
         "title": "Paket",
         "description": "Kelola paket langganan yang tersedia untuk pelanggan."
+      },
+      "enterprise": {
+        "title": "Perusahaan",
+        "description": ""
       }
     }
   },
@@ -866,36 +870,53 @@
       }
     },
     "organizations": {
-      "title": "Organisasi Superadmin",
+      "title": "Organisasi",
       "detail": "Kelola dan awasi semua organisasi yang terdaftar, paket yang aktif, jumlah anggota, serta metadata.",
-      "list": {
-        "kpis": {
-          "total": "Total Organisasi",
-          "premium": "Langganan Premium",
-          "members": "Total Seluruh Anggota"
+      "table": {
+        "name": "Nama",
+        "members": "Anggota",
+        "createdOn": "Dibuat pada",
+        "plan": "Paket",
+        "status": "Status",
+        "price": "Harga",
+        "actions": "Aksi"
+      },
+      "kpis": {
+        "total": "Total Organisasi",
+        "premium": "Langganan Premium",
+        "members": "Total Seluruh Anggota"
+      },
+      "searchPlaceholder": "Cari organisasi berdasarkan nama...",
+      "placeholders": {
+        "noOrgs": "Organisasi tidak ditemukan.",
+        "members": "anggota",
+        "createdOn": "Dibuat pada tanggal",
+        "freeAccess": "Akses Gratis",
+        "plan": "PAKET"
+      },
+      "buttons": {
+        "cancel": "Batal",
+        "delete": "Hapus",
+        "trash": "Sampah"
+      },
+      "dialogDelete": {
+        "title": "Apakah Anda benar-benar yakin?",
+        "desc": "Tindakan ini akan menghapus organisasi {orgName} beserta seluruh data relasi langganan, transaksi, dan keanggotaan anggotanya secara permanen dari database. Tindakan ini tidak dapat dibatalkan."
+      },
+      "alerts": {
+        "deletedTitle": "Organisasi Dihapus",
+        "deletedDesc": "Organisasi '{orgName}' beserta seluruh data relasi dan keanggotaannya berhasil dihapus dari database.",
+        "failed": {
+          "title": "Penghapusan Gagal",
+          "desc": "Gagal menghapus organisasi."
         },
-        "searchPlaceholder": "Cari organisasi berdasarkan nama...",
-        "placeholders": {
-          "noOrgs": "Organisasi tidak ditemukan.",
-          "members": "anggota",
-          "createdOn": "Dibuat pada tanggal",
-          "freeAccess": "Akses Gratis",
-          "plan": "PAKET"
+        "failedLength": {
+          "title": "Penghapusan Gagal",
+          "desc": "{deletedSize} berhasil dihapus, {failedLength} gagal."
         },
-        "buttons": {
-          "cancel": "Batal",
-          "delete": "Hapus",
-          "trash": "Sampah"
-        },
-        "dialogDelete": {
-          "title": "Apakah Anda benar-benar yakin?",
-          "desc": "Tindakan ini akan menghapus organisasi {orgName} beserta seluruh data relasi langganan, transaksi, dan keanggotaan anggotanya secara permanen dari database. Tindakan ini tidak dapat dibatalkan."
-        },
-        "alerts": {
-          "deletedTitle": "Organisasi Dihapus",
-          "deletedDesc": "Organisasi '{orgName}' beserta seluruh data relasi dan keanggotaannya berhasil dihapus dari database.",
-          "failedTitle": "Penghapusan Gagal",
-          "failedDesc": "Gagal menghapus organisasi."
+        "successDelete": {
+          "title": "Data Dihapus",
+          "desc": "{deletedSize} organisasi berhasil dihapus."
         }
       }
     },
@@ -1048,7 +1069,7 @@
       "active": "Aktif",
       "selected": "dipilih",
       "buttons": {
-        "create": "Tambah Kupon",
+        "create": "Kupon",
         "cancel": "Batal",
         "save": "Simpan",
         "delete": "Hapus ",
@@ -1118,7 +1139,7 @@
       "optional": "Provider yang tidak menggunakan ID gateway tidak perlu diisi, cukup aktifkan saja",
       "selected": "dipilih",
       "buttons": {
-        "create": "Tambah Paket",
+        "create": "Paket",
         "edit": "Edit",
         "deactivate": "Nonaktifkan",
         "deactiveselected": "Nonaktifkan {length} paket terpilih",
@@ -1127,7 +1148,8 @@
         "back": "Kembali",
         "delete": "Hapus",
         "confirmDelete": "Hapus",
-        "confirmDeactivate": "Nonaktifkan Paket"
+        "confirmDeactivate": "Nonaktifkan Paket",
+        "bulkActions": "Aksi"
       },
       "table": {
         "name": "Paket",
@@ -1160,8 +1182,8 @@
         "displayFeaturesPlaceholder": "contoh:\n10.000 Tasks per bulan\nDukungan Prioritas",
         "recommended": "Direkomendasikan",
         "sort-order": "Urutan",
-        "enterprise": "Enterprise (Kontak)",
-        "trialDays": "Trial (hari)",
+        "enterprise": "Enterprise",
+        "trialDays": "Trial",
         "dynamic": "Dinamis",
         "gateActive": "AKTIF",
         "gateInactive": "NON-AKTIF",
@@ -1175,6 +1197,14 @@
         "features-configuration": "Konfigurasi Fitur",
         "payment-gateway": "Gateway Pembayaran",
         "noprovider": "Tidak ada payment provider yang diaktifkan di konfigurasi environment.",
+        "days": "Hari",
+        "orderTo": "Urutan ke",
+        "filledLanguage": "Bahasa Terisi",
+        "usageLimits": "Batasan Kuantitatif",
+        "featureAccess": "Akses Fitur",
+        "active": "Aktif",
+        "inactive": "Nonaktif",
+        "customSettings": "Pengaturan Kustom",
         "monthly": {
           "title": "Langganan Bulanan",
           "amount": "Nominal",
@@ -1191,6 +1221,12 @@
           "displayFeature": "Fitur baris demi baris {language}...",
           "provider": "Masukan id paket {label}...",
           "sort-order": "Urutan Paket"
+        },
+        "errors": {
+          "idRequired": "ID paket wajib diisi.",
+          "nameRequired": "Nama paket wajib diisi.",
+          "descRequired": "Deskripsi paket wajib diisi.",
+          "billingRequired": "Masukkan setidaknya satu nominal langganan."
         }
       },
       "alerts": {
@@ -1201,7 +1237,17 @@
         "error": "Terjadi kesalahan.",
         "deleteTitle": "Hapus Paket Langganan",
         "deleteDesc": "Yakin ingin menghapus paket langganan anda? data akan dihapus secara permanen.",
-        "deleteSuccess": "Paket berhasil dihapus"
+        "deleteSuccess": "Paket berhasil dihapus",
+        "permanentDelete": "Apakah Anda yakin ingin menghapus paket ini secara permanen?",
+        "deleteSelected": "Apakah Anda yakin ingin menghapus secara permanen {selectedRows} paket yang dipilih? Tindakan ini tidak dapat dibatalkan.",
+        "successDeactive": "{result} berhasil dinonaktifkan, {failedCount} gagal.",
+        "successDeleted": "{result} berhasil dihapus, {failedCount} gagal.",
+        "orderConflictWarning": {
+          "title": "Peringatan Bentrok Urutan",
+          "desc": "Urutan tampilan <strong>{order}</strong> sudah digunakan oleh paket <strong>\"{planName}\"</strong>.",
+          "detail": "Jika Anda menyetujui, sistem akan otomatis melakukan pergeseran berantai pada paket tersebut serta paket-paket setelahnya dengan menaikkan nilai urutan mereka agar susunan tetap konsisten dan tidak ada duplikasi.",
+          "continue": "Lanjutkan"
+        }
       }
     }
   },

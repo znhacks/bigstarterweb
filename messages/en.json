@@ -866,36 +866,53 @@
       }
     },
     "organizations": {
-      "title": "Superadmin Organizations",
+      "title": "Organizations",
       "detail": "Manage and oversee all registered organizations, active plans, member counts, and metadata.",
-      "list": {
-        "kpis": {
-          "total": "Total Organizations",
-          "premium": "Premium Subscriptions",
-          "members": "Total Members"
+      "table": {
+        "name": "Name",
+        "members": "Members",
+        "createdOn": "Created On",
+        "plan": "Plan",
+        "status": "Status",
+        "price": "Price",
+        "actions": "Actions"
+      },
+      "kpis": {
+        "total": "Total Organizations",
+        "premium": "Premium Subscriptions",
+        "members": "Total Members"
+      },
+      "searchPlaceholder": "Search organizations by name...",
+      "placeholders": {
+        "noOrgs": "Organizations not found.",
+        "members": "members",
+        "createdOn": "Created on",
+        "freeAccess": "Free Access",
+        "plan": "PLAN"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "trash": "Trash"
+      },
+      "dialogDelete": {
+        "title": "Are you absolutely sure?",
+        "desc": "This action will permanently delete the organization {orgName} along with all subscription relations, transactions, and membership data of its members from the database. This action cannot be undone."
+      },
+      "alerts": {
+        "deletedTitle": "Organization Deleted",
+        "deletedDesc": "The organization '{orgName}' and all its related data and memberships have been successfully deleted from the database.",
+        "failed": {
+          "title": "Deletion Failed",
+          "desc": "Failed to delete the organization."
         },
-        "searchPlaceholder": "Search organizations by name...",
-        "placeholders": {
-          "noOrgs": "Organizations not found.",
-          "members": "members",
-          "createdOn": "Created on",
-          "freeAccess": "Free Access",
-          "plan": "PLAN"
+        "failedLength": {
+          "title": "Deletion Failed",
+          "desc": "{deletedSize} organizations were deleted successfully, {failedLength} failed."
         },
-        "buttons": {
-          "cancel": "Cancel",
-          "delete": "Delete",
-          "trash": "Trash"
-        },
-        "dialogDelete": {
-          "title": "Are you absolutely sure?",
-          "desc": "This action will permanently delete the organization {orgName} along with all subscription relations, transactions, and membership data of its members from the database. This action cannot be undone."
-        },
-        "alerts": {
-          "deletedTitle": "Organization Deleted",
-          "deletedDesc": "Organization '{orgName}' along with all its relational and membership data has been successfully deleted from the database.",
-          "failedTitle": "Deletion Failed",
-          "failedDesc": "Failed to delete organization."
+        "successDelete": {
+          "title": "Data Deleted",
+          "desc": "{deletedSize} organization(s) deleted successfully."
         }
       }
     },
@@ -1127,7 +1144,8 @@
         "back": "Back",
         "delete": "Delete",
         "confirmDelete": "Delete",
-        "confirmDeactivate": "Deactivate Plan"
+        "confirmDeactivate": "Deactivate Plan",
+        "bulkActions": "Bulk Actions"
       },
       "table": {
         "name": "Plan",
@@ -1160,8 +1178,8 @@
         "displayFeaturesPlaceholder": "example:\n10,000 Tasks per month\nPriority Support",
         "recommended": "Recommended",
         "sort-order": "Sort Order",
-        "enterprise": "Enterprise (Contact)",
-        "trialDays": "Trial (days)",
+        "enterprise": "Enterprise",
+        "trialDays": "Trial",
         "dynamic": "Dynamic",
         "gateActive": "ACTIVE",
         "gateInactive": "INACTIVE",
@@ -1175,6 +1193,14 @@
         "features-configuration": "Feature Configuration",
         "payment-gateway": "Payment Gateway",
         "noprovider": "No payment provider enabled in the environment configuration.",
+        "days": "Days",
+        "orderTo": "Sort Order",
+        "filledLanguage": "Languages Filled",
+        "usageLimits": "Usage Limits",
+        "featureAccess": "Feature Access",
+        "active": "Active",
+        "inactive": "Inactive",
+        "customSettings": "Custom Settings",
         "monthly": {
           "title": "Monthly Subscription",
           "amount": "Amount",
@@ -1191,6 +1217,12 @@
           "displayFeature": "Features line-by-line in {language}...",
           "provider": "Enter {label} plan id...",
           "sort-order": "Urutan Paket"
+        },
+        "errors": {
+          "idRequired": "Plan ID is required.",
+          "nameRequired": "Plan name is required.",
+          "descRequired": "Plan description is required.",
+          "billingRequired": "Enter at least one subscription price."
         }
       },
       "alerts": {
@@ -1201,7 +1233,16 @@
         "error": "An error occurred.",
         "deleteTitle": "Delete Subscription Plan",
         "deleteDesc": "Are you sure you want to delete your subscription plan? Data will be deleted permanently.",
-        "deleteSuccess": "Plan deleted successfully."
+        "deleteSuccess": "Plan deleted successfully.",
+        "permanentDelete": "Are you sure you want to permanently delete this plan?",
+        "deleteSelected": "Are you sure you want to permanently delete the {selectedRows} selected plans? This action cannot be undone.",
+        "failedCount": "{result} deactivated successfully, {failedCount} failed.",
+        "orderConflictWarning": {
+          "title": "Sort Order Conflict Warning",
+          "desc": "The display order <strong>{order}</strong> is already used by the <strong>\"{planName}\"</strong> plan.",
+          "detail": "If you continue, the system will automatically shift this plan and all subsequent plans by increasing their sort order. This ensures the order remains consistent and prevents duplicate sort orders.",
+          "continue": "Continue"
+        }
       }
     }
   },

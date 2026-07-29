@@ -866,36 +866,53 @@
       }
     },
     "organizations": {
-      "title": "مؤسسات المسؤول المتميز",
+      "title": "المؤسسات",
       "detail": "إدارة والإشراف على جميع المؤسسات المسجلة، الباقات النشطة، أعداد الأعضاء، والبيانات الوصفية.",
-      "list": {
-        "kpis": {
-          "total": "إجمالي المؤسسات",
-          "premium": "الاشتراكات المميزة",
-          "members": "إجمالي الأعضاء"
+      "table": {
+        "name": "الاسم",
+        "members": "الأعضاء",
+        "createdOn": "تاريخ الإنشاء",
+        "plan": "الخطة",
+        "status": "الحالة",
+        "price": "السعر",
+        "actions": "الإجراءات"
+      },
+      "kpis": {
+        "total": "إجمالي المؤسسات",
+        "premium": "الاشتراكات المميزة",
+        "members": "إجمالي الأعضاء"
+      },
+      "searchPlaceholder": "البحث عن المؤسسات بالاسم...",
+      "placeholders": {
+        "noOrgs": "لم يتم العثور على مؤسسات.",
+        "members": "أعضاء",
+        "createdOn": "تم الإنشاء في",
+        "freeAccess": "وصول مجاني",
+        "plan": "الباقة"
+      },
+      "buttons": {
+        "cancel": "إلغاء",
+        "delete": "حذف",
+        "trash": "سلة المهملات"
+      },
+      "dialogDelete": {
+        "title": "هل أنت متأكد تمامًا؟",
+        "desc": "سيؤدي هذا الإجراء إلى حذف المؤسسة {orgName} نهائيًا مع جميع بيانات الاشتراكات والمعاملات وعضويات أعضائها من قاعدة البيانات. لا يمكن التراجع عن هذا الإجراء."
+      },
+      "alerts": {
+        "deletedTitle": "تم حذف المؤسسة",
+        "deletedDesc": "تم حذف المؤسسة '{orgName}' وجميع بياناتها المرتبطة وعضوياتها من قاعدة البيانات بنجاح.",
+        "failed": {
+          "title": "فشل الحذف",
+          "desc": "تعذر حذف المؤسسة."
         },
-        "searchPlaceholder": "البحث عن المؤسسات بالاسم...",
-        "placeholders": {
-          "noOrgs": "لم يتم العثور على مؤسسات.",
-          "members": "أعضاء",
-          "createdOn": "تم الإنشاء في",
-          "freeAccess": "وصول مجاني",
-          "plan": "الباقة"
+        "failedLength": {
+          "title": "فشل الحذف",
+          "desc": "تم حذف {deletedSize} مؤسسة بنجاح، وفشل حذف {failedLength}."
         },
-        "buttons": {
-          "cancel": "إلغاء",
-          "delete": "حذف",
-          "trash": "سلة المهملات"
-        },
-        "dialogDelete": {
-          "title": "هل أنت متأكد تمامًا؟",
-          "desc": "سيؤدي هذا الإجراء إلى حذف المؤسسة {orgName} نهائيًا مع جميع بيانات الاشتراكات والمعاملات وعضويات أعضائها من قاعدة البيانات. لا يمكن التراجع عن هذا الإجراء."
-        },
-        "alerts": {
-          "deletedTitle": "تم حذف المؤسسة",
-          "deletedDesc": "تم حذف المؤسسة '{orgName}' وجميع البيانات والعضويات المرتبطة بها بنجاح من قاعدة البيانات.",
-          "failedTitle": "فشل الحذف",
-          "failedDesc": "فشل حذف المؤسسة."
+        "successDelete": {
+          "title": "تم حذف البيانات",
+          "desc": "تم حذف {deletedSize} مؤسسة بنجاح."
         }
       }
     },
@@ -1127,7 +1144,8 @@
         "back": "رجوع",
         "delete": "حذف",
         "confirmDelete": "حذف",
-        "confirmDeactivate": "إلغاء تفعيل الباقة"
+        "confirmDeactivate": "إلغاء تفعيل الباقة",
+        "bulkActions": "الإجراءات الجماعية"
       },
       "table": {
         "name": "الباقة",
@@ -1160,8 +1178,8 @@
         "displayFeaturesPlaceholder": "مثال:\n10,000 مهمة شهريًا\nدعم ذو أولوية",
         "recommended": "موصى به",
         "sort-order": "ترتيب الفرز",
-        "enterprise": "Enterprise (تواصل)",
-        "trialDays": "تجريبي (أيام)",
+        "enterprise": "Enterprise",
+        "trialDays": "تجريبي",
         "dynamic": "ديناميكي",
         "gateActive": "نشط",
         "gateInactive": "غير نشط",
@@ -1175,6 +1193,14 @@
         "features-configuration": "تكوين الميزات",
         "payment-gateway": "بوابة الدفع",
         "noprovider": "لم يتم تمكين موفر دفع في تكوين البيئة.",
+        "days": "الأيام",
+        "orderTo": "ترتيب العرض",
+        "filledLanguage": "اللغات المكتملة",
+        "usageLimits": "حدود الاستخدام",
+        "featureAccess": "إمكانية الوصول إلى الميزات",
+        "active": "نشط",
+        "inactive": "غير نشط",
+        "customSettings": "الإعدادات المخصصة",
         "monthly": {
           "title": "الاشتراك الشهري",
           "amount": "المبلغ",
@@ -1191,6 +1217,12 @@
           "displayFeature": "الميزات سطرًا بسطر بـ {language}...",
           "provider": "أدخل معرف باقة {label}...",
           "sort-order": "Urutan Paket"
+        },
+        "errors": {
+          "idRequired": "معرّف الخطة مطلوب.",
+          "nameRequired": "اسم الخطة مطلوب.",
+          "descRequired": "وصف الخطة مطلوب.",
+          "billingRequired": "أدخل سعر اشتراك واحدًا على الأقل."
         }
       },
       "alerts": {
@@ -1201,7 +1233,16 @@
         "error": "حدث خطأ ما.",
         "deleteTitle": "حذف باقة الاشتراك",
         "deleteDesc": "هل أنت متأكد من رغبتك في حذف باقة الاشتراك الخاصة بك؟ سيتم حذف البيانات نهائيًا.",
-        "deleteSuccess": "تم حذف الخطة بنجاح."
+        "deleteSuccess": "تم حذف الخطة بنجاح.",
+        "permanentDelete": "هل أنت متأكد من رغبتك في حذف هذه الخطة نهائيًا؟",
+        "deleteSelected": "هل أنت متأكد من رغبتك في حذف {selectedRows} خطة محددة نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.",
+        "failedCount": "تم تعطيل {result} بنجاح، وفشل {failedCount}.",
+        "orderConflictWarning": {
+          "title": "تحذير تعارض الترتيب",
+          "desc": "ترتيب العرض <strong>{order}</strong> مستخدم بالفعل بواسطة الخطة <strong>\"{planName}\"</strong>.",
+          "detail": "إذا تابعت، فسيقوم النظام تلقائيًا بإزاحة هذه الخطة وجميع الخطط التي تليها من خلال زيادة قيمة الترتيب. يضمن ذلك الحفاظ على ترتيب متسق ومنع تكرار قيم الترتيب.",
+          "continue": "متابعة"
+        }
       }
     }
   },
