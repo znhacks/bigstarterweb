@@ -11,18 +11,6 @@ import { SuperadminOrganization } from "./logic";
 export async function getSuperadminOrganizations(): Promise<SuperadminOrganization[]> {
   const cookieStore = await cookies();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        }
-      }
-    }
-  );
-
   const { data: tenants, error } = await (
     await tenantRepository(supabaseAdmin)
   )
@@ -32,6 +20,26 @@ export async function getSuperadminOrganizations(): Promise<SuperadminOrganizati
       id,
       name,
       created_at,
+      logo,
+      slug,
+      db_model,
+      status,
+      address_line1,
+      address_line2,
+      city,
+      state_province,
+      postal_code,
+      country_code,
+      business_email,
+      phone_number,
+      tax_id,
+      default_locale,
+      timezone,
+      currency,
+      description,
+      website,
+      kecamatan,
+      desa,
       memberships (
         id
       ),
@@ -68,13 +76,33 @@ export async function getSuperadminOrganizations(): Promise<SuperadminOrganizati
     return {
       id: tenant.id,
       name: tenant.name || "Unnamed Organization",
-      logo: tenant.logo_url || null,
+      logo: tenant.logo || null,
       created_at: tenant.created_at,
       memberCount: tenant.memberships ? tenant.memberships.length : 0,
       planName: planInfo?.name ?? firstSub?.plan_id ?? "Free",
       planStatus: firstSub?.status || "inactive",
       endsAt: firstSub?.ends_at || null,
-      price: planInfo?.monthly ?? 0
+      price: planInfo?.monthly ?? 0,
+      // Field detail tambahan dari schema tenants
+      slug: tenant.slug,
+      dbModel: tenant.db_model,
+      status: tenant.status,
+      addressLine1: tenant.address_line1,
+      addressLine2: tenant.address_line2,
+      city: tenant.city,
+      stateProvince: tenant.state_province,
+      postalCode: tenant.postal_code,
+      countryCode: tenant.country_code,
+      businessEmail: tenant.business_email,
+      phoneNumber: tenant.phone_number,
+      taxId: tenant.tax_id,
+      defaultLocale: tenant.default_locale,
+      timezone: tenant.timezone,
+      currency: tenant.currency,
+      description: tenant.description,
+      website: tenant.website,
+      kecamatan: tenant.kecamatan,
+      desa: tenant.desa
     };
   });
 

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
-import { Building2, Trash2, Loader2 } from "lucide-react";
+import { Building2, Trash2, Loader2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { softDeleteTenant } from "@/app/(auth)/(superadmin)/superadmin/actions/account-moderation";
@@ -13,7 +13,7 @@ import { createSelectColumn } from "@/components/data-table/data-table-select-co
 import { useTranslations, useLocale } from "next-intl";
 import { actionCol, dateCol, numCol, textCol } from "@/components/data-table/columns";
 import { useEffect, useState } from "react";
-import { formatDateTime } from "@/lib/i18n/format";
+import { formatDateTime, formatNumber } from "@/lib/i18n/format";
 
 export interface SuperadminOrganization {
   id: string;
@@ -25,6 +25,27 @@ export interface SuperadminOrganization {
   planStatus: string;
   endsAt: string | null;
   price: number;
+
+  // Field Detail Organisasi Tambahan (Sesuai Schema Database)
+  slug?: string | null;
+  dbModel?: string;
+  status?: string;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  stateProvince?: string | null;
+  postalCode?: string | null;
+  countryCode?: string | null;
+  businessEmail?: string | null;
+  phoneNumber?: string | null;
+  taxId?: string | null;
+  defaultLocale?: string;
+  timezone?: string;
+  currency?: string;
+  description?: string | null;
+  website?: string | null;
+  kecamatan?: string | null;
+  desa?: string | null;
 }
 
 export interface AlertState {
@@ -47,13 +68,6 @@ export function useAdminOrganizations(data: SuperadminOrganization[]) {
   const locale = useLocale();
   const t = useTranslations("superadmin.organizations");
 
-  const formatPrice = (amount: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0
-    }).format(amount);
-
   const formatOrgs = (list: SuperadminOrganization[]): SuperadminOrganization[] =>
     (list || []).map((org) => ({
       ...org,
@@ -61,21 +75,24 @@ export function useAdminOrganizations(data: SuperadminOrganization[]) {
     }));
 
   const [orgs, setOrgs] = useState<SuperadminOrganization[]>(() => formatOrgs(data));
-  // Sinkronisasi dari prop — pola resmi React ("adjust state during render") tanpa useEffect,
-  // agar tidak memicu state update sebelum komponen selesai mount.
   const [prevData, setPrevData] = useState(data);
   const [prevLocale, setPrevLocale] = useState(locale);
+
   if (data !== prevData || locale !== prevLocale) {
     setPrevData(data);
     setPrevLocale(locale);
     setOrgs(formatOrgs(data));
   }
+
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [orgToDelete, setOrgToDelete] = useState<SuperadminOrganization | null>(null);
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
+
+  // State untuk menyimpan data organisasi yang sedang aktif dilihat melalui Slide-over Sheet
+  const [activeOrgDetail, setActiveOrgDetail] = useState<SuperadminOrganization | null>(null);
 
   useEffect(() => {
     if (alertMessage) {
@@ -121,22 +138,32 @@ export function useAdminOrganizations(data: SuperadminOrganization[]) {
       key: "name",
       header: t("table.name"),
       cell: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="bg-primary/10 border-primary/20 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
+        <button
+          onClick={() => setActiveOrgDetail(row)}
+          className="flex items-center gap-3 text-left transition-opacity hover:opacity-80 focus:outline-none">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full">
             {row.logo ? (
               <img src={row.logo} alt={row.name || "Logo"} className="h-full w-full object-cover" />
             ) : (
-              <Building2 className="text-primary h-4 w-4" />
+              <div className="bg-primary/10 border-primary/20 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+                <Building2 className="text-primary h-4 w-4" />
+              </div>
             )}
           </div>
-          <span className="text-foreground truncate font-semibold">{row.name}</span>
-        </div>
+          <span className="text-foreground decoration-primary truncate font-semibold hover:underline">
+            {row.name}
+          </span>
+        </button>
       )
     }),
     numCol<SuperadminOrganization>({
       key: "memberCount",
       header: t("table.members"),
-      cell: (row) => <span className="text-muted-foreground text-xs">{row.memberCount}</span>
+      cell: (row) => (
+        <span className="text-muted-foreground text-xs">
+          {formatNumber(row.memberCount, locale)}
+        </span>
+      )
     }),
     dateCol<SuperadminOrganization>({
       key: "created_at",
@@ -179,7 +206,7 @@ export function useAdminOrganizations(data: SuperadminOrganization[]) {
         const isActivePremium = org.planStatus === "active" && org.planName !== "Free";
         return (
           <span className="text-muted-foreground text-xs whitespace-nowrap">
-            {isActivePremium ? `${formatPrice(org.price)}/mo` : t("placeholders.freeAccess")}
+            {isActivePremium ? `${formatNumber(org.price, locale)}` : t("placeholders.freeAccess")}
           </span>
         );
       }
@@ -190,7 +217,15 @@ export function useAdminOrganizations(data: SuperadminOrganization[]) {
       cell: (row) => {
         const org = row;
         return (
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              onClick={() => setActiveOrgDetail(org)}
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground h-9 w-9 rounded-lg"
+              title="Lihat Detail">
+              <Eye className="h-4 w-4" />
+            </Button>
             <Button
               onClick={() => setOrgToDelete(org)}
               disabled={isDeletingId !== null || isBulkDeleting}
@@ -297,6 +332,9 @@ export function useAdminOrganizations(data: SuperadminOrganization[]) {
     setRestoreOpen,
     planOptions,
     statusOptions,
-    onRestored
+    onRestored,
+    // Ekspor state detail organisasi baru
+    activeOrgDetail,
+    setActiveOrgDetail
   };
 }
