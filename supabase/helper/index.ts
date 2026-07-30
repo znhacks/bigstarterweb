@@ -27,6 +27,7 @@ export * from "./transactions";
 export * from "./coupons";
 export * from "./coupon-redemptions";
 export * from "./tasks";
+export * from "./notifications";
 export * from "./api-keys";
 export * from "./otp-codes";
 export * from "./screenshot-logs";
