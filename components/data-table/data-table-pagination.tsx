@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Table as TanstackTable } from "@tanstack/react-table";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { formatNumber } from "@/lib/i18n/format";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
@@ -34,12 +34,24 @@ interface DataTablePaginationProps<TData> {
 export function DataTablePagination<TData>({
   table,
   pageSizeOptions = [10, 20, 50, 100],
-  selectedLabel = (selected, total) => `${selected} of ${total} row(s) selected.`,
-  rowsPerPageLabel = "Rows per page:",
-  previousLabel = "Previous",
-  nextLabel = "Next"
+  selectedLabel,
+  rowsPerPageLabel,
+  previousLabel,
+  nextLabel
 }: DataTablePaginationProps<TData>) {
   const locale = useLocale();
+  const t = useTranslations("data-table.pagination");
+  const selectedText =
+    selectedLabel ??
+    ((selected: string, total: string) =>
+      t("selecteddata", {
+        selected,
+        total
+      }));
+
+  const rowsText = rowsPerPageLabel ?? t("rowsPerPage");
+  const previousText = previousLabel ?? t("previous");
+  const nextText = nextLabel ?? t("next");
 
   const renderPaginationItems = () => {
     const totalPages = table.getPageCount();
@@ -92,7 +104,7 @@ export function DataTablePagination<TData>({
   return (
     <div className="flex flex-col items-center justify-between gap-4 pt-4 md:flex-row">
       <div className="text-muted-foreground order-2 text-xs md:order-1">
-        {selectedLabel(
+        {selectedText(
           formatNumber(table.getFilteredSelectedRowModel().rows.length, locale),
           formatNumber(table.getFilteredRowModel().rows.length, locale)
         )}
@@ -100,9 +112,7 @@ export function DataTablePagination<TData>({
 
       <div className="order-1 flex w-full flex-col items-center justify-end gap-4 sm:flex-row md:order-2 md:w-auto">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs whitespace-nowrap">
-            {rowsPerPageLabel}
-          </span>
+          <span className="text-muted-foreground text-xs whitespace-nowrap">{rowsText}</span>
           <Select
             value={`${table.getState().pagination.pageSize}`}
             onValueChange={(val) => table.setPageSize(Number(val))}>
@@ -135,7 +145,7 @@ export function DataTablePagination<TData>({
                   )}
                   onClick={() => table.previousPage()}>
                   <ChevronLeftIcon className="h-4 w-4 rtl:-scale-x-100" />
-                  <span className="hidden sm:block">{previousLabel}</span>
+                  <span className="hidden sm:block">{previousText}</span>
                 </PaginationLink>
               </PaginationItem>
 
@@ -151,7 +161,7 @@ export function DataTablePagination<TData>({
                     !table.getCanNextPage() && "pointer-events-none opacity-50"
                   )}
                   onClick={() => table.nextPage()}>
-                  <span className="hidden sm:block">{nextLabel}</span>
+                  <span className="hidden sm:block">{nextText}</span>
                   <ChevronRightIcon className="h-4 w-4 rtl:-scale-x-100" />
                 </PaginationLink>
               </PaginationItem>
