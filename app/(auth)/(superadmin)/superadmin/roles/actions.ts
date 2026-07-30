@@ -1,4 +1,3 @@
-// app/(auth)/(superadmin)/superadmin/roles/actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -9,14 +8,10 @@ import { membershipRepository } from "@/supabase/repositories/memberships";
 import { invitationRepository } from "@/supabase/repositories/invitations";
 import { rolePermissionRepository } from "@/supabase/repositories/role-permissions";
 import { permissionRepository } from "@/supabase/repositories/permissions";
+import { Permission, RoleRow } from "./logic";
 
-// Mendefinisikan tipe kembalian aksi yang mendukung opsional roleId
 type ActionResult =
   { success: true; roleId?: string; error?: never } | { success: false; error: string };
-
-/* ------------------------------------------------------------------ */
-/* Roles                                                               */
-/* ------------------------------------------------------------------ */
 
 export async function createRole(formData: FormData): Promise<ActionResult> {
   await requireSuperadmin();
@@ -25,8 +20,9 @@ export async function createRole(formData: FormData): Promise<ActionResult> {
 
   if (!name) return { success: false, error: "Nama role wajib diisi." };
 
-  // SOLUSI: Menambahkan .select("id").single() untuk mendapatkan ID peran baru
-  const { data, error } = await (await roleRepository(supabaseAdmin))
+  const { data, error } = await (
+    await roleRepository(supabaseAdmin)
+  )
     .query()
     .insert({ name, hierarchy_level: Number.isFinite(hierarchy) ? hierarchy : 0 })
     .select("id")
@@ -46,7 +42,9 @@ export async function updateRole(formData: FormData): Promise<ActionResult> {
 
   if (!id || !name) return { success: false, error: "Data role tidak lengkap." };
 
-  const { error } = await (await roleRepository(supabaseAdmin))
+  const { error } = await (
+    await roleRepository(supabaseAdmin)
+  )
     .query()
     .update({ name, hierarchy_level: Number.isFinite(hierarchy) ? hierarchy : 0 })
     .eq("id", id);
@@ -62,7 +60,6 @@ export async function deleteRole(formData: FormData): Promise<ActionResult> {
   const id = String(formData.get("id") || "");
   if (!id) return { success: false, error: "ID role hilang." };
 
-  // Tolak hapus jika masih ada membership/invitation yang memakai role ini.
   const [{ count: memberCount }, { count: inviteCount }] = await Promise.all([
     (await membershipRepository(supabaseAdmin))
       .query()
@@ -82,24 +79,12 @@ export async function deleteRole(formData: FormData): Promise<ActionResult> {
     };
   }
 
-  // role_permissions otomatis ter-cascade on delete.
-  const { error } = await (await roleRepository(supabaseAdmin))
-    .query()
-    .delete()
-    .eq("id", id);
+  const { error } = await (await roleRepository(supabaseAdmin)).query().delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   revalidatePath("/superadmin/roles");
   return { success: true };
 }
 
-/* ------------------------------------------------------------------ */
-/* Permission grants (role_permissions)                                */
-/* ------------------------------------------------------------------ */
-
-/**
- * Ganti seluruh grant permission untuk sebuah role: hapus semua, lalu
- * insert set terpilih. Dijalankan dalam satu transaksi logika.
- */
 export async function setRolePermissions(
   roleId: string,
   permissionIds: string[]
@@ -109,10 +94,7 @@ export async function setRolePermissions(
 
   const rolePermissionsRepo = await rolePermissionRepository(supabaseAdmin);
 
-  const { error: delError } = await rolePermissionsRepo
-    .query()
-    .delete()
-    .eq("role_id", roleId);
+  const { error: delError } = await rolePermissionsRepo.query().delete().eq("role_id", roleId);
   if (delError) return { success: false, error: delError.message };
 
   if (permissionIds.length > 0) {
@@ -126,14 +108,15 @@ export async function setRolePermissions(
   return { success: true };
 }
 
-// SOLUSI: Mengimplementasikan getRolePermissions yang hilang
 export async function getRolePermissions(
   roleId: string
 ): Promise<{ success: true; grantedIds: string[] } | { success: false; error: string }> {
   await requireSuperadmin();
   if (!roleId) return { success: false, error: "ID role hilang." };
 
-  const { data, error } = await (await rolePermissionRepository(supabaseAdmin))
+  const { data, error } = await (
+    await rolePermissionRepository(supabaseAdmin)
+  )
     .query()
     .select("permission_id")
     .eq("role_id", roleId);
@@ -144,10 +127,6 @@ export async function getRolePermissions(
   return { success: true, grantedIds };
 }
 
-/* ------------------------------------------------------------------ */
-/* Permissions                                                         */
-/* ------------------------------------------------------------------ */
-
 export async function createPermission(formData: FormData): Promise<ActionResult> {
   await requireSuperadmin();
   const name = String(formData.get("name") || "").trim();
@@ -155,7 +134,9 @@ export async function createPermission(formData: FormData): Promise<ActionResult
 
   if (!name) return { success: false, error: "Nama permission wajib diisi." };
 
-  const { error } = await (await permissionRepository(supabaseAdmin))
+  const { error } = await (
+    await permissionRepository(supabaseAdmin)
+  )
     .query()
     .insert({ name, description });
   if (error) return { success: false, error: error.message };
@@ -168,12 +149,54 @@ export async function deletePermission(formData: FormData): Promise<ActionResult
   const id = String(formData.get("id") || "");
   if (!id) return { success: false, error: "ID permission hilang." };
 
-  // role_permissions ter-cascade on delete, jadi grant ikut terhapus.
-  const { error } = await (await permissionRepository(supabaseAdmin))
-    .query()
-    .delete()
-    .eq("id", id);
+  const { error } = await (await permissionRepository(supabaseAdmin)).query().delete().eq("id", id);
   if (error) return { success: false, error: error.message };
   revalidatePath("/superadmin/roles");
   return { success: true };
+}
+
+export async function getSuperadminRoles(): Promise<{
+  rows: RoleRow[];
+  permissions: Permission[];
+}> {
+  await requireSuperadmin();
+
+  const [{ data: roles }, { data: memberRows }, { data: permRows }, { data: permissions }] =
+    await Promise.all([
+      (await roleRepository(supabaseAdmin))
+        .query()
+        .select("id, name, hierarchy_level, created_at")
+        .order("hierarchy_level", { ascending: false }),
+      (await membershipRepository(supabaseAdmin)).query().select("role_id"),
+      (await rolePermissionRepository(supabaseAdmin)).query().select("role_id"),
+      (await permissionRepository(supabaseAdmin))
+        .query()
+        .select("id, name, description")
+        .order("name", { ascending: true })
+    ]);
+
+  const memberCount = new Map<string, number>();
+  (memberRows ?? []).forEach((m: any) => {
+    if (m.role_id) {
+      memberCount.set(m.role_id, (memberCount.get(m.role_id) ?? 0) + 1);
+    }
+  });
+
+  const permCount = new Map<string, number>();
+  (permRows ?? []).forEach((p: any) => {
+    permCount.set(p.role_id, (permCount.get(p.role_id) ?? 0) + 1);
+  });
+
+  const rows: RoleRow[] = (roles ?? []).map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    hierarchy_level: r.hierarchy_level,
+    members_count: memberCount.get(r.id) ?? 0,
+    permissions_count: permCount.get(r.id) ?? 0
+  }));
+
+  return {
+    rows,
+    permissions: (permissions ?? []) as Permission[]
+  };
 }
