@@ -39,12 +39,16 @@ import { useSuperadminBilling } from "./logic";
 import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 import type { DateRange } from "react-day-picker";
 
-// Reusable Table Components
 import {
   useDataTable,
   DataTable,
   DataTableColumnHeader,
-  DataTablePagination
+  DataTablePagination,
+  DataGrid,
+  DataGridTable,
+  textCol,
+  actionCol,
+  numCol
 } from "@/components/data-table";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
@@ -76,13 +80,11 @@ interface BillingDashboardViewProps {
   loadAllDashboardData: () => void;
 }
 
-// Komponen Pembungkus Utama (Connected Component)
 export function SuperadminBillingDashboard() {
   const billingState = useSuperadminBilling();
   return <SuperadminBillingDashboardView {...billingState} />;
 }
 
-// Komponen Presentational Internal
 function SuperadminBillingDashboardView({
   locale,
   isLoading,
@@ -107,51 +109,44 @@ function SuperadminBillingDashboardView({
   const formatPrice = (amount: number, currency?: string) =>
     formatCurrency(amount, locale, { currencyCode: currency ?? APP_BASE_CURRENCY });
 
-  // 1. Definisikan Kolom Reusable untuk Recent Transactions
   const transactionColumns = useMemo<ColumnDef<any, unknown>[]>(
     () => [
-      {
-        accessorKey: "tenants.name",
-        id: "tenants_name",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="User" />,
-        cell: ({ row }) => (
+      textCol<any>({
+        key: "tenants_name",
+        header: "User",
+        cell: (tx) => (
           <span className="text-foreground font-semibold">
-            {row.original.tenants?.name || "Unknown Tenant"}
+            {tx.tenants?.name || "Unknown Tenant"}
           </span>
         )
-      },
-      {
-        accessorKey: "plan_name",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Plan" />,
-        cell: ({ row }) => row.original.plan_name
-      },
-      {
-        accessorKey: "amount",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Amount" />,
-        cell: ({ row }) => {
-          const tx = row.original;
-          return (
-            <span
-              className={
-                tx.status === "failed" ? "font-bold text-red-600" : "text-foreground font-bold"
-              }>
-              {formatTransactionAmount(tx.amount, tx.currency, tx.amount_in_idr, locale)}
-            </span>
-          );
-        }
-      },
-      {
-        accessorKey: "provider",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Gateway" />,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs uppercase">{row.original.provider || "-"}</span>
+      }),
+      textCol<any>({
+        key: "plan_name",
+        header: "Plan",
+        cell: (tx) => tx.plan_name
+      }),
+      textCol<any>({
+        key: "amount",
+        header: "Amount",
+        cell: (tx) => (
+          <span
+            className={
+              tx.status === "failed" ? "font-bold text-red-600" : "text-foreground font-bold"
+            }>
+            {formatTransactionAmount(tx.amount, tx.currency, tx.amount_in_idr, locale)}
+          </span>
         )
-      },
-      {
-        accessorKey: "status",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-        cell: ({ row }) => {
-          const status = row.original.status?.toLowerCase();
+      }),
+      textCol<any>({
+        key: "provider",
+        header: "Gateway",
+        cell: (tx) => <span className="font-mono text-xs uppercase">{tx.provider || "-"}</span>
+      }),
+      textCol<any>({
+        key: "status",
+        header: "Status",
+        cell: (tx) => {
+          const status = tx.status?.toLowerCase();
           return (
             <Badge
               variant="outline"
@@ -162,47 +157,44 @@ function SuperadminBillingDashboardView({
                     ? "border-red-500/20 bg-red-500/10 text-red-600"
                     : "border-amber-500/20 bg-amber-500/10 text-amber-600"
               }`}>
-              {row.original.status}
+              {tx.status}
             </Badge>
           );
         }
-      },
-      {
-        id: "actions",
-        header: () => <span className="sr-only">Action</span>,
+      }),
+      actionCol<any>({
+        header: "Action",
+        enableSorting: false,
         cell: () => (
           <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" title="Lihat Invoice">
             <FileText className="h-4 w-4" />
           </Button>
         )
-      }
+      })
     ],
     [locale]
   );
 
-  // 2. Definisikan Kolom Reusable untuk Recent Subscriptions
   const subscriptionColumns = useMemo<ColumnDef<any, unknown>[]>(
     () => [
-      {
-        accessorKey: "tenants.name",
-        id: "tenants_name",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="User" />,
-        cell: ({ row }) => (
+      textCol<any>({
+        key: "tenants_name",
+        header: "User",
+        cell: (sub) => (
           <span className="text-foreground font-semibold">
-            {row.original.tenants?.name || "Unknown Tenant"}
+            {sub.tenants?.name || "Unknown Tenant"}
           </span>
         )
-      },
-      {
-        accessorKey: "plan_id",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Plan" />,
-        cell: ({ row }) => <span className="capitalize">{row.original.plan_id || "Free"}</span>
-      },
-      {
-        id: "type",
+      }),
+      textCol<any>({
+        key: "plan_id",
+        header: "Plan",
+        cell: (sub) => <span className="capitalize">{sub.plan_id || "Free"}</span>
+      }),
+      textCol<any>({
+        key: "type",
         header: "Type",
-        cell: ({ row }) => {
-          const sub = row.original;
+        cell: (sub) => {
           return sub.cancel_at_period_end ? (
             <span className="font-medium text-red-500">Cancel</span>
           ) : sub.interval === "year" ? (
@@ -211,38 +203,32 @@ function SuperadminBillingDashboardView({
             <span className="font-medium text-emerald-600">New / Monthly</span>
           );
         }
-      },
-      {
-        accessorKey: "status",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-        cell: ({ row }) => {
-          const sub = row.original;
-          return (
-            <Badge
-              className={`rounded-full text-[10px] font-bold uppercase ${
-                sub.status === "active"
-                  ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
-                  : "border border-amber-500/20 bg-amber-500/10 text-amber-600"
-              }`}>
-              {sub.status}
-            </Badge>
-          );
+      }),
+      textCol<any>({
+        key: "status",
+        header: "Status",
+        cell: (sub) => (
+          <Badge
+            className={`rounded-full text-[10px] font-bold uppercase ${
+              sub.status === "active"
+                ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
+                : "border border-amber-500/20 bg-amber-500/10 text-amber-600"
+            }`}>
+            {sub.status}
+          </Badge>
+        )
+      }),
+      textCol<any>({
+        key: "starts_at",
+        header: "Date",
+        cell: (sub) => {
+          return new Date(sub.starts_at).toLocaleDateString(locale === "id" ? "id-ID" : "en-US");
         }
-      },
-      {
-        accessorKey: "starts_at",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
-        cell: ({ row }) => {
-          return new Date(row.original.starts_at).toLocaleDateString(
-            locale === "id" ? "id-ID" : "en-US"
-          );
-        }
-      }
+      })
     ],
     [locale]
   );
 
-  // 3. Inisialisasi Hook Tabel Reusable (Membatasi Data Maksimal 10 Baris Saja)
   const txTable = useDataTable({
     columns: transactionColumns,
     data: useMemo(() => filteredData.txs.slice(0, 10), [filteredData.txs])
@@ -262,15 +248,9 @@ function SuperadminBillingDashboardView({
   }
 
   return (
-    <div className="mx-auto w-full space-y-3 px-4 py-8">
-      {/* HEADER & CONTROLS PANEL */}
+    <div className="mx-auto w-full space-y-3">
       <div className="flex flex-col gap-4 border-b border-dashed pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-foreground text-3xl font-bold tracking-tight">Dashboard Billing</h1>
-          <p className="text-muted-foreground text-sm">
-            Dashboard visualisasi metrik, pendapatan, dan kesehatan langganan.
-          </p>
-        </div>
+        <h1 className="text-foreground text-2xl font-semibold tracking-tight">Dashboard Billing</h1>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <CalendarDateRangePicker date={date} setDate={setDate} className="w-full sm:w-[260px]" />
@@ -283,9 +263,7 @@ function SuperadminBillingDashboardView({
         </div>
       </div>
 
-      {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {/* Total Revenue */}
         <Card className="">
           <CardContent className="flex items-center justify-between">
             <div className="space-y-1">
@@ -302,7 +280,6 @@ function SuperadminBillingDashboardView({
           </CardContent>
         </Card>
 
-        {/* MRR */}
         <Card className="">
           <CardContent className="flex items-center justify-between">
             <div className="space-y-1">
@@ -319,7 +296,6 @@ function SuperadminBillingDashboardView({
           </CardContent>
         </Card>
 
-        {/* Active Subscriptions */}
         <Card className="">
           <CardContent className="flex items-center justify-between">
             <div className="space-y-1">
@@ -336,7 +312,6 @@ function SuperadminBillingDashboardView({
           </CardContent>
         </Card>
 
-        {/* Canceled Subscriptions */}
         <Card className="">
           <CardContent className="flex items-center justify-between">
             <div className="space-y-1">
@@ -353,7 +328,6 @@ function SuperadminBillingDashboardView({
           </CardContent>
         </Card>
 
-        {/* Failed Payments */}
         <Card className="">
           <CardContent className="flex items-center justify-between">
             <div className="space-y-1">
@@ -371,7 +345,6 @@ function SuperadminBillingDashboardView({
         </Card>
       </div>
 
-      {/* CHART 1: REVENUE ANALYTICS */}
       <Card className="">
         <CardHeader className="flex flex-col items-start justify-between gap-4 border-b border-dashed pb-4 md:flex-row md:items-center">
           <div className="space-y-0.5">
@@ -455,9 +428,7 @@ function SuperadminBillingDashboardView({
         </CardContent>
       </Card>
 
-      {/* GRAPH ROW 2 */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        {/* Subscription Analytics */}
         <Card className="col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base font-bold">Subscription Activity Analytics</CardTitle>
@@ -495,7 +466,6 @@ function SuperadminBillingDashboardView({
           </CardContent>
         </Card>
 
-        {/* Payment Gateway */}
         <Card className="">
           <CardHeader>
             <CardTitle className="text-base font-bold">Payment Gateway</CardTitle>
@@ -544,9 +514,7 @@ function SuperadminBillingDashboardView({
         </Card>
       </div>
 
-      {/* GRAPH ROW 3 */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {/* Revenue by Plan */}
         <Card className="">
           <CardHeader>
             <CardTitle className="text-base font-bold">Revenue by Plan</CardTitle>
@@ -589,7 +557,6 @@ function SuperadminBillingDashboardView({
           </CardContent>
         </Card>
 
-        {/* Subscription Status Pie */}
         <Card className="">
           <CardHeader>
             <CardTitle className="text-base font-bold">Subscription Status Dist.</CardTitle>
@@ -634,33 +601,32 @@ function SuperadminBillingDashboardView({
         </Card>
       </div>
 
-      {/* DETAILED DATA TABLES PANEL (Kelas "justify-between" Dihapus agar Konten Selalu Rapat ke Atas) */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {/* Recent Transactions Table */}
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="text-base font-bold">Recent Transactions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DataTable
+            <DataGrid
               table={txTable}
               columns={transactionColumns}
-              noResultsText="No transactions found."
-            />
+              noResultsText="No transactions found.">
+              <DataGridTable />
+            </DataGrid>
           </CardContent>
         </Card>
 
-        {/* Recent Subscriptions Table */}
         <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="text-base font-bold">Recent Subscriptions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DataTable
+            <DataGrid
               table={subTable}
               columns={subscriptionColumns}
-              noResultsText="No subscriptions found."
-            />
+              noResultsText="No subscriptions found.">
+              <DataGridTable />
+            </DataGrid>
           </CardContent>
         </Card>
       </div>

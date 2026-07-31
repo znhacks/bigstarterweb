@@ -13,7 +13,7 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
-  X
+  Trash
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,14 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter
+} from "@/components/ui/sheet";
 import { formatDateTime, formatNumber } from "@/lib/i18n/format";
 
 import {
@@ -54,7 +62,13 @@ import {
   numCol,
   textCol,
   createSelectColumn,
-  multiSelectFilterFn
+  multiSelectFilterFn,
+  DataGrid,
+  DataGridToolbar,
+  DataGridSearch,
+  DataGridBulkActions,
+  DataGridTable,
+  DataGridPagination
 } from "@/components/data-table";
 
 import { DateTimePicker } from "@/components/date-time-picker";
@@ -253,14 +267,11 @@ export function AdminCouponsPage() {
   ];
 
   return (
-    <div className="mx-auto w-full space-y-6 px-4 py-8">
+    <div className="mx-auto w-full space-y-3">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-foreground text-2xl font-bold tracking-tight md:text-3xl">
-            {t("title")}
-          </h1>
-          <p className="text-muted-foreground text-sm">{t("subTitle")}</p>
-        </div>
+        <h1 className="text-foreground text-2xl font-semibold tracking-tight md:text-2xl">
+          {t("title")}
+        </h1>
         <Button onClick={handleOpenCreate}>
           <Plus className="me-1.5 h-4 w-4" /> {t("buttons.create")}
         </Button>
@@ -281,304 +292,287 @@ export function AdminCouponsPage() {
         </Alert>
       )}
 
-      <div className="flex flex-row flex-wrap items-center gap-2">
-        <DataTableSearch table={table} columnId="code" placeholder={t("table.search")} />
-
-        <DataTableFacetedFilter
-          column={table.getColumn("discount_type")}
-          title={t("form.typeLabel")}
-          options={discountTypeOptions}
-        />
-
-        <DataTableFacetedFilter
-          column={table.getColumn("expiryStatus")}
-          title={t("table.expiry")}
-          options={expiryStatusOptions}
-        />
-
-        {selectedRows.length > 0 && (
-          <Button
-            variant="destructive"
-            className="h-9 text-xs"
-            onClick={() => setBulkConfirmOpen(true)}>
-            <Trash2 className="me-2 h-4 w-4" />
-            {t("buttons.delete")} {selectedRows.length}
-          </Button>
-        )}
-
-        <DataTableViewOptions table={table} className="md:ms-auto" label={t("column")} />
-      </div>
-
-      {isLoading ? (
-        <div className="flex min-h-80 items-center justify-center">
-          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-        </div>
-      ) : (
-        <>
-          <DataTable table={table} columns={columns} noResultsText={t("table.noData")} />
-          <DataTablePagination
-            table={table}
-            pageSizeOptions={[10, 20, 50, 100]}
-            rowsPerPageLabel={t("table.rowsPerPage")}
-            selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
+      <DataGrid table={table} columns={columns}>
+        <DataGridToolbar>
+          <DataGridSearch columnId="code" placeholder={t("table.search")} />
+          <DataTableFacetedFilter
+            column={table.getColumn("discount_type")}
+            title={t("form.typeLabel")}
+            options={discountTypeOptions}
           />
-        </>
-      )}
 
-      {dialogOpen && (
-        <div
-          className="animate-in fade-in fixed inset-0 z-50 min-h-full bg-black/40 transition-opacity duration-300"
-          onClick={() => setDialogOpen(false)}
-        />
-      )}
+          <DataTableFacetedFilter
+            column={table.getColumn("expiryStatus")}
+            title={t("table.expiry")}
+            options={expiryStatusOptions}
+          />
 
-      <div
-        className={`border-border bg-background fixed inset-y-0 z-50 flex h-full w-full flex-col shadow-2xl transition-[transform,opacity] duration-300 ease-in-out sm:max-w-lg md:max-w-xl ${
-          isRtl ? "left-0 border-r" : "right-0 border-l"
-        } ${
-          dialogOpen
-            ? "pointer-events-auto translate-x-0 opacity-100"
-            : isRtl
-              ? "pointer-events-none -translate-x-full opacity-0"
-              : "pointer-events-none translate-x-full opacity-0"
-        }`}>
-        <div className="border-border flex items-center justify-between border-b p-6">
-          <div className="space-y-1.5">
-            <h2 className="text-foreground text-xl font-bold">
-              {selectedCoupon ? `${t("detail.title")} ${selectedCoupon.code}` : t("form.title")}
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              {selectedCoupon ? t("detail.desc") : t("form.desc")}
-            </p>
+          <DataGridBulkActions
+            label={t("buttons.bulkActions")}
+            actions={[
+              {
+                label: t("buttons.delete"),
+                icon: Trash,
+                tone: "destructive",
+                separator: true,
+                onSelect: () => setBulkConfirmOpen(true)
+              }
+            ]}
+          />
+          <DataTableViewOptions table={table} className="md:ms-auto" label={t("column")} />
+        </DataGridToolbar>
+        {isLoading ? (
+          <div className="flex min-h-80 items-center justify-center">
+            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={() => setDialogOpen(false)}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        ) : (
+          <>
+            <DataGridTable />
+            <DataGridPagination
+              pageSizeOptions={[10, 20, 50, 100]}
+              rowsPerPageLabel={t("table.rowsPerPage")}
+              selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
+            />
+          </>
+        )}
+      </DataGrid>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-6">
-          {!selectedCoupon ? (
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="coupon-code">{t("form.codeLabel")}</Label>
-                <Input
-                  id="coupon-code"
-                  value={form.code}
-                  onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-                  placeholder={t("form.codePlaceholder")}
-                  className="font-mono tracking-wider"
-                />
-              </div>
+      <Sheet open={dialogOpen} onOpenChange={setDialogOpen}>
+        <SheetContent
+          side={isRtl ? "left" : "right"}
+          className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-lg md:max-w-xl">
+          <SheetHeader className="space-y-1.5 border-b p-6 text-start">
+            <SheetTitle className="text-foreground text-xl font-bold">
+              {selectedCoupon ? `${t("detail.title")} ${selectedCoupon.code}` : t("form.title")}
+            </SheetTitle>
+            <SheetDescription className="text-muted-foreground text-sm">
+              {selectedCoupon ? t("detail.desc") : t("form.desc")}
+            </SheetDescription>
+          </SheetHeader>
 
-              <div className="grid grid-cols-2 gap-3">
+          <div className="flex-1 space-y-4 overflow-y-auto p-6">
+            {!selectedCoupon ? (
+              <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label>{t("form.typeLabel")}</Label>
-                  <Select
-                    value={form.discountType}
-                    onValueChange={(v: any) => setForm((f) => ({ ...f, discountType: v }))}>
-                    <SelectTrigger className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="percentage">{t("form.percentage")}</SelectItem>
-                      <SelectItem value="fixed_amount">{t("form.fixedAmount")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="discount-value">{t("form.valueLabel")}</Label>
+                  <Label htmlFor="coupon-code">{t("form.codeLabel")}</Label>
                   <Input
-                    id="discount-value"
-                    type="number"
-                    value={form.discountValue || ""}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, discountValue: parseFloat(e.target.value) || 0 }))
-                    }
-                    placeholder={form.discountType === "percentage" ? "20" : "50000"}
+                    id="coupon-code"
+                    value={form.code}
+                    onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                    placeholder={t("form.codePlaceholder")}
+                    className="font-mono tracking-wider"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>{t("form.typeLabel")}</Label>
+                    <Select
+                      value={form.discountType}
+                      onValueChange={(v: any) => setForm((f) => ({ ...f, discountType: v }))}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">{t("form.percentage")}</SelectItem>
+                        <SelectItem value="fixed_amount">{t("form.fixedAmount")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="discount-value">{t("form.valueLabel")}</Label>
+                    <Input
+                      id="discount-value"
+                      type="number"
+                      value={form.discountValue || ""}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, discountValue: parseFloat(e.target.value) || 0 }))
+                      }
+                      placeholder={form.discountType === "percentage" ? "20" : "50000"}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="max-redemptions">{t("form.quotaLabel")}</Label>
+                    <Input
+                      id="max-redemptions"
+                      type="number"
+                      value={form.maxRedemptions}
+                      onChange={(e) => setForm((f) => ({ ...f, maxRedemptions: e.target.value }))}
+                      placeholder={t("form.quotaPlaceholder")}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="valid-until">{t("form.expiryLabel")}</Label>
+                    <DateTimePicker
+                      date={form.validUntil ? new Date(form.validUntil) : undefined}
+                      setDate={(date) =>
+                        setForm((f) => ({
+                          ...f,
+                          validUntil: date ? date.toISOString() : ""
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="overflow-hidden">
+                  <Button
+                    type="button"
+                    onClick={() => toggleSection("details")}
+                    className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
+                    <span className="text-foreground text-sm font-semibold">
+                      {t("detail.detail-coupon")}
+                    </span>
+                    {openSections.details ? (
+                      <ChevronUp className="text-muted-foreground h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="text-muted-foreground h-4 w-4" />
+                    )}
+                  </Button>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="max-redemptions">{t("form.quotaLabel")}</Label>
-                  <Input
-                    id="max-redemptions"
-                    type="number"
-                    value={form.maxRedemptions}
-                    onChange={(e) => setForm((f) => ({ ...f, maxRedemptions: e.target.value }))}
-                    placeholder={t("form.quotaPlaceholder")}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="valid-until">{t("form.expiryLabel")}</Label>
-                  <DateTimePicker
-                    date={form.validUntil ? new Date(form.validUntil) : undefined}
-                    setDate={(date) =>
-                      setForm((f) => ({
-                        ...f,
-                        validUntil: date ? date.toISOString() : ""
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="overflow-hidden">
-                <Button
-                  type="button"
-                  onClick={() => toggleSection("details")}
-                  className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
-                  <span className="text-foreground text-sm font-semibold">
-                    {t("detail.detail-coupon")}
-                  </span>
-                  {openSections.details ? (
-                    <ChevronUp className="text-muted-foreground h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="text-muted-foreground h-4 w-4" />
-                  )}
-                </Button>
-
-                {openSections.details && (
-                  <div className="space-y-4 p-5">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground text-xs">
-                          {t("detail.discount-type")}
-                        </Label>
-                        <p className="mt-0.5 text-sm font-semibold capitalize">
-                          {selectedCoupon.discount_type === "percentage"
-                            ? t("form.percentage")
-                            : t("form.fixedAmount")}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground text-xs">
-                          {t("detail.discount-value")}
-                        </Label>
-                        <p className="mt-0.5 text-sm font-semibold">
-                          {formatDiscount(selectedCoupon)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground text-xs">
-                          {t("detail.expiry")}
-                        </Label>
-                        <p className="mt-0.5 text-sm font-semibold">
-                          {selectedCoupon.valid_until
-                            ? formatDateTime(selectedCoupon.valid_until, locale)
-                            : t("table.noExpiry")}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground text-xs">
-                          {t("detail.coupon-status")}
-                        </Label>
-                        <div className="mt-0.5">
-                          <Badge
-                            variant={
-                              getExpiryStatus(selectedCoupon) === "active" ? "default" : "secondary"
-                            }>
-                            {getExpiryStatus(selectedCoupon) === "active"
-                              ? t("active")
-                              : t("expired")}
-                          </Badge>
+                  {openSections.details && (
+                    <div className="space-y-4 p-5">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-muted-foreground text-xs">
+                            {t("detail.discount-type")}
+                          </Label>
+                          <p className="mt-0.5 text-sm font-semibold capitalize">
+                            {selectedCoupon.discount_type === "percentage"
+                              ? t("form.percentage")
+                              : t("form.fixedAmount")}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground text-xs">
+                            {t("detail.discount-value")}
+                          </Label>
+                          <p className="mt-0.5 text-sm font-semibold">
+                            {formatDiscount(selectedCoupon)}
+                          </p>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="border-border/40 space-y-1.5 border-t pt-2">
-                      <div className="text-muted-foreground flex justify-between text-xs font-semibold">
-                        <span>{t("detail.usage")}</span>
-                        <span>
-                          {selectedCoupon.redeemed_count} /{" "}
-                          {selectedCoupon.max_redemptions || t("detail.unlimited")}
-                        </span>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-muted-foreground text-xs">
+                            {t("detail.expiry")}
+                          </Label>
+                          <p className="mt-0.5 text-sm font-semibold">
+                            {selectedCoupon.valid_until
+                              ? formatDateTime(selectedCoupon.valid_until, locale)
+                              : t("table.noExpiry")}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground text-xs">
+                            {t("detail.coupon-status")}
+                          </Label>
+                          <div className="mt-0.5">
+                            <Badge
+                              variant={
+                                getExpiryStatus(selectedCoupon) === "active"
+                                  ? "default"
+                                  : "secondary"
+                              }>
+                              {getExpiryStatus(selectedCoupon) === "active"
+                                ? t("active")
+                                : t("expired")}
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
-                      {selectedCoupon.max_redemptions && (
-                        <Progress
-                          value={Math.min(
-                            100,
-                            (selectedCoupon.redeemed_count / selectedCoupon.max_redemptions) * 100
-                          )}
-                          className="bg-muted h-2 w-full"
-                        />
+
+                      <div className="border-border/40 space-y-1.5 border-t pt-2">
+                        <div className="text-muted-foreground flex justify-between text-xs font-semibold">
+                          <span>{t("detail.usage")}</span>
+                          <span>
+                            {selectedCoupon.redeemed_count} /{" "}
+                            {selectedCoupon.max_redemptions || t("detail.unlimited")}
+                          </span>
+                        </div>
+                        {selectedCoupon.max_redemptions && (
+                          <Progress
+                            value={Math.min(
+                              100,
+                              (selectedCoupon.redeemed_count / selectedCoupon.max_redemptions) * 100
+                            )}
+                            className="bg-muted h-2 w-full"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="overflow-hidden">
+                  <Button
+                    type="button"
+                    onClick={() => toggleSection("redemptionsList")}
+                    className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
+                    <span className="text-foreground text-sm font-semibold">
+                      {t("detail.coupon-users")}
+                    </span>
+                    {openSections.redemptionsList ? (
+                      <ChevronUp className="text-muted-foreground h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="text-muted-foreground h-4 w-4" />
+                    )}
+                  </Button>
+
+                  {openSections.redemptionsList && (
+                    <div className="space-y-3 p-4">
+                      {isLoadingRedemptions ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+                        </div>
+                      ) : redemptions.length === 0 ? (
+                        <p className="text-muted-foreground py-4 text-center text-xs">
+                          {t("detail.nousage")}
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          <DataTable
+                            table={redemptionsTable}
+                            columns={redemptionColumns}
+                            noResultsText={t("table.noData")}
+                          />
+                          <DataTablePagination
+                            table={redemptionsTable}
+                            pageSizeOptions={[5, 10, 25]}
+                            rowsPerPageLabel={t("table.rowsPerPage")}
+                            selectedLabel={(selected, total) =>
+                              `${selected} / ${total} ${t("selected")}`
+                            }
+                          />
+                        </div>
                       )}
                     </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="overflow-hidden">
-                <Button
-                  type="button"
-                  onClick={() => toggleSection("redemptionsList")}
-                  className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
-                  <span className="text-foreground text-sm font-semibold">
-                    {t("detail.coupon-users")}
-                  </span>
-                  {openSections.redemptionsList ? (
-                    <ChevronUp className="text-muted-foreground h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="text-muted-foreground h-4 w-4" />
                   )}
-                </Button>
-
-                {openSections.redemptionsList && (
-                  <div className="space-y-3 p-4">
-                    {isLoadingRedemptions ? (
-                      <div className="flex items-center justify-center py-6">
-                        <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
-                      </div>
-                    ) : redemptions.length === 0 ? (
-                      <p className="text-muted-foreground py-4 text-center text-xs">
-                        {t("detail.nousage")}
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        <DataTable
-                          table={redemptionsTable}
-                          columns={redemptionColumns}
-                          noResultsText={t("table.noData")}
-                        />
-                        <DataTablePagination
-                          table={redemptionsTable}
-                          pageSizeOptions={[5, 10, 25]}
-                          rowsPerPageLabel={t("table.rowsPerPage")}
-                          selectedLabel={(selected, total) =>
-                            `${selected} / ${total} ${t("selected")}`
-                          }
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        <div className="border-border bg-muted/20 flex items-center justify-end gap-3 border-t p-6">
-          <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>
-            {t("buttons.cancel")}
-          </Button>
-          {!selectedCoupon && (
-            <Button onClick={handleSaveCoupon} disabled={isSaving}>
-              {isSaving && <Loader2 className="me-1.5 h-4 w-4 animate-spin" />} {t("buttons.save")}
+          <SheetFooter className="border-border bg-muted/20 flex flex-row items-center justify-end gap-3 border-t p-6 sm:justify-end">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>
+              {t("buttons.cancel")}
             </Button>
-          )}
-        </div>
-      </div>
+            {!selectedCoupon && (
+              <Button onClick={handleSaveCoupon} disabled={isSaving}>
+                {isSaving && <Loader2 className="me-1.5 h-4 w-4 animate-spin" />}{" "}
+                {t("buttons.save")}
+              </Button>
+            )}
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

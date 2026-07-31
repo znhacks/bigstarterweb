@@ -7,11 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { softDeleteTenant } from "@/app/(auth)/(superadmin)/superadmin/actions/account-moderation";
 
-import { useDataTable } from "@/components/data-table/use-data-table";
-import { createSelectColumn } from "@/components/data-table/data-table-select-column";
+import {
+  useDataTable,
+  createSelectColumn,
+  actionCol,
+  dateCol,
+  numCol,
+  textCol
+} from "@/components/data-table";
 
 import { useTranslations, useLocale } from "next-intl";
-import { actionCol, dateCol, numCol, textCol } from "@/components/data-table/columns";
 import { useEffect, useState } from "react";
 import { formatDateTime, formatNumber } from "@/lib/i18n/format";
 

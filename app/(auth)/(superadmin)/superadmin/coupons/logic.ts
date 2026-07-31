@@ -1,4 +1,3 @@
-// app/(auth)/(superadmin)/superadmin/coupons/logic.ts
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -154,7 +153,6 @@ export function useAdminCoupons() {
     setDialogOpen(true);
   };
 
-  // Diperbarui: Memanggil data asinkron via Server Action agar RLS Terlewati
   const handleOpenView = async (coupon: DBCoupon) => {
     setSelectedCoupon(coupon);
     setRedemptions([]);
@@ -166,10 +164,10 @@ export function useAdminCoupons() {
       if (res.success && res.redemptions) {
         setRedemptions(res.redemptions);
       } else if (!res.success) {
-        console.error("Gagal memuat riwayat kupon:", res.error);
+        console.error("Failed to load history:", res.error);
       }
     } catch (err: any) {
-      console.error("Gagal memuat riwayat kupon:", err.message);
+      console.error("Failed to load history coupons", err.message);
     } finally {
       setIsLoadingRedemptions(false);
     }

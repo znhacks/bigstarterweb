@@ -1,4 +1,3 @@
-// app/(auth)/(superadmin)/superadmin/coupons/actions.ts
 "use server";
 
 import { requireSuperadmin } from "@/lib/auth";
@@ -6,15 +5,15 @@ import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { couponRedemptionRepository } from "@/supabase/repositories/coupon-redemptions";
 
 export async function getCouponRedemptions(couponId: string) {
-  // Pastikan pengguna adalah superadmin sebelum mengeksekusi
   await requireSuperadmin();
 
   if (!couponId) {
     return { success: false, error: "ID kupon tidak valid." };
   }
 
-  // Melakukan kueri menggunakan supabaseAdmin untuk bypass RLS
-  const { data, error } = await (await couponRedemptionRepository(supabaseAdmin))
+  const { data, error } = await (
+    await couponRedemptionRepository(supabaseAdmin)
+  )
     .query()
     .select(
       `

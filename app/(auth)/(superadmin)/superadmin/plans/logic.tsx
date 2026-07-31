@@ -7,9 +7,14 @@ import { Trash2, Ban, MoreVertical } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/i18n/currency";
 import { getLocalizedValue } from "@/lib/i18n/localize";
-import { useDataTable } from "@/components/data-table/use-data-table";
-import { createSelectColumn } from "@/components/data-table/data-table-select-column";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import {
+  useDataTable,
+  createSelectColumn,
+  DataTableColumnHeader,
+  actionCol,
+  numCol,
+  textCol
+} from "@/components/data-table";
 import { FEATURE_DEFINITIONS, decodeFeatureGates } from "@/config/feature-definitions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +28,7 @@ import {
 
 import { routing } from "@/i18n/routing";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
-import { actionCol, numCol, textCol } from "@/components/data-table/columns";
+import { formatNumber } from "@/lib/i18n/format";
 
 export interface DBPlan {
   id: string;
@@ -382,6 +387,12 @@ export function useAdminPlans() {
     textCol<PlanRow>({
       key: "name",
       header: t("table.name"),
+      filterFn: (row, _columnId, filterValue: string) => {
+        if (!filterValue) return true;
+        return getLocalizedValue(row.original.name, locale)
+          .toLowerCase()
+          .includes(String(filterValue).toLowerCase());
+      },
       cell: (row) => {
         const nameStr = getLocalizedValue(row.name, locale);
         return (
@@ -392,7 +403,9 @@ export function useAdminPlans() {
               <p className="font-bold">{nameStr}</p>
               {(row.sort_order !== undefined || row.weight !== undefined) && (
                 <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-                  Order: {row.sort_order ?? row.weight}
+                  {t("table.order", {
+                    order: formatNumber(row.sort_order ?? row.weight ?? 0, locale)
+                  })}
                 </Badge>
               )}
             </div>
@@ -472,7 +485,21 @@ export function useAdminPlans() {
     })
   ];
 
-  const table = useDataTable({ columns, data: rows });
+  const table = useDataTable({
+    columns,
+    data: rows,
+    globalFilterFn: (row, columnId, filterValue: string) => {
+      const term = String(filterValue ?? "")
+        .toLowerCase()
+        .trim();
+      if (!term) return true;
+      if (columnId === "name") {
+        return getLocalizedValue(row.original.name, locale).toLowerCase().includes(term);
+      }
+      const val = row.getValue(columnId);
+      return val != null && String(val).toLowerCase().includes(term);
+    }
+  });
 
   const selectedRows = table.getFilteredSelectedRowModel().rows;
   const selectedActiveCount = selectedRows.filter((r) => r.original.is_active).length;

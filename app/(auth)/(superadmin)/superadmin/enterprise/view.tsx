@@ -121,16 +121,12 @@ export function SuperadminEnterprisePage() {
   };
 
   return (
-    <div className="mx-auto w-full space-y-8 px-4 py-10">
+    <div className="mx-auto w-full space-y-3">
       <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-foreground text-3xl font-bold tracking-tight">
-            Enterprise Inquiries
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Permintaan kontak paket enterprise dari penyewa.
-          </p>
-        </div>
+        <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+          Enterprise Inquiries
+        </h1>
+
         <Button
           variant="outline"
           size="sm"

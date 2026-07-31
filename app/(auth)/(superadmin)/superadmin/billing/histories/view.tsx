@@ -1,4 +1,3 @@
-// app/(auth)/(superadmin)/superadmin/billing/transactions/view.tsx
 "use client";
 
 import * as React from "react";
@@ -7,7 +6,6 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-// Impor klien Supabase, Global Language Hook
 import { supabase } from "@/lib/supabase";
 import { transactionRepository } from "@/supabase/repositories/transactions";
 import { useLocale, useTranslations } from "next-intl";
@@ -15,7 +13,6 @@ import { formatTransactionAmount } from "@/lib/i18n/currency";
 import { formatDateTime } from "@/lib/i18n/format";
 import { getLocaleMeta } from "@/config/i18n-culture";
 
-// Reusable Table Components
 import {
   useDataTable,
   DataTable,
@@ -24,7 +21,16 @@ import {
   DataTableColumnHeader,
   DataTableFacetedFilter,
   DataTableViewOptions,
-  multiSelectFilterFn
+  multiSelectFilterFn,
+  textCol,
+  dateCol,
+  numCol,
+  DataGrid,
+  DataGridToolbar,
+  DataGridSearch,
+  DataGridViewOptions,
+  DataGridTable,
+  DataGridPagination
 } from "@/components/data-table";
 
 interface SuperadminTransaction {
@@ -51,7 +57,6 @@ export function SuperadminTransactionsPage() {
   const t = useTranslations("superadmin.billing.histories");
   const ttable = useTranslations("data-table");
 
-  // Ambil metadata arah layout dinamis
   const meta = getLocaleMeta(locale);
 
   const [transactions, setTransactions] = useState<SuperadminTransaction[]>([]);
@@ -64,7 +69,9 @@ export function SuperadminTransactionsPage() {
   const fetchTransactions = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (await transactionRepository(supabase))
+      const { data, error } = await (
+        await transactionRepository(supabase)
+      )
         .query()
         .select(
           `
@@ -95,7 +102,6 @@ export function SuperadminTransactionsPage() {
     }
   };
 
-  // Penerjemahan Opsi Filter Dropdown Status secara dinamis peka-kultur
   const statusOptions = useMemo(() => {
     return [
       { value: "paid", label: t("statuses.paid") || "Paid" },
@@ -111,101 +117,68 @@ export function SuperadminTransactionsPage() {
     return unique.map((name) => ({ value: name, label: name }));
   }, [transactions]);
 
-  const columns = useMemo<ColumnDef<SuperadminTransaction, unknown>[]>(
-    () => [
-      {
-        accessorKey: "tenants.name",
-        meta: {
-          label: t("table.tenant")
-        },
-        id: "tenants_name", // SOLUSI: ID Kolom Eksplisit untuk meredam crash TanStack
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("table.tenant") || "Tenant"} />
-        ),
-        filterFn: containsFilterFn,
-        cell: ({ row }) => {
-          const tx = row.original;
-          return (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-foreground font-semibold">
-                {tx.tenants?.name || "Unknown Tenant"}
-              </span>
-              <span className="text-muted-foreground font-mono text-[10px]">{tx.order_id}</span>
-            </div>
-          );
-        }
-      },
-      {
-        accessorKey: "plan_name",
-        meta: {
-          label: t("table.plan")
-        },
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("table.plan") || "Plan"} />
-        ),
-        filterFn: multiSelectFilterFn,
-        cell: ({ row }) => row.original.plan_name
-      },
-      {
-        accessorKey: "created_at",
-        meta: {
-          label: t("table.created_at")
-        },
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("table.date") || "Date"} />
-        ),
-        cell: ({ row }) => {
-          // SOLUSI: Menggunakan formatDateTime standard BCP-47 peka-kultur
-          return formatDateTime(row.original.created_at, locale, { dateStyle: "medium" });
-        }
-      },
-      {
-        accessorKey: "amount",
-        meta: {
-          label: t("table.amount")
-        },
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("table.amount") || "Amount"} />
-        ),
-        cell: ({ row }) => {
-          const tx = row.original;
-          const isRefunded = tx.status === "refunded";
-          return (
-            <span className={`font-bold ${isRefunded ? "text-red-600" : "text-foreground"}`}>
-              {isRefunded ? "-" : ""}
-              {formatTransactionAmount(tx.amount, tx.currency, tx.amount_in_idr, locale)}
+  const columns: ColumnDef<SuperadminTransaction>[] = [
+    textCol<SuperadminTransaction>({
+      key: "tenants_name",
+      header: t("table.tenant"),
+      cell: (row) => {
+        const tx = row;
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-foreground font-semibold">
+              {tx.tenants?.name || "Unknown Tenant"}
             </span>
-          );
-        }
-      },
-      {
-        accessorKey: "status",
-        meta: {
-          label: t("table.status")
-        },
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("table.status") || "Status"} />
-        ),
-        filterFn: multiSelectFilterFn,
-        cell: ({ row }) => {
-          const tx = row.original;
-          const isRefunded = tx.status === "refunded";
-          return (
-            <Badge
-              className={`rounded-full text-[9px] font-bold uppercase ${
-                isRefunded
-                  ? "border border-red-500/20 bg-red-500/10 text-red-600"
-                  : "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
-              }`}>
-              {/* SOLUSI: Melokalisasi cetakan nama badge status */}
-              {t.has(`statuses.${tx.status}`) ? t(`statuses.${tx.status}`) : tx.status}
-            </Badge>
-          );
-        }
+            <span className="text-muted-foreground font-mono text-[10px]">{tx.order_id}</span>
+          </div>
+        );
       }
-    ],
-    [locale, t]
-  );
+    }),
+    textCol<SuperadminTransaction>({
+      key: "plan_name",
+      header: t("table.plan"),
+      cell: (row) => row.plan_name
+    }),
+    dateCol<SuperadminTransaction>({
+      key: "created_at",
+      header: t("table.date"),
+      cell: (row) => {
+        return formatDateTime(row.created_at, locale, { dateStyle: "medium" });
+      }
+    }),
+    numCol<SuperadminTransaction>({
+      key: "amount",
+      header: t("table.amount"),
+      cell: (row) => {
+        const tx = row;
+        const isRefunded = tx.status === "refunded";
+        return (
+          <span className={`font-bold ${isRefunded ? "text-red-600" : "text-foreground"}`}>
+            {isRefunded ? "-" : ""}
+            {formatTransactionAmount(tx.amount, tx.currency, tx.amount_in_idr, locale)}
+          </span>
+        );
+      }
+    }),
+    textCol<SuperadminTransaction>({
+      key: "status",
+      header: t("table.status"),
+      cell: (row) => {
+        const tx = row;
+        const isRefunded = tx.status === "refunded";
+        return (
+          <Badge
+            className={`rounded-full text-[9px] font-bold uppercase ${
+              isRefunded
+                ? "border border-red-500/20 bg-red-500/10 text-red-600"
+                : "border border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
+            }`}>
+            {}
+            {t.has(`statuses.${tx.status}`) ? t(`statuses.${tx.status}`) : tx.status}
+          </Badge>
+        );
+      }
+    })
+  ];
 
   const table = useDataTable({ columns, data: transactions });
 
@@ -218,25 +191,16 @@ export function SuperadminTransactionsPage() {
   }
 
   return (
-    <div className="mx-auto w-full space-y-6 px-4 py-10" dir={meta.dir}>
-      <div className="space-y-1">
-        <h1 className="text-foreground text-2xl font-bold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("description")}</p>
-      </div>
+    <div className="mx-auto w-full space-y-3" dir={meta.dir}>
+      <h1 className="text-foreground text-2xl font-semibold tracking-tight">{t("title")}</h1>
 
-      <div className="space-y-4">
-        <div className="flex flex-row flex-wrap items-center gap-2">
-          {/* SOLUSI: Cari tenants_name */}
-          <DataTableSearch
-            table={table}
-            columnId="tenants_name"
-            placeholder={t("table.search") || "Cari tenant..."}
-          />
-
+      <DataGrid table={table} columns={columns}>
+        <DataGridToolbar>
+          <DataGridSearch columnId="tenants_name" placeholder={t("table.search")} />
           <DataTableFacetedFilter
             column={table.getColumn("status")}
             title={t("table.status") || "Status"}
-            options={statusOptions} // Gunakan opsi terjemahan dinamis
+            options={statusOptions}
           />
 
           <DataTableFacetedFilter
@@ -244,29 +208,15 @@ export function SuperadminTransactionsPage() {
             title={t("table.plan") || "Plan"}
             options={planOptions}
           />
-
-          <DataTableViewOptions table={table} className="md:ms-auto" label={t("filters.columns")} />
-        </div>
-
-        <DataTable
-          table={table}
-          columns={columns}
-          noResultsText={t("placeholders.noTransactions")}
+          <DataGridViewOptions label={t("filters.columns")} className="md:ms-auto" />
+        </DataGridToolbar>
+        <DataGridTable />
+        <DataGridPagination
+          pageSizeOptions={[10, 20, 50, 100]}
+          rowsPerPageLabel={t("table.rowsPerPage")}
+          selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
         />
-
-        <DataTablePagination
-          table={table}
-          selectedLabel={(selected, total) =>
-            ttable("pagination.selecteddata", {
-              selected,
-              total
-            })
-          }
-          rowsPerPageLabel={ttable("pagination.rowsPerPage")}
-          previousLabel={ttable("pagination.previous")} // Dikirim dinamis
-          nextLabel={ttable("pagination.next")}
-        />
-      </div>
+      </DataGrid>
     </div>
   );
 }

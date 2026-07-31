@@ -1,23 +1,20 @@
-"use client";
-
-import * as React from "react";
-import { useState, useEffect } from "react";
+import { computeBannedUntil, DEFAULT_BAN_KEY } from "@/config/moderation";
+import { supabase } from "@/lib/supabase";
+import { profileRepository } from "@/supabase/repositories/profiles";
+import { roleRepository } from "@/supabase/repositories/roles";
+import { useLocale, useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+import { banUser, softDeleteUser, unbanUser } from "../actions/account-moderation";
 import { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Loader2, Trash2 } from "lucide-react";
-
 import {
-  useDataTable,
-  DataTable,
-  DataTableSearch,
-  DataTableFacetedFilter,
-  DataTableViewOptions,
-  DataTablePagination,
-  DataTableColumnHeader,
+  actionCol,
   createSelectColumn,
-  multiSelectFilterFn
+  DataTableColumnHeader,
+  dateCol,
+  multiSelectFilterFn,
+  textCol,
+  useDataTable
 } from "@/components/data-table";
-
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,37 +24,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { generateAvatarFallback } from "@/lib/utils";
-
-import { formatToUserTimezone, formatRelativeTime } from "@/lib/date";
-import { supabase } from "@/lib/supabase";
-import { roleRepository } from "@/supabase/repositories/roles";
-import { profileRepository } from "@/supabase/repositories/profiles";
-import { useTranslations, useLocale } from "next-intl";
-
-import {
-  softDeleteUser,
-  banUser,
-  unbanUser
-} from "@/app/(auth)/(superadmin)/superadmin/actions/account-moderation";
-import { BAN_DURATIONS, DEFAULT_BAN_KEY, computeBannedUntil } from "@/config/moderation";
-import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
-import { RestoreDialog } from "@/components/restore-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { formatRelativeTime } from "@/lib/i18n/format";
+import { formatToUserTimezone } from "@/lib/date";
+import { Button } from "@/components/ui/button";
+import { Loader2, MoreHorizontal } from "lucide-react";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 
 export type User = {
   id: number;
@@ -88,7 +59,7 @@ const getLocalizedValue = (value: any, locale: string): string => {
   return String(value);
 };
 
-export default function UsersDataTable({ data: initialData }: { data?: User[] }) {
+export function useUsersLogic({ data: initialData }: { data?: User[] }) {
   const t = useTranslations("superadmin.users.data-table");
   const tMod = useTranslations("moderation");
   const ttable = useTranslations("data-table");
@@ -130,7 +101,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
 
   useEffect(() => {
     (async () => {
-      (await roleRepository(supabase))
+      (await roleRepository(supabaseAdmin))
         .query()
         .select("name")
         .order("hierarchy_level", { ascending: false })
@@ -150,12 +121,11 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   const loadUsersFromSupabase = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (await profileRepository(supabase)).query().select(`
+      const { data, error } = await (await profileRepository(supabaseAdmin)).query().select(`
           id,
           full_name,
           avatar,
           created_at,
-          updated_at,
           last_sign_in,
           status,
           banned_until,
@@ -212,7 +182,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
         status: statusVal as "active" | "inactive" | "pending",
         image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`,
         created_at: prof.created_at,
-        updated_at: prof.updated_at,
         lastSignIn: prof.last_sign_in || null,
         accountStatus: (prof.status as User["accountStatus"]) || "active",
         bannedUntil: prof.banned_until || null,
@@ -294,24 +263,21 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     );
   };
 
-  const columns: ColumnDef<User, unknown>[] = [
+  const columns: ColumnDef<User>[] = [
     createSelectColumn<User>(),
-    {
-      accessorKey: "name",
+    textCol<User>({
+      key: "name",
       header: t("headers.name"),
-      meta: {
-        label: t("headers.name")
-      },
-      cell: ({ row }) => {
-        const acc = row.original.accountStatus;
+      cell: (row) => {
+        const acc = row.accountStatus;
         return (
           <div className="flex items-center gap-4">
             <Avatar>
-              <AvatarImage src={row.original.image} alt={row.original.name} />
-              <AvatarFallback>{generateAvatarFallback(row.getValue("name") || "U")}</AvatarFallback>
+              <AvatarImage src={row.image} alt={row.name} />
+              <AvatarFallback>{generateAvatarFallback(row.name)}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-1">
-              <div className="text-foreground font-semibold capitalize">{row.getValue("name")}</div>
+              <div className="text-foreground font-semibold capitalize">{row.name}</div>
               {acc && acc !== "active" && (
                 <Badge
                   variant={acc === "banned" ? "destructive" : "secondary"}
@@ -323,57 +289,39 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           </div>
         );
       }
-    },
-    {
-      accessorKey: "role",
-      meta: {
-        label: t("headers.role")
-      },
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t("headers.role")} />,
-      cell: ({ row }) => <span className="capitalize">{row.getValue("role")}</span>,
-      filterFn: multiSelectFilterFn
-    },
-    {
-      accessorKey: "plan_name",
-      meta: {
-        label: t("headers.plan")
-      },
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t("headers.plan")} />,
-      cell: ({ row }) => (
+    }),
+    textCol<User>({
+      key: "role",
+      header: t("headers.role"),
+      filterFn: multiSelectFilterFn, // <-- Mengaktifkan filter multi-select
+      cell: (row) => <span className="capitalize">{row.role}</span>
+    }),
+    textCol<User>({
+      key: "plan_name",
+      header: t("headers.plan"),
+      filterFn: multiSelectFilterFn, // <-- Mengaktifkan filter multi-select
+      cell: (row) => (
         <Badge variant="outline" className="font-semibold">
-          {row.getValue("plan_name")}
+          {row.plan_name}
         </Badge>
-      ),
-      filterFn: multiSelectFilterFn
-    },
-    {
-      accessorKey: "email",
-      meta: {
-        label: t("headers.email")
-      },
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t("headers.email")} />,
-      cell: ({ row }) => (
-        <span className="text-muted-foreground text-xs">{row.getValue("email")}</span>
       )
-    },
-    {
-      accessorKey: "country",
-      meta: {
-        label: t("headers.country")
-      },
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t("headers.country")} />
-      ),
-      cell: ({ row }) => row.getValue("country")
-    },
-    {
-      accessorKey: "status",
-      meta: {
-        label: t("headers.status")
-      },
-      header: ({ column }) => <DataTableColumnHeader column={column} title={t("headers.status")} />,
-      cell: ({ row }) => {
-        const status = row.original.status;
+    }),
+    textCol<User>({
+      key: "email",
+      header: t("headers.email"),
+      cell: (row) => <span className="text-muted-foreground text-xs">{row.email}</span>
+    }),
+    textCol<User>({
+      key: "country",
+      header: t("headers.country"),
+      cell: (row) => row.country
+    }),
+    textCol<User>({
+      key: "status",
+      header: t("headers.status"),
+      filterFn: multiSelectFilterFn, // <-- Mengaktifkan filter multi-select
+      cell: (row) => {
+        const status = row.status;
         const statusMap = {
           active: "success",
           inactive: "destructive",
@@ -385,19 +333,13 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             {status.replace("-", " ")}
           </Badge>
         );
-      },
-      filterFn: multiSelectFilterFn
-    },
-    {
-      accessorKey: "lastSignIn",
-      meta: {
-        label: t("headers.lastSignIn")
-      },
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t("headers.lastSignIn")} />
-      ),
-      cell: ({ row }) => {
-        const value = row.getValue("lastSignIn") as string | null;
+      }
+    }),
+    dateCol<User>({
+      key: "lastSignIn",
+      header: t("headers.lastSignIn"),
+      cell: (row) => {
+        const value = row.lastSignIn as string | null;
         if (!value) return <span className="text-muted-foreground text-xs">-</span>;
         return (
           <div className="flex flex-col gap-0.5">
@@ -408,17 +350,12 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           </div>
         );
       }
-    },
-    {
-      accessorKey: "created_at",
-      meta: {
-        label: t("headers.createdAt")
-      },
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t("headers.createdAt")} />
-      ),
-      cell: ({ row }) => {
-        const value = row.getValue("created_at") as string;
+    }),
+    dateCol<User>({
+      key: "created_at",
+      header: t("headers.createdAt"),
+      cell: (row) => {
+        const value = row.created_at as string;
         if (!value) return <span className="text-muted-foreground text-xs">-</span>;
         return (
           <span className="text-muted-foreground text-xs">
@@ -426,17 +363,12 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           </span>
         );
       }
-    },
-    {
-      accessorKey: "updated_at",
-      meta: {
-        label: t("headers.updatedAt")
-      },
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t("headers.updatedAt")} />
-      ),
-      cell: ({ row }) => {
-        const value = row.getValue("updated_at") as string;
+    }),
+    dateCol<User>({
+      key: "updated_at",
+      header: t("headers.updatedAt"),
+      cell: (row) => {
+        const value = row.updated_at as string;
         if (!value) return <span className="text-muted-foreground text-xs">-</span>;
         return (
           <span className="text-muted-foreground text-xs">
@@ -444,40 +376,36 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           </span>
         );
       }
-    },
-    {
-      id: "actions",
+    }),
+    actionCol<User>({
       enableHiding: false,
-      cell: ({ row }) => (
+      cell: (row) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
-              <span className="sr-only">Open menu</span>
               <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem className="cursor-pointer">{t("actions.view")}</DropdownMenuItem>
-            {row.original.accountStatus === "banned" ? (
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={() => handleUnban(row.original.dbId)}>
+            {row.accountStatus === "banned" ? (
+              <DropdownMenuItem className="cursor-pointer" onClick={() => handleUnban(row.dbId)}>
                 {t("actions.unban")}
               </DropdownMenuItem>
             ) : (
-              <DropdownMenuItem className="cursor-pointer" onClick={() => handleBan(row.original)}>
+              <DropdownMenuItem className="cursor-pointer" onClick={() => handleBan(row)}>
                 {t("actions.ban")}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
-              onClick={() => handleDeleteRow(row.original)}
+              onClick={() => handleDeleteRow(row)}
               className="text-destructive focus:text-destructive cursor-pointer">
               {t("actions.delete")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
-    }
+    })
   ];
 
   const table = useDataTable({ columns, data: users });
@@ -495,114 +423,30 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
     { value: "Enterprise", label: "Enterprise" }
   ];
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full">
-      <div className="flex flex-row flex-wrap items-center gap-2 py-4">
-        <DataTableSearch table={table} columnId="name" placeholder={t("filters.search")} />
-
-        <DataTableFacetedFilter
-          column={table.getColumn("status")}
-          title={t("filters.status")}
-          options={statuses}
-          emptyText={t("filters.noStatus")}
-        />
-
-        <DataTableFacetedFilter
-          column={table.getColumn("plan_name")}
-          title={t("filters.plan")}
-          options={plansList}
-          emptyText={t("filters.noPlan")}
-        />
-
-        <DataTableFacetedFilter
-          column={table.getColumn("role")}
-          title={t("filters.role")}
-          options={roles}
-          emptyText={t("filters.noRole")}
-        />
-
-        <Button variant="outline" className="h-9 text-xs" onClick={() => setRestoreOpen(true)}>
-          <Trash2 className="me-2 h-4 w-4" />
-          <span className="hidden md:inline">{t("trash")}</span>
-        </Button>
-
-        <DataTableViewOptions table={table} label={t("filters.columns")} className="md:ms-auto" />
-      </div>
-
-      <DataTable table={table} columns={columns} noResultsText={t("footer.noResults")} />
-
-      <DataTablePagination
-        table={table}
-        selectedLabel={(selected, total) => t("footer.selected", { selected, total })}
-        previousLabel={ttable("pagination.previous")}
-        nextLabel={ttable("pagination.next")}
-      />
-
-      <ConfirmDeleteDialog
-        open={!!userToDelete}
-        onOpenChange={(o) => !o && setUserToDelete(null)}
-        confirmName={userToDelete?.name || ""}
-        loading={deleteSaving}
-        onConfirm={confirmDeleteUser}
-      />
-
-      <Dialog open={!!userToBan} onOpenChange={(o) => !o && setUserToBan(null)}>
-        <DialogContent className="sm:max-w-[440px]">
-          <DialogHeader>
-            <DialogTitle>{tMod("ban.title", { name: userToBan?.name || "" })}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label>{tMod("ban.duration")}</Label>
-              <Select value={banDuration} onValueChange={setBanDuration}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BAN_DURATIONS.map((d) => (
-                    <SelectItem key={d.key} value={d.key}>
-                      {tMod(d.labelKey)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>{tMod("ban.reason")}</Label>
-              <Textarea
-                value={banReason}
-                onChange={(e) => setBanReason(e.target.value)}
-                rows={2}
-                placeholder={tMod("ban.reasonPlaceholder")}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUserToBan(null)} disabled={banSaving}>
-              {t("actions.cancel")}
-            </Button>
-            <Button onClick={confirmBan} disabled={banSaving} variant="destructive">
-              {banSaving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              {tMod("ban.confirm")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <RestoreDialog
-        open={restoreOpen}
-        onOpenChange={setRestoreOpen}
-        kind="user"
-        onRestored={loadUsersFromSupabase}
-      />
-    </div>
-  );
+  return {
+    isLoading,
+    t,
+    table,
+    statuses,
+    plansList,
+    roles,
+    setRestoreOpen,
+    columns,
+    userToDelete,
+    setUserToDelete,
+    ttable,
+    deleteSaving,
+    confirmDeleteUser,
+    userToBan,
+    setUserToBan,
+    tMod,
+    banDuration,
+    setBanDuration,
+    banReason,
+    setBanReason,
+    banSaving,
+    confirmBan,
+    restoreOpen,
+    loadUsersFromSupabase
+  };
 }

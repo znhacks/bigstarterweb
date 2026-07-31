@@ -18,7 +18,7 @@ export default async function RolesPage() {
   const data = await getSuperadminRoles();
 
   return (
-    <div className="mx-auto w-full px-4 py-10">
+    <div className="mx-auto w-full">
       <RolesView data={data} />
     </div>
   );
