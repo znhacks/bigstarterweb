@@ -47,7 +47,13 @@ import { useSuperadminMainDashboard } from "./logic";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
 // Reusable table pieces — the same ones every other table in the app uses.
-import { useDataTable, DataTable, DataTableColumnHeader } from "@/components/data-table";
+import {
+  useDataGrid,
+  DataGrid,
+  DataGridContent,
+  DataGridTable,
+  DataGridColumnHeader
+} from "@/components/data-table";
 
 const COLORS = ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6b7280"];
 
@@ -102,7 +108,7 @@ function SuperadminMainDashboardView({
     () => [
       {
         accessorKey: "tenants.name",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Tenant" />,
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Tenant" />,
         cell: ({ row }) => (
           <span className="text-foreground font-semibold">
             {row.original.tenants?.name || "Unknown Tenant"}
@@ -111,12 +117,12 @@ function SuperadminMainDashboardView({
       },
       {
         accessorKey: "plan_name",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Plan" />,
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Plan" />,
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.plan_name}</span>
       },
       {
         accessorKey: "amount",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Amount" />,
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Amount" />,
         cell: ({ row }) => {
           const tx = row.original;
           return (
@@ -131,7 +137,7 @@ function SuperadminMainDashboardView({
       },
       {
         accessorKey: "provider",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Provider" />,
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Provider" />,
         cell: ({ row }) => (
           <span className="font-mono text-[10px] uppercase">
             {row.original.provider || "Manual"}
@@ -140,7 +146,7 @@ function SuperadminMainDashboardView({
       },
       {
         accessorKey: "status",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Status" />,
         cell: ({ row }) => {
           const status = row.original.status;
           const isSuccess = ["paid", "completed", "success", "settlement"].includes(
@@ -160,7 +166,7 @@ function SuperadminMainDashboardView({
       },
       {
         accessorKey: "created_at",
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+        header: ({ column }) => <DataGridColumnHeader column={column} title="Date" />,
         cell: ({ row }) => (
           <span className="text-muted-foreground">
             {new Date(row.original.created_at).toLocaleDateString(
@@ -174,7 +180,7 @@ function SuperadminMainDashboardView({
   );
 
   // You own this instance — read/mutate it however this widget needs.
-  const transactionsTable = useDataTable({
+  const transactionsTable = useDataGrid({
     columns: transactionColumns,
     data: recentTransactions as RecentTransactionRow[],
     initialPageSize: 10
@@ -633,18 +639,21 @@ function SuperadminMainDashboardView({
         </Card>
       </div>
 
-      {/* 7. RECENT TRANSACTIONS — now the reusable DataTable instead of a raw <table> */}
+      {/* 7. RECENT TRANSACTIONS — now the reusable DataGrid instead of a raw <table> */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base font-bold">Recent Transactions</CardTitle>
           <CardDescription>Catatan aliran dana terverifikasi pada sistem.</CardDescription>
         </CardHeader>
         <CardContent>
-          <DataTable
+          <DataGrid
             table={transactionsTable}
             columns={transactionColumns}
-            noResultsText="Tidak ada transaksi baru"
-          />
+            noResultsText="Tidak ada transaksi baru">
+            <DataGridContent>
+              <DataGridTable />
+            </DataGridContent>
+          </DataGrid>
         </CardContent>
       </Card>
 

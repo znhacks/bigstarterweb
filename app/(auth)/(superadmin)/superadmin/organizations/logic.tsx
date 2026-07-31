@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { softDeleteTenant } from "@/app/(auth)/(superadmin)/superadmin/actions/account-moderation";
 
 import {
-  useDataTable,
+  useDataGrid,
   createSelectColumn,
   actionCol,
   dateCol,
@@ -250,7 +250,7 @@ export function useAdminOrganizations(data: SuperadminOrganization[]) {
     })
   ];
 
-  const table = useDataTable({
+  const table = useDataGrid({
     columns,
     data: orgs
   });

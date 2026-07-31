@@ -1,11 +1,46 @@
 // app/(auth)/(superadmin)/superadmin/users/actions.ts
+"use server";
 
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
-import { planRepository } from "@/supabase/repositories/plans";
 import { profileRepository } from "@/supabase/repositories/profiles";
-import { User } from "./logic";
+import { planRepository } from "@/supabase/repositories/plans";
+import { getLocale } from "next-intl/server";
+import { User } from "./view";
 
-export async function getUsers(): Promise<User[]> {
+const getLocalizedValue = (value: any, locale: string): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    return value[locale] || value["en"] || Object.values(value)[0] || "";
+  }
+  return String(value);
+};
+
+export async function getSuperadminUsers(): Promise<User[]> {
+  const cookieStore = await cookies();
+  const locale = await getLocale();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {}
+        }
+      }
+    }
+  );
+
   const { data: profiles, error } = await (
     await profileRepository(supabaseAdmin)
   )
@@ -14,9 +49,8 @@ export async function getUsers(): Promise<User[]> {
       `
       id,
       full_name,
-      avatar,
       created_at,
-      last_sign_in,
+      avatar,
       status,
       banned_until,
       banned_reason,
@@ -44,7 +78,7 @@ export async function getUsers(): Promise<User[]> {
   }
 
   const { data: dbPlans } = await (await planRepository(supabaseAdmin)).query().select("id, name");
-  const planNameMap = new Map<string, string>((dbPlans ?? []).map((p: any) => [p.id, p.name]));
+  const planNameMap = new Map<string, any>((dbPlans ?? []).map((p: any) => [p.id, p.name]));
 
   const formattedUsers: User[] = (profiles || []).map((prof: any, index: number) => {
     const fullName = prof.full_name || "Unknown User";
@@ -52,7 +86,9 @@ export async function getUsers(): Promise<User[]> {
     const tenant = firstMembership?.tenants;
     const firstSub = tenant?.subscriptions?.[0];
 
-    const planName = planNameMap.get(firstSub?.plan_id) || "Free";
+    const rawPlanName = planNameMap.get(firstSub?.plan_id);
+    const planName = rawPlanName ? getLocalizedValue(rawPlanName, locale) : "Free";
+    const roleVal = getLocalizedValue(firstMembership?.roles?.name, locale) || "Member";
     const statusVal = firstSub?.status === "active" ? "active" : "inactive";
 
     return {
@@ -61,18 +97,18 @@ export async function getUsers(): Promise<User[]> {
       firstName: fullName.split(" ")[0] || "",
       lastName: fullName.split(" ").slice(1).join(" ") || "",
       name: fullName,
-      role: firstMembership?.roles?.name || "Member",
+      role: roleVal,
       plan_name: planName,
       email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
       country: "United States",
       status: statusVal as "active" | "inactive" | "pending",
       image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`,
       created_at: prof.created_at,
+      updated_at: prof.updated_at,
       lastSignIn: prof.last_sign_in || null,
       accountStatus: (prof.status as User["accountStatus"]) || "active",
       bannedUntil: prof.banned_until || null,
       bannedReason: prof.banned_reason || null
-      // Kolom updated_at dihilangkan dari sini
     };
   });
 

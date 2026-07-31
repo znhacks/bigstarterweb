@@ -12,23 +12,19 @@ import { useLocale, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/i18n/currency";
 
 import {
-  useDataTable,
-  DataTable,
-  DataTableSearch,
-  DataTablePagination,
-  DataTableColumnHeader,
-  DataTableFacetedFilter,
-  DataTableViewOptions,
+  useDataGrid,
+  DataGrid,
+  DataGridToolbar,
+  DataGridContent,
+  DataGridSearch,
+  DataGridFacetedFilter,
+  DataGridViewOptions,
+  DataGridTable,
+  DataGridPagination,
   multiSelectFilterFn,
   textCol,
   numCol,
-  dateCol,
-  DataGrid,
-  DataGridToolbar,
-  DataGridSearch,
-  DataGridTable,
-  DataGridPagination,
-  DataGridViewOptions
+  dateCol
 } from "@/components/data-table";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
@@ -221,7 +217,7 @@ export function SuperadminSubscriptionsPage() {
     })
   ];
 
-  const table = useDataTable({
+  const table = useDataGrid({
     columns,
     data: subscriptions,
     initialColumnVisibility: { renewalStatus: false }
@@ -244,26 +240,28 @@ export function SuperadminSubscriptionsPage() {
           <DataGrid table={table} columns={columns}>
             <DataGridToolbar>
               <DataGridSearch columnId="tenants_name" placeholder={t("table.search")} />
-              <DataTableFacetedFilter
-                column={table.getColumn("plans_name")}
+              <DataGridFacetedFilter
+                columnId="plans_name"
                 title={t("table.plan") || "Plan"}
                 options={planOptions}
               />
 
-              <DataTableFacetedFilter
-                column={table.getColumn("renewalStatus")}
+              <DataGridFacetedFilter
+                columnId="renewalStatus"
                 title={t("table.renewal")}
                 options={renewalOptions}
               />
 
               <DataGridViewOptions className="md:ms-auto" label={t("filters.columns")} />
             </DataGridToolbar>
-            <DataGridTable />
-            <DataGridPagination
-              pageSizeOptions={[10, 20, 50, 100]}
-              rowsPerPageLabel={t("table.rowsPerPage")}
-              selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
-            />
+            <DataGridContent>
+              <DataGridTable />
+              <DataGridPagination
+                pageSizeOptions={[10, 20, 50, 100]}
+                rowsPerPageLabel={t("table.rowsPerPage")}
+                selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
+              />
+            </DataGridContent>
           </DataGrid>
         </div>
       </div>

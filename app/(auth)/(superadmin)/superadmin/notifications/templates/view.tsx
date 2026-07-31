@@ -8,12 +8,13 @@ import { Pencil, Send } from "lucide-react";
 
 import {
   DataGrid,
-  DataGridPagination,
+  DataGridToolbar,
+  DataGridContent,
   DataGridSearch,
   DataGridTable,
-  DataGridToolbar,
+  DataGridPagination,
   DataGridViewOptions,
-  useDataTable,
+  useDataGrid,
   textCol,
   actionCol
 } from "@/components/data-table";
@@ -248,7 +249,7 @@ export function TemplatesView({
     [categories, tRoot] // Di-re-create jika data kategori atau fungsi translate berubah
   );
 
-  const table = useDataTable({
+  const table = useDataGrid({
     columns,
     data: rows,
     globalFilterFn
@@ -267,8 +268,10 @@ export function TemplatesView({
           <DataGridSearch global placeholder={t("placeholder.search")} />
           <DataGridViewOptions className="md:ms-auto" />
         </DataGridToolbar>
-        <DataGridTable />
-        <DataGridPagination />
+        <DataGridContent>
+          <DataGridTable />
+          <DataGridPagination />
+        </DataGridContent>
       </DataGrid>
 
       <Sheet open={editingId !== null} onOpenChange={(o) => !o && setEditingId(null)}>

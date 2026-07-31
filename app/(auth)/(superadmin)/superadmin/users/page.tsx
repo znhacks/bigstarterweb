@@ -1,28 +1,19 @@
-import UsersDataTable from "./view";
+// app/(auth)/(superadmin)/superadmin/users/page.tsx
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
-import { getUsers } from "./actions";
+import UsersDataTable from "./view";
+import { getSuperadminUsers } from "./actions";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.superadmin.users");
-
-  return constructMetadata({
-    title: t("title"),
-    description: t("description")
-  });
+  return constructMetadata({ title: t("title"), description: t("description") });
 }
 
-export default async function Page() {
-  const t = await getTranslations("superadmin.users");
-
-  const data = await getUsers();
+export default async function UsersPage() {
+  const data = await getSuperadminUsers();
 
   return (
-    <div className="mx-auto w-full space-y-3">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-      </div>
-      {}
+    <div className="mx-auto w-full">
       <UsersDataTable data={data} />
     </div>
   );

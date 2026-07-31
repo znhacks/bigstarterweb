@@ -4,13 +4,14 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import {
   DataGrid,
+  DataGridContent,
   DataGridPagination,
   DataGridTable,
   DataGridToolbar,
   DataGridViewOptions,
-  useDataTable,
+  useDataGrid,
   textCol,
-  DataTableFacetedFilter
+  DataGridFacetedFilter
 } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import type { SuperadminDeliveryLog } from "../types";
@@ -94,39 +95,39 @@ export function DeliveryLogsView({ logs }: { logs: SuperadminDeliveryLog[] }) {
     })
   ];
 
-  const table = useDataTable({ columns, data: logs, initialPageSize: 25 });
+  const table = useDataGrid({ columns, data: logs, initialPageSize: 25 });
 
   return (
     <div className="mx-auto w-full space-y-3">
       <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
 
       <DataGrid table={table} columns={columns}>
-        <div className="space-y-3">
-          <DataGridToolbar>
-            <DataTableFacetedFilter
-              column={table.getColumn("channel")}
-              title={t("colChannel")}
-              options={[
-                { value: "in_app", label: channelLabel("in_app") },
-                { value: "email", label: channelLabel("email") },
-                { value: "push", label: channelLabel("push") }
-              ]}
-            />
-            <DataTableFacetedFilter
-              column={table.getColumn("status")}
-              title={t("colStatus")}
-              options={[
-                { value: "sent", label: statusLabel("sent") },
-                { value: "delivered", label: statusLabel("delivered") },
-                { value: "failed", label: statusLabel("failed") },
-                { value: "skipped", label: statusLabel("skipped") }
-              ]}
-            />
-            <DataGridViewOptions />
-          </DataGridToolbar>
+        <DataGridToolbar>
+          <DataGridFacetedFilter
+            columnId="channel"
+            title={t("colChannel")}
+            options={[
+              { value: "in_app", label: channelLabel("in_app") },
+              { value: "email", label: channelLabel("email") },
+              { value: "push", label: channelLabel("push") }
+            ]}
+          />
+          <DataGridFacetedFilter
+            columnId="status"
+            title={t("colStatus")}
+            options={[
+              { value: "sent", label: statusLabel("sent") },
+              { value: "delivered", label: statusLabel("delivered") },
+              { value: "failed", label: statusLabel("failed") },
+              { value: "skipped", label: statusLabel("skipped") }
+            ]}
+          />
+          <DataGridViewOptions />
+        </DataGridToolbar>
+        <DataGridContent>
           <DataGridTable noResultsText={t("empty")} />
           <DataGridPagination />
-        </div>
+        </DataGridContent>
       </DataGrid>
     </div>
   );

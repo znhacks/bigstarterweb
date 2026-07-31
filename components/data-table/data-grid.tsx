@@ -1,4 +1,19 @@
 "use client";
+/**
+ * data-grid.tsx — Sistem tabel compound. SEMUA komponen memakai nama DataGrid*.
+ * Pintu import publik: @/components/data-table (barrel index.ts).
+ *
+ * Struktur pemakaian:
+ * <DataGrid table={table} columns={columns}>
+ *   <DataGridToolbar> ...search/filter/tools... </DataGridToolbar>
+ *   <DataGridContent>
+ *     <DataGridTable />
+ *     <DataGridPagination />
+ *   </DataGridContent>
+ * </DataGrid>
+ *
+ * Semua anak DataGrid* WAJIB di dalam <DataGrid> (membaca instance table dari context).
+ */
 
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
@@ -7,6 +22,7 @@ import {
   ColumnDef,
   ColumnFiltersState,
   FilterFn,
+  Row,
   RowSelectionState,
   SortingState,
   Table as TanstackTable,
@@ -89,28 +105,78 @@ declare module "@tanstack/react-table" {
   }
 }
 
-export type DataGridDensity = "sm" | "default" | "lg";
+export type DataGridDensity = "xs" | "sm" | "default" | "lg";
 
 const DENSITY_CELL: Record<string, string> = {
+  xs: "py-1",
   sm: "py-2",
   default: "py-4",
   lg: "py-6"
 };
 
 const DENSITY_HEADER: Record<string, string> = {
+  xs: "h-8",
   sm: "h-9",
   default: "h-12",
   lg: "h-14"
 };
 
-interface UseDataTableOptions<TData, TValue> {
+/* =========================================================================
+ * Context & root
+ * ========================================================================= */
+interface DataGridContextValue {
+  table: TanstackTable<any>;
+  columns?: ColumnDef<any>[];
+  density?: DataGridDensity;
+  noResultsText?: string;
+}
+
+const DataGridContext = React.createContext<DataGridContextValue | null>(null);
+
+export function useDataGridContext(): DataGridContextValue {
+  const ctx = React.useContext(DataGridContext);
+  if (!ctx) {
+    throw new Error("Komponen DataGrid* harus dipakai di dalam <DataGrid>.");
+  }
+  return ctx;
+}
+
+export interface DataGridProps<TData, TValue = unknown> {
+  table: TanstackTable<TData>;
+  columns?: ColumnDef<TData, TValue>[];
+  density?: DataGridDensity;
+  noResultsText?: string;
+  children?: React.ReactNode;
+}
+
+export function DataGrid<TData, TValue = unknown>({
+  table,
+  columns,
+  density,
+  noResultsText,
+  children
+}: DataGridProps<TData, TValue>) {
+  const value = useMemo(
+    () => ({ table, columns, density, noResultsText }) as DataGridContextValue,
+    [table, columns, density, noResultsText]
+  );
+  return (
+    <DataGridContext.Provider value={value}>
+      <div className="space-y-3">{children}</div>
+    </DataGridContext.Provider>
+  );
+}
+
+/* =========================================================================
+ * Hook: useDataGrid
+ * ========================================================================= */
+interface UseDataGridOptions<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   meta?: TableMeta<TData>;
   initialSorting?: SortingState;
   initialColumnVisibility?: VisibilityState;
   initialPageSize?: number;
-
   manualPagination?: boolean;
   manualSorting?: boolean;
   manualFiltering?: boolean;
@@ -119,7 +185,7 @@ interface UseDataTableOptions<TData, TValue> {
   globalFilterFn?: FilterFn<any>;
 }
 
-export function useDataTable<TData, TValue>({
+export function useDataGrid<TData, TValue>({
   columns,
   data,
   meta,
@@ -131,7 +197,7 @@ export function useDataTable<TData, TValue>({
   manualFiltering = false,
   pageCount,
   globalFilterFn
-}: UseDataTableOptions<TData, TValue>) {
+}: UseDataGridOptions<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] =
@@ -164,6 +230,9 @@ export function useDataTable<TData, TValue>({
   return table;
 }
 
+/* =========================================================================
+ * Filter & select helpers
+ * ========================================================================= */
 export const multiSelectFilterFn: FilterFn<any> = (row, columnId, filterValue: string[]) => {
   if (!filterValue || filterValue.length === 0) return true;
   const rowValue = String(row.getValue(columnId)).toLowerCase();
@@ -194,6 +263,9 @@ export function createSelectColumn<TData>(): ColumnDef<TData, unknown> {
   };
 }
 
+/* =========================================================================
+ * Cells & header
+ * ========================================================================= */
 interface NumericCellProps {
   value: number | string | null | undefined;
   format?: (v: number) => string;
@@ -209,36 +281,31 @@ export function NumericCell({ value, format, locale = "en", className }: Numeric
       </div>
     );
   }
-
   const n = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(n)) {
     return <div className={cn("text-muted-foreground text-right", className)}>-</div>;
   }
-
   const formatted = format ? format(n) : n.toLocaleString(locale);
-
   return <div className={cn("text-end font-mono tabular-nums", className)}>{formatted}</div>;
 }
 
-interface DataTableColumnHeaderProps<TData, TValue> extends React.HTMLAttributes<HTMLDivElement> {
+interface DataGridColumnHeaderProps<TData, TValue> extends React.HTMLAttributes<HTMLDivElement> {
   column: Column<TData, TValue>;
   title: string;
 }
 
-export function DataTableColumnHeader<TData, TValue>({
+export function DataGridColumnHeader<TData, TValue>({
   column,
   title,
   className
-}: DataTableColumnHeaderProps<TData, TValue>) {
+}: DataGridColumnHeaderProps<TData, TValue>) {
   const align = (column.columnDef.meta as any)?.align as string | undefined;
   const alignClass = align === "right" ? "justify-end text-end w-full" : "";
 
   if (!column.getCanSort()) {
     return <div className={cn("text-xs", alignClass, className)}>{title}</div>;
   }
-
   const isSorted = column.getIsSorted();
-
   return (
     <Button
       variant="ghost"
@@ -360,8 +427,7 @@ export function EditableCell({
     <div
       className={`cursor-pointer select-none ${className ?? ""}`}
       onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      title={enabled ? undefined : undefined}>
+      onDoubleClick={handleDoubleClick}>
       {displayValue}
     </div>
   );
@@ -382,7 +448,6 @@ function TextEditor({
     ref.current?.focus();
     ref.current?.select();
   }, []);
-
   return (
     <Input
       ref={ref}
@@ -418,15 +483,10 @@ function DateEditor({
   useEffect(() => {
     ref.current?.focus();
   }, []);
-
   const commit = () => {
-    if (!draft) {
-      onCommit(null);
-    } else {
-      onCommit(`${draft}T00:00:00.000Z`);
-    }
+    if (!draft) onCommit(null);
+    else onCommit(`${draft}T00:00:00.000Z`);
   };
-
   return (
     <Input
       ref={ref}
@@ -508,7 +568,6 @@ export function ReadonlyCell({
       onView();
     }, 220);
   }, [onView]);
-
   return (
     <div className={`cursor-pointer select-none ${className ?? ""}`} onClick={handleClick}>
       {displayValue}
@@ -516,6 +575,9 @@ export function ReadonlyCell({
   );
 }
 
+/* =========================================================================
+ * Column factories
+ * ========================================================================= */
 interface BaseOpts {
   header: string;
   width?: number;
@@ -535,7 +597,7 @@ export function selectCol<T>(opts?: SelectColOpts<T>): ColumnDef<T> {
   return {
     id: "select",
     header: opts?.header
-      ? ({ column }) => <DataTableColumnHeader column={column} title={opts.header!} />
+      ? ({ column }) => <DataGridColumnHeader column={column} title={opts.header!} />
       : ({ table }) => (
           <Checkbox
             checked={
@@ -546,10 +608,7 @@ export function selectCol<T>(opts?: SelectColOpts<T>): ColumnDef<T> {
             aria-label="Select all"
           />
         ),
-    meta: {
-      width: opts?.width,
-      label: opts?.header || "Select"
-    },
+    meta: { width: opts?.width, label: opts?.header || "Select" },
     enableSorting: opts?.enableSorting ?? false,
     enableHiding: opts?.enableHiding ?? false,
     enableGlobalFilter: false,
@@ -573,7 +632,7 @@ interface TextColOpts<T> extends BaseOpts {
 export function textCol<T>(opts: TextColOpts<T>): ColumnDef<T> {
   return {
     accessorKey: opts.key,
-    header: ({ column }) => <DataTableColumnHeader column={column} title={opts.header} />,
+    header: ({ column }) => <DataGridColumnHeader column={column} title={opts.header} />,
     meta: { width: opts.width, label: opts.header },
     enableSorting: opts.enableSorting ?? true,
     enableHiding: opts.enableHiding ?? true,
@@ -593,7 +652,7 @@ interface NumColOpts<T> extends BaseOpts {
 export function numCol<T>(opts: NumColOpts<T>): ColumnDef<T> {
   return {
     accessorKey: opts.key,
-    header: ({ column }) => <DataTableColumnHeader column={column} title={opts.header} />,
+    header: ({ column }) => <DataGridColumnHeader column={column} title={opts.header} />,
     meta: { width: opts.width, align: "right", label: opts.header },
     enableSorting: opts.enableSorting ?? true,
     enableHiding: opts.enableHiding ?? true,
@@ -618,7 +677,7 @@ interface DateColOpts<T> extends BaseOpts {
 export function dateCol<T>(opts: DateColOpts<T>): ColumnDef<T> {
   return {
     accessorKey: opts.key,
-    header: ({ column }) => <DataTableColumnHeader column={column} title={opts.header} />,
+    header: ({ column }) => <DataGridColumnHeader column={column} title={opts.header} />,
     meta: { width: opts.width, align: "right", label: opts.header },
     enableSorting: opts.enableSorting ?? true,
     enableHiding: opts.enableHiding ?? true,
@@ -650,7 +709,7 @@ export function actionCol<T>(opts: ActionColOpts<T>): ColumnDef<T> {
   return {
     id: "actions",
     header: opts.header
-      ? ({ column }) => <DataTableColumnHeader column={column} title={opts.header!} />
+      ? ({ column }) => <DataGridColumnHeader column={column} title={opts.header!} />
       : undefined,
     meta: { width: opts.width, align: "right", label: opts.header },
     enableSorting: false,
@@ -660,30 +719,40 @@ export function actionCol<T>(opts: ActionColOpts<T>): ColumnDef<T> {
   };
 }
 
-interface DataTableSearchProps<TData> {
-  table: TanstackTable<TData>;
+/* =========================================================================
+ * Toolbar (DataGridToolbar + tools)
+ * ========================================================================= */
+export function DataGridToolbar({
+  className,
+  children
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className={cn("flex flex-row flex-wrap items-center gap-2", className)}>{children}</div>
+  );
+}
+
+export function DataGridSearch({
+  columnId,
+  global: isGlobal,
+  placeholder = "Search...",
+  className
+}: {
   /** Bila diisi (dan `global` tidak di-set), mencari per-kolom. */
   columnId?: string;
   /** Bila true, mencari lintas semua kolom yang aktif (global filter). */
   global?: boolean;
   placeholder?: string;
   className?: string;
-}
-
-export function DataTableSearch<TData>({
-  table,
-  columnId,
-  global: isGlobal,
-  placeholder = "Search...",
-  className
-}: DataTableSearchProps<TData>) {
+}) {
+  const { table } = useDataGridContext();
   const [value, setValue] = useState("");
   const [searching, setSearching] = useState(false);
 
   const column = isGlobal ? undefined : table.getColumn(columnId!);
-  const hasFilter = isGlobal
-    ? !!table.getState().globalFilter
-    : !!column?.getFilterValue();
+  const hasFilter = isGlobal ? !!table.getState().globalFilter : !!column?.getFilterValue();
 
   const applyFilter = (next: string) => {
     const v = next.trim() || undefined;
@@ -710,14 +779,11 @@ export function DataTableSearch<TData>({
         onChange={(e) => {
           const next = e.target.value;
           setValue(next);
-          if (next === "") {
-            applyFilter("");
-          }
+          if (next === "") applyFilter("");
         }}
         onKeyDown={(e) => e.key === "Enter" && trigger()}
         className="h-9 w-full pr-22"
       />
-
       <div className="absolute inset-y-0 right-1 flex items-center">
         {hasFilter && (
           <Button type="button" variant="ghost" size="icon" onClick={clear} className="h-7 w-7">
@@ -743,314 +809,24 @@ export function DataTableSearch<TData>({
   );
 }
 
-interface DataTablePaginationProps<TData> {
-  table: TanstackTable<TData>;
-  pageSizeOptions?: number[];
-  selectedLabel?: (selected: string, total: string) => string;
-  rowsPerPageLabel?: string;
-  previousLabel?: string;
-  nextLabel?: string;
-}
-
-export function DataTablePagination<TData>({
-  table,
-  pageSizeOptions = [10, 20, 50, 100],
-  selectedLabel = (selected, total) => `${selected} of ${total} row(s) selected.`,
-  rowsPerPageLabel = "Rows per page:",
-  previousLabel = "Previous",
-  nextLabel = "Next"
-}: DataTablePaginationProps<TData>) {
-  const locale = useLocale();
-
-  const renderPaginationItems = () => {
-    const totalPages = table.getPageCount();
-    const currentPage = table.getState().pagination.pageIndex;
-    const items: React.ReactNode[] = [];
-
-    const createPageItem = (pageIndex: number) => (
-      <PaginationItem key={pageIndex}>
-        <PaginationLink
-          isActive={currentPage === pageIndex}
-          onClick={() => table.setPageIndex(pageIndex)}
-          className="cursor-pointer">
-          {formatNumber(pageIndex + 1, locale)}
-        </PaginationLink>
-      </PaginationItem>
-    );
-
-    if (totalPages <= 5) {
-      for (let i = 0; i < totalPages; i++) items.push(createPageItem(i));
-    } else {
-      items.push(createPageItem(0));
-
-      if (currentPage > 2) {
-        items.push(
-          <PaginationItem key="ellipsis-start">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-
-      const start = Math.max(1, currentPage - 1);
-      const end = Math.min(totalPages - 2, currentPage + 1);
-
-      for (let i = start; i <= end; i++) items.push(createPageItem(i));
-
-      if (currentPage < totalPages - 3) {
-        items.push(
-          <PaginationItem key="ellipsis-end">
-            <PaginationEllipsis />
-          </PaginationItem>
-        );
-      }
-
-      items.push(createPageItem(totalPages - 1));
-    }
-
-    return items;
-  };
-
-  return (
-    <div className="flex flex-col items-center justify-between gap-4 pt-4 md:flex-row">
-      <div className="text-muted-foreground order-2 text-xs md:order-1">
-        {selectedLabel(
-          formatNumber(table.getFilteredSelectedRowModel().rows.length, locale),
-          formatNumber(table.getFilteredRowModel().rows.length, locale)
-        )}
-      </div>
-
-      <div className="order-1 flex w-full flex-col items-center justify-end gap-4 sm:flex-row md:order-2 md:w-auto">
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs whitespace-nowrap">
-            {rowsPerPageLabel}
-          </span>
-          <Select
-            value={`${table.getState().pagination.pageSize}`}
-            onValueChange={(val) => table.setPageSize(Number(val))}>
-            <SelectTrigger className="border-border/80 h-8 w-[70px] rounded-lg text-xs">
-              <SelectValue
-                placeholder={formatNumber(table.getState().pagination.pageSize, locale)}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {pageSizeOptions.map((size) => (
-                <SelectItem key={size} value={`${size}`} className="text-xs">
-                  {formatNumber(size, locale)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {table.getPageCount() > 1 && (
-          <Pagination>
-            <PaginationContent className="flex-wrap gap-1">
-              <PaginationItem>
-                <PaginationLink
-                  aria-label="Go to previous page"
-                  size="default"
-                  className={cn(
-                    "cursor-pointer gap-1 rounded-lg px-2.5 text-xs sm:ps-2.5",
-                    !table.getCanPreviousPage() && "pointer-events-none opacity-50"
-                  )}
-                  onClick={() => table.previousPage()}>
-                  <ChevronLeftIcon className="h-4 w-4 rtl:-scale-x-100" />
-                  <span className="hidden sm:block">{previousLabel}</span>
-                </PaginationLink>
-              </PaginationItem>
-
-              {renderPaginationItems()}
-
-              <PaginationItem>
-                <PaginationLink
-                  aria-label="Go to next page"
-                  size="default"
-                  className={cn(
-                    "cursor-pointer gap-1 rounded-lg px-2.5 text-xs sm:pe-2.5",
-                    !table.getCanNextPage() && "pointer-events-none opacity-50"
-                  )}
-                  onClick={() => table.nextPage()}>
-                  <span className="hidden sm:block">{nextLabel}</span>
-                  <ChevronRightIcon className="h-4 w-4 rtl:-scale-x-100" />
-                </PaginationLink>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        )}
-      </div>
-    </div>
-  );
-}
-
-interface DataTableViewOptionsProps<TData> {
-  table: TanstackTable<TData>;
-  label?: string;
-  className?: string;
-  storageKey?: string;
-}
-
-export function DataTableViewOptions<TData>({
-  table,
-  label = "Columns",
-  className,
-  storageKey
-}: DataTableViewOptionsProps<TData>) {
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  const resolvedStorageKey = useMemo(() => {
-    if (storageKey) return storageKey;
-    const columnIds = table
-      .getAllColumns()
-      .map((c) => c.id)
-      .sort()
-      .join("-");
-    return `table-visibility-${columnIds}`;
-  }, [table, storageKey]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedState = localStorage.getItem(resolvedStorageKey);
-      if (savedState) {
-        try {
-          const parsed = JSON.parse(savedState);
-          table.setColumnVisibility(parsed);
-        } catch (error) {
-          console.error("Failed to restore column visibility state:", error);
-        }
-      }
-      setIsLoaded(true);
-    }
-  }, [table, resolvedStorageKey]);
-
-  const currentVisibility = table.getState().columnVisibility;
-  useEffect(() => {
-    if (isLoaded && typeof window !== "undefined") {
-      localStorage.setItem(resolvedStorageKey, JSON.stringify(currentVisibility));
-    }
-  }, [currentVisibility, resolvedStorageKey, isLoaded]);
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className={cn("h-9 text-xs", className)}>
-          <Columns className="me-2 h-4 w-4" />
-          <span className="hidden md:inline">{label}</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {table
-          .getAllColumns()
-          .filter((column) => column.getCanHide())
-          .map((column) => (
-            <DropdownMenuCheckboxItem
-              key={column.id}
-              className="cursor-pointer capitalize"
-              checked={column.getIsVisible()}
-              onCheckedChange={(value) => column.toggleVisibility(!!value)}
-              onSelect={(event) => event.preventDefault()}>
-              {column.columnDef.meta?.label ?? column.id}
-            </DropdownMenuCheckboxItem>
-          ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-export type BulkActionTone = "default" | "warning" | "destructive";
-
-export interface DataTableBulkAction<TData> {
-  label: React.ReactNode;
-  icon?: LucideIcon;
-  tone?: BulkActionTone;
-  separator?: boolean;
-  disabled?: boolean | ((rows: TData[]) => boolean);
-  onSelect: (rows: TData[]) => void;
-}
-
-interface DataTableBulkActionsProps<TData> {
-  table: TanstackTable<TData>;
-  actions: DataTableBulkAction<TData>[];
-  label?: React.ReactNode;
-  className?: string;
-}
-
-const TONE_CLASSES: Record<BulkActionTone, string> = {
-  default: "",
-  warning: "text-amber-600 focus:text-amber-600 dark:text-amber-500",
-  destructive: "text-destructive focus:text-destructive"
-};
-
-export function DataTableBulkActions<TData>({
-  table,
-  actions,
-  label = "Bulk actions",
-  className
-}: DataTableBulkActionsProps<TData>) {
-  const locale = useLocale();
-  const selectedRows = table.getFilteredSelectedRowModel().rows;
-  const selectedData = selectedRows.map((row) => row.original);
-  const count = selectedRows.length;
-
-  const isButtonDisabled = count === 0;
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild disabled={isButtonDisabled}>
-        <Button
-          variant="outline"
-          disabled={isButtonDisabled}
-          className={cn("h-9 gap-1.5 border-dashed text-xs", className)}>
-          {label}{" "}
-          <Badge variant="secondary" className="h-4 min-w-4 justify-center px-1.5 py-0 text-[10px]">
-            {formatNumber(count, locale)}
-          </Badge>
-          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-36">
-        {actions.map((action, index) => {
-          const Icon = action.icon;
-          const isDisabled =
-            typeof action.disabled === "function"
-              ? action.disabled(selectedData)
-              : !!action.disabled;
-
-          return (
-            <React.Fragment key={index}>
-              {action.separator && index > 0 && <DropdownMenuSeparator />}
-              <DropdownMenuItem
-                disabled={isDisabled}
-                onClick={() => action.onSelect(selectedData)}
-                className={cn("cursor-pointer", TONE_CLASSES[action.tone ?? "default"])}>
-                {Icon && <Icon className="me-2 h-4 w-4" />}
-                {action.label}
-              </DropdownMenuItem>
-            </React.Fragment>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-export interface DataTableFacetedFilterOption {
+export interface DataGridFacetedFilterOption {
   value: string;
   label: string;
 }
 
-interface DataTableFacetedFilterProps<TData, TValue> {
-  column?: Column<TData, TValue>;
-  title: string;
-  options: DataTableFacetedFilterOption[];
-  emptyText?: string;
-}
-
-export function DataTableFacetedFilter<TData, TValue>({
-  column,
+export function DataGridFacetedFilter({
+  columnId,
   title,
   options,
   emptyText = "No results found."
-}: DataTableFacetedFilterProps<TData, TValue>) {
+}: {
+  columnId: string;
+  title: string;
+  options: DataGridFacetedFilterOption[];
+  emptyText?: string;
+}) {
+  const { table } = useDataGridContext();
+  const column = table.getColumn(columnId);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>((column?.getFilterValue() as string[]) || []);
   const [temp, setTemp] = useState<string[]>(selected);
@@ -1115,37 +891,206 @@ export function DataTableFacetedFilter<TData, TValue>({
   );
 }
 
-interface DataTableProps<TData, TValue> {
-  table: TanstackTable<TData>;
-  columns: ColumnDef<TData, TValue>[];
-  noResultsText?: string;
-  density?: DataGridDensity;
+export function DataGridViewOptions({
+  label = "Columns",
+  className,
+  storageKey
+}: {
+  label?: string;
+  className?: string;
+  storageKey?: string;
+}) {
+  const { table } = useDataGridContext();
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const resolvedStorageKey = useMemo(() => {
+    if (storageKey) return storageKey;
+    const columnIds = table
+      .getAllColumns()
+      .map((c) => c.id)
+      .sort()
+      .join("-");
+    return `table-visibility-${columnIds}`;
+  }, [table, storageKey]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedState = localStorage.getItem(resolvedStorageKey);
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState);
+          table.setColumnVisibility(parsed);
+        } catch (error) {
+          console.error("Failed to restore column visibility state:", error);
+        }
+      }
+      setIsLoaded(true);
+    }
+  }, [table, resolvedStorageKey]);
+
+  const currentVisibility = table.getState().columnVisibility;
+  useEffect(() => {
+    if (isLoaded && typeof window !== "undefined") {
+      localStorage.setItem(resolvedStorageKey, JSON.stringify(currentVisibility));
+    }
+  }, [currentVisibility, resolvedStorageKey, isLoaded]);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" className={cn("h-9 text-xs", className)}>
+          <Columns className="me-2 h-4 w-4" />
+          <span className="hidden md:inline">{label}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {table
+          .getAllColumns()
+          .filter((column) => column.getCanHide())
+          .map((column) => (
+            <DropdownMenuCheckboxItem
+              key={column.id}
+              className="cursor-pointer capitalize"
+              checked={column.getIsVisible()}
+              onCheckedChange={(value) => column.toggleVisibility(!!value)}
+              onSelect={(event) => event.preventDefault()}>
+              {column.columnDef.meta?.label ?? column.id}
+            </DropdownMenuCheckboxItem>
+          ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
-export function DataTable<TData, TValue>({
+export type BulkActionTone = "default" | "warning" | "destructive";
+
+export interface DataGridBulkAction<TData> {
+  label: React.ReactNode;
+  icon?: LucideIcon;
+  tone?: BulkActionTone;
+  separator?: boolean;
+  disabled?: boolean | ((rows: TData[]) => boolean);
+  onSelect: (rows: TData[]) => void;
+}
+
+const TONE_CLASSES: Record<BulkActionTone, string> = {
+  default: "",
+  warning: "text-amber-600 focus:text-amber-600 dark:text-amber-500",
+  destructive: "text-destructive focus:text-destructive"
+};
+
+export function DataGridBulkActions<TData>({
   table,
-  columns,
-  noResultsText = "No results.",
-  density = "default"
-}: DataTableProps<TData, TValue>) {
+  actions,
+  label = "Bulk actions",
+  className
+}: {
+  /** Opsional, untuk inferensi tipe `actions`. Default mengambil dari context. */
+  table?: TanstackTable<TData>;
+  actions: DataGridBulkAction<TData>[];
+  label?: React.ReactNode;
+  className?: string;
+}) {
+  const ctx = useDataGridContext();
+  const resolvedTable = (table ?? ctx.table) as TanstackTable<TData>;
+  const locale = useLocale();
+  const selectedRows = resolvedTable.getFilteredSelectedRowModel().rows;
+  const selectedData = selectedRows.map((row) => row.original);
+  const count = selectedRows.length;
+  const isButtonDisabled = count === 0;
+
   return (
-    <div className="bg-card overflow-hidden rounded-md border">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={isButtonDisabled}>
+        <Button
+          variant="outline"
+          disabled={isButtonDisabled}
+          className={cn("h-9 gap-1.5 border-dashed text-xs", className)}>
+          {label}{" "}
+          <Badge variant="secondary" className="h-4 min-w-4 justify-center px-1.5 py-0 text-[10px]">
+            {formatNumber(count, locale)}
+          </Badge>
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-36">
+        {actions.map((action, index) => {
+          const Icon = action.icon;
+          const isDisabled =
+            typeof action.disabled === "function"
+              ? action.disabled(selectedData)
+              : !!action.disabled;
+          return (
+            <React.Fragment key={index}>
+              {action.separator && index > 0 && <DropdownMenuSeparator />}
+              <DropdownMenuItem
+                disabled={isDisabled}
+                onClick={() => action.onSelect(selectedData)}
+                className={cn("cursor-pointer", TONE_CLASSES[action.tone ?? "default"])}>
+                {Icon && <Icon className="me-2 h-4 w-4" />}
+                {action.label}
+              </DropdownMenuItem>
+            </React.Fragment>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/* =========================================================================
+ * Content (table + pagination wrapper)
+ * ========================================================================= */
+export function DataGridContent({
+  className,
+  children
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  return <div className={cn("space-y-3", className)}>{children}</div>;
+}
+
+/* =========================================================================
+ * Table & pagination
+ * ========================================================================= */
+export function DataGridTable({
+  density,
+  noResultsText,
+  onRowClick,
+  className
+}: {
+  density?: DataGridDensity;
+  noResultsText?: string;
+  /** Dipanggil saat baris diklik (menerima TanStack Row). */
+  onRowClick?: (row: Row<any>) => void;
+  className?: string;
+}) {
+  const ctx = useDataGridContext();
+  if (!ctx.columns) {
+    throw new Error("<DataGridTable> memerlukan `columns` yang diteruskan ke <DataGrid>.");
+  }
+  const d = density ?? ctx.density ?? "default";
+  const noResults = noResultsText ?? ctx.noResultsText ?? "No results.";
+
+  return (
+    <div className={cn("bg-card overflow-hidden rounded-md border", className)}>
       <Table>
         <colgroup>
-          {table.getVisibleLeafColumns().map((column) => {
+          {ctx.table.getVisibleLeafColumns().map((column) => {
             const width = column.columnDef.meta?.width;
             return <col key={column.id} style={width !== undefined ? { width } : undefined} />;
           })}
         </colgroup>
         <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
+          {ctx.table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent">
               {headerGroup.headers.map((header) => {
                 const align = header.column.columnDef.meta?.align;
                 return (
                   <TableHead
                     key={header.id}
-                    className={cn(DENSITY_HEADER[density], align === "right" && "text-end")}>
+                    className={cn(DENSITY_HEADER[d], align === "right" && "text-end")}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -1156,19 +1101,20 @@ export function DataTable<TData, TValue>({
           ))}
         </TableHeader>
         <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => (
+          {ctx.table.getRowModel().rows?.length ? (
+            ctx.table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
-                className="hover:bg-accent/5">
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={cn("hover:bg-accent/5", onRowClick && "cursor-pointer")}>
                 {row.getVisibleCells().map((cell) => {
                   const align = cell.column.columnDef.meta?.align;
                   return (
                     <TableCell
                       key={cell.id}
                       className={cn(
-                        DENSITY_CELL[density],
+                        DENSITY_CELL[d],
                         "text-xs",
                         align === "right" && "text-end tabular-nums"
                       )}>
@@ -1181,9 +1127,9 @@ export function DataTable<TData, TValue>({
           ) : (
             <TableRow>
               <TableCell
-                colSpan={columns.length}
+                colSpan={ctx.columns.length}
                 className="text-muted-foreground h-24 text-center">
-                {noResultsText}
+                {noResults}
               </TableCell>
             </TableRow>
           )}
@@ -1193,131 +1139,12 @@ export function DataTable<TData, TValue>({
   );
 }
 
-interface DataGridContextValue {
-  table: TanstackTable<any>;
-  columns?: ColumnDef<any>[];
-  density?: DataGridDensity;
-  noResultsText?: string;
-}
-
-const DataGridContext = React.createContext<DataGridContextValue | null>(null);
-
-export function useDataGridContext(): DataGridContextValue {
-  const ctx = React.useContext(DataGridContext);
-  if (!ctx) {
-    throw new Error(
-      "DataGrid sub-components (DataGridToolbar/DataGridSearch/DataGridViewOptions/DataGridTable/DataGridPagination/DataGridBulkActions) must be used within <DataGrid>."
-    );
-  }
-  return ctx;
-}
-
-export interface DataGridProps<TData, TValue = unknown> {
-  table: TanstackTable<TData>;
-  columns?: ColumnDef<TData, TValue>[];
-  density?: DataGridDensity;
-  noResultsText?: string;
-  children?: React.ReactNode;
-}
-
-export function DataGrid<TData, TValue = unknown>({
-  table,
-  columns,
-  density,
-  noResultsText,
-  children
-}: DataGridProps<TData, TValue>) {
-  const value = useMemo(
-    () => ({ table, columns, density, noResultsText }) as DataGridContextValue,
-    [table, columns, density, noResultsText]
-  );
-
-  return <DataGridContext.Provider value={value}>{children}</DataGridContext.Provider>;
-}
-
-export function DataGridToolbar({
-  className,
-  children
-}: {
-  className?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className={cn("flex flex-row flex-wrap items-center gap-2", className)}>{children}</div>
-  );
-}
-
-export function DataGridSearch({
-  columnId,
-  global: isGlobal,
-  placeholder,
-  className
-}: {
-  /** Per-kolom (butuh `columnId`) atau global (lintas kolom). */
-  columnId?: string;
-  global?: boolean;
-  placeholder?: string;
-  className?: string;
-}) {
-  const { table } = useDataGridContext();
-  return (
-    <DataTableSearch
-      table={table}
-      columnId={columnId}
-      global={isGlobal}
-      placeholder={placeholder}
-      className={className}
-    />
-  );
-}
-
-export function DataGridViewOptions({
-  label,
-  className,
-  storageKey
-}: {
-  label?: string;
-  className?: string;
-  storageKey?: string;
-}) {
-  const { table } = useDataGridContext();
-  return (
-    <DataTableViewOptions
-      table={table}
-      label={label}
-      className={className}
-      storageKey={storageKey}
-    />
-  );
-}
-
-export function DataGridTable({
-  density,
-  noResultsText
-}: {
-  density?: DataGridDensity;
-  noResultsText?: string;
-}) {
-  const ctx = useDataGridContext();
-  if (!ctx.columns) {
-    throw new Error("<DataGridTable> memerlukan prop `columns` yang diteruskan ke <DataGrid>.");
-  }
-  return (
-    <DataTable
-      table={ctx.table}
-      columns={ctx.columns}
-      density={density ?? ctx.density}
-      noResultsText={noResultsText ?? ctx.noResultsText}
-    />
-  );
-}
-
 export function DataGridPagination({
-  pageSizeOptions,
-  selectedLabel,
-  rowsPerPageLabel,
-  previousLabel,
-  nextLabel
+  pageSizeOptions = [10, 20, 50, 100],
+  selectedLabel = (selected, total) => `${selected} of ${total} row(s) selected.`,
+  rowsPerPageLabel = "Rows per page:",
+  previousLabel = "Previous",
+  nextLabel = "Next"
 }: {
   pageSizeOptions?: number[];
   selectedLabel?: (selected: string, total: string) => string;
@@ -1326,37 +1153,114 @@ export function DataGridPagination({
   nextLabel?: string;
 }) {
   const { table } = useDataGridContext();
-  return (
-    <DataTablePagination
-      table={table}
-      pageSizeOptions={pageSizeOptions}
-      selectedLabel={selectedLabel}
-      rowsPerPageLabel={rowsPerPageLabel}
-      previousLabel={previousLabel}
-      nextLabel={nextLabel}
-    />
-  );
-}
+  const locale = useLocale();
 
-export function DataGridBulkActions<TData>({
-  table,
-  actions,
-  label,
-  className
-}: {
-  table?: TanstackTable<TData>;
-  actions: DataTableBulkAction<TData>[];
-  label?: React.ReactNode;
-  className?: string;
-}) {
-  const ctx = useDataGridContext();
-  const resolvedTable = (table ?? ctx.table) as TanstackTable<TData>;
+  const renderPaginationItems = () => {
+    const totalPages = table.getPageCount();
+    const currentPage = table.getState().pagination.pageIndex;
+    const items: React.ReactNode[] = [];
+
+    const createPageItem = (pageIndex: number) => (
+      <PaginationItem key={pageIndex}>
+        <PaginationLink
+          isActive={currentPage === pageIndex}
+          onClick={() => table.setPageIndex(pageIndex)}
+          className="cursor-pointer">
+          {formatNumber(pageIndex + 1, locale)}
+        </PaginationLink>
+      </PaginationItem>
+    );
+
+    if (totalPages <= 5) {
+      for (let i = 0; i < totalPages; i++) items.push(createPageItem(i));
+    } else {
+      items.push(createPageItem(0));
+      if (currentPage > 2) {
+        items.push(
+          <PaginationItem key="ellipsis-start">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+      const start = Math.max(1, currentPage - 1);
+      const end = Math.min(totalPages - 2, currentPage + 1);
+      for (let i = start; i <= end; i++) items.push(createPageItem(i));
+      if (currentPage < totalPages - 3) {
+        items.push(
+          <PaginationItem key="ellipsis-end">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+      items.push(createPageItem(totalPages - 1));
+    }
+    return items;
+  };
+
   return (
-    <DataTableBulkActions
-      table={resolvedTable}
-      actions={actions}
-      label={label}
-      className={className}
-    />
+    <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+      <div className="text-muted-foreground order-2 text-xs md:order-1">
+        {selectedLabel(
+          formatNumber(table.getFilteredSelectedRowModel().rows.length, locale),
+          formatNumber(table.getFilteredRowModel().rows.length, locale)
+        )}
+      </div>
+      <div className="order-1 flex w-full flex-col items-center justify-end gap-4 sm:flex-row md:order-2 md:w-auto">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-xs whitespace-nowrap">
+            {rowsPerPageLabel}
+          </span>
+          <Select
+            value={`${table.getState().pagination.pageSize}`}
+            onValueChange={(val) => table.setPageSize(Number(val))}>
+            <SelectTrigger className="border-border/80 h-8 w-[70px] rounded-lg text-xs">
+              <SelectValue
+                placeholder={formatNumber(table.getState().pagination.pageSize, locale)}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeOptions.map((size) => (
+                <SelectItem key={size} value={`${size}`} className="text-xs">
+                  {formatNumber(size, locale)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {table.getPageCount() > 1 && (
+          <Pagination>
+            <PaginationContent className="flex-wrap gap-1">
+              <PaginationItem>
+                <PaginationLink
+                  aria-label="Go to previous page"
+                  size="default"
+                  className={cn(
+                    "cursor-pointer gap-1 rounded-lg px-2.5 text-xs sm:ps-2.5",
+                    !table.getCanPreviousPage() && "pointer-events-none opacity-50"
+                  )}
+                  onClick={() => table.previousPage()}>
+                  <ChevronLeftIcon className="h-4 w-4 rtl:-scale-x-100" />
+                  <span className="hidden sm:block">{previousLabel}</span>
+                </PaginationLink>
+              </PaginationItem>
+              {renderPaginationItems()}
+              <PaginationItem>
+                <PaginationLink
+                  aria-label="Go to next page"
+                  size="default"
+                  className={cn(
+                    "cursor-pointer gap-1 rounded-lg px-2.5 text-xs sm:pe-2.5",
+                    !table.getCanNextPage() && "pointer-events-none opacity-50"
+                  )}
+                  onClick={() => table.nextPage()}>
+                  <span className="hidden sm:block">{nextLabel}</span>
+                  <ChevronRightIcon className="h-4 w-4 rtl:-scale-x-100" />
+                </PaginationLink>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
+      </div>
+    </div>
   );
 }

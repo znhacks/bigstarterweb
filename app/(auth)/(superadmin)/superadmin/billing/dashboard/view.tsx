@@ -40,11 +40,9 @@ import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 import type { DateRange } from "react-day-picker";
 
 import {
-  useDataTable,
-  DataTable,
-  DataTableColumnHeader,
-  DataTablePagination,
+  useDataGrid,
   DataGrid,
+  DataGridContent,
   DataGridTable,
   textCol,
   actionCol,
@@ -229,12 +227,12 @@ function SuperadminBillingDashboardView({
     [locale]
   );
 
-  const txTable = useDataTable({
+  const txTable = useDataGrid({
     columns: transactionColumns,
     data: useMemo(() => filteredData.txs.slice(0, 10), [filteredData.txs])
   });
 
-  const subTable = useDataTable({
+  const subTable = useDataGrid({
     columns: subscriptionColumns,
     data: useMemo(() => filteredData.subs.slice(0, 10), [filteredData.subs])
   });
@@ -611,7 +609,9 @@ function SuperadminBillingDashboardView({
               table={txTable}
               columns={transactionColumns}
               noResultsText="No transactions found.">
-              <DataGridTable />
+              <DataGridContent>
+                <DataGridTable />
+              </DataGridContent>
             </DataGrid>
           </CardContent>
         </Card>
@@ -625,7 +625,9 @@ function SuperadminBillingDashboardView({
               table={subTable}
               columns={subscriptionColumns}
               noResultsText="No subscriptions found.">
-              <DataGridTable />
+              <DataGridContent>
+                <DataGridTable />
+              </DataGridContent>
             </DataGrid>
           </CardContent>
         </Card>

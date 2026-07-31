@@ -63,6 +63,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Link from "next/link";
 import {
   DataGrid,
+  DataGridContent,
   DataGridBulkActions,
   DataGridPagination,
   DataGridSearch,
@@ -197,20 +198,22 @@ export function AdminPlansPage() {
           <DataGridViewOptions className="md:ms-auto" label={t("column")} />
         </DataGridToolbar>
 
-        {isLoading ? (
-          <div className="flex min-h-80 items-center justify-center">
-            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <DataGridTable />
-            <DataGridPagination
-              pageSizeOptions={[10, 20, 50, 100]}
-              rowsPerPageLabel={t("table.rowsPerPage")}
-              selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
-            />
-          </>
-        )}
+        <DataGridContent>
+          {isLoading ? (
+            <div className="flex min-h-80 items-center justify-center">
+              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <>
+              <DataGridTable />
+              <DataGridPagination
+                pageSizeOptions={[10, 20, 50, 100]}
+                rowsPerPageLabel={t("table.rowsPerPage")}
+                selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
+              />
+            </>
+          )}
+        </DataGridContent>
       </DataGrid>
 
       <Sheet open={dialogOpen} onOpenChange={setDialogOpen}>

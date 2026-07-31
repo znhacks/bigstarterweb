@@ -6,6 +6,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  X,
   Building2,
   Globe,
   Mail,
@@ -34,12 +35,13 @@ import {
 import {
   DataGrid,
   DataGridBulkActions,
+  DataGridContent,
+  DataGridFacetedFilter,
   DataGridPagination,
   DataGridSearch,
   DataGridTable,
   DataGridToolbar,
-  DataGridViewOptions,
-  DataTableFacetedFilter
+  DataGridViewOptions
 } from "@/components/data-table";
 
 import {
@@ -108,14 +110,14 @@ export function SuperadminOrganizationsPage({ data }: { data: SuperadminOrganiza
               }
             ]}
           />
-          <DataTableFacetedFilter
-            column={table.getColumn("planName")}
+          <DataGridFacetedFilter
+            columnId="planName"
             title="Plan"
             options={planOptions}
           />
 
-          <DataTableFacetedFilter
-            column={table.getColumn("planStatus")}
+          <DataGridFacetedFilter
+            columnId="planStatus"
             title="Status"
             options={statusOptions}
           />
@@ -126,16 +128,18 @@ export function SuperadminOrganizationsPage({ data }: { data: SuperadminOrganiza
           <DataGridViewOptions className="md:ms-auto" label={t("column")} />
         </DataGridToolbar>
 
-        {/* Mengaktifkan onRowClick untuk membuka detail saat baris data diklik */}
-        <DataGridTable
-          onRowClick={(row) => setActiveOrgDetail(row.original)}
-          className="cursor-pointer"
-        />
-        <DataGridPagination
-          pageSizeOptions={[10, 20, 50, 100]}
-          rowsPerPageLabel={t("table.rowsPerPage")}
-          selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
-        />
+        <DataGridContent>
+          {/* Mengaktifkan onRowClick untuk membuka detail saat baris data diklik */}
+          <DataGridTable
+            onRowClick={(row) => setActiveOrgDetail(row.original)}
+            className="cursor-pointer"
+          />
+          <DataGridPagination
+            pageSizeOptions={[10, 20, 50, 100]}
+            rowsPerPageLabel={t("table.rowsPerPage")}
+            selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
+          />
+        </DataGridContent>
       </DataGrid>
 
       {/* Kontainer Slide-Over Detail Organisasi Menggunakan Sheet Shadcn */}

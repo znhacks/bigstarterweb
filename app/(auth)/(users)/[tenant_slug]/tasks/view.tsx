@@ -53,12 +53,15 @@ import { getLocaleMeta } from "@/config/i18n-culture";
 import { DateTimePicker } from "@/components/date-time-picker";
 
 import {
-  useDataTable,
-  DataTable,
-  DataTableSearch,
-  DataTablePagination,
-  DataTableColumnHeader,
-  DataTableFacetedFilter,
+  useDataGrid,
+  DataGrid,
+  DataGridContent,
+  DataGridToolbar,
+  DataGridSearch,
+  DataGridPagination,
+  DataGridTable,
+  DataGridColumnHeader,
+  DataGridFacetedFilter,
   createSelectColumn,
   multiSelectFilterFn,
   EditableCell,
@@ -212,7 +215,7 @@ export function TasksView({
       {
         accessorKey: "title",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("data-table.headers.title")} />
+          <DataGridColumnHeader column={column} title={t("data-table.headers.title")} />
         ),
         sortingFn: localeSortFn,
         cell: ({ row }) => {
@@ -241,7 +244,7 @@ export function TasksView({
       {
         accessorKey: "status",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("data-table.headers.status")} />
+          <DataGridColumnHeader column={column} title={t("data-table.headers.status")} />
         ),
         filterFn: multiSelectFilterFn,
         sortingFn: localeSortFn,
@@ -266,7 +269,7 @@ export function TasksView({
       {
         accessorKey: "priority",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("data-table.headers.priority")} />
+          <DataGridColumnHeader column={column} title={t("data-table.headers.priority")} />
         ),
         filterFn: multiSelectFilterFn,
         sortingFn: localeSortFn,
@@ -292,7 +295,7 @@ export function TasksView({
         id: "assignee",
         accessorFn: (row) => profileName(row.assignee, memberName(h.members, row.assignee_id)),
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("data-table.headers.assignee")} />
+          <DataGridColumnHeader column={column} title={t("data-table.headers.assignee")} />
         ),
         filterFn: multiSelectFilterFn,
         sortingFn: localeSortFn,
@@ -330,7 +333,7 @@ export function TasksView({
       {
         accessorKey: "due_date",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("data-table.headers.dueDate")} />
+          <DataGridColumnHeader column={column} title={t("data-table.headers.dueDate")} />
         ),
         cell: ({ row }) => {
           const task = row.original;
@@ -359,7 +362,7 @@ export function TasksView({
         id: "created_by",
         accessorFn: (row) => profileName(row.creator, memberName(h.members, row.created_by)),
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("data-table.headers.createdBy")} />
+          <DataGridColumnHeader column={column} title={t("data-table.headers.createdBy")} />
         ),
         sortingFn: localeSortFn,
         cell: ({ row }) => {
@@ -382,7 +385,7 @@ export function TasksView({
       {
         accessorKey: "created_at",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("data-table.headers.createdAt")} />
+          <DataGridColumnHeader column={column} title={t("data-table.headers.createdAt")} />
         ),
         cell: ({ row }) => {
           const value = row.getValue("created_at") as string | null;
@@ -405,7 +408,7 @@ export function TasksView({
       {
         accessorKey: "updated_at",
         header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("data-table.headers.updatedAt")} />
+          <DataGridColumnHeader column={column} title={t("data-table.headers.updatedAt")} />
         ),
         cell: ({ row }) => {
           const value = row.getValue("updated_at") as string | null;
@@ -466,7 +469,7 @@ export function TasksView({
     h.setTaskToDelete
   ]);
 
-  const table = useDataTable({
+  const table = useDataGrid({
     columns,
     data: h.tasks,
     initialSorting: [{ id: "created_at", desc: true }]
@@ -535,110 +538,106 @@ export function TasksView({
         </Alert>
       )}
 
-      <div>
-        {h.isLoading ? (
-          <div className="flex min-h-100 items-center justify-center">
-            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+      <DataGrid table={table} columns={columns} noResultsText={t("data-table.footer.noResults")}>
+        <DataGridToolbar className="flex flex-col gap-4 py-4 md:flex-row md:items-center">
+          <div className="flex flex-wrap items-center gap-2">
+            <DataGridSearch
+              columnId="title"
+              placeholder={t("data-table.filters.search")}
+              className="max-w-sm"
+            />
+
+            <DataGridFacetedFilter
+              columnId="status"
+              title={t("data-table.filters.status")}
+              options={statusOptions}
+              emptyText={t("data-table.filters.noStatus")}
+            />
+
+            <DataGridFacetedFilter
+              columnId="priority"
+              title={t("data-table.filters.priority")}
+              options={priorityOptions}
+              emptyText={t("data-table.filters.noPriority")}
+            />
+
+            <DataGridFacetedFilter
+              columnId="assignee"
+              title={t("data-table.filters.assignee")}
+              options={assigneeFilterOptions}
+              emptyText={t("data-table.filters.noAssignee")}
+            />
           </div>
-        ) : (
-          <div className="w-full">
-            <div className="flex flex-col gap-4 py-4 md:flex-row md:items-center">
-              <div className="flex flex-wrap items-center gap-2">
-                <DataTableSearch
-                  table={table}
-                  columnId="title"
-                  placeholder={t("data-table.filters.search")}
-                  className="max-w-sm"
-                />
 
-                <DataTableFacetedFilter
-                  column={table.getColumn("status")}
-                  title={t("data-table.filters.status")}
-                  options={statusOptions}
-                  emptyText={t("data-table.filters.noStatus")}
-                />
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            <Button
+              onClick={handleExport}
+              variant="outline"
+              className="h-9 text-xs"
+              disabled={isExporting || h.tasks.length === 0}>
+              {isExporting ? (
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="me-2 h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">{t("download")}</span>
+            </Button>
 
-                <DataTableFacetedFilter
-                  column={table.getColumn("priority")}
-                  title={t("data-table.filters.priority")}
-                  options={priorityOptions}
-                  emptyText={t("data-table.filters.noPriority")}
-                />
-
-                <DataTableFacetedFilter
-                  column={table.getColumn("assignee")}
-                  title={t("data-table.filters.assignee")}
-                  options={assigneeFilterOptions}
-                  emptyText={t("data-table.filters.noAssignee")}
-                />
-              </div>
-
-              <div className="ms-auto flex flex-wrap items-center gap-2">
-                <Button
-                  onClick={handleExport}
-                  variant="outline"
-                  className="h-9 text-xs"
-                  disabled={isExporting || h.tasks.length === 0}>
-                  {isExporting ? (
-                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="me-2 h-4 w-4" />
-                  )}
-                  <span className="hidden sm:inline">{t("download")}</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-9 text-xs">
+                  <Columns className="me-2 h-4 w-4" />
+                  <span className="hidden md:inline">{t("data-table.filters.columns")}</span>
                 </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {table
+                  .getAllColumns()
+                  .filter((c) => c.getCanHide())
+                  .map((column) => {
+                    const labelKey = COLUMN_LABEL_KEYS[column.id];
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="cursor-pointer"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) => column.toggleVisibility(!!value)}>
+                        {labelKey ? t(labelKey) : column.id}
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-9 text-xs">
-                      <Columns className="me-2 h-4 w-4" />
-                      <span className="hidden md:inline">{t("data-table.filters.columns")}</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {table
-                      .getAllColumns()
-                      .filter((c) => c.getCanHide())
-                      .map((column) => {
-                        const labelKey = COLUMN_LABEL_KEYS[column.id];
-                        return (
-                          <DropdownMenuCheckboxItem
-                            key={column.id}
-                            className="cursor-pointer"
-                            checked={column.getIsVisible()}
-                            onCheckedChange={(value) => column.toggleVisibility(!!value)}>
-                            {labelKey ? t(labelKey) : column.id}
-                          </DropdownMenuCheckboxItem>
-                        );
-                      })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {canCreate && (
-                  <Button onClick={openCreate} className="h-9 text-xs">
-                    <PlusCircle className="me-2 h-4 w-4" />
-                    {t("newTask")}
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <p className="text-muted-foreground mb-2 text-xs">{t("data-table.editHint")}</p>
-
-            <DataTable
-              table={table}
-              columns={columns}
-              noResultsText={t("data-table.footer.noResults")}
-            />
-
-            <DataTablePagination
-              table={table}
-              selectedLabel={(selected, total) =>
-                t("data-table.footer.selected", { selected, total })
-              }
-            />
+            {canCreate && (
+              <Button onClick={openCreate} className="h-9 text-xs">
+                <PlusCircle className="me-2 h-4 w-4" />
+                {t("newTask")}
+              </Button>
+            )}
           </div>
-        )}
-      </div>
+        </DataGridToolbar>
+
+        <DataGridContent>
+          {h.isLoading ? (
+            <div className="flex min-h-100 items-center justify-center">
+              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <div className="w-full">
+              <p className="text-muted-foreground mb-2 text-xs">{t("data-table.editHint")}</p>
+
+              <DataGridTable />
+
+              <DataGridPagination
+                selectedLabel={(selected, total) =>
+                  t("data-table.footer.selected", { selected, total })
+                }
+              />
+            </div>
+          )}
+        </DataGridContent>
+      </DataGrid>
 
       <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-md" dir={meta.dir}>

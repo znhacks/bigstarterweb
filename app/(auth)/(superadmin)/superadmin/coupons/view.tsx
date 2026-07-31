@@ -50,25 +50,22 @@ import {
 import { formatDateTime, formatNumber } from "@/lib/i18n/format";
 
 import {
-  useDataTable,
-  DataTable,
-  DataTableSearch,
-  DataTablePagination,
-  DataTableColumnHeader,
-  DataTableFacetedFilter,
-  DataTableViewOptions,
+  useDataGrid,
+  DataGrid,
+  DataGridToolbar,
+  DataGridContent,
+  DataGridSearch,
+  DataGridFacetedFilter,
+  DataGridViewOptions,
+  DataGridBulkActions,
+  DataGridTable,
+  DataGridPagination,
   actionCol,
   dateCol,
   numCol,
   textCol,
   createSelectColumn,
-  multiSelectFilterFn,
-  DataGrid,
-  DataGridToolbar,
-  DataGridSearch,
-  DataGridBulkActions,
-  DataGridTable,
-  DataGridPagination
+  multiSelectFilterFn
 } from "@/components/data-table";
 
 import { DateTimePicker } from "@/components/date-time-picker";
@@ -222,7 +219,7 @@ export function AdminCouponsPage() {
     })
   ];
 
-  const table = useDataTable({
+  const table = useDataGrid({
     columns,
     data: coupons,
     initialColumnVisibility: { expiryStatus: false }
@@ -247,7 +244,7 @@ export function AdminCouponsPage() {
     })
   ];
 
-  const redemptionsTable = useDataTable({
+  const redemptionsTable = useDataGrid({
     columns: redemptionColumns,
     data: redemptions || []
   });
@@ -295,14 +292,14 @@ export function AdminCouponsPage() {
       <DataGrid table={table} columns={columns}>
         <DataGridToolbar>
           <DataGridSearch columnId="code" placeholder={t("table.search")} />
-          <DataTableFacetedFilter
-            column={table.getColumn("discount_type")}
+          <DataGridFacetedFilter
+            columnId="discount_type"
             title={t("form.typeLabel")}
             options={discountTypeOptions}
           />
 
-          <DataTableFacetedFilter
-            column={table.getColumn("expiryStatus")}
+          <DataGridFacetedFilter
+            columnId="expiryStatus"
             title={t("table.expiry")}
             options={expiryStatusOptions}
           />
@@ -319,22 +316,24 @@ export function AdminCouponsPage() {
               }
             ]}
           />
-          <DataTableViewOptions table={table} className="md:ms-auto" label={t("column")} />
+          <DataGridViewOptions className="md:ms-auto" label={t("column")} />
         </DataGridToolbar>
-        {isLoading ? (
-          <div className="flex min-h-80 items-center justify-center">
-            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <DataGridTable />
-            <DataGridPagination
-              pageSizeOptions={[10, 20, 50, 100]}
-              rowsPerPageLabel={t("table.rowsPerPage")}
-              selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
-            />
-          </>
-        )}
+        <DataGridContent>
+          {isLoading ? (
+            <div className="flex min-h-80 items-center justify-center">
+              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <>
+              <DataGridTable />
+              <DataGridPagination
+                pageSizeOptions={[10, 20, 50, 100]}
+                rowsPerPageLabel={t("table.rowsPerPage")}
+                selectedLabel={(selected, total) => `${selected} / ${total} ${t("selected")}`}
+              />
+            </>
+          )}
+        </DataGridContent>
       </DataGrid>
 
       <Sheet open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -538,19 +537,22 @@ export function AdminCouponsPage() {
                         </p>
                       ) : (
                         <div className="space-y-2">
-                          <DataTable
+                          <DataGrid
                             table={redemptionsTable}
                             columns={redemptionColumns}
                             noResultsText={t("table.noData")}
-                          />
-                          <DataTablePagination
-                            table={redemptionsTable}
-                            pageSizeOptions={[5, 10, 25]}
-                            rowsPerPageLabel={t("table.rowsPerPage")}
-                            selectedLabel={(selected, total) =>
-                              `${selected} / ${total} ${t("selected")}`
-                            }
-                          />
+                          >
+                            <DataGridContent>
+                              <DataGridTable />
+                              <DataGridPagination
+                                pageSizeOptions={[5, 10, 25]}
+                                rowsPerPageLabel={t("table.rowsPerPage")}
+                                selectedLabel={(selected, total) =>
+                                  `${selected} / ${total} ${t("selected")}`
+                                }
+                              />
+                            </DataGridContent>
+                          </DataGrid>
                         </div>
                       )}
                     </div>

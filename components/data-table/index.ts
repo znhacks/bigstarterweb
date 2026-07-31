@@ -1,26 +1,32 @@
+// Single entry point for the data-table system.
+// Semua komponen memakai nama DataGrid*. Implementasi ada di ./data-grid.
+
 export {
+  // Compound root + layout
   DataGrid,
   DataGridToolbar,
+  DataGridContent,
+  // Toolbar tools
   DataGridSearch,
+  DataGridFacetedFilter,
   DataGridViewOptions,
+  DataGridBulkActions,
+  // Table & pagination
   DataGridTable,
   DataGridPagination,
-  DataGridBulkActions,
+  // Header (dipakai di column def)
+  DataGridColumnHeader,
+  // Hook & context
+  useDataGrid,
   useDataGridContext,
-  DataTable,
-  DataTableSearch,
-  DataTablePagination,
-  DataTableViewOptions,
-  DataTableBulkActions,
-  DataTableColumnHeader,
-  DataTableFacetedFilter,
-  useDataTable,
+  // Column helpers
   createSelectColumn,
   selectCol,
   textCol,
   numCol,
   dateCol,
   actionCol,
+  // Filter & cells
   multiSelectFilterFn,
   NumericCell,
   EditableCell,
@@ -31,7 +37,7 @@ export type {
   DataGridProps,
   DataGridDensity,
   BulkActionTone,
-  DataTableBulkAction,
-  DataTableFacetedFilterOption,
+  DataGridBulkAction,
+  DataGridFacetedFilterOption,
   SelectOption
 } from "./data-grid";

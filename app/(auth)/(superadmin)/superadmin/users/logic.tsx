@@ -1,34 +1,16 @@
-import { computeBannedUntil, DEFAULT_BAN_KEY } from "@/config/moderation";
+// app/(auth)/(superadmin)/superadmin/users/logic.ts
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { profileRepository } from "@/supabase/repositories/profiles";
 import { roleRepository } from "@/supabase/repositories/roles";
-import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
-import { banUser, softDeleteUser, unbanUser } from "../actions/account-moderation";
-import { ColumnDef } from "@tanstack/react-table";
+import { profileRepository } from "@/supabase/repositories/profiles";
+import { useLocale } from "next-intl";
+
 import {
-  actionCol,
-  createSelectColumn,
-  DataTableColumnHeader,
-  dateCol,
-  multiSelectFilterFn,
-  textCol,
-  useDataTable
-} from "@/components/data-table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { generateAvatarFallback } from "@/lib/utils";
-import { formatRelativeTime } from "@/lib/i18n/format";
-import { formatToUserTimezone } from "@/lib/date";
-import { Button } from "@/components/ui/button";
-import { Loader2, MoreHorizontal } from "lucide-react";
-import { supabaseAdmin } from "@/lib/api/supabase-server";
+  softDeleteUser,
+  banUser,
+  unbanUser
+} from "@/app/(auth)/(superadmin)/superadmin/actions/account-moderation";
+import { DEFAULT_BAN_KEY, computeBannedUntil } from "@/config/moderation";
 
 export type User = {
   id: number;
@@ -50,7 +32,7 @@ export type User = {
   bannedReason?: string | null;
 };
 
-const getLocalizedValue = (value: any, locale: string): string => {
+export const getLocalizedValue = (value: any, locale: string): string => {
   if (!value) return "";
   if (typeof value === "string") return value;
   if (typeof value === "object") {
@@ -59,10 +41,7 @@ const getLocalizedValue = (value: any, locale: string): string => {
   return String(value);
 };
 
-export function useUsersLogic({ data: initialData }: { data?: User[] }) {
-  const t = useTranslations("superadmin.users.data-table");
-  const tMod = useTranslations("moderation");
-  const ttable = useTranslations("data-table");
+export function useUsersDataTableLogic(initialData?: User[]) {
   const locale = useLocale();
 
   const [users, setUsers] = useState<User[]>(initialData || []);
@@ -72,6 +51,14 @@ export function useUsersLogic({ data: initialData }: { data?: User[] }) {
 
   const [roles, setRoles] = useState<{ value: string; label: string }[]>([]);
   const [planNameMap, setPlanNameMap] = useState<Map<string, any>>(new Map());
+
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToBan, setUserToBan] = useState<User | null>(null);
+  const [banDuration, setBanDuration] = useState<string>(DEFAULT_BAN_KEY);
+  const [banReason, setBanReason] = useState<string>("");
+  const [banSaving, setBanSaving] = useState(false);
+  const [deleteSaving, setDeleteSaving] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/billing/plans")
@@ -101,7 +88,7 @@ export function useUsersLogic({ data: initialData }: { data?: User[] }) {
 
   useEffect(() => {
     (async () => {
-      (await roleRepository(supabaseAdmin))
+      (await roleRepository(supabase))
         .query()
         .select("name")
         .order("hierarchy_level", { ascending: false })
@@ -121,12 +108,11 @@ export function useUsersLogic({ data: initialData }: { data?: User[] }) {
   const loadUsersFromSupabase = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (await profileRepository(supabaseAdmin)).query().select(`
+      const { data, error } = await (await profileRepository(supabase)).query().select(`
           id,
           full_name,
           avatar,
           created_at,
-          last_sign_in,
           status,
           banned_until,
           banned_reason,
@@ -156,7 +142,7 @@ export function useUsersLogic({ data: initialData }: { data?: User[] }) {
   };
 
   useEffect(() => {
-    if (initialData) return;
+    if (rawProfiles.length === 0 && initialData) return;
 
     const formatted: User[] = rawProfiles.map((prof: any, index: number) => {
       const fullName = prof.full_name || "Unknown User";
@@ -182,6 +168,7 @@ export function useUsersLogic({ data: initialData }: { data?: User[] }) {
         status: statusVal as "active" | "inactive" | "pending",
         image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`,
         created_at: prof.created_at,
+        updated_at: prof.updated_at,
         lastSignIn: prof.last_sign_in || null,
         accountStatus: (prof.status as User["accountStatus"]) || "active",
         bannedUntil: prof.banned_until || null,
@@ -191,14 +178,6 @@ export function useUsersLogic({ data: initialData }: { data?: User[] }) {
 
     setUsers(formatted);
   }, [rawProfiles, planNameMap, locale, initialData]);
-
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [userToBan, setUserToBan] = useState<User | null>(null);
-  const [banDuration, setBanDuration] = useState<string>(DEFAULT_BAN_KEY);
-  const [banReason, setBanReason] = useState<string>("");
-  const [banSaving, setBanSaving] = useState(false);
-  const [deleteSaving, setDeleteSaving] = useState(false);
-  const [restoreOpen, setRestoreOpen] = useState(false);
 
   const handleDeleteRow = (user: User) => setUserToDelete(user);
 
@@ -263,190 +242,29 @@ export function useUsersLogic({ data: initialData }: { data?: User[] }) {
     );
   };
 
-  const columns: ColumnDef<User>[] = [
-    createSelectColumn<User>(),
-    textCol<User>({
-      key: "name",
-      header: t("headers.name"),
-      cell: (row) => {
-        const acc = row.accountStatus;
-        return (
-          <div className="flex items-center gap-4">
-            <Avatar>
-              <AvatarImage src={row.image} alt={row.name} />
-              <AvatarFallback>{generateAvatarFallback(row.name)}</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col gap-1">
-              <div className="text-foreground font-semibold capitalize">{row.name}</div>
-              {acc && acc !== "active" && (
-                <Badge
-                  variant={acc === "banned" ? "destructive" : "secondary"}
-                  className="w-fit text-[10px]">
-                  {t(`accountStatus.${acc}`)}
-                </Badge>
-              )}
-            </div>
-          </div>
-        );
-      }
-    }),
-    textCol<User>({
-      key: "role",
-      header: t("headers.role"),
-      filterFn: multiSelectFilterFn, // <-- Mengaktifkan filter multi-select
-      cell: (row) => <span className="capitalize">{row.role}</span>
-    }),
-    textCol<User>({
-      key: "plan_name",
-      header: t("headers.plan"),
-      filterFn: multiSelectFilterFn, // <-- Mengaktifkan filter multi-select
-      cell: (row) => (
-        <Badge variant="outline" className="font-semibold">
-          {row.plan_name}
-        </Badge>
-      )
-    }),
-    textCol<User>({
-      key: "email",
-      header: t("headers.email"),
-      cell: (row) => <span className="text-muted-foreground text-xs">{row.email}</span>
-    }),
-    textCol<User>({
-      key: "country",
-      header: t("headers.country"),
-      cell: (row) => row.country
-    }),
-    textCol<User>({
-      key: "status",
-      header: t("headers.status"),
-      filterFn: multiSelectFilterFn, // <-- Mengaktifkan filter multi-select
-      cell: (row) => {
-        const status = row.status;
-        const statusMap = {
-          active: "success",
-          inactive: "destructive",
-          pending: "warning"
-        } as const;
-        const statusClass = statusMap[status] ?? "outline";
-        return (
-          <Badge variant={statusClass} className="capitalize">
-            {status.replace("-", " ")}
-          </Badge>
-        );
-      }
-    }),
-    dateCol<User>({
-      key: "lastSignIn",
-      header: t("headers.lastSignIn"),
-      cell: (row) => {
-        const value = row.lastSignIn as string | null;
-        if (!value) return <span className="text-muted-foreground text-xs">-</span>;
-        return (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium">{formatRelativeTime(value, locale)}</span>
-            <span className="text-muted-foreground text-[10px]">
-              {formatToUserTimezone(value, timeZone, locale)}
-            </span>
-          </div>
-        );
-      }
-    }),
-    dateCol<User>({
-      key: "created_at",
-      header: t("headers.createdAt"),
-      cell: (row) => {
-        const value = row.created_at as string;
-        if (!value) return <span className="text-muted-foreground text-xs">-</span>;
-        return (
-          <span className="text-muted-foreground text-xs">
-            {formatToUserTimezone(value, timeZone, locale)}
-          </span>
-        );
-      }
-    }),
-    dateCol<User>({
-      key: "updated_at",
-      header: t("headers.updatedAt"),
-      cell: (row) => {
-        const value = row.updated_at as string;
-        if (!value) return <span className="text-muted-foreground text-xs">-</span>;
-        return (
-          <span className="text-muted-foreground text-xs">
-            {formatToUserTimezone(value, timeZone, locale)}
-          </span>
-        );
-      }
-    }),
-    actionCol<User>({
-      enableHiding: false,
-      cell: (row) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem className="cursor-pointer">{t("actions.view")}</DropdownMenuItem>
-            {row.accountStatus === "banned" ? (
-              <DropdownMenuItem className="cursor-pointer" onClick={() => handleUnban(row.dbId)}>
-                {t("actions.unban")}
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem className="cursor-pointer" onClick={() => handleBan(row)}>
-                {t("actions.ban")}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              onClick={() => handleDeleteRow(row)}
-              className="text-destructive focus:text-destructive cursor-pointer">
-              {t("actions.delete")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    })
-  ];
-
-  const table = useDataTable({ columns, data: users });
-
-  const statuses = [
-    { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
-    { value: "pending", label: "Pending" }
-  ];
-
-  const plansList = [
-    { value: "Free", label: "Free" },
-    { value: "Starter", label: "Starter" },
-    { value: "Pro", label: "Pro" },
-    { value: "Enterprise", label: "Enterprise" }
-  ];
-
   return {
-    isLoading,
-    t,
-    table,
-    statuses,
-    plansList,
+    users,
     roles,
-    setRestoreOpen,
-    columns,
+    isLoading,
+    locale,
+    timeZone,
     userToDelete,
     setUserToDelete,
-    ttable,
-    deleteSaving,
-    confirmDeleteUser,
     userToBan,
     setUserToBan,
-    tMod,
     banDuration,
     setBanDuration,
     banReason,
     setBanReason,
     banSaving,
-    confirmBan,
+    deleteSaving,
     restoreOpen,
+    setRestoreOpen,
+    handleDeleteRow,
+    confirmDeleteUser,
+    handleBan,
+    confirmBan,
+    handleUnban,
     loadUsersFromSupabase
   };
 }

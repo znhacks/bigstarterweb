@@ -8,9 +8,8 @@ import { supabase } from "@/lib/supabase";
 import { formatCurrency } from "@/lib/i18n/currency";
 import { getLocalizedValue } from "@/lib/i18n/localize";
 import {
-  useDataTable,
+  useDataGrid,
   createSelectColumn,
-  DataTableColumnHeader,
   actionCol,
   numCol,
   textCol
@@ -485,7 +484,7 @@ export function useAdminPlans() {
     })
   ];
 
-  const table = useDataTable({
+  const table = useDataGrid({
     columns,
     data: rows,
     globalFilterFn: (row, columnId, filterValue: string) => {

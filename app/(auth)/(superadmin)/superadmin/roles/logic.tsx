@@ -7,7 +7,7 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { Pencil, Trash2, Loader2, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useDataTable, numCol, actionCol, textCol } from "@/components/data-table";
+import { useDataGrid, numCol, actionCol, textCol } from "@/components/data-table";
 
 import {
   deleteRole,
@@ -261,7 +261,7 @@ export function useAdminRoles(initialRows: RoleRow[], permissions: Permission[] 
     [t, pendingId, handleOpenEdit]
   );
 
-  const table = useDataTable({ columns, data: rows });
+  const table = useDataGrid({ columns, data: rows });
 
   return {
     t,

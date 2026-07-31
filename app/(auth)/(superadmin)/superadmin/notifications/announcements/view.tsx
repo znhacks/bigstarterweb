@@ -8,12 +8,13 @@ import { Plus, Send, Trash2 } from "lucide-react";
 
 import {
   DataGrid,
+  DataGridContent,
   DataGridPagination,
   DataGridSearch,
   DataGridTable,
   DataGridToolbar,
   DataGridViewOptions,
-  useDataTable,
+  useDataGrid,
   textCol,
   dateCol,
   actionCol
@@ -238,7 +239,7 @@ export function AnnouncementsView({
     })
   ];
 
-  const table = useDataTable({ columns, data: rows });
+  const table = useDataGrid({ columns, data: rows });
 
   return (
     <div className="mx-auto w-full space-y-3">
@@ -256,8 +257,10 @@ export function AnnouncementsView({
           <DataGridSearch columnId="title" placeholder={t("searchPlaceholder")} />
           <DataGridViewOptions className="md:ms-auto" />
         </DataGridToolbar>
-        <DataGridTable />
-        <DataGridPagination />
+        <DataGridContent>
+          <DataGridTable />
+          <DataGridPagination />
+        </DataGridContent>
       </DataGrid>
 
       <Sheet open={open} onOpenChange={setOpen}>

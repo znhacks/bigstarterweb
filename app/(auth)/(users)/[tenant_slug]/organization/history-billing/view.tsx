@@ -20,11 +20,14 @@ import { formatDateTime } from "@/lib/i18n/format";
 import { formatTransactionAmount } from "@/lib/i18n/currency";
 
 import {
-  useDataTable,
-  DataTable,
-  DataTableSearch,
-  DataTablePagination,
-  DataTableColumnHeader
+  useDataGrid,
+  DataGrid,
+  DataGridContent,
+  DataGridToolbar,
+  DataGridTable,
+  DataGridSearch,
+  DataGridPagination,
+  DataGridColumnHeader
 } from "@/components/data-table";
 
 import { useBillingHistory, Transaction } from "./logic";
@@ -49,7 +52,7 @@ export function BillingHistory() {
     {
       accessorKey: "created_at",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t("history.table.date")} />
+        <DataGridColumnHeader column={column} title={t("history.table.date")} />
       ),
       cell: ({ row }) => (
         <span className="font-medium whitespace-nowrap">
@@ -78,7 +81,7 @@ export function BillingHistory() {
     {
       accessorKey: "amount",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t("history.table.amount")} />
+        <DataGridColumnHeader column={column} title={t("history.table.amount")} />
       ),
       cell: ({ row }) => (
         <span className="font-bold whitespace-nowrap">
@@ -122,7 +125,7 @@ export function BillingHistory() {
   ];
 
   // You own this instance — read/mutate it however this page needs.
-  const table = useDataTable({ columns, data: transactions });
+  const table = useDataGrid({ columns, data: transactions });
 
   if (isLoading) {
     return (
@@ -155,13 +158,15 @@ export function BillingHistory() {
       )}
 
       {/* Toolbar is hardcoded here — free to add/remove/reorder anything. */}
-      <div className="flex flex-row flex-wrap items-center gap-2">
-        <DataTableSearch table={table} columnId="order_id" placeholder={t("history.table.txId")} />
-      </div>
-
-      <DataTable table={table} columns={columns} noResultsText={t("history.table.empty")} />
-
-      <DataTablePagination table={table} />
+      <DataGrid table={table} columns={columns} noResultsText={t("history.table.empty")}>
+        <DataGridToolbar>
+          <DataGridSearch columnId="order_id" placeholder={t("history.table.txId")} />
+        </DataGridToolbar>
+        <DataGridContent>
+          <DataGridTable />
+          <DataGridPagination />
+        </DataGridContent>
+      </DataGrid>
 
       {/* DIALOG MODAL DETAIL INVOICE */}
       <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
