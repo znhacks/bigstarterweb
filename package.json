@@ -9,7 +9,11 @@
     "lint": "next lint",
     "auth:migrate": "better-auth migrate",
     "db:sync-rbac": "tsx --env-file=.env scripts/sync-rbac.ts",
-    "create:user": "tsx --env-file=.env scripts/create-user.ts"
+    "create:user": "tsx --env-file=.env scripts/create-user.ts",
+    "worker": "tsx --env-file=.env worker.ts",
+    "trigger:dev": "trigger dev",
+    "trigger:deploy": "trigger deploy",
+    "jobs:register-schedules": "tsx --env-file=.env scripts/register-schedules.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
@@ -83,8 +87,11 @@
     "@tiptap/pm": "^3.15.3",
     "@tiptap/react": "^3.15.3",
     "@tiptap/starter-kit": "^3.15.3",
+    "@trigger.dev/build": "^4.5.9",
+    "@trigger.dev/sdk": "^4.5.9",
     "@uidotdev/usehooks": "^2.4.1",
     "better-auth": "^1.6.22",
+    "bullmq": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -96,6 +103,7 @@
     "fumadocs-ui": "^16.10.5",
     "hono": "^4.12.27",
     "input-otp": "^1.4.2",
+    "ioredis": "^5.11.1",
     "libphonenumber-js": "^1.13.8",
     "lottie-react": "^2.4.1",
     "lowlight": "^3.3.0",

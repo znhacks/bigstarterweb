@@ -1,39 +1,30 @@
 // app/api/cron/notifications/route.ts
 //
-// Cron minimal untuk announcement terjadwal: memproses announcement dengan
-// status='scheduled' dan scheduled_for <= now(). Dipanggil oleh Vercel Cron
-// (lihat vercel.json) — lindungi dengan CRON_SECRET (Authorization: Bearer).
+// Entry cron untuk provider Vercel (scheduled-only). Kini tipis: hanya memanggil
+// registry handler. Default project memakai trigger.dev (jadwal dimiliki Trigger);
+// route ini aktif hanya jika provider=vercel + entri cron di vercel.json.
+// Dilindungi JOBS_SECRET (fallback CRON_SECRET).
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/api/supabase-server";
-import { announcementRepository } from "@/supabase/repositories/announcements";
-import { sendAnnouncement } from "@/services/notification/notification-service";
+import "@/lib/jobs/handlers"; // side-effect: registrasi handler
+import { runJob } from "@/lib/jobs/registry";
+import { PROCESS_SCHEDULED_ANNOUNCEMENTS } from "@/lib/jobs/handlers/notifications";
+import { vercelJobsConfig } from "@/config/jobs";
 
 export async function GET(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  const authHeader = req.headers.get("authorization");
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  const secret = vercelJobsConfig.secret;
+  const auth = req.headers.get("authorization");
+  if (!secret || auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const repo = await announcementRepository(supabaseAdmin);
-  const { data: due, error } = await repo
-    .query()
-    .select("id")
-    .eq("status", "scheduled")
-    .lte("scheduled_for", new Date().toISOString());
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  let sent = 0;
-  for (const a of due ?? []) {
-    try {
-      const res = await sendAnnouncement(a.id);
-      if (res.processed > 0) sent++;
-    } catch (e) {
-      console.error("[cron/notifications] announcement send failed", a.id, e);
-    }
+  try {
+    const result = await runJob(PROCESS_SCHEDULED_ANNOUNCEMENTS);
+    return NextResponse.json({ ok: true, result });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "failed" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ ok: true, due: due?.length ?? 0, sent });
 }
