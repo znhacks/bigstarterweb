@@ -5,23 +5,14 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { profileRepository } from "@/supabase/repositories/profiles";
-import { planRepository } from "@/supabase/repositories/plans";
 import { getLocale } from "next-intl/server";
 import { User } from "./view";
-
-const getLocalizedValue = (value: any, locale: string): string => {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  if (typeof value === "object") {
-    return value[locale] || value["en"] || Object.values(value)[0] || "";
-  }
-  return String(value);
-};
 
 export async function getSuperadminUsers(): Promise<User[]> {
   const cookieStore = await cookies();
   const locale = await getLocale();
 
+  // Inisialisasi client standar jika diperlukan untuk validasi sesi/cookies
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -41,6 +32,7 @@ export async function getSuperadminUsers(): Promise<User[]> {
     }
   );
 
+  // Ambil data profil lengkap sesuai skema tabel profiles
   const { data: profiles, error } = await (
     await profileRepository(supabaseAdmin)
   )
@@ -54,61 +46,84 @@ export async function getSuperadminUsers(): Promise<User[]> {
       status,
       banned_until,
       banned_reason,
-      memberships (
-        role_id,
-        roles (
-          name
-        ),
-        tenants (
-          id,
-          name,
-          subscriptions (
-            status,
-            plan_id
-          )
-        )
-      )
+      is_superadmin,
+      preferred_language,
+      timezone,
+      address_line1,
+      address_line2,
+      address_city,
+      address_region,
+      address_postal_code,
+      address_country,
+      description,
+      phone,
+      address_kecamatan,
+      address_desa,
+      currency
     `
     )
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Gagal memuat data pengguna server-side:", error.message);
+    console.error("Gagal memuat data profil server-side:", error.message);
     return [];
   }
 
-  const { data: dbPlans } = await (await planRepository(supabaseAdmin)).query().select("id, name");
-  const planNameMap = new Map<string, any>((dbPlans ?? []).map((p: any) => [p.id, p.name]));
+  // Mengambil data kredensial (email & sign-in metadata) dari auth.users secara aman
+  const authUserMap = new Map<string, { email: string | null; lastSignIn: string | null }>();
+  try {
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+    if (!authError && authData?.users) {
+      authData.users.forEach((user) => {
+        authUserMap.set(user.id, {
+          email: user.email || null,
+          lastSignIn: user.last_sign_in_at || null
+        });
+      });
+    }
+  } catch (err) {
+    console.error("Gagal memuat data auth users:", err);
+  }
 
+  // Gabungkan data tabel profiles dan data auth.users
   const formattedUsers: User[] = (profiles || []).map((prof: any, index: number) => {
     const fullName = prof.full_name || "Unknown User";
-    const firstMembership = prof.memberships?.[0];
-    const tenant = firstMembership?.tenants;
-    const firstSub = tenant?.subscriptions?.[0];
-
-    const rawPlanName = planNameMap.get(firstSub?.plan_id);
-    const planName = rawPlanName ? getLocalizedValue(rawPlanName, locale) : "Free";
-    const roleVal = getLocalizedValue(firstMembership?.roles?.name, locale) || "Member";
-    const statusVal = firstSub?.status === "active" ? "active" : "inactive";
+    const authInfo = authUserMap.get(prof.id);
+    const roleVal: "superadmin" | "user" = prof.is_superadmin ? "superadmin" : "user";
 
     return {
       id: index + 1,
       dbId: prof.id,
-      firstName: fullName.split(" ")[0] || "",
-      lastName: fullName.split(" ").slice(1).join(" ") || "",
       name: fullName,
       role: roleVal,
-      plan_name: planName,
-      email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
-      country: "United States",
-      status: statusVal as "active" | "inactive" | "pending",
-      image: prof.avatar || `https://i.pravatar.cc/150?img=${(index % 70) + 1}`,
+      email: authInfo?.email || null,
+      country: prof.address_country || "-",
+      status: (prof.status as "active" | "banned" | "deleted") || "active",
+      image:
+        prof.avatar ||
+        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
       created_at: prof.created_at,
       updated_at: prof.updated_at,
-      lastSignIn: prof.last_sign_in || null,
+      lastSignIn: authInfo?.lastSignIn || null,
       accountStatus: (prof.status as User["accountStatus"]) || "active",
       bannedUntil: prof.banned_until || null,
-      bannedReason: prof.banned_reason || null
+      bannedReason: prof.banned_reason || null,
+
+      // Detail data tambahan untuk view sheet
+      description: prof.description || null,
+      phone: prof.phone || null,
+      address_line1: prof.address_line1 || null,
+      address_line2: prof.address_line2 || null,
+      address_desa: prof.address_desa || null,
+      address_kecamatan: prof.address_kecamatan || null,
+      address_city: prof.address_city || null,
+      address_region: prof.address_region || null,
+      address_postal_code: prof.address_postal_code || null,
+      address_country: prof.address_country || null,
+      preferred_language: prof.preferred_language || null,
+      currency: prof.currency || null,
+      timezone: prof.timezone || null,
+      is_superadmin: !!prof.is_superadmin
     };
   });
 

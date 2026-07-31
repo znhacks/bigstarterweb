@@ -13,6 +13,8 @@ import { syncVercelEnvVars } from "@trigger.dev/build/extensions/core";
 export default defineConfig({
   project: process.env.TRIGGER_PROJECT_REF || "",
   dirs: ["jobs/trigger"],
+  // Wajib di trigger.dev v4: batas durasi sebuah task (detik, min 5).
+  maxDuration: 300,
   build: {
     extensions: [syncVercelEnvVars()]
   }
