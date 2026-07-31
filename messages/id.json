@@ -108,6 +108,24 @@
       "enterprise": {
         "title": "Perusahaan",
         "description": ""
+      },
+      "notifications": {
+        "templates": {
+          "title": "Template Notifikasi",
+          "description": "Kelola template dan channel notifikasi sistem."
+        },
+        "announcements": {
+          "title": "Pengumuman",
+          "description": "Kirim pengumuman kepada pengguna."
+        },
+        "delivery-logs": {
+          "title": "Log Pengiriman",
+          "description": "Riwayat audit pengiriman notifikasi."
+        },
+        "preferences": {
+          "title": "Preferensi Default",
+          "description": "Channel notifikasi default per kategori."
+        }
       }
     }
   },
@@ -399,7 +417,12 @@
       "billing-dashboard": "Dasbor Keuangan",
       "subscriptions": "Berlangganan",
       "history-transactions": "Riwayat Transaksi",
-      "enterprise": "Permintaan Enterprise"
+      "enterprise": "Permintaan Enterprise",
+      "notifications": "Notifikasi",
+      "notifications-templates": "Template",
+      "notifications-announcements": "Pengumuman",
+      "notifications-delivery-logs": "Log Pengiriman",
+      "notifications-preferences": "Preferensi"
     }
   },
   "currency": {
@@ -741,7 +764,8 @@
     "menu": {
       "general": "Umum",
       "appearance": "Tampilan",
-      "security": "Keamanan"
+      "security": "Keamanan",
+      "notifications": "Notifikasi"
     },
     "account-general": {
       "title": "Pengaturan Akun",
@@ -872,6 +896,8 @@
     "organizations": {
       "title": "Organisasi",
       "detail": "Kelola dan awasi semua organisasi yang terdaftar, paket yang aktif, jumlah anggota, serta metadata.",
+      "selected": "dipilih",
+      "column": "Kolom",
       "table": {
         "name": "Nama",
         "members": "Anggota",
@@ -879,7 +905,8 @@
         "plan": "Paket",
         "status": "Status",
         "price": "Harga",
-        "actions": "Aksi"
+        "actions": "Aksi",
+        "rowsPerPage": "Baris per halaman"
       },
       "kpis": {
         "total": "Total Organisasi",
@@ -897,7 +924,8 @@
       "buttons": {
         "cancel": "Batal",
         "delete": "Hapus",
-        "trash": "Sampah"
+        "trash": "Sampah",
+        "bulkActions": "Aksi"
       },
       "dialogDelete": {
         "title": "Apakah Anda benar-benar yakin?",
@@ -1030,6 +1058,7 @@
       "desc": "Tetapkan role dan permission yang diberikan tiap role ke seluruh organisasi.",
       "new": {
         "title": "Role Baru",
+        "desc": "Konfigurasikan peran sistem baru",
         "nameLabel": "Nama role",
         "hierarchyLabel": "Level hierarki",
         "hierarchyHint": "Angka lebih besar = lebih berkuasa. Pengguna hanya bisa menetapkan role dengan level lebih rendah dari dirinya.",
@@ -1045,6 +1074,7 @@
       },
       "detail": {
         "edit": "Edit",
+        "desc": "Ubah properti dan izin peran di bawah ini",
         "editTitle": "Edit role",
         "save": "Simpan",
         "permissionsTitle": "Permission",
@@ -1059,6 +1089,14 @@
         "delete": "Hapus",
         "confirmDeleteTitle": "Konfirmasi Hapus",
         "confirmDelete": "Yakin ingin menghapus role ini?"
+      },
+      "form": {
+        "general": "Umum",
+        "configurationaccess": "Konfigurasi Hak Akses"
+      },
+      "buttons": {
+        "edit": "Edit",
+        "delete": "Hapus"
       }
     },
     "coupons": {
@@ -1073,7 +1111,8 @@
         "cancel": "Batal",
         "save": "Simpan",
         "delete": "Hapus ",
-        "confirmDelete": "Hapus"
+        "confirmDelete": "Hapus",
+        "bulkActions": "Aksi"
       },
       "table": {
         "code": "Kode Kupon",
@@ -1153,6 +1192,7 @@
       },
       "table": {
         "name": "Paket",
+        "order": "Order: {order}",
         "monthly": "Bulanan",
         "yearly": "Tahunan",
         "status": "Status",
@@ -1249,6 +1289,116 @@
           "continue": "Lanjutkan"
         }
       }
+    },
+    "notifications": {
+      "templates": {
+        "title": "Template Notifikasi",
+        "subtitle": "Kelola konten & channel notifikasi sistem. Template terpicu otomatis pada event.",
+        "empty": "Tidak ada template.",
+        "table": {
+          "event": "Event",
+          "category": "Kategori",
+          "title": "Judul",
+          "channels": "Channel",
+          "enabled": "Aktif",
+          "actions": "Aksi"
+        },
+        "form": {
+          "sectionContent": "Konten",
+          "sectionChannels": "Channel & Tautan",
+          "language": "Bahasa",
+          "filledLanguage": "terisi",
+          "active": "Aktif",
+          "inactive": "Nonaktif"
+        },
+        "placeholder": {
+          "fieldTitle": "Masukan Judul",
+          "fieldBody": "Masukan isi",
+          "search": "Cari berdasarkan key event..."
+        },
+        "buttons": {
+          "edit": "Edit",
+          "cancel": "Batal",
+          "save": "Simpan",
+          "saving": "Menyimpan...",
+          "test": "Kirim uji",
+          "testing": "Mengirim..."
+        },
+        "toastEnabled": "Template diaktifkan.",
+        "toastDisabled": "Template dinonaktifkan.",
+        "toastSaved": "Template disimpan.",
+        "toastTestNeedUser": "Masukkan id user tujuan.",
+        "toastTestSent": "Notifikasi uji terkirim."
+      },
+      "announcements": {
+        "title": "Pengumuman",
+        "subtitle": "Kirim pesan manual ke pengguna lintas channel.",
+        "searchPlaceholder": "Cari pengumuman...",
+        "empty": "Belum ada pengumuman.",
+        "btnCreate": "Pengumuman Baru",
+        "btnCancel": "Batal",
+        "btnSendNow": "Kirim Sekarang",
+        "btnSchedule": "Jadwalkan",
+        "btnSending": "Mengirim...",
+        "btnPublish": "Publikasi",
+        "panelTitle": "Pengumuman Baru",
+        "panelDescription": "Susun pesan lalu pilih audiens, channel, dan jadwal.",
+        "fieldTitle": "Judul",
+        "fieldBody": "Isi",
+        "fieldChannels": "Channel",
+        "fieldAudience": "Audiens",
+        "fieldTenants": "Pilih tenant",
+        "fieldUsers": "Pilih user",
+        "fieldSchedule": "Jadwal",
+        "scheduleNow": "Kirim sekarang",
+        "scheduleLater": "Jadwalkan untuk nanti",
+        "audience_all_users": "Semua User",
+        "audience_specific_tenant": "Tenant Tertentu",
+        "audience_selected_users": "User Terpilih",
+        "colTitle": "Judul",
+        "colAudience": "Audiens",
+        "colChannels": "Channel",
+        "colStatus": "Status",
+        "colCreated": "Dibuat",
+        "colActions": "Aksi",
+        "status_draft": "Draf",
+        "status_scheduled": "Terjadwal",
+        "status_sending": "Mengirim",
+        "status_sent": "Terkirim",
+        "status_failed": "Gagal",
+        "toastScheduled": "Pengumuman dijadwalkan.",
+        "toastSent": "Pengumuman terkirim.",
+        "toastDeleted": "Pengumuman dihapus.",
+        "form": {
+          "sectionContent": "Konten",
+          "sectionAudience": "Audiens & Target",
+          "sectionChannels": "Channel",
+          "sectionSchedule": "Jadwal",
+          "language": "Bahasa",
+          "filledLanguage": "terisi",
+          "active": "Aktif",
+          "inactive": "Nonaktif"
+        }
+      },
+      "delivery-logs": {
+        "title": "Log Pengiriman",
+        "subtitle": "Riwayat audit setiap upaya pengiriman notifikasi.",
+        "empty": "Tidak ada log pengiriman.",
+        "colTime": "Waktu",
+        "colTitle": "Judul",
+        "colRecipient": "Penerima",
+        "colChannel": "Channel",
+        "colStatus": "Status",
+        "colSource": "Sumber"
+      },
+      "preferences": {
+        "title": "Preferensi Default",
+        "subtitle": "Channel notifikasi default untuk user baru per kategori.",
+        "matrixTitle": "Default per kategori",
+        "matrixDescription": "Aktifkan channel default tiap kategori. User dapat menimpa nilai ini.",
+        "colCategory": "Kategori",
+        "toastSaved": "Default disimpan."
+      }
     }
   },
   "moderation": {
@@ -1310,6 +1460,59 @@
       "rowsPerPage": "Baris per halaman:",
       "previous": "Sebelumnya",
       "next": "Berikutnya"
+    }
+  },
+  "notifications": {
+    "title": "Notifikasi",
+    "channel": {
+      "in_app": "In-app",
+      "email": "Email",
+      "push": "Push"
+    },
+    "category": {
+      "system": "Sistem",
+      "payment": "Pembayaran",
+      "subscription": "Langganan",
+      "trial": "Uji Coba",
+      "security": "Keamanan",
+      "account": "Akun",
+      "invitation": "Undangan",
+      "member": "Keanggotaan",
+      "announcement": "Pengumuman",
+      "marketing": "Pemasaran"
+    },
+    "status_sent": "Terkirim",
+    "status_delivered": "Tersampaikan",
+    "status_failed": "Gagal",
+    "status_skipped": "Dilewati",
+    "bell": {
+      "title": "Notifikasi",
+      "viewAll": "Lihat semua",
+      "markAllRead": "Tandai semua dibaca",
+      "empty": "Tidak ada notifikasi"
+    },
+    "inbox": {
+      "title": "Notifikasi",
+      "empty": "Semua sudah dibaca.",
+      "filterAll": "Semua",
+      "filterUnread": "Belum dibaca",
+      "markAllRead": "Tandai semua dibaca"
+    },
+    "preferences": {
+      "title": "Preferensi Notifikasi",
+      "subtitle": "Pilih cara Anda menerima tiap jenis notifikasi.",
+      "pushTitle": "Notifikasi Push",
+      "pushDescription": "Terima notifikasi di perangkat ini meski aplikasi ditutup.",
+      "pushEnable": "Aktifkan push",
+      "pushDisable": "Nonaktifkan push",
+      "pushStateDefault": "Izin belum diminta",
+      "pushStateGranted": "Aktif",
+      "pushStateDenied": "Diblokir di browser",
+      "pushUnsupported": "Notifikasi push tidak didukung di browser ini.",
+      "matrixTitle": "Channel per kategori",
+      "matrixDescription": "Aktifkan channel untuk tiap kategori.",
+      "colCategory": "Kategori",
+      "toastSaved": "Preferensi disimpan."
     }
   }
 }

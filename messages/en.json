@@ -104,6 +104,24 @@
       "plans": {
         "title": "Plans",
         "description": "Manage subscription plans available for customers."
+      },
+      "notifications": {
+        "templates": {
+          "title": "Notification Templates",
+          "description": "Manage system notification templates and channels."
+        },
+        "announcements": {
+          "title": "Announcements",
+          "description": "Broadcast announcements to users."
+        },
+        "delivery-logs": {
+          "title": "Delivery Logs",
+          "description": "Audit trail of notification deliveries."
+        },
+        "preferences": {
+          "title": "Default Preferences",
+          "description": "Default notification channels per category."
+        }
       }
     }
   },
@@ -395,7 +413,12 @@
       "billing-dashboard": "Financial Dashboard",
       "subscriptions": "Subscriptions",
       "history-transactions": "Transaction History",
-      "enterprise": "Enterprise Inquiries"
+      "enterprise": "Enterprise Inquiries",
+      "notifications": "Notifications",
+      "notifications-templates": "Templates",
+      "notifications-announcements": "Announcements",
+      "notifications-delivery-logs": "Delivery Logs",
+      "notifications-preferences": "Preferences"
     }
   },
   "currency": {
@@ -737,7 +760,8 @@
     "menu": {
       "general": "General",
       "appearance": "Appearance",
-      "security": "Security"
+      "security": "Security",
+      "notifications": "Notifications"
     },
     "account-general": {
       "title": "Account Settings",
@@ -868,6 +892,8 @@
     "organizations": {
       "title": "Organizations",
       "detail": "Manage and oversee all registered organizations, active plans, member counts, and metadata.",
+      "selected": "selected",
+      "column": "Columns",
       "table": {
         "name": "Name",
         "members": "Members",
@@ -875,7 +901,8 @@
         "plan": "Plan",
         "status": "Status",
         "price": "Price",
-        "actions": "Actions"
+        "actions": "Actions",
+        "rowsPerPage": "Rows per page"
       },
       "kpis": {
         "total": "Total Organizations",
@@ -893,7 +920,8 @@
       "buttons": {
         "cancel": "Cancel",
         "delete": "Delete",
-        "trash": "Trash"
+        "trash": "Trash",
+        "bulkActions": "Bulk Actions"
       },
       "dialogDelete": {
         "title": "Are you absolutely sure?",
@@ -1069,7 +1097,8 @@
         "cancel": "Cancel",
         "save": "Save",
         "delete": "Delete",
-        "confirmDelete": "Delete"
+        "confirmDelete": "Delete",
+        "bulkActions": "Actions"
       },
       "table": {
         "code": "Coupon Code",
@@ -1149,6 +1178,7 @@
       },
       "table": {
         "name": "Plan",
+        "order": "Order: {order}",
         "monthly": "Monthly",
         "yearly": "Yearly",
         "status": "Status",
@@ -1244,6 +1274,116 @@
           "continue": "Continue"
         }
       }
+    },
+    "notifications": {
+      "templates": {
+        "title": "Notification Templates",
+        "subtitle": "Manage system notification content and channels. Templates fire automatically on events.",
+        "searchPlaceholder": "Search by event key...",
+        "empty": "No templates.",
+        "colEvent": "Event",
+        "colCategory": "Category",
+        "colTitle": "Title",
+        "colChannels": "Channels",
+        "colEnabled": "Enabled",
+        "colActions": "Actions",
+        "btnEdit": "Edit",
+        "btnCancel": "Cancel",
+        "btnSave": "Save",
+        "btnSaving": "Saving...",
+        "panelTitle": "Edit Template",
+        "panelDescription": "Customize content per language and active channels.",
+        "fieldTitle": "Title",
+        "fieldBody": "Body",
+        "fieldChannels": "Channels",
+        "fieldLink": "Link (optional)",
+        "testTitle": "Send test",
+        "testDescription": "Send this notification to a user to verify delivery.",
+        "btnTest": "Send test",
+        "btnTesting": "Sending...",
+        "toastEnabled": "Template enabled.",
+        "toastDisabled": "Template disabled.",
+        "toastSaved": "Template saved.",
+        "toastTestNeedUser": "Enter a target user id.",
+        "toastTestSent": "Test notification sent.",
+        "form": {
+          "sectionContent": "Content",
+          "sectionChannels": "Channels & Link",
+          "language": "Language",
+          "filledLanguage": "filled",
+          "active": "On",
+          "inactive": "Off"
+        }
+      },
+      "announcements": {
+        "title": "Announcements",
+        "subtitle": "Broadcast manual messages to users across channels.",
+        "searchPlaceholder": "Search announcements...",
+        "empty": "No announcements yet.",
+        "btnCreate": "New Announcement",
+        "btnCancel": "Cancel",
+        "btnSendNow": "Send Now",
+        "btnSchedule": "Schedule",
+        "btnSending": "Sending...",
+        "btnPublish": "Publish",
+        "panelTitle": "New Announcement",
+        "panelDescription": "Compose the message and choose audience, channels, and schedule.",
+        "fieldTitle": "Title",
+        "fieldBody": "Body",
+        "fieldChannels": "Channels",
+        "fieldAudience": "Audience",
+        "fieldTenants": "Select tenants",
+        "fieldUsers": "Select users",
+        "fieldSchedule": "Schedule",
+        "scheduleNow": "Send now",
+        "scheduleLater": "Schedule for later",
+        "audience_all_users": "All Users",
+        "audience_specific_tenant": "Specific Tenant",
+        "audience_selected_users": "Selected Users",
+        "colTitle": "Title",
+        "colAudience": "Audience",
+        "colChannels": "Channels",
+        "colStatus": "Status",
+        "colCreated": "Created",
+        "colActions": "Actions",
+        "status_draft": "Draft",
+        "status_scheduled": "Scheduled",
+        "status_sending": "Sending",
+        "status_sent": "Sent",
+        "status_failed": "Failed",
+        "toastScheduled": "Announcement scheduled.",
+        "toastSent": "Announcement sent.",
+        "toastDeleted": "Announcement deleted.",
+        "form": {
+          "sectionContent": "Content",
+          "sectionAudience": "Audience & Targets",
+          "sectionChannels": "Channels",
+          "sectionSchedule": "Schedule",
+          "language": "Language",
+          "filledLanguage": "filled",
+          "active": "On",
+          "inactive": "Off"
+        }
+      },
+      "delivery-logs": {
+        "title": "Delivery Logs",
+        "subtitle": "Audit trail of every notification delivery attempt.",
+        "empty": "No delivery logs.",
+        "colTime": "Time",
+        "colTitle": "Title",
+        "colRecipient": "Recipient",
+        "colChannel": "Channel",
+        "colStatus": "Status",
+        "colSource": "Source"
+      },
+      "preferences": {
+        "title": "Default Preferences",
+        "subtitle": "Default notification channels applied to new users per category.",
+        "matrixTitle": "Category defaults",
+        "matrixDescription": "Toggle which channels are on by default for each category. Users can override these.",
+        "colCategory": "Category",
+        "toastSaved": "Defaults saved."
+      }
     }
   },
   "moderation": {
@@ -1305,6 +1445,59 @@
       "rowsPerPage": "Rows per page:",
       "previous": "Previous",
       "next": "Next"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "channel": {
+      "in_app": "In-app",
+      "email": "Email",
+      "push": "Push"
+    },
+    "category": {
+      "system": "System",
+      "payment": "Payment",
+      "subscription": "Subscription",
+      "trial": "Trial",
+      "security": "Security",
+      "account": "Account",
+      "invitation": "Invitation",
+      "member": "Membership",
+      "announcement": "Announcement",
+      "marketing": "Marketing"
+    },
+    "status_sent": "Sent",
+    "status_delivered": "Delivered",
+    "status_failed": "Failed",
+    "status_skipped": "Skipped",
+    "bell": {
+      "title": "Notifications",
+      "viewAll": "View all",
+      "markAllRead": "Mark all read",
+      "empty": "No notifications"
+    },
+    "inbox": {
+      "title": "Notifications",
+      "empty": "You're all caught up.",
+      "filterAll": "All",
+      "filterUnread": "Unread",
+      "markAllRead": "Mark all read"
+    },
+    "preferences": {
+      "title": "Notification Preferences",
+      "subtitle": "Choose how you receive each type of notification.",
+      "pushTitle": "Push Notifications",
+      "pushDescription": "Receive notifications on this device even when the app is closed.",
+      "pushEnable": "Enable push",
+      "pushDisable": "Disable push",
+      "pushStateDefault": "Permission not requested",
+      "pushStateGranted": "Enabled",
+      "pushStateDenied": "Blocked in browser",
+      "pushUnsupported": "Push notifications are not supported in this browser.",
+      "matrixTitle": "Channels per category",
+      "matrixDescription": "Toggle channels for each category.",
+      "colCategory": "Category",
+      "toastSaved": "Preferences saved."
     }
   }
 }

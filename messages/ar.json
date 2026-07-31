@@ -104,6 +104,24 @@
       "plans": {
         "title": "الباقات",
         "description": "إدارة باقات الاشتراك المتاحة للعملاء."
+      },
+      "notifications": {
+        "templates": {
+          "title": "قوالب الإشعارات",
+          "description": "إدارة قوالب وقنوات إشعارات النظام."
+        },
+        "announcements": {
+          "title": "الإعلانات",
+          "description": "بث الإعلانات للمستخدمين."
+        },
+        "delivery-logs": {
+          "title": "سجلات التسليم",
+          "description": "سجل تدقيق لتسليم الإشعارات."
+        },
+        "preferences": {
+          "title": "التفضيلات الافتراضية",
+          "description": "قنوات الإشعار الافتراضية لكل فئة."
+        }
       }
     }
   },
@@ -395,7 +413,12 @@
       "billing-dashboard": "لوحة قيادة المالية",
       "subscriptions": "الاشتراكات",
       "history-transactions": "سجل المعاملات",
-      "enterprise": "طلبات Enterprise"
+      "enterprise": "طلبات Enterprise",
+      "notifications": "الإشعارات",
+      "notifications-templates": "القوالب",
+      "notifications-announcements": "الإعلانات",
+      "notifications-delivery-logs": "سجلات التسليم",
+      "notifications-preferences": "التفضيلات"
     }
   },
   "currency": {
@@ -737,7 +760,8 @@
     "menu": {
       "general": "عام",
       "appearance": "المظهر",
-      "security": "الأمان"
+      "security": "الأمان",
+      "notifications": "الإشعارات"
     },
     "account-general": {
       "title": "إعدادات الحساب",
@@ -868,6 +892,8 @@
     "organizations": {
       "title": "المؤسسات",
       "detail": "إدارة والإشراف على جميع المؤسسات المسجلة، الباقات النشطة، أعداد الأعضاء، والبيانات الوصفية.",
+      "selected": "محدد",
+      "column": "الأعمدة",
       "table": {
         "name": "الاسم",
         "members": "الأعضاء",
@@ -875,7 +901,8 @@
         "plan": "الخطة",
         "status": "الحالة",
         "price": "السعر",
-        "actions": "الإجراءات"
+        "actions": "الإجراءات",
+        "rowsPerPage": "عدد الصفوف لكل صفحة"
       },
       "kpis": {
         "total": "إجمالي المؤسسات",
@@ -893,7 +920,8 @@
       "buttons": {
         "cancel": "إلغاء",
         "delete": "حذف",
-        "trash": "سلة المهملات"
+        "trash": "سلة المهملات",
+        "bulkActions": "الإجراءات الجماعية"
       },
       "dialogDelete": {
         "title": "هل أنت متأكد تمامًا؟",
@@ -1069,7 +1097,8 @@
         "cancel": "إلغاء",
         "save": "حفظ",
         "delete": "حذف",
-        "confirmDelete": "حذف"
+        "confirmDelete": "حذف",
+        "bulkActions": "الإجراءات الجماعية"
       },
       "table": {
         "code": "رمز الكوبون",
@@ -1149,6 +1178,7 @@
       },
       "table": {
         "name": "الباقة",
+        "order": "الترتيب: {order}",
         "monthly": "شهريًا",
         "yearly": "سنويًا",
         "status": "الحالة",
@@ -1244,6 +1274,116 @@
           "continue": "متابعة"
         }
       }
+    },
+    "notifications": {
+      "templates": {
+        "title": "قوالب الإشعارات",
+        "subtitle": "إدارة محتوى وقنوات إشعارات النظام. تُطلق القوالب تلقائيًا عند الأحداث.",
+        "searchPlaceholder": "ابحث بمفتاح الحدث...",
+        "empty": "لا توجد قوالب.",
+        "colEvent": "الحدث",
+        "colCategory": "الفئة",
+        "colTitle": "العنوان",
+        "colChannels": "القنوات",
+        "colEnabled": "مفعّل",
+        "colActions": "إجراءات",
+        "btnEdit": "تعديل",
+        "btnCancel": "إلغاء",
+        "btnSave": "حفظ",
+        "btnSaving": "جارٍ الحفظ...",
+        "panelTitle": "تعديل القالب",
+        "panelDescription": "خصّص المحتوى لكل لغة والقنوات النشطة.",
+        "fieldTitle": "العنوان",
+        "fieldBody": "المحتوى",
+        "fieldChannels": "القنوات",
+        "fieldLink": "رابط (اختياري)",
+        "testTitle": "إرسال تجريبي",
+        "testDescription": "أرسل هذا الإشعار إلى مستخدم للتحقق من التسليم.",
+        "btnTest": "إرسال تجريبي",
+        "btnTesting": "جارٍ الإرسال...",
+        "toastEnabled": "تم تفعيل القالب.",
+        "toastDisabled": "تم تعطيل القالب.",
+        "toastSaved": "تم حفظ القالب.",
+        "toastTestNeedUser": "أدخل معرّف المستخدم الهدف.",
+        "toastTestSent": "تم إرسال الإشعار التجريبي.",
+        "form": {
+          "sectionContent": "المحتوى",
+          "sectionChannels": "القنوات والرابط",
+          "language": "اللغة",
+          "filledLanguage": "مكتمل",
+          "active": "مفعّل",
+          "inactive": "متوقف"
+        }
+      },
+      "announcements": {
+        "title": "الإعلانات",
+        "subtitle": "بث الرسائل اليدوية للمستخدمين عبر القنوات.",
+        "searchPlaceholder": "ابحث في الإعلانات...",
+        "empty": "لا توجد إعلانات بعد.",
+        "btnCreate": "إعلان جديد",
+        "btnCancel": "إلغاء",
+        "btnSendNow": "إرسال الآن",
+        "btnSchedule": "جدولة",
+        "btnSending": "جارٍ الإرسال...",
+        "btnPublish": "نشر",
+        "panelTitle": "إعلان جديد",
+        "panelDescription": "أنشئ الرسالة واختر الجمهور والقنوات والجدول.",
+        "fieldTitle": "العنوان",
+        "fieldBody": "المحتوى",
+        "fieldChannels": "القنوات",
+        "fieldAudience": "الجمهور",
+        "fieldTenants": "اختر المؤسسات",
+        "fieldUsers": "اختر المستخدمين",
+        "fieldSchedule": "الجدولة",
+        "scheduleNow": "إرسال الآن",
+        "scheduleLater": "جدولة لوقت لاحق",
+        "audience_all_users": "كل المستخدمين",
+        "audience_specific_tenant": "مؤسسة محددة",
+        "audience_selected_users": "مستخدمون محددون",
+        "colTitle": "العنوان",
+        "colAudience": "الجمهور",
+        "colChannels": "القنوات",
+        "colStatus": "الحالة",
+        "colCreated": "أُنشئ",
+        "colActions": "إجراءات",
+        "status_draft": "مسودة",
+        "status_scheduled": "مجدول",
+        "status_sending": "جارٍ الإرسال",
+        "status_sent": "مُرسل",
+        "status_failed": "فشل",
+        "toastScheduled": "تمت جدولة الإعلان.",
+        "toastSent": "تم إرسال الإعلان.",
+        "toastDeleted": "تم حذف الإعلان.",
+        "form": {
+          "sectionContent": "المحتوى",
+          "sectionAudience": "الجمهور والأهداف",
+          "sectionChannels": "القنوات",
+          "sectionSchedule": "الجدولة",
+          "language": "اللغة",
+          "filledLanguage": "مكتمل",
+          "active": "مفعّل",
+          "inactive": "متوقف"
+        }
+      },
+      "delivery-logs": {
+        "title": "سجلات التسليم",
+        "subtitle": "سجل تدقيق لكل محاولة تسليم إشعار.",
+        "empty": "لا توجد سجلات تسليم.",
+        "colTime": "الوقت",
+        "colTitle": "العنوان",
+        "colRecipient": "المستلم",
+        "colChannel": "القناة",
+        "colStatus": "الحالة",
+        "colSource": "المصدر"
+      },
+      "preferences": {
+        "title": "التفضيلات الافتراضية",
+        "subtitle": "قنوات الإشعار الافتراضية للمستخدمين الجدد لكل فئة.",
+        "matrixTitle": "الافتراضي حسب الفئة",
+        "matrixDescription": "بدّل القنوات الافتراضية لكل فئة. يمكن للمستخدمين تجاوزها.",
+        "colCategory": "الفئة",
+        "toastSaved": "تم حفظ الافتراضيات."
+      }
     }
   },
   "moderation": {
@@ -1305,6 +1445,59 @@
       "rowsPerPage": "عدد الصفوف لكل صفحة:",
       "previous": "السابق",
       "next": "التالي"
+    }
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "channel": {
+      "in_app": "داخل التطبيق",
+      "email": "البريد",
+      "push": "فوري"
+    },
+    "category": {
+      "system": "النظام",
+      "payment": "الدفع",
+      "subscription": "الاشتراك",
+      "trial": "التجريبي",
+      "security": "الأمان",
+      "account": "الحساب",
+      "invitation": "الدعوة",
+      "member": "العضوية",
+      "announcement": "إعلان",
+      "marketing": "تسويق"
+    },
+    "status_sent": "مُرسل",
+    "status_delivered": "تم التسليم",
+    "status_failed": "فشل",
+    "status_skipped": "تم التخطي",
+    "bell": {
+      "title": "الإشعارات",
+      "viewAll": "عرض الكل",
+      "markAllRead": "تعليم الكل كمقروء",
+      "empty": "لا توجد إشعارات"
+    },
+    "inbox": {
+      "title": "الإشعارات",
+      "empty": "لا جديد.",
+      "filterAll": "الكل",
+      "filterUnread": "غير مقروء",
+      "markAllRead": "تعليم الكل كمقروء"
+    },
+    "preferences": {
+      "title": "تفضيلات الإشعارات",
+      "subtitle": "اختر كيف تتلقى كل نوع من الإشعارات.",
+      "pushTitle": "الإشعارات الفورية",
+      "pushDescription": "تلقَّ الإشعارات على هذا الجهاز حتى عند إغلاق التطبيق.",
+      "pushEnable": "تفعيل الإشعارات",
+      "pushDisable": "تعطيل الإشعارات",
+      "pushStateDefault": "الإذن غير مطلوب بعد",
+      "pushStateGranted": "مفعّل",
+      "pushStateDenied": "محظور في المتصفح",
+      "pushUnsupported": "الإشعارات الفورية غير مدعومة في هذا المتصفح.",
+      "matrixTitle": "القنوات حسب الفئة",
+      "matrixDescription": "بدّل القنوات لكل فئة.",
+      "colCategory": "الفئة",
+      "toastSaved": "تم حفظ التفضيلات."
     }
   }
 }
