@@ -1,15 +1,11 @@
-// /lib/i18n/currency.ts
 import { getLocaleMeta } from "@/config/i18n-culture";
 import { APP_BASE_CURRENCY } from "@/config/billing-rates";
 
 interface FormatCurrencyOptions {
-  currencyCode?: string; // override default display currency
+  currencyCode?: string;
   options?: Intl.NumberFormatOptions;
 }
 
-/**
- * Memformat angka menjadi representasi nilai mata uang lokal.
- */
 export function formatCurrency(
   amount: number,
   locale: string,
@@ -32,14 +28,6 @@ export function formatCurrency(
   }
 }
 
-/**
- * Format nilai transaksi pembayaran:
- * - Bila mata uang asli = IDR → tampilkan IDR saja.
- * - Bila mata uang asli != IDR (mis. PayPal charge USD) → "harga asli (≈ Rp ekuivalen)".
- *
- * Mencegah mismatch data: angka USD tidak lagi ditampilkan sbg Rupiah.
- * amountInIdr dipakai sbg ekuivalen IDR yang akurat (dihitung webhook via kurs).
- */
 export function formatTransactionAmount(
   amount: number,
   currency: string | null | undefined,
