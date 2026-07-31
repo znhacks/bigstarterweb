@@ -30,7 +30,8 @@ import {
   ReceiptText,
   LayoutDashboard,
   BadgeCheck,
-  Headset
+  Headset,
+  Bell
 } from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -163,6 +164,29 @@ export const navItems: NavGroup[] = [
           {
             title: "superadmin.history-transactions",
             href: "/superadmin/billing/histories"
+          }
+        ]
+      },
+      {
+        title: "superadmin.notifications",
+        href: "/superadmin/notifications",
+        icon: Bell,
+        items: [
+          {
+            title: "superadmin.notifications-templates",
+            href: "/superadmin/notifications/templates"
+          },
+          {
+            title: "superadmin.notifications-announcements",
+            href: "/superadmin/notifications/announcements"
+          },
+          {
+            title: "superadmin.notifications-delivery-logs",
+            href: "/superadmin/notifications/delivery-logs"
+          },
+          {
+            title: "superadmin.notifications-preferences",
+            href: "/superadmin/notifications/preferences"
           }
         ]
       },

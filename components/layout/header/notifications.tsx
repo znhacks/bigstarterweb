@@ -1,6 +1,10 @@
-import { BellIcon, ClockIcon } from "lucide-react";
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
+import { BellIcon, CheckCheck } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTranslations } from "next-intl";
 
 import {
   DropdownMenu,
@@ -10,76 +14,102 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-
-import { notifications, type Notification } from "./data";
+import { Badge } from "@/components/ui/badge";
+import { useNotifications } from "@/hooks/use-notifications";
 
 const Notifications = () => {
   const isMobile = useIsMobile();
+  const t = useTranslations("notifications");
+  const tRoot = useTranslations();
+  const { items, unread, markAllRead, markRead } = useNotifications(8);
+
+  const recent = items.slice(0, 6);
+
+  const categoryLabel = (id: string) => {
+    try {
+      return tRoot(`notifications.category.${id}`);
+    } catch {
+      return id;
+    }
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button size="icon-sm" variant="ghost" className="relative">
           <BellIcon />
-          <span className="bg-destructive absolute end-0.5 top-0.5 block size-1.5 shrink-0 rounded-full"></span>
+          {unread > 0 && (
+            <span className="bg-destructive absolute end-0.5 top-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
         </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align={isMobile ? "center" : "end"} className="ms-4 w-80 p-0">
         <DropdownMenuLabel className="bg-background dark:bg-muted sticky top-0 z-10 p-0">
-          <div className="flex justify-between border-b px-6 py-4">
-            <div className="font-medium">Notifications</div>
-            <Button variant="link" className="h-auto p-0 text-xs" size="icon-sm" asChild>
-              <Link href="/dashboard/pages/notifications">View all</Link>
-            </Button>
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <div className="text-sm font-medium">{t("bell.title")}</div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="link"
+                className="h-auto p-0 text-xs"
+                size="sm"
+                onClick={markAllRead}
+                disabled={unread === 0}>
+                <CheckCheck className="size-3" />
+                {t("bell.markAllRead")}
+              </Button>
+            </div>
           </div>
         </DropdownMenuLabel>
 
         <ScrollArea className="h-[350px]">
-          {notifications.map((item: Notification, key) => (
-            <DropdownMenuItem
-              key={key}
-              className="group flex cursor-pointer items-start gap-9 rounded-none border-b px-4 py-3">
-              <div className="flex flex-1 items-start gap-2">
-                <div className="flex-none">
-                  <Avatar className="size-8">
-                    <AvatarImage src={item.avatar} alt="" />
-                    <AvatarFallback> {item.title.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                </div>
-                <div className="flex flex-1 flex-col gap-1">
-                  <div className="dark:group-hover:text-default-800 truncate text-sm font-medium">
-                    {item.title}
-                  </div>
-                  <div className="dark:group-hover:text-default-700 text-muted-foreground line-clamp-1 text-xs">
-                    {item.desc}
-                  </div>
-                  {item.type === "confirm" && (
-                    <div className="flex items-center gap-2">
-                      <Button size="xs" variant="outline">
-                        Accept
-                      </Button>
-                      <Button size="xs" variant="destructive">
-                        Decline
-                      </Button>
+          {recent.length === 0 ? (
+            <div className="text-muted-foreground px-4 py-10 text-center text-xs">
+              {t("bell.empty")}
+            </div>
+          ) : (
+            recent.map((item) => (
+              <DropdownMenuItem
+                key={item.id}
+                asChild
+                className="group border-b px-4 py-3 last:border-0">
+                <Link
+                  href={item.link ?? "/notifications"}
+                  onClick={() => {
+                    if (!item.is_read) markRead(item.id);
+                  }}>
+                  <div className="flex w-full items-start gap-2">
+                    <div className="flex-1 space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="secondary" className="text-[9px]">
+                          {categoryLabel(item.category)}
+                        </Badge>
+                        {!item.is_read && (
+                          <span className="bg-primary size-1.5 shrink-0 rounded-full" />
+                        )}
+                      </div>
+                      <div className="truncate text-sm font-medium">{item.title}</div>
+                      {item.body ? (
+                        <div className="text-muted-foreground line-clamp-1 text-xs">
+                          {item.body}
+                        </div>
+                      ) : null}
                     </div>
-                  )}
-                  <div className="dark:group-hover:text-default-500 text-muted-foreground flex items-center gap-1 text-xs">
-                    <ClockIcon className="size-3!" />
-                    {item.date}
                   </div>
-                </div>
-              </div>
-              {item.unread_message && (
-                <div className="flex-0">
-                  <span className="bg-destructive/80 block size-2 rounded-full border" />
-                </div>
-              )}
-            </DropdownMenuItem>
-          ))}
+                </Link>
+              </DropdownMenuItem>
+            ))
+          )}
         </ScrollArea>
+
+        <div className="border-t p-2">
+          <Button variant="ghost" size="sm" className="w-full" asChild>
+            <Link href="/notifications">{t("bell.viewAll")}</Link>
+          </Button>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
