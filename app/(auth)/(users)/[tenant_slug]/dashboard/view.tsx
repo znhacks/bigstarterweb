@@ -64,11 +64,11 @@ function UserWorkspaceDashboardView({
           <h1 className="text-foreground text-3xl font-bold tracking-tight">
             Welcome {profile?.full_name || "Workspace Member"} !
           </h1>
-          <p className="text-muted-foreground text-sm">
+          {/* <p className="text-muted-foreground text-sm">
             Here&apos;s what&apos;s happening in your active workspace (
             <span className="text-foreground font-semibold">{activeTenant?.name || "Unknown"}</span>
             ).
-          </p>
+          </p> */}
         </div>
       </div>
 

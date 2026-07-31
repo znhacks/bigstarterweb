@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Palette, Settings, Shield } from "lucide-react";
+import { Bell, Palette, Settings, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useLocale, useTranslations } from "next-intl";
@@ -20,13 +20,13 @@ export default function SettingsLayout({
   const isGeneralActive = pathname?.includes("/settings/general");
   const isAppearancesActive = pathname?.includes("/settings/appearance");
   const isSecurityActive = pathname?.includes("/settings/security");
+  const isNotificationsActive = pathname?.includes("/settings/notifications");
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
       {/* Header Halaman Utama */}
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
       </div>
 
       {/* Grid Layout: Menu Samping & Slot Konten Anak */}
@@ -69,6 +69,18 @@ export default function SettingsLayout({
                 )}>
                 <Shield className="h-4 w-4 shrink-0" />
                 <span>{t("menu.security")}</span>
+              </Link>
+
+              <Link
+                href="/settings/notifications"
+                className={cn(
+                  "flex w-full items-center justify-start gap-3 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                  isNotificationsActive
+                    ? "bg-secondary text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                )}>
+                <Bell className="h-4 w-4 shrink-0" />
+                <span>{t("menu.notifications")}</span>
               </Link>
             </nav>
           </Card>

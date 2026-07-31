@@ -21,19 +21,14 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
-      {}
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
       </div>
 
-      {}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        {}
         <div className="md:col-span-1">
           <Card className="overflow-hidden p-2">
             <nav className="flex flex-row gap-1 md:flex-col">
-              {}
               <Link
                 href={`/${tenantSlug}/organization/general`}
                 className={cn(
@@ -46,7 +41,6 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 <span>{t("menu.general")}</span>
               </Link>
 
-              {}
               <Link
                 href={`/${tenantSlug}/organization/member`}
                 className={cn(
@@ -86,7 +80,6 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           </Card>
         </div>
 
-        {}
         <div className="md:col-span-3">{children}</div>
       </div>
     </div>

@@ -493,14 +493,11 @@ export function TasksView({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8" dir={meta.dir}>
-      {}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
 
-        {}
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="px-3 py-1 text-xs">
             Plan: {h.planName} ({currentUsageCount}/{h.limit} Tasks)
@@ -514,7 +511,6 @@ export function TasksView({
         </div>
       </div>
 
-      {}
       {h.isReadOnly && (
         <Alert>
           <AlertTitle>{t("readOnly.title")}</AlertTitle>
@@ -532,7 +528,6 @@ export function TasksView({
         </Alert>
       )}
 
-      {}
       {h.alertMessage && (
         <Alert variant={h.alertMessage.variant === "destructive" ? "destructive" : "default"}>
           <AlertTitle>{h.alertMessage.title}</AlertTitle>
@@ -547,7 +542,6 @@ export function TasksView({
           </div>
         ) : (
           <div className="w-full">
-            {}
             <div className="flex flex-col gap-4 py-4 md:flex-row md:items-center">
               <div className="flex flex-wrap items-center gap-2">
                 <DataTableSearch
@@ -646,7 +640,6 @@ export function TasksView({
         )}
       </div>
 
-      {}
       <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-md" dir={meta.dir}>
           <DialogHeader>
@@ -689,7 +682,6 @@ export function TasksView({
         </DialogContent>
       </Dialog>
 
-      {}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-130" dir={meta.dir}>
           <DialogHeader>
@@ -799,7 +791,6 @@ export function TasksView({
         </DialogContent>
       </Dialog>
 
-      {}
       <Dialog open={!!detailTask} onOpenChange={(o) => !o && setDetailTask(null)}>
         <DialogContent className="sm:max-w-140" dir={meta.dir}>
           <DialogHeader>
@@ -870,7 +861,6 @@ export function TasksView({
         </DialogContent>
       </Dialog>
 
-      {}
       <AlertDialog open={!!h.taskToDelete} onOpenChange={(o) => !o && h.setTaskToDelete(null)}>
         <AlertDialogContent dir={meta.dir}>
           <AlertDialogHeader>
