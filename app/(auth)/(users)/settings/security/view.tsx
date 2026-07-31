@@ -147,7 +147,7 @@ export function SecuritySettingsPage() {
       )}
 
       {/* KONSOLIDASI: SATU CARD TUNGGAL UNTUK SEMUA FORM SECURITY */}
-      <Card className="border-border/80 overflow-hidden rounded-2xl border shadow-sm">
+      <Card className="border-border overflow-hidden">
         <CardContent className="divide-border/60 divide-y p-0">
           {/* Section 1: Set/Change Password */}
           <div className="flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center">

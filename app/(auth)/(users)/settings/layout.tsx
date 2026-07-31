@@ -8,11 +8,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useLocale, useTranslations } from "next-intl";
 
-export default function SettingsLayout({
-  children
-}: {
-  children: React.ReactNode; // Perubahan dari React.Node menjadi React.ReactNode
-}) {
+export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const locale = useLocale();
   const t = useTranslations("settings");
   const pathname = usePathname();
@@ -23,15 +19,10 @@ export default function SettingsLayout({
   const isNotificationsActive = pathname?.includes("/settings/notifications");
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
-      {/* Header Halaman Utama */}
-      <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
-      </div>
+    <div className="mx-auto w-full max-w-6xl space-y-3">
+      <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
 
-      {/* Grid Layout: Menu Samping & Slot Konten Anak */}
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-        {/* Menu Samping */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <div className="md:col-span-1">
           <Card className="overflow-hidden p-2">
             <nav className="flex flex-row gap-1 md:flex-col">
@@ -86,7 +77,6 @@ export default function SettingsLayout({
           </Card>
         </div>
 
-        {/* Konten Halaman Aktif */}
         <div className="md:col-span-3">{children}</div>
       </div>
     </div>

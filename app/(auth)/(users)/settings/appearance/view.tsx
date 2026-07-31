@@ -16,7 +16,6 @@ const RADIUS_OPTIONS = [
   { value: "default", label: "Default" }
 ] as const;
 
-// Nilai peninjau statis agar tidak terpengaruh oleh variabel CSS global
 const RADIUS_PREVIEWS = {
   none: { outer: "0px", inner: "0px" },
   sm: { outer: "4px", inner: "2px" },
@@ -43,18 +42,14 @@ export function AppearanceView() {
   const t = useTranslations("settings.appearance");
 
   return (
-    <div className="mx-auto max-w-3xl space-y-3 py-0">
-      <div className="grid gap-6">
-        {/* Preset Selection */}
-        <Card className="border-border/60 shadow-sm">
+    <div className="mx-auto space-y-3 py-0">
+      <div className="grid gap-3">
+        <Card className="border-border">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
               <Paintbrush className="text-muted-foreground h-4 w-4" />
               <CardTitle className="text-base">{t("preset")}</CardTitle>
             </div>
-            <CardDescription>
-              Pilih warna tema utama untuk identitas prapel pel peluncur Anda
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -88,9 +83,8 @@ export function AppearanceView() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Radius Selection */}
-          <Card className="border-border/60 shadow-sm">
+        <div className="grid gap-3 md:grid-cols-2">
+          <Card className="border-border">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <Ruler className="text-muted-foreground h-4 w-4" />
@@ -112,7 +106,6 @@ export function AppearanceView() {
                           ? "border-primary bg-primary/5 text-primary"
                           : "border-border/60 text-muted-foreground hover:text-foreground"
                       }`}>
-                      {/* Menggunakan inline style peninjau statis */}
                       <div
                         className="flex h-8 w-8 items-center justify-center border-2 border-dashed border-current transition-all"
                         style={{ borderRadius: preview.outer }}>
@@ -129,8 +122,7 @@ export function AppearanceView() {
             </CardContent>
           </Card>
 
-          {/* Scale Selection */}
-          <Card className="border-border/60 shadow-sm">
+          <Card className="border-border">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2">
                 <Type className="text-muted-foreground h-4 w-4" />
@@ -161,8 +153,7 @@ export function AppearanceView() {
           </Card>
         </div>
 
-        {/* Layout Selection */}
-        <Card className="border-border/60 shadow-sm">
+        <Card className="border-border">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
               <LayoutGrid className="text-muted-foreground h-4 w-4" />

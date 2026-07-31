@@ -101,7 +101,7 @@ export function GeneralSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {alertMessage && (
         <Alert
           variant={alertMessage.variant === "destructive" ? "destructive" : "default"}
@@ -125,13 +125,10 @@ export function GeneralSettingsPage() {
         </Alert>
       )}
 
-      {/* KONSOLIDASI: SATU CARD TUNGGAL UNTUK SEMUA FORM GENERAL */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden py-0">
         <CardContent className="divide-border/60 divide-y p-0">
-          {/* BAGIAN TERPADU: PROFIL & ALAMAT */}
           <div className="space-y-8 p-8">
             <div className="space-y-8">
-              {/* Sub-Section 1: Avatar */}
               <div className="flex flex-col items-start justify-between gap-6 pt-2 md:flex-row md:items-center">
                 <div className="space-y-1 md:max-w-md">
                   <h3 className="text-foreground text-sm font-medium">{t("avatar")}</h3>
@@ -168,7 +165,6 @@ export function GeneralSettingsPage() {
                 </div>
               </div>
 
-              {/* Sub-Section 2: Full Name */}
               <div className="flex flex-col items-start justify-between gap-4 pt-6 md:flex-row">
                 <div className="md:max-w-md">
                   <h3 className="text-foreground text-sm font-medium">{t("name")}</h3>
@@ -185,7 +181,6 @@ export function GeneralSettingsPage() {
                 </div>
               </div>
 
-              {/* Sub-Section 3: Bio & Phone */}
               <div className="flex flex-col items-start justify-between gap-4 pt-6 lg:flex-row">
                 <div className="space-y-1 md:max-w-md">
                   <h3 className="text-foreground text-sm font-medium">{t("description")}</h3>
@@ -216,7 +211,6 @@ export function GeneralSettingsPage() {
                 </div>
               </div>
 
-              {/* Sub-Section 4: Address */}
               <div className="flex flex-col items-start justify-between gap-4 pt-6 lg:flex-row">
                 <div className="space-y-1 md:max-w-md">
                   <h3 className="text-foreground text-sm font-medium">Alamat</h3>
@@ -241,7 +235,6 @@ export function GeneralSettingsPage() {
               </div>
             </div>
 
-            {/* Tombol Simpan Tunggal untuk Seluruh Formulir Profil */}
             <div className="border-border/40 flex justify-end pt-6">
               <Button
                 onClick={handleSaveProfile}
@@ -255,7 +248,6 @@ export function GeneralSettingsPage() {
             </div>
           </div>
 
-          {/* Section: Email */}
           <div className="space-y-4 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="space-y-1 md:max-w-md">
@@ -286,7 +278,6 @@ export function GeneralSettingsPage() {
             </div>
           </div>
 
-          {/* Section: Communication Language */}
           <div className="space-y-4 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="space-y-1 md:max-w-md">
@@ -326,7 +317,6 @@ export function GeneralSettingsPage() {
             </div>
           </div>
 
-          {/* Section: Timezone Settings */}
           <div className="space-y-4 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="space-y-1 md:max-w-md">
@@ -388,11 +378,12 @@ export function GeneralSettingsPage() {
             </div>
           </div>
 
-          {/* Section: Display Currency */}
           <div className="space-y-4 p-8">
             <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
               <div className="space-y-1 md:max-w-md">
-                <h2 className="text-foreground text-base font-semibold">{t("currencyTitle") || "Display Currency"}</h2>
+                <h2 className="text-foreground text-base font-semibold">
+                  {t("currencyTitle") || "Display Currency"}
+                </h2>
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {t("currencyDesc") || "Choose your preferred currency for displaying prices."}
                 </p>
@@ -425,7 +416,6 @@ export function GeneralSettingsPage() {
             </div>
           </div>
 
-          {/* Section: Delete Account (Danger Zone) */}
           <div className="flex flex-col items-start justify-between gap-6 bg-red-50/10 p-8 md:flex-row md:items-center">
             <div className="space-y-1.5 md:max-w-xl">
               <h2 className="text-destructive text-base font-semibold">{t("delete")}</h2>

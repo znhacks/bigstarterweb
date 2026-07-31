@@ -20,7 +20,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const isAppearancesActive = pathname?.includes("/organization/appearance");
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10">
+    <div className="mx-auto w-full max-w-6xl space-y-3">
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">{t("title")}</h1>
       </div>
