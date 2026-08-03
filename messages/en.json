@@ -925,6 +925,7 @@
     "organizations": {
       "title": "Organizations",
       "detail": "Manage and oversee all registered organizations, active plans, member counts, and metadata.",
+      "detailSubtitle": "Detailed information about organization profile and configuration.",
       "selected": "selected",
       "column": "Columns",
       "table": {

@@ -928,6 +928,7 @@
     "organizations": {
       "title": "Organisasi",
       "detail": "Kelola dan awasi semua organisasi yang terdaftar, paket yang aktif, jumlah anggota, serta metadata.",
+      "detailSubtitle": "Informasi lengkap mengenai profil dan konfigurasi organisasi.",
       "selected": "dipilih",
       "column": "Kolom",
       "table": {
