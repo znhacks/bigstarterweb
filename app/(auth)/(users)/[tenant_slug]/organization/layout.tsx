@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { getActiveTenant } from "@/services/tenant";
-import { getAccessibleOrgRoutes } from "@/lib/rbac/org-access";
+import { getAccessibleOrgRoutes } from "@/modules/rbac/shared/org-access";
 import { OrganizationNav } from "./components/organization-nav";
 
 export default async function SettingsLayout({
@@ -18,7 +18,7 @@ export default async function SettingsLayout({
   // Bila pengguna bukan member (ctx null) → tidak ada menu; akses halaman akan
   // di-block 404 oleh gate `requireOrgRoute` di tiap page.tsx.
   const ctx = await getActiveTenant(tenant_slug);
-  const visibleRoutes = getAccessibleOrgRoutes(ctx?.hierarchyLevel ?? null);
+  const visibleRoutes = getAccessibleOrgRoutes(ctx?.permissions ?? null);
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-3">

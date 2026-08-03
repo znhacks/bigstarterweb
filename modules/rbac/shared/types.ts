@@ -10,13 +10,12 @@ export interface ActiveTenant {
 
 /**
  * Otoritas pengguna yang sudah di-resolve untuk satu membership aktif:
- * role apa, level hirarki-nya, dan himpunan permission efektif
+ * role apa dan himpunan permission efektif
  * (memberships.role_id → roles → role_permissions → permissions).
  */
 export interface ResolvedAuthority {
   roleId: string;
   roleName: string;
-  hierarchyLevel: number;
   permissions: PermissionName[];
 }
 

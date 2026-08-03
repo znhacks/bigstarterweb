@@ -2,15 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getMembershipsByUser } from "@/supabase/helper/memberships";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { cookies } from "next/headers";
-import type { ActiveTenant, ActiveTenantContext, ResolvedAuthority } from "@/lib/rbac/types";
-import type { PermissionName } from "@/lib/rbac/permissions";
+import type { ActiveTenant, ActiveTenantContext, ResolvedAuthority } from "@/modules/rbac/shared/types";
+import type { PermissionName } from "@/modules/rbac/shared/permissions";
 
 type MembershipRow = {
   role_id: string | null;
   roles: {
     id: string;
     name: string;
-    hierarchy_level: number;
     role_permissions: { permissions: { name: string } | null }[] | null;
   } | null;
   tenants: ActiveTenant;
@@ -27,7 +26,6 @@ function resolveAuthority(row: any): ResolvedAuthority | null {
   return {
     roleId: role.id,
     roleName: role.name,
-    hierarchyLevel: role.hierarchy_level,
     permissions: perms
   };
 }
@@ -37,7 +35,6 @@ const MEMBERSHIP_SELECT = `
   roles (
     id,
     name,
-    hierarchy_level,
     role_permissions ( permissions ( name ) )
   ),
   tenants!inner (

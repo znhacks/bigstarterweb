@@ -3,10 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { profileRepository } from "@/supabase/repositories/profiles";
 import { getActiveTenant } from "@/services/tenant";
 import { redirect, notFound } from "next/navigation";
-import type { PermissionName } from "@/lib/rbac/permissions";
-import { hasAnyPermission } from "@/lib/rbac";
-import { canAccessOrgRoute } from "@/lib/rbac/org-access";
-import type { ActiveTenantContext } from "@/lib/rbac/types";
+import type { PermissionName } from "@/modules/rbac/shared/permissions";
+import { hasAnyPermission } from "@/modules/rbac/shared";
+import { canAccessOrgRoute } from "@/modules/rbac/shared/org-access";
+import type { ActiveTenantContext } from "@/modules/rbac/shared/types";
 
 /**
  * Mengambil data pengguna aktif secara aman di sisi server.
@@ -108,18 +108,11 @@ export async function requireAnyPermission(
 }
 
 /**
- * Gate berbasis ROLE (hierarchy) untuk sub-route organisation.
+ * Gate berbasis permission untuk sub-route organisation.
  * Berbeda dari `requirePermission`/`requireAnyPermission` yang berbasis permission:
- * rule di sini membatasi menu/halaman per role (Member/Admin/Owner) lewat
- * `ORG_ROUTE_MIN_HIERARCHY`, terlepas dari permission apa pun yang melekat pada role.
+ * rule di sini membatasi menu/halaman per route lewat `ORG_ROUTE_REQUIRED_PERMISSIONS`.
  *
- * Aturan (lib/rbac/org-access.ts):
- *   - general         → Member+ (10)
- *   - member          → Admin+  (50)
- *   - history-billing → Owner   (100)
- *   - appearance      → Owner   (100)
- *
- * @param segment Salah satu key ORG_ROUTE_MIN_HIERARCHY.
+ * @param segment Salah satu key ORG_ROUTE_REQUIRED_PERMISSIONS.
  * @param tenantSlug Slug organisasi dari URL.
  * @returns Konteks otoritas + tenant aktif, atau notFound() bila ditolak.
  */
@@ -130,7 +123,7 @@ export async function requireOrgRoute(
   await requireAuth();
 
   const ctx = await getActiveTenant(tenantSlug);
-  if (!ctx || !canAccessOrgRoute(segment, ctx.hierarchyLevel)) {
+  if (!ctx || !canAccessOrgRoute(segment, ctx.permissions)) {
     notFound();
   }
 

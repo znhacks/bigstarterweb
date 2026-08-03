@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
-import { PERMISSIONS, hasPermission, type PermissionName } from "@/lib/rbac";
+import { PERMISSIONS, hasPermission, type PermissionName } from "@/modules/rbac/shared";
 import type { Task, MemberOption, AlertState, TaskInput } from "./types";
 import { compareStrings } from "@/lib/i18n/collator";
 import { fetchTasksAction, createTaskAction, updateTaskAction, deleteTaskAction } from "./actions";

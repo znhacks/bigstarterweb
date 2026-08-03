@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { hasPermission } from "@/modules/rbac/shared";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 
 export interface ActiveTenant {
@@ -37,7 +39,9 @@ export function useActiveTenant() {
       const memRepo = await membershipRepository(supabase);
       const { data } = await memRepo
         .query()
-        .select("tenant_id, roles(name, hierarchy_level), tenants(id, name, slug, logo)")
+        .select(
+          "tenant_id, roles(name, role_permissions(permissions(name))), tenants(id, name, slug, logo)"
+        )
         .eq("user_id", user.id);
 
       const found = ((data as any[]) ?? []).find((m) => m.tenants?.slug === tenantSlug);
@@ -49,8 +53,14 @@ export function useActiveTenant() {
           slug: found.tenants.slug,
           logo: found.tenants.logo
         });
-        const hierarchy = found.roles?.hierarchy_level;
-        setIsTenantAdmin(hierarchy != null && hierarchy >= 50);
+        const permissions = ((found.roles?.role_permissions as any[]) ?? [])
+          .map((rp: any) => rp?.permissions?.name)
+          .filter((name: any): name is string => typeof name === "string");
+        setIsTenantAdmin(
+          hasPermission(permissions, PERMISSIONS.membersInvite) ||
+            hasPermission(permissions, PERMISSIONS.membersManage) ||
+            hasPermission(permissions, PERMISSIONS.membersRemove)
+        );
       } else {
         setActiveTenant(null);
         setIsTenantAdmin(false);

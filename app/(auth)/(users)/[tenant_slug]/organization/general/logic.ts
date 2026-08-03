@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { PERMISSIONS, hasPermission, type PermissionName } from "@/lib/rbac";
+import { PERMISSIONS, hasPermission, type PermissionName } from "@/modules/rbac/shared";
 import { useLocale, useTranslations } from "next-intl";
 import { tenantConfig } from "@/config/tenant"; // Pastikan path import ini sesuai
 import { normalizeTenantUpdatePayload, updateTenantSchema } from "@/lib/validation/tenants";

@@ -2,7 +2,7 @@
 
 import { requireAuth } from "@/lib/auth";
 import { getActiveTenant } from "@/services/tenant";
-import { PERMISSIONS } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 import { createClient } from "@/lib/supabase/server";
 import { createTenantServerClient } from "@/lib/supabase/tenant-server";
 import { getProfilesByIds } from "@/supabase/helper/profiles";

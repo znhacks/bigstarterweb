@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 import { checkSeatLimit } from "@/lib/billing/enforcer";
 import { getUser } from "@/lib/auth";
-import { isTenantAdmin } from "@/lib/billing/tenant-auth";
+import { resolveTenantPermissions } from "@/lib/billing/tenant-auth";
 import { signInviteToken } from "@/lib/invite/token";
 import { createClient } from "@/lib/supabase/server";
 import { roleRepository } from "@/supabase/repositories/roles";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { invitationRepository } from "@/supabase/repositories/invitations";
+import { hasPermission } from "@/modules/rbac/shared";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 
 const mailersend = new MailerSend({
   apiKey: process.env.MAILERSEND_API_KEY || ""
@@ -61,10 +63,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const canInvite = await isTenantAdmin(supabase, user.id, tenantData.id);
+    const permissions = await resolveTenantPermissions(supabase, user.id, tenantData.id);
+    const canInvite = hasPermission(permissions, PERMISSIONS.membersInvite);
     if (!canInvite) {
       return NextResponse.json(
-        { error: "Forbidden: hanya admin/owner yang dapat mengundang anggota." },
+        { error: "Forbidden: hanya pengguna dengan permission members.invite yang dapat mengundang anggota." },
         { status: 403 }
       );
     }

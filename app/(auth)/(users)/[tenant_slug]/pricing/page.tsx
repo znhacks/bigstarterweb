@@ -2,7 +2,7 @@ import { constructMetadata } from "@/lib/metadata";
 import { getTranslations } from "next-intl/server";
 import { OrganizationBilling } from "./view";
 import { requirePermission } from "@/lib/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata.users.organization.billing");

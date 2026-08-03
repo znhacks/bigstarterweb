@@ -5,7 +5,7 @@ import { supabaseAdmin } from "../supabase-server";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { organizationSchema } from "../schemas";
 import { notFound, dbError } from "../errors";
-import { PERMISSIONS } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 
 /**
  * The API key (or dashboard session) is bound to a single tenant, so these

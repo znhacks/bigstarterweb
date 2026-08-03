@@ -5,8 +5,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { resolveTenantAuthorityFull } from "@/lib/billing/tenant-auth";
-import { PERMISSIONS } from "@/lib/rbac";
-import { hasPermission, canAssignRole } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
+import { hasPermission, canAssignRole } from "@/modules/rbac/shared";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { roleRepository } from "@/supabase/repositories/roles";
 import { invitationRepository } from "@/supabase/repositories/invitations";
@@ -23,7 +23,8 @@ async function resolveAuthority(tenantId: string) {
   return { supabase, authority };
 }
 
-/** Ubah role seorang member. Wajib members.manage + hierarchy target < actor. */
+/** Ubah role seorang member. Wajib members.manage dan role target
+ * harus memiliki permission yang seluruhnya ada pada actor. */
 export async function changeMemberRoleAction(
   tenantId: string,
   membershipId: string,
@@ -36,15 +37,19 @@ export async function changeMemberRoleAction(
       return { error: "Akses ditolak: butuh permission members.manage." };
     }
 
-    // Cek hierarchy target role (actor hanya boleh tetapkan role di bawahnya).
     const { data: role } = await (await roleRepository(supabase))
       .query()
-      .select("hierarchy_level")
+      .select("id, role_permissions(permissions(name))")
       .eq("id", newRoleId)
       .maybeSingle();
     if (!role) return { error: "Role tidak valid." };
-    if (!canAssignRole(authority.hierarchyLevel, (role as any).hierarchy_level)) {
-      return { error: "Tidak boleh menetapkan role setara/lebih tinggi dari Anda." };
+
+    const targetPermissions = ((role as any).role_permissions ?? [])
+      .map((rp: any) => rp?.permissions?.name)
+      .filter((name: any): name is string => typeof name === "string");
+
+    if (!canAssignRole(authority.permissions, targetPermissions)) {
+      return { error: "Tidak boleh menetapkan role yang memerlukan permission di luar otoritas Anda." };
     }
 
     const { error } = await (await membershipRepository(supabase))
@@ -58,7 +63,7 @@ export async function changeMemberRoleAction(
   }
 }
 
-/** Hapus member. Wajib members.remove + hierarchy target < actor. */
+/** Hapus member. Wajib members.remove. */
 export async function removeMemberAction(
   tenantId: string,
   membershipId: string
@@ -68,18 +73,6 @@ export async function removeMemberAction(
     if (!supabase || !authority) return { error: "Tidak terautentikasi." };
     if (!hasPermission(authority.permissions, PERMISSIONS.membersRemove)) {
       return { error: "Akses ditolak: butuh permission members.remove." };
-    }
-
-    // Cek hierarchy target (admin tak bisa hapus owner/setara).
-    const { data: mem } = await (await membershipRepository(supabase))
-      .query()
-      .select("id, roles(hierarchy_level)")
-      .eq("id", membershipId)
-      .maybeSingle();
-    if (!mem) return { error: "Anggota tidak ditemukan." };
-    const targetHierarchy = (mem as any).roles?.hierarchy_level;
-    if (!canAssignRole(authority.hierarchyLevel, targetHierarchy)) {
-      return { error: "Tidak boleh menghapus anggota setara/lebih tinggi dari Anda." };
     }
 
     const { error } = await (await membershipRepository(supabase))

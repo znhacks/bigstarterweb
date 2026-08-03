@@ -6,7 +6,7 @@ import { apiKeyRepository } from "@/supabase/repositories/api-keys";
 import { apiKeySchema, uuid } from "../schemas";
 import { notFound, dbError } from "../errors";
 import { generateApiKey, hashApiKey, apiKeyPrefix } from "../crypto";
-import { PERMISSIONS } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 
 /**
  * Lifecycle of an API key. For security, CREATE is dashboard-session-only — an

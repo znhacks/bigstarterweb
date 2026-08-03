@@ -2,7 +2,7 @@ import { constructMetadata } from "@/lib/metadata";
 import { getTranslations } from "next-intl/server";
 import { TasksView } from "./view";
 import { requirePermission } from "@/lib/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 import { getActivePlan } from "@/services/payment/billing/gating";
 
 export async function generateMetadata() {
