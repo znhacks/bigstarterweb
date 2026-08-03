@@ -51,6 +51,7 @@ export async function fetchTasksAction(tenantSlug: string): Promise<ActionResult
       .select("*")
       .eq("tenant_id", ctx.tenant.id)
       .order("created_at", { ascending: false });
+
     if (error) throw error;
 
     const rows = (data || []) as any[];

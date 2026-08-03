@@ -68,15 +68,16 @@ export async function getTenantClient(subdomain: string): Promise<{
 
   // Tentukan nama skema tujuan berdasarkan model tenant
   const targetSchema =
-    tenant.db_model === "SHARED" ? "tenant_shared" : `tenant_${tenant.subdomain}`;
+    tenant.db_model === "SHARED" ? "public" : `tenant_${tenant.subdomain}`;
 
   // 2. Ambil dari cache atau buat baru jika belum ada
   if (!connectionCache[targetSchema]) {
     const { url, serviceKey } = resolveServiceEnv();
-    connectionCache[targetSchema] = createClient(url, serviceKey, {
-      db: { schema: targetSchema },
-      auth: { persistSession: false }
-    });
+    const opts: any = { auth: { persistSession: false } };
+    if (targetSchema !== "public") {
+      opts.db = { schema: targetSchema };
+    }
+    connectionCache[targetSchema] = createClient(url, serviceKey, opts);
   }
 
   return {

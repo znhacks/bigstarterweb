@@ -289,7 +289,7 @@ model Task {
   creator  Profile? @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@map("tasks")
-  @@schema("tenant_shared")
+  @@schema("public")
 }
 
 model ApiKey {
@@ -307,5 +307,5 @@ model ApiKey {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("api_keys")
-  @@schema("tenant_shared")
+  @@schema("public")
 }
