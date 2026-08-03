@@ -8,6 +8,10 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  notificationIcon,
+  resolveNotificationHref
+} from "@/lib/notifications/meta";
 
 export function InboxView() {
   const t = useTranslations("notifications");
@@ -23,12 +27,6 @@ export function InboxView() {
     } catch {
       return id;
     }
-  };
-
-  const handleClick = (id: string, isRead: boolean, link: string | null) => {
-    if (!isRead) markRead(id);
-    // navigasi ditangani oleh <Link> bila ada link
-    return link ? link : undefined;
   };
 
   return (
@@ -80,12 +78,20 @@ export function InboxView() {
           </div>
         ) : (
           shown.map((item) => {
-            const inner = (
-              <div
+            const Icon = notificationIcon(item.category);
+            const href = resolveNotificationHref(item);
+            return (
+              <Link
+                key={item.id}
+                href={href}
+                onClick={() => {
+                  if (!item.is_read) markRead(item.id);
+                }}
                 className={cn(
                   "bg-card flex items-start gap-3 rounded-lg border p-4 transition-colors hover:bg-accent/5",
                   !item.is_read && "border-primary/30 bg-primary/5"
                 )}>
+                <Icon className="text-muted-foreground mt-0.5 size-5 shrink-0" />
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-[10px]">
@@ -103,20 +109,7 @@ export function InboxView() {
                     {new Date(item.created_at).toLocaleString()}
                   </p>
                 </div>
-              </div>
-            );
-            return (
-              <div
-                key={item.id}
-                onClick={() => handleClick(item.id, item.is_read, item.link)}>
-                {item.link ? (
-                  <Link href={item.link} className="block">
-                    {inner}
-                  </Link>
-                ) : (
-                  inner
-                )}
-              </div>
+              </Link>
             );
           })
         )}

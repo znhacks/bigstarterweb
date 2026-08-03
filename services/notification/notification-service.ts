@@ -35,10 +35,12 @@ export interface SendNotificationParams {
   event: string;
   userId: string;
   tenantId?: string;
-  /** Variabel untuk interpolasi {{var}}. */
+  /** Variabel untuk interpolasi {{var}} pada title/body/link. */
   data?: Record<string, any>;
   /** Override locale (jika tidak, resolve dari profile/country). */
   locale?: string;
+  /** Override link tujuan (mendukung {{var}} dari data). Mis. "/invitations/{{invitationId}}". */
+  link?: string;
 }
 
 function interpolate(template: string, data: Record<string, any> = {}): string {
@@ -126,6 +128,9 @@ export async function sendNotification(
   const resolvedLocale = resolveLocale(profile, locale);
   const title = interpolate(String(getLocalizedValue(tpl.title, resolvedLocale)), data);
   const body = interpolate(String(getLocalizedValue(tpl.body, resolvedLocale)), data);
+  // Link tujuan: override dari caller > link template; mendukung interpolasi {{var}}.
+  const linkPattern = params.link ?? tpl.link ?? null;
+  const link = linkPattern ? interpolate(linkPattern, data) : null;
 
   const activeChannels = getActiveChannels();
   const prefs = await getEffectivePreferences(userId);
@@ -159,7 +164,7 @@ export async function sendNotification(
     title,
     body,
     data: { ...data, tenantId },
-    link: tpl.link ?? null,
+    link,
     category: tpl.category,
     locale: resolvedLocale,
     source: "system",

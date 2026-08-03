@@ -96,6 +96,13 @@ export const navItems: NavGroup[] = [
         permissions: [PERMISSIONS.tasksRead]
       },
       {
+        title: "users.billing",
+        href: "/pricing",
+        tenantScoped: true,
+        icon: CreditCardIcon,
+        permissions: [PERMISSIONS.billingRead]
+      },
+      {
         title: "users.settings",
         href: "/settings/general",
         icon: Settings,

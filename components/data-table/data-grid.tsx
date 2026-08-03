@@ -782,9 +782,9 @@ export function DataGridSearch({
           if (next === "") applyFilter("");
         }}
         onKeyDown={(e) => e.key === "Enter" && trigger()}
-        className="h-9 w-full pr-22"
+        className="h-9 w-full pe-22"
       />
-      <div className="absolute inset-y-0 right-1 flex items-center">
+      <div className="absolute inset-y-0 end-1 flex items-center">
         {hasFilter && (
           <Button type="button" variant="ghost" size="icon" onClick={clear} className="h-7 w-7">
             <X className="h-4 w-4" />

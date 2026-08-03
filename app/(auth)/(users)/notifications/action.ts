@@ -45,6 +45,20 @@ export async function getUnreadCountAction(): Promise<number> {
   return count ?? 0;
 }
 
+/** Ambil satu notifikasi (RLS: hanya milik sendiri). Untuk halaman detail. */
+export async function getNotificationAction(id: string): Promise<InboxItem | null> {
+  await requireAuth();
+  const client = await createClient();
+  const { data } = await client
+    .from("notifications")
+    .select(
+      "id, category, title, body, data, link, is_read, source, source_ref, created_at"
+    )
+    .eq("id", id)
+    .maybeSingle();
+  return (data as InboxItem | null) ?? null;
+}
+
 export async function markReadAction(id: string): Promise<void> {
   await requireAuth();
   const client = await createClient();

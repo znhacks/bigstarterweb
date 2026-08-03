@@ -400,6 +400,7 @@
       "settings": "الإعدادات",
       "account": "الحساب",
       "organization": "المؤسسة",
+      "billing": "الفوترة",
       "i18n-culture": "التدويل والثقافة"
     },
     "superadmin": {
@@ -844,50 +845,81 @@
     "users": {
       "title": "مستخدمو المسؤول المتميز",
       "desc": "إدارة وعرض والإشراف على جميع ملفات تعريف المستخدمين المسجلين وعضويات المؤسسات.",
-      "data-table": {
-        "headers": {
-          "name": "الاسم",
-          "role": "الدور",
-          "plan": "الباقة",
-          "email": "البريد الإلكتروني",
-          "country": "البلد",
-          "status": "الحالة",
-          "lastSignIn": "آخر تسجيل دخول",
-          "createdAt": "تم الإنشاء في",
-          "updatedAt": "تم التحديث في"
+      "roles": {
+        "superadmin": "المسؤول الأعلى",
+        "user": "المستخدمون"
+      },
+      "headers": {
+        "name": "الاسم",
+        "role": "الدور",
+        "plan": "الباقة",
+        "email": "البريد الإلكتروني",
+        "country": "البلد",
+        "status": "الحالة",
+        "lastSignIn": "آخر تسجيل دخول",
+        "createdAt": "تم الإنشاء في",
+        "updatedAt": "تم التحديث في"
+      },
+      "actions": {
+        "view": "عرض المستخدم",
+        "delete": "حذف",
+        "ban": "تعليق",
+        "unban": "إلغاء التعليق",
+        "cancel": "إلغاء",
+        "bulkActions": "الإجراءات الجماعية"
+      },
+      "filters": {
+        "search": "البحث عن المستخدمين...",
+        "status": "الحالة",
+        "plan": "الباقة",
+        "role": "الدور",
+        "columns": "الأعمدة",
+        "noStatus": "لم يتم العثور على الحالة.",
+        "noPlan": "لم يتم العثور على الباقة.",
+        "noRole": "لم يتم العثور على الدور."
+      },
+      "footer": {
+        "selected": "تم تحديد {selected} من أصل {total} صفوف.",
+        "previous": "السابق",
+        "next": "التالي",
+        "noResults": "لا توجد نتائج."
+      },
+      "confirmDelete": "هل أنت متأكد من رغبتك في حذف هذا المستخدم؟",
+      "accountStatus": {
+        "active": "نشط",
+        "banned": "موقوف",
+        "deleted": "محذوف"
+      },
+      "detail": {
+        "description": "الوصف",
+        "contacts": "معلومات الاتصال",
+        "phone": "الهاتف",
+        "address": {
+          "useraddress": "عنوان المستخدم",
+          "mainAddress": "العنوان الرئيسي",
+          "village": "القرية / الحي",
+          "subdistrict": "المنطقة",
+          "city": "المدينة / المحافظة",
+          "province": "المقاطعة / الإقليم",
+          "postalCode": "الرمز البريدي",
+          "country": "الدولة"
         },
-        "table": {},
-        "actions": {
-          "view": "عرض المستخدم",
-          "delete": "حذف",
-          "ban": "تعليق",
-          "unban": "إلغاء التعليق",
-          "cancel": "إلغاء"
+        "preference": {
+          "title": "التفضيلات والنظام",
+          "selectedLanguage": "اللغة المفضلة",
+          "currency": "العملة",
+          "timezone": "المنطقة الزمنية"
         },
-        "filters": {
-          "search": "البحث عن المستخدمين...",
-          "status": "الحالة",
-          "plan": "الباقة",
-          "role": "الدور",
-          "columns": "الأعمدة",
-          "noStatus": "لم يتم العثور على الحالة.",
-          "noPlan": "لم يتم العثور على الباقة.",
-          "noRole": "لم يتم العثور على الدور."
+        "banned": {
+          "title": "تفاصيل تعليق الحساب",
+          "reason": "السبب",
+          "bannedUntil": "معلق حتى:"
         },
-        "footer": {
-          "selected": "تم تحديد {selected} من أصل {total} صفوف.",
-          "previous": "السابق",
-          "next": "التالي",
-          "noResults": "لا توجد نتائج."
-        },
-        "confirmDelete": "هل أنت متأكد من رغبتك في حذف هذا المستخدم؟",
-        "accountStatus": {
-          "active": "نشط",
-          "banned": "موقوف",
-          "deleted": "محذوف"
-        },
-        "trash": "سلة المهملات"
-      }
+        "registeredAt": "تاريخ التسجيل:",
+        "lastLogin": "آخر تسجيل دخول:",
+        "back": "رجوع"
+      },
+      "trash": "سلة المهملات"
     },
     "organizations": {
       "title": "المؤسسات",

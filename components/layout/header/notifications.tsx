@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/hooks/use-notifications";
+import { notificationIcon, resolveNotificationHref } from "@/lib/notifications/meta";
 
 const Notifications = () => {
   const isMobile = useIsMobile();
@@ -54,7 +55,7 @@ const Notifications = () => {
             <div className="flex items-center gap-1">
               <Button
                 variant="link"
-                className="h-auto p-0 text-xs"
+                className="flex h-auto items-center gap-1 p-0 text-xs"
                 size="sm"
                 onClick={markAllRead}
                 disabled={unread === 0}>
@@ -67,41 +68,45 @@ const Notifications = () => {
 
         <ScrollArea className="h-[350px]">
           {recent.length === 0 ? (
-            <div className="text-muted-foreground px-4 py-10 text-center text-xs">
+            <div className="text-muted-foreground w-max px-4 py-10 text-center text-xs">
               {t("bell.empty")}
             </div>
           ) : (
-            recent.map((item) => (
-              <DropdownMenuItem
-                key={item.id}
-                asChild
-                className="group border-b px-4 py-3 last:border-0">
-                <Link
-                  href={item.link ?? "/notifications"}
-                  onClick={() => {
-                    if (!item.is_read) markRead(item.id);
-                  }}>
-                  <div className="flex w-full items-start gap-2">
-                    <div className="flex-1 space-y-0.5">
+            recent.map((item) => {
+              const Icon = notificationIcon(item.category);
+              const href = resolveNotificationHref(item);
+              return (
+                <DropdownMenuItem
+                  key={item.id}
+                  asChild
+                  className="group flex w-auto cursor-pointer items-start gap-2 border-b px-4 py-3 last:border-0">
+                  <Link
+                    href={href}
+                    onClick={() => {
+                      if (!item.is_read) markRead(item.id);
+                    }}>
+                    <Icon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                    <div className="min-w-0 flex-1 space-y-0.5 text-start">
                       <div className="flex items-center gap-1.5">
-                        <Badge variant="secondary" className="text-[9px]">
+                        <Badge variant="secondary" className="max-w-[120px] truncate text-[9px]">
                           {categoryLabel(item.category)}
                         </Badge>
                         {!item.is_read && (
                           <span className="bg-primary size-1.5 shrink-0 rounded-full" />
                         )}
                       </div>
-                      <div className="truncate text-sm font-medium">{item.title}</div>
+                      <div className="truncate text-start text-sm font-medium">{item.title}</div>
+
                       {item.body ? (
-                        <div className="text-muted-foreground line-clamp-1 text-xs">
+                        <div className="text-muted-foreground line-clamp-1 text-start text-xs">
                           {item.body}
                         </div>
                       ) : null}
                     </div>
-                  </div>
-                </Link>
-              </DropdownMenuItem>
-            ))
+                  </Link>
+                </DropdownMenuItem>
+              );
+            })
           )}
         </ScrollArea>
 

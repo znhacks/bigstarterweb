@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, Row } from "@tanstack/react-table";
 import {
   Loader2,
   Trash2,
@@ -14,7 +14,8 @@ import {
   Coins,
   Lock,
   MoreVertical,
-  Rows
+  Ban,
+  Unlock
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -28,12 +29,12 @@ import {
   DataGridViewOptions,
   DataGridTable,
   DataGridPagination,
-  DataGridColumnHeader,
   createSelectColumn,
   multiSelectFilterFn,
   textCol,
   dateCol,
-  actionCol
+  actionCol,
+  DataGridBulkActions
 } from "@/components/data-table";
 
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { generateAvatarFallback } from "@/lib/utils";
 
-import { formatToUserTimezone, formatRelativeTime } from "@/lib/date";
 import { BAN_DURATIONS } from "@/config/moderation";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { RestoreDialog } from "@/components/restore-dialog";
@@ -78,12 +78,45 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 import { useUsersDataTableLogic, User } from "./logic";
+import { formatDateTime, formatRelativeTime } from "@/lib/i18n/format";
 
 export type { User };
 
+// Fungsi pembantu untuk menyensor email
+function maskEmail(email: string | null | undefined): string {
+  if (!email) return "-";
+  const parts = email.split("@");
+  if (parts.length !== 2) return email;
+
+  const [localPart, domain] = parts;
+  const len = localPart.length;
+
+  if (len <= 2) {
+    return `${localPart[0] || ""}*@${domain}`;
+  }
+
+  const firstChars = localPart.substring(0, 2);
+  const lastChar = localPart.substring(len - 1);
+  return `${firstChars}***${lastChar}@${domain}`;
+}
+
+// Fungsi pembantu untuk menyensor nomor telepon
+function maskPhone(phone: string | null | undefined): string {
+  if (!phone) return "-";
+  const cleanPhone = phone.trim();
+  const len = cleanPhone.length;
+
+  if (len <= 6) {
+    return `${cleanPhone.substring(0, 2)}****`;
+  }
+
+  const firstChars = cleanPhone.substring(0, 4);
+  const lastChars = cleanPhone.substring(len - 3);
+  return `${firstChars}****${lastChars}`;
+}
+
 export default function UsersDataTable({ data: initialData }: { data?: User[] }) {
-  const ttitle = useTranslations("superadmin.users");
-  const t = useTranslations("superadmin.users.data-table");
+  const t = useTranslations("superadmin.users");
   const tMod = useTranslations("moderation");
   const ttable = useTranslations("data-table");
 
@@ -114,10 +147,24 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
   } = useUsersDataTableLogic(initialData);
 
   const [activeUserDetail, setActiveUserDetail] = React.useState<User | null>(null);
+  const selectColumn = React.useMemo(() => {
+    const baseCol = createSelectColumn<User>();
+    return {
+      ...baseCol,
+      cell: (props: any) => {
+        const originalCell = baseCol.cell;
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            {typeof originalCell === "function" ? originalCell(props) : null}
+          </div>
+        );
+      }
+    };
+  }, []);
 
   const columns = React.useMemo<ColumnDef<User, unknown>[]>(
     () => [
-      createSelectColumn<User>(),
+      selectColumn,
       textCol<User>({
         key: "name",
         header: t("headers.name"),
@@ -145,13 +192,12 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
       }),
       textCol<User>({
         key: "role",
-
         header: t("headers.role"),
         cell: (row) => {
           const role = row.role as string;
           return (
-            <Badge variant={role === "superadmin" ? "warning" : "secondary"} className="capitalize">
-              {role}
+            <Badge variant={role === "superadmin" ? "warning" : "secondary"}>
+              {t(`roles.${role}`)}
             </Badge>
           );
         },
@@ -173,17 +219,12 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             deleted: "outline"
           } as const;
           const statusClass = statusMap[status] ?? "outline";
-          return (
-            <Badge variant={statusClass} className="capitalize">
-              {status}
-            </Badge>
-          );
+          return <Badge variant={statusClass}>{t(`accountStatus.${status}`)}</Badge>;
         },
         filterFn: multiSelectFilterFn
       }),
       dateCol<User>({
         key: "lastSignIn",
-
         header: t("headers.lastSignIn"),
         cell: (row) => {
           const value = row.lastSignIn as string | null;
@@ -191,9 +232,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           return (
             <div className="flex flex-col gap-0.5">
               <span className="text-sm font-medium">{formatRelativeTime(value, locale)}</span>
-              <span className="text-muted-foreground text-[10px]">
-                {formatToUserTimezone(value, timeZone, locale)}
-              </span>
             </div>
           );
         }
@@ -206,7 +244,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           if (!value) return <span className="text-muted-foreground text-xs">-</span>;
           return (
             <span className="text-muted-foreground text-xs">
-              {formatToUserTimezone(value, timeZone, locale)}
+              {formatRelativeTime(value, locale)}
             </span>
           );
         }
@@ -217,7 +255,6 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
-                <span className="sr-only">Open menu</span>
                 <MoreVertical />
               </Button>
             </DropdownMenuTrigger>
@@ -265,7 +302,7 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
 
   return (
     <div className="w-full space-y-3">
-      <h1 className="text-2xl font-semibold tracking-tight">{ttitle("title")}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
       <DataGrid table={table} columns={columns} noResultsText={t("footer.noResults")}>
         <DataGridToolbar>
           <DataGridSearch columnId="name" placeholder={t("filters.search")} />
@@ -289,6 +326,71 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             <span className="hidden md:inline">{t("trash")}</span>
           </Button>
 
+          <DataGridBulkActions
+            label={t("actions.bulkActions")}
+
+            actions={[
+              {
+                label: t("actions.ban"),
+                icon: Ban,
+                tone: "warning",
+                disabled: (rows: unknown[]) => {
+                  const items = rows as any[];
+                  return (
+                    items.length === 0 ||
+                    items.every((r) => {
+                      const status = r?.original?.status ?? r?.status;
+                      return status === "banned";
+                    })
+                  );
+                },
+                onSelect: (selectedRows: unknown[]) => {
+                  const items = selectedRows as any[];
+                  const selectedUsers = items.map((r) => r?.original ?? r);
+                  if (selectedUsers.length > 0) {
+                    handleBan(selectedUsers[0]);
+                  }
+                }
+              },
+              {
+                label: t("actions.unban"),
+                icon: Unlock,
+                tone: "warning",
+                disabled: (rows: unknown[]) => {
+                  const items = rows as any[];
+                  return (
+                    items.length === 0 ||
+                    items.every((r) => {
+                      const status = r?.original?.status ?? r?.status;
+                      return status !== "banned";
+                    })
+                  );
+                },
+                onSelect: (selectedRows: unknown[]) => {
+                  const items = selectedRows as any[];
+                  const selectedUsers = items.map((r) => r?.original ?? r);
+                  if (selectedUsers.length > 0) {
+                    handleUnban(selectedUsers[0].dbId);
+                  }
+                }
+              },
+              {
+                label: t("actions.delete"),
+                icon: Trash2,
+                tone: "destructive",
+                separator: true,
+                disabled: (rows: unknown[]) => (rows as any[]).length === 0,
+                onSelect: (selectedRows: unknown[]) => {
+                  const items = selectedRows as any[];
+                  const selectedUsers = items.map((r) => r?.original ?? r);
+                  if (selectedUsers.length > 0) {
+                    handleDeleteRow(selectedUsers[0]);
+                  }
+                }
+              }
+            ]}
+          />
+
           <DataGridViewOptions label={t("filters.columns")} className="md:ms-auto" />
         </DataGridToolbar>
         <DataGridContent>
@@ -301,12 +403,10 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
         </DataGridContent>
       </DataGrid>
 
-      {}
       <Sheet open={!!activeUserDetail} onOpenChange={(open) => !open && setActiveUserDetail(null)}>
         <SheetContent
           side={locale === "ar" ? "left" : "right"}
           className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-lg md:max-w-xl">
-          {}
           <SheetHeader className="border-border border-b p-6 text-start">
             <div className="flex items-center gap-4">
               <Avatar className="h-14 w-14 border">
@@ -318,35 +418,32 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
               <div className="space-y-1">
                 <SheetTitle className="text-xl font-bold">{activeUserDetail?.name}</SheetTitle>
                 <SheetDescription className="text-muted-foreground flex items-center gap-1 text-sm">
-                  <Mail className="inline h-3 w-3" /> {activeUserDetail?.email || "-"}
+                  <Mail className="inline h-3 w-3" /> {maskEmail(activeUserDetail?.email)}
                 </SheetDescription>
               </div>
             </div>
           </SheetHeader>
 
-          {}
           {activeUserDetail && (
             <div className="flex-1 space-y-6 overflow-y-auto p-6 text-start text-sm">
-              {}
               <div className="flex flex-wrap gap-2">
                 <Badge
                   className="capitalize"
                   variant={activeUserDetail.is_superadmin ? "warning" : "secondary"}>
-                  Role: {activeUserDetail.role}
+                  {t("headers.role")}: {t(`roles.${activeUserDetail.role}`)}
                 </Badge>
-                <Badge
-                  variant={activeUserDetail.status === "active" ? "success" : "destructive"}
-                  className="capitalize">
-                  {activeUserDetail.status}
+                <Badge variant={activeUserDetail.status === "active" ? "success" : "destructive"}>
+                  {t(`accountStatus.${activeUserDetail.status}`)}
                 </Badge>
-                {activeUserDetail.is_superadmin && <Badge variant="warning">Superadmin</Badge>}
+                {activeUserDetail.is_superadmin && (
+                  <Badge variant="warning">{t("roles.superadmin")}</Badge>
+                )}
               </div>
 
-              {}
               {activeUserDetail.description && (
                 <div className="space-y-1.5">
                   <h4 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                    Deskripsi / Bio
+                    {t("detail.description")}
                   </h4>
                   <p className="text-foreground bg-muted/40 rounded-lg border p-3 text-sm leading-relaxed">
                     {activeUserDetail.description}
@@ -356,32 +453,32 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
 
               <Separator />
 
-              {}
               <div className="space-y-3">
                 <h4 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Informasi Kontak
+                  {t("detail.contacts")}
                 </h4>
                 <div className="flex items-center gap-3">
                   <Phone className="text-muted-foreground h-4 w-4 shrink-0" />
                   <div>
-                    <p className="text-muted-foreground text-xs">Nomor Telepon</p>
-                    <p className="font-medium">{activeUserDetail.phone || "-"}</p>
+                    <p className="text-muted-foreground text-xs">{t("detail.phone")}</p>
+                    <p className="font-medium">{maskPhone(activeUserDetail.phone)}</p>
                   </div>
                 </div>
               </div>
 
               <Separator />
 
-              {}
               <div className="space-y-3">
                 <h4 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Alamat Pengguna
+                  {t("detail.address.useraddress")}
                 </h4>
                 <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div className="flex items-start gap-1.5 sm:col-span-2">
                     <MapPin className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
                     <div>
-                      <p className="text-muted-foreground text-xs">Alamat Utama</p>
+                      <p className="text-muted-foreground text-xs">
+                        {t("detail.address.mainAddress")}
+                      </p>
                       <p className="font-medium">
                         {activeUserDetail.address_line1 || "-"}
                         {activeUserDetail.address_line2 && `, ${activeUserDetail.address_line2}`}
@@ -389,27 +486,31 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                     </div>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Desa / Kelurahan</p>
+                    <p className="text-muted-foreground text-xs">{t("detail.address.village")}</p>
                     <p className="font-medium">{activeUserDetail.address_desa || "-"}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Kecamatan</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("detail.address.subdistrict")}
+                    </p>
                     <p className="font-medium">{activeUserDetail.address_kecamatan || "-"}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Kota / Kabupaten</p>
+                    <p className="text-muted-foreground text-xs">{t("detail.address.city")}</p>
                     <p className="font-medium">{activeUserDetail.address_city || "-"}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Provinsi / Wilayah</p>
+                    <p className="text-muted-foreground text-xs">{t("detail.address.province")}</p>
                     <p className="font-medium">{activeUserDetail.address_region || "-"}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Kode Pos</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t("detail.address.postalCode")}
+                    </p>
                     <p className="font-medium">{activeUserDetail.address_postal_code || "-"}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Negara</p>
+                    <p className="text-muted-foreground text-xs">{t("detail.address.country")}</p>
                     <p className="font-medium uppercase">
                       {activeUserDetail.address_country || activeUserDetail.country || "-"}
                     </p>
@@ -419,16 +520,17 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
 
               <Separator />
 
-              {}
               <div className="space-y-3">
                 <h4 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Preferensi & Sistem
+                  {t("detail.preference.title")}
                 </h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center gap-2">
                     <Languages className="text-muted-foreground h-4 w-4" />
                     <div>
-                      <p className="text-muted-foreground text-xs">Bahasa Pilihan</p>
+                      <p className="text-muted-foreground text-xs">
+                        {t("detail.preference.selectedLanguage")}
+                      </p>
                       <p className="font-medium uppercase">
                         {activeUserDetail.preferred_language || "en"}
                       </p>
@@ -437,7 +539,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                   <div className="flex items-center gap-2">
                     <Coins className="text-muted-foreground h-4 w-4" />
                     <div>
-                      <p className="text-muted-foreground text-xs">Mata Uang</p>
+                      <p className="text-muted-foreground text-xs">
+                        {t("detail.preference.currency")}
+                      </p>
                       <p className="font-mono font-medium uppercase">
                         {activeUserDetail.currency || "IDR"}
                       </p>
@@ -446,26 +550,27 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                   <div className="col-span-2 flex items-center gap-2">
                     <Clock className="text-muted-foreground h-4 w-4" />
                     <div>
-                      <p className="text-muted-foreground text-xs">Zona Waktu</p>
+                      <p className="text-muted-foreground text-xs">
+                        {t("detail.preference.timezone")}
+                      </p>
                       <p className="font-medium">{activeUserDetail.timezone || "UTC"}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {}
               {activeUserDetail.accountStatus === "banned" && (
                 <>
                   <Separator />
                   <div className="border-destructive/20 bg-destructive/5 space-y-3 rounded-xl border p-4">
                     <div className="text-destructive flex items-center gap-2 font-semibold">
                       <Lock className="h-4 w-4" />
-                      <h4>Detail Pemblokiran Akun</h4>
+                      <h4>{t("detail.banned.title")}</h4>
                     </div>
                     <div className="grid grid-cols-1 gap-2 text-xs">
                       <div>
                         <p className="text-muted-foreground font-sans font-semibold">
-                          Alasan Pemblokiran:
+                          {t("detail.banned.reason")}
                         </p>
                         <p className="text-foreground">
                           {activeUserDetail.bannedReason || "Tidak dicantumkan."}
@@ -473,9 +578,11 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                       </div>
                       {activeUserDetail.bannedUntil && (
                         <div>
-                          <p className="text-muted-foreground font-semibold">Diblokir Hingga:</p>
+                          <p className="text-muted-foreground font-semibold">
+                            {t("detail.banned.bannedUntil")}
+                          </p>
                           <p className="text-foreground">
-                            {formatToUserTimezone(activeUserDetail.bannedUntil, timeZone, locale)}
+                            {formatDateTime(activeUserDetail.bannedUntil, locale)}
                           </p>
                         </div>
                       )}
@@ -486,14 +593,13 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
 
               <Separator />
 
-              {}
               <div className="bg-muted text-muted-foreground space-y-2 rounded-lg p-3 text-xs">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 shrink-0" />
                   <span>
-                    Daftar akun:{" "}
+                    {t("detail.registeredAt")}{" "}
                     {activeUserDetail.created_at
-                      ? formatToUserTimezone(activeUserDetail.created_at, timeZone, locale)
+                      ? formatRelativeTime(activeUserDetail.created_at, locale)
                       : "-"}
                   </span>
                 </div>
@@ -501,8 +607,8 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 shrink-0" />
                     <span>
-                      Masuk terakhir:{" "}
-                      {formatToUserTimezone(activeUserDetail.lastSignIn, timeZone, locale)}
+                      {t("detail.lastLogin")}{" "}
+                      {formatRelativeTime(activeUserDetail.lastSignIn, locale)}
                     </span>
                   </div>
                 )}
@@ -510,10 +616,9 @@ export default function UsersDataTable({ data: initialData }: { data?: User[] })
             </div>
           )}
 
-          {}
-          <SheetFooter className="border-border bg-muted/20 flex items-center justify-end gap-3 border-t p-6 sm:justify-end">
+          <SheetFooter className="border-border bg-muted/20 flex items-end justify-end gap-3 border-t p-6 sm:justify-end">
             <Button variant="outline" onClick={() => setActiveUserDetail(null)}>
-              Kembali
+              {t("detail.back")}
             </Button>
           </SheetFooter>
         </SheetContent>

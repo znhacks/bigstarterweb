@@ -400,6 +400,7 @@
       "settings": "Settings",
       "account": "Account",
       "organization": "Organization",
+      "billing": "Subscriptions",
       "i18n-culture": "Internationalization & Culture"
     },
     "superadmin": {
@@ -844,50 +845,82 @@
     "users": {
       "title": "Superadmin Users",
       "desc": "Manage, view, and oversee all registered user profiles and organization memberships.",
-      "data-table": {
-        "headers": {
-          "name": "Name",
-          "role": "Role",
-          "plan": "Plan",
-          "email": "Email",
-          "country": "Country",
-          "status": "Status",
-          "lastSignIn": "Last Login",
-          "createdAt": "Created At",
-          "updatedAt": "Updated At"
+      "roles": {
+        "superadmin": "Super Administrator",
+        "user": "User"
+      },
+      "headers": {
+        "name": "Name",
+        "role": "Role",
+        "plan": "Plan",
+        "email": "Email",
+        "country": "Country",
+        "status": "Status",
+        "lastSignIn": "Last Login",
+        "createdAt": "Created At",
+        "updatedAt": "Updated At"
+      },
+      "table": {},
+      "actions": {
+        "view": "View user",
+        "delete": "Delete",
+        "ban": "Suspend",
+        "unban": "Unsuspend",
+        "cancel": "Cancel",
+        "bulkActions": "Bulk Actions"
+      },
+      "filters": {
+        "search": "Search users...",
+        "status": "Status",
+        "plan": "Plan",
+        "role": "Role",
+        "columns": "Columns",
+        "noStatus": "Status not found.",
+        "noPlan": "Plan not found.",
+        "noRole": "Role not found."
+      },
+      "footer": {
+        "selected": "{selected} of {total} row(s) selected.",
+        "previous": "Previous",
+        "next": "Next",
+        "noResults": "No results."
+      },
+      "confirmDelete": "Are you sure you want to delete this user?",
+      "accountStatus": {
+        "active": "Active",
+        "banned": "Suspended",
+        "deleted": "Deleted"
+      },
+      "detail": {
+        "description": "Description",
+        "contacts": "Contact Information",
+        "phone": "Phone",
+        "address": {
+          "useraddress": "User Address",
+          "mainAddress": "Primary Address",
+          "village": "Village / Subdistrict",
+          "subdistrict": "District",
+          "city": "City / Regency",
+          "province": "Province / Region",
+          "postalCode": "Postal Code",
+          "country": "Country"
         },
-        "table": {},
-        "actions": {
-          "view": "View user",
-          "delete": "Delete",
-          "ban": "Suspend",
-          "unban": "Unsuspend",
-          "cancel": "Cancel"
+        "preference": {
+          "title": "Preferences & System",
+          "selectedLanguage": "Preferred Language",
+          "currency": "Currency",
+          "timezone": "Time Zone"
         },
-        "filters": {
-          "search": "Search users...",
-          "status": "Status",
-          "plan": "Plan",
-          "role": "Role",
-          "columns": "Columns",
-          "noStatus": "Status not found.",
-          "noPlan": "Plan not found.",
-          "noRole": "Role not found."
+        "banned": {
+          "title": "Account Suspension Details",
+          "reason": "Reason",
+          "bannedUntil": "Suspended Until:"
         },
-        "footer": {
-          "selected": "{selected} of {total} row(s) selected.",
-          "previous": "Previous",
-          "next": "Next",
-          "noResults": "No results."
-        },
-        "confirmDelete": "Are you sure you want to delete this user?",
-        "accountStatus": {
-          "active": "Active",
-          "banned": "Suspended",
-          "deleted": "Deleted"
-        },
-        "trash": "Trash"
-      }
+        "registeredAt": "Registered At:",
+        "lastLogin": "Last Login:",
+        "back": "Back"
+      },
+      "trash": "Trash"
     },
     "organizations": {
       "title": "Organizations",

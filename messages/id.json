@@ -404,6 +404,7 @@
       "settings": "Pengaturan",
       "account": "Akun",
       "organization": "Organisasi",
+      "billing": "Berlangganan",
       "i18n-culture": "Internasionalisasi & Budaya"
     },
     "superadmin": {
@@ -848,50 +849,81 @@
     "users": {
       "title": "Pengguna Superadmin",
       "desc": "Kelola, lihat, dan awasi semua profil pengguna terdaftar dan keanggotaan organisasi.",
-      "data-table": {
-        "headers": {
-          "name": "Nama",
-          "role": "Peran",
-          "plan": "Paket",
-          "email": "Email",
-          "country": "Negara",
-          "status": "Status",
-          "lastSignIn": "Terakhir Login",
-          "createdAt": "Dibuat Pada",
-          "updatedAt": "Diperbarui Pada"
+      "roles": {
+        "superadmin": "Superadmin",
+        "user": "Pengguna"
+      },
+      "headers": {
+        "name": "Nama",
+        "role": "Peran",
+        "plan": "Paket",
+        "email": "Email",
+        "country": "Negara",
+        "status": "Status",
+        "lastSignIn": "Terakhir Login",
+        "createdAt": "Dibuat Pada",
+        "updatedAt": "Diperbarui Pada"
+      },
+      "actions": {
+        "view": "Lihat pengguna",
+        "delete": "Hapus",
+        "ban": "Tangguhkan",
+        "unban": "Batal tangguh",
+        "cancel": "Batal",
+        "bulkActions": "Aksi"
+      },
+      "filters": {
+        "search": "Cari pengguna...",
+        "status": "Status",
+        "plan": "Paket",
+        "role": "Peran",
+        "columns": "Kolom",
+        "noStatus": "Status tidak ditemukan.",
+        "noPlan": "Paket tidak ditemukan.",
+        "noRole": "Peran tidak ditemukan."
+      },
+      "footer": {
+        "selected": "{selected} dari {total} baris dipilih.",
+        "previous": "Sebelumnya",
+        "next": "Berikutnya",
+        "noResults": "Tidak ada hasil."
+      },
+      "confirmDelete": "Apakah Anda yakin ingin menghapus pengguna ini?",
+      "accountStatus": {
+        "active": "Aktif",
+        "banned": "Ditangguhkan",
+        "deleted": "Terhapus"
+      },
+      "detail": {
+        "description": "Deskripsi",
+        "contacts": "Informasi Kontak",
+        "phone": "Telepon",
+        "address": {
+          "useraddress": "Alamat Pengguna",
+          "mainAddress": "Alamat Utama",
+          "village": "Desa / Kelurahan",
+          "subdistrict": "Kecamatan",
+          "city": "Kota / Kabupaten",
+          "province": "Provinsi / Wilayah",
+          "postalCode": "Kode Pos",
+          "country": "Negara"
         },
-        "table": {},
-        "actions": {
-          "view": "Lihat pengguna",
-          "delete": "Hapus",
-          "ban": "Tangguhkan",
-          "unban": "Batal tangguh",
-          "cancel": "Batal"
+        "preference": {
+          "title": "Preferensi & Sistem",
+          "selectedLanguage": "Bahasa Pilihan",
+          "currency": "Mata Uang",
+          "timezone": "Zona Waktu"
         },
-        "filters": {
-          "search": "Cari pengguna...",
-          "status": "Status",
-          "plan": "Paket",
-          "role": "Peran",
-          "columns": "Kolom",
-          "noStatus": "Status tidak ditemukan.",
-          "noPlan": "Paket tidak ditemukan.",
-          "noRole": "Peran tidak ditemukan."
+        "banned": {
+          "title": "Detail Pemblokiran Akun",
+          "reason": "Alasan",
+          "bannedUntil": "Diblokir Hingga:"
         },
-        "footer": {
-          "selected": "{selected} dari {total} baris dipilih.",
-          "previous": "Sebelumnya",
-          "next": "Berikutnya",
-          "noResults": "Tidak ada hasil."
-        },
-        "confirmDelete": "Apakah Anda yakin ingin menghapus pengguna ini?",
-        "accountStatus": {
-          "active": "Aktif",
-          "banned": "Ditangguhkan",
-          "deleted": "Terhapus"
-        },
-        "trash": "Sampah"
-      }
+        "registeredAt": "Daftar pada:",
+        "lastLogin": "Login terakhir:",
+        "back": "Kembali"
+      },
+      "trash": "Sampah"
     },
     "organizations": {
       "title": "Organisasi",

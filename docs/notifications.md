@@ -242,6 +242,39 @@ components/layout/header/notifications.tsx  bell (live)
 
 ---
 
+## Navigasi & link dinamis (GitHub-like)
+
+Klik notifikasi mengarah ke halaman yang relevan. Prioritas href (lihat `lib/notifications/meta.ts` `resolveNotificationHref`):
+1. **registry** — `defineNotificationMeta(category, { href })` builder developer (mis. `/invitations/{id}`).
+2. **notification.link** — link dinamis yang di-resolve saat kirim.
+3. **`/notifications/{id}`** — halaman detail (fallback).
+
+### Link dinamis saat kirim
+Template `link` **mendukung interpolasi `{{var}}`** dari `data`; caller bisa override via `send({ link })`:
+```ts
+await notificationService.send({
+  event: "invitation.received",
+  userId,
+  data: { tenant: "Acme", role: "Admin", invitationId: "123" },
+  link: "/invitations/{{invitationId}}"   // → disimpan /invitations/123
+});
+```
+Announcement tanpa link → otomatis ke `/notifications/{id}` (detail).
+
+### Registry meta (developer-extensible)
+Developer fitur baru mendaftarkan ikon/href tanpa menyentuh bell/inbox:
+```ts
+// di modul client fitur Anda
+import { defineNotificationMeta } from "@/lib/notifications/meta";
+defineNotificationMeta("invitation", {
+  href: (n) => (n.data?.invitationId ? `/invitations/${n.data.invitationId}` : null)
+});
+// key "source:category" menang sebelum "category"
+```
+Ikon default per kategori sudah di-seed (`notificationIcon`). Halaman detail: `app/(auth)/(users)/notifications/[id]`.
+
+---
+
 ## 11. Troubleshooting
 
 - **Realtime error `cannot add callbacks after subscribe()`** — sebab: nama channel

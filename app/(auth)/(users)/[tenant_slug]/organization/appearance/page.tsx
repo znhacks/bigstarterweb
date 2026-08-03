@@ -1,6 +1,5 @@
 // app/(auth)/(users)/[tenant_slug]/organization/appearance/page.tsx
-import { requirePermission } from "@/lib/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireOrgRoute } from "@/lib/auth";
 import { getTranslations } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
 import { TenantAppearanceView } from "./view";
@@ -16,6 +15,9 @@ export async function generateMetadata() {
 
 export default async function Page({ params }: PageProps) {
   const { tenant_slug } = await params;
-  const ctx = await requirePermission(PERMISSIONS.organizationUpdate, tenant_slug);
+  // Tampilan organisasi hanya boleh diubah Owner (hierarchy >= 100).
+  // Sebelumnya di-gate via permission `organizationUpdate` — tapi role Admin
+  // juga memegang permission itu, sehingga bertentangan dengan aturan role.
+  const ctx = await requireOrgRoute("appearance", tenant_slug);
   return <TenantAppearanceView tenantId={ctx.tenant.id} tenantName={ctx.tenant.name} />;
 }
