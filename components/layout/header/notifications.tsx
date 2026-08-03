@@ -66,7 +66,7 @@ const Notifications = () => {
           </div>
         </DropdownMenuLabel>
 
-        <ScrollArea className="h-[350px]">
+        <ScrollArea className="h-[350px] w-full">
           {recent.length === 0 ? (
             <div className="text-muted-foreground w-max px-4 py-10 text-center text-xs">
               {t("bell.empty")}
@@ -79,13 +79,18 @@ const Notifications = () => {
                 <DropdownMenuItem
                   key={item.id}
                   asChild
-                  className="group flex w-auto cursor-pointer items-start gap-2 border-b px-4 py-3 last:border-0">
+                  /* 
+                    Menambahkan max-w-[320px] untuk menyamakan dengan w-80 parent 
+                    dan overflow-hidden agar pembatasan lebar berjalan dengan benar di dalam ScrollArea
+                  */
+                  className="group flex w-full max-w-[320px] cursor-pointer items-start gap-2 overflow-hidden border-b px-4 py-3 last:border-0">
                   <Link
                     href={href}
                     onClick={() => {
                       if (!item.is_read) markRead(item.id);
                     }}>
                     <Icon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                    {/* min-w-0 flex-1 di bawah ini sekarang akan bekerja sebagaimana mestinya */}
                     <div className="min-w-0 flex-1 space-y-0.5 text-start">
                       <div className="flex items-center gap-1.5">
                         <Badge variant="secondary" className="max-w-[120px] truncate text-[9px]">

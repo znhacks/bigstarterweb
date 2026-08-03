@@ -47,7 +47,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { useLocale, useTranslations } from "next-intl";
-import { PERMISSIONS, type PermissionName } from "@/lib/rbac";
+import { PERMISSIONS, type PermissionName } from "@/modules/rbac/shared";
 
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;

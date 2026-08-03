@@ -21,7 +21,7 @@ import { navItems } from "@/components/layout/sidebar/nav-main";
 
 import { supabase } from "@/lib/supabase";
 import { membershipRepository } from "@/supabase/repositories/memberships";
-import { type PermissionName } from "@/lib/rbac";
+import { type PermissionName } from "@/modules/rbac/shared";
 import { useTranslations } from "next-intl";
 
 type NavItem = {
