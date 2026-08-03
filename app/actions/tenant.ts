@@ -9,9 +9,15 @@ import { cookies } from "next/headers";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 
+const serviceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY &&
+  !process.env.SUPABASE_SERVICE_ROLE_KEY.includes("your_")
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY
+    : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
 const systemSupabase = createSystemClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  serviceKey,
   {
     db: { schema: "public" },
     auth: { persistSession: false }

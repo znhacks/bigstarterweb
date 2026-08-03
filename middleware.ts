@@ -130,9 +130,23 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect /superadmin routes from non-superadmins
+  if (path.startsWith("/superadmin") && !isSuperadmin) {
+    url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect Superadmin accessing root / or /dashboard to /superadmin/dashboard
+  if (isSuperadmin && (path === "/" || path === "" || path === "/dashboard")) {
+    url.pathname = "/superadmin/dashboard";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
   // (c) ACTIVE — alur normal.
   if (isAuthPage) {
-    url.pathname = DEFAULT_REDIRECT_ROUTE;
+    url.pathname = isSuperadmin ? "/superadmin/dashboard" : DEFAULT_REDIRECT_ROUTE;
     url.search = "";
     return NextResponse.redirect(url);
   }

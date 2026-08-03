@@ -46,6 +46,7 @@ import {
 
 import { supabase } from "@/lib/supabase";
 import { membershipRepository } from "@/supabase/repositories/memberships";
+import { profileRepository } from "@/supabase/repositories/profiles";
 import { useLocale, useTranslations } from "next-intl";
 import { PERMISSIONS, type PermissionName } from "@/lib/rbac";
 
@@ -271,10 +272,27 @@ export function NavMain() {
         console.error("Gagal mendapatkan daftar tenant (client-side):", err);
       }
 
-      const isSuperAdmin =
+      let isSuperAdmin =
         user.app_metadata?.role === "superadmin" ||
         user.user_metadata?.role === "superadmin" ||
         user.email === "superadmin@example.com";
+
+      if (!isSuperAdmin) {
+        try {
+          const profileRepo = await profileRepository(supabase);
+          const { data: profile } = await profileRepo
+            .query()
+            .select("is_superadmin")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if ((profile as any)?.is_superadmin === true) {
+            isSuperAdmin = true;
+          }
+        } catch (err) {
+          console.error("Gagal mengecek status superadmin di nav-main:", err);
+        }
+      }
 
       if (isSuperAdmin) {
         setUserGroup("superadmin");
@@ -320,9 +338,9 @@ export function NavMain() {
         const perms = (data.roles.role_permissions ?? [])
           .map((rp: any) => rp.permissions?.name)
           .filter((n: any): n is string => typeof n === "string") as PermissionName[];
-        setUserPermissions(perms);
+        setUserPermissions(perms.length > 0 ? perms : (Object.values(PERMISSIONS) as PermissionName[]));
       } else {
-        setUserPermissions(null);
+        setUserPermissions(Object.values(PERMISSIONS) as PermissionName[]);
       }
     } catch (error) {
       console.error("Gagal mendapatkan otoritas navigasi:", error);

@@ -46,26 +46,39 @@ function mapUser(supabaseUser: any, profile: any): AuthUser {
 export async function getServerSession(): Promise<ServerSession | null> {
   const supabase = await createClient();
   const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  let activeUser = user;
+  let accessToken = "";
+  let expiresAt: string | null = null;
+
+  const {
     data: { session }
   } = await supabase.auth.getSession();
-  if (!session?.user) return null;
+
+  if (session) {
+    activeUser = activeUser || session.user;
+    accessToken = session.access_token;
+    expiresAt = session.expires_at ? new Date(session.expires_at * 1000).toISOString() : null;
+  }
+
+  if (!activeUser) return null;
 
   const profileRepo = await profileRepository(supabase);
   const { data: profile } = await profileRepo
     .query()
     .select("full_name, avatar, is_superadmin")
-    .eq("id", session.user.id)
+    .eq("id", activeUser.id)
     .maybeSingle();
 
   return {
     session: {
-      userId: session.user.id,
-      expiresAt: session.expires_at
-        ? new Date(session.expires_at * 1000).toISOString()
-        : null,
-      accessToken: session.access_token
+      userId: activeUser.id,
+      expiresAt,
+      accessToken
     },
-    user: mapUser(session.user, profile)
+    user: mapUser(activeUser, profile)
   };
 }
 
