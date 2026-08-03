@@ -214,6 +214,7 @@ export function useDataGrid<TData, TValue>({
     manualFiltering,
     pageCount,
     globalFilterFn,
+    autoResetPageIndex: false,
     onGlobalFilterChange: setGlobalFilter,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,

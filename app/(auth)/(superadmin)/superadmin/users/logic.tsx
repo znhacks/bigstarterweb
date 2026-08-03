@@ -70,7 +70,11 @@ export function useUsersDataTableLogic(initialData?: User[]) {
   }, []);
 
   useEffect(() => {
-    if (!initialData) loadUsersFromSupabase();
+    if (initialData) {
+      setUsers(initialData);
+    } else {
+      loadUsersFromSupabase();
+    }
   }, [initialData]);
 
   useEffect(() => {
