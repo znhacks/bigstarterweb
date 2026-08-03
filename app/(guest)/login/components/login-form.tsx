@@ -81,17 +81,12 @@ export function LoginForm() {
   const locale = useLocale();
   const t = useTranslations("guest.login");
 
-  const handleRedirect = (user: any) => {
-    const isSuperAdmin =
-      user?.app_metadata?.role === "superadmin" ||
-      user?.user_metadata?.role === "superadmin" ||
-      user?.email === "superadmin@example.com";
-
-    if (isSuperAdmin) {
-      router.push("/superadmin/dashboard");
-    } else {
-      router.push(nextTarget || "/");
-    }
+  // Routing pasca-login TIDAK lagi menebak superadmin di sisi client.
+  // Semua user (superadmin maupun biasa) dilepas ke `/` (atau nextTarget),
+  // dan root page `/` yang menjadi otoritas routing berbasis profiles.is_superadmin.
+  // Lihat app/page.tsx.
+  const handleRedirect = () => {
+    router.push(nextTarget || "/");
     router.refresh();
   };
 
@@ -112,7 +107,7 @@ export function LoginForm() {
       if (data.user) {
         setSuccessMsg(t("logsucces"));
         setTimeout(() => {
-          handleRedirect(data.user);
+          handleRedirect();
         }, 1000);
       }
     } catch (err: any) {
@@ -200,7 +195,7 @@ export function LoginForm() {
       if (data?.user) {
         setSuccessMsg(t("passkeysuccess"));
         setTimeout(() => {
-          handleRedirect(data.user);
+          handleRedirect();
         }, 1000);
       }
     } catch (err: any) {

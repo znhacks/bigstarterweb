@@ -52,10 +52,15 @@ export async function GET(request: Request) {
         await profileRepository(supabase)
       )
         .query()
-        .select("status, banned_until, address_country")
+        .select("status, banned_until, address_country, is_superadmin")
         .eq("id", user?.id ?? "")
         .maybeSingle();
       const status = (profile as any)?.status ?? "active";
+      // Sumber kebenaran superadmin sama dgn middleware & requireSuperadmin:
+      // kolom DB `profiles.is_superadmin` (OR app_metadata sebagai fast path).
+      const isSuperadmin =
+        (profile as any)?.is_superadmin === true ||
+        user?.app_metadata?.role === "superadmin";
 
       if (status === "deleted") {
         return NextResponse.redirect(`${origin}/restore`);
@@ -65,7 +70,10 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/login?reason=banned`);
       }
 
-      if (!(profile as any)?.address_country) {
+      // Onboarding gate hanya untuk user biasa. Superadmin di-bypass (konsisten
+      // dgn middleware) lalu dilepas ke root router (`/`) yang akan mengarahkan
+      // ke /superadmin/dashboard.
+      if (!isSuperadmin && !(profile as any)?.address_country) {
         const safeNext = next || "/";
         return NextResponse.redirect(`${origin}/onboarding?next=${encodeURIComponent(safeNext)}`);
       }
