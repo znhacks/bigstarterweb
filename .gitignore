@@ -52,5 +52,6 @@ pnpm-lock.yaml
 
 .vercel
 .env*
+!.env.example
 
 .trigger
