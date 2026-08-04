@@ -31,7 +31,8 @@ import {
   LayoutDashboard,
   BadgeCheck,
   Headset,
-  Bell
+  Bell,
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -102,6 +103,28 @@ export const navItems: NavGroup[] = [
         tenantScoped: true,
         icon: CreditCardIcon,
         permissions: [PERMISSIONS.billingRead]
+      },
+      {
+        title: "users.monitoring",
+        href: "/monitoring/activity-logs",
+        icon: Activity,
+        items: [
+          {
+            title: "users.activity-logs",
+            href: "/monitoring/activity-logs",
+            tenantScoped: true
+          },
+          {
+            title: "users.monitoring-users",
+            href: "/monitoring/users",
+            tenantScoped: true
+          },
+          {
+            title: "users.journals",
+            href: "/monitoring/journals",
+            tenantScoped: true
+          }
+        ]
       },
       {
         title: "users.settings",

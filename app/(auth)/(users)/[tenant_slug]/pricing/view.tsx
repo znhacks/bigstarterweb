@@ -161,7 +161,7 @@ export function OrganizationBilling() {
       <div className="space-y-6">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="space-y-1">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-950">{t("changeTitle")}</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">{t("changeTitle")}</h2>
           </div>
 
           <div className="flex items-center justify-center gap-3 py-2 select-none">
@@ -170,8 +170,8 @@ export function OrganizationBilling() {
               onClick={() => setBillingCycle("monthly")}
               className={`text-sm font-semibold transition-colors focus:outline-none ${
                 billingCycle === "monthly"
-                  ? "text-slate-950"
-                  : "text-slate-400 hover:text-slate-600"
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}>
               {t("cycles.monthly")}
             </button>
@@ -179,14 +179,14 @@ export function OrganizationBilling() {
             <Switch
               checked={billingCycle === "yearly"}
               onCheckedChange={(checked) => setBillingCycle(checked ? "yearly" : "monthly")}
-              className="bg-slate-200 data-[state=checked]:bg-slate-300 data-[state=unchecked]:bg-slate-200"
+              className="bg-muted"
             />
 
             <button
               type="button"
               onClick={() => setBillingCycle("yearly")}
               className={`text-sm font-semibold transition-colors focus:outline-none ${
-                billingCycle === "yearly" ? "text-slate-950" : "text-slate-400 hover:text-slate-600"
+                billingCycle === "yearly" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}>
               {t("cycles.yearly")}
             </button>
@@ -248,7 +248,7 @@ export function OrganizationBilling() {
                     <div className="min-w-0 space-y-5">
                       <div className="space-y-1.5">
                         <div className="flex flex-wrap items-center justify-between gap-2 pr-8">
-                          <h3 className="truncate text-xl font-bold tracking-tight">
+                          <h3 className="truncate text-xl font-bold tracking-tight text-foreground">
                             {localizedName}
                           </h3>
                           {billingCycle === "yearly" && plan.id !== "free" && (
@@ -257,34 +257,34 @@ export function OrganizationBilling() {
                             </span>
                           )}
                         </div>
-                        <p className="min-h-[40px] text-sm leading-relaxed break-words text-slate-500">
+                        <p className="min-h-[40px] text-sm leading-relaxed break-words text-muted-foreground">
                           {localizedDescription}
                         </p>
                       </div>
 
                       <div className="flex min-w-0 flex-wrap items-baseline gap-1 pt-1">
                         {plan.isEnterprise ? (
-                          <span className="text-2xl font-bold tracking-tight sm:text-2xl">
+                          <span className="text-2xl font-bold tracking-tight sm:text-2xl text-foreground">
                             Hubungi Kami
                           </span>
                         ) : (
                           <>
-                            <span className="text-3xl font-extrabold tracking-tight break-all text-slate-900 sm:text-4xl">
+                            <span className="text-3xl font-extrabold tracking-tight break-all text-foreground sm:text-4xl">
                               {formatPrice(planPrice)}
                             </span>
-                            <span className="shrink-0 text-sm font-medium text-slate-500">
+                            <span className="shrink-0 text-sm font-medium text-muted-foreground">
                               /{billingCycle === "yearly" ? "year" : "month"}
                             </span>
                           </>
                         )}
                       </div>
 
-                      <div className="space-y-3 border-t border-slate-100 pt-2">
-                        <ul className="space-y-2.5 text-sm text-slate-700">
+                      <div className="space-y-3 border-t border-border pt-2">
+                        <ul className="space-y-2.5 text-sm text-foreground">
                           {localizedFeatures.map((feature: string, idx: number) => (
                             <li key={idx} className="flex min-w-0 items-start gap-2.5">
                               <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                              <span className="text-[13px] leading-relaxed break-words text-slate-600">
+                              <span className="text-[13px] leading-relaxed break-words text-muted-foreground">
                                 {feature}
                               </span>
                             </li>
@@ -347,11 +347,11 @@ export function OrganizationBilling() {
                               }}
                               disabled={isDisabled || isDowngrading}
                               variant="outline"
-                              className="border-secondary w-full font-semibold transition-all hover:bg-slate-50">
+                              className="border-secondary w-full font-semibold transition-all hover:bg-muted">
                               {isDowngrading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                               <span>{t("buttons.switchToMonthly")}</span>
                             </Button>
-                            <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
+                            <p className="px-2 text-center text-[10px] leading-normal break-words text-muted-foreground">
                               *Paket tahunan Anda tetap aktif sampai masa berakhir, baru kemudian
                               beralih ke bulanan.
                             </p>
@@ -382,7 +382,7 @@ export function OrganizationBilling() {
                               {isDowngrading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                               {t("buttons.downgrade") || "Downgrade Plan"}
                             </Button>
-                            <p className="px-2 text-center text-[10px] leading-normal break-words text-slate-500">
+                            <p className="px-2 text-center text-[10px] leading-normal break-words text-muted-foreground">
                               *{t("downgradeinfo")}
                             </p>
                           </div>
@@ -404,7 +404,7 @@ export function OrganizationBilling() {
                             variant="outline"
                             onClick={() => handleStartTrial(plan.id)}
                             disabled={isStartingTrial}
-                            className="mt-2 w-full text-xs font-semibold text-slate-700">
+                            className="mt-2 w-full text-xs font-semibold text-muted-foreground">
                             {isStartingTrial && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                             Mulai Trial {plan.trialDays} Hari
                           </Button>
@@ -419,11 +419,11 @@ export function OrganizationBilling() {
 
       {}
       {showWarningBanner && activeSub && (
-        <Alert className="flex items-start gap-3 rounded-2xl border-amber-500/30 bg-amber-50/50 p-4 text-amber-800">
+        <Alert className="flex items-start gap-3 rounded-2xl border-amber-500/30 bg-amber-50/10 p-4 text-amber-700 dark:text-amber-400">
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
           <div className="space-y-1">
-            <AlertTitle className="font-bold text-amber-900">{t("warning.title")}</AlertTitle>
-            <AlertDescription className="text-sm leading-normal break-words text-amber-800/90">
+            <AlertTitle className="font-bold">{t("warning.title")}</AlertTitle>
+            <AlertDescription className="text-sm leading-normal break-words opacity-90">
               {t("warning.desc", { planName: activeSubLocalizedName, days: daysLeft })}
             </AlertDescription>
           </div>
@@ -433,25 +433,25 @@ export function OrganizationBilling() {
       {}
       <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
         <DialogContent
-          className="max-h-[90vh] w-[95vw] max-w-[550px] overflow-y-auto rounded-2xl border border-slate-200 p-6 sm:p-8"
+          className="max-h-[90vh] w-[95vw] max-w-[550px] overflow-y-auto rounded-2xl border border-border p-6 sm:p-8"
           dir={meta.dir}>
           {selectedInvoice && (
             <div className="space-y-6">
               <div id="printable-invoice" className="space-y-6 print:p-0">
-                <div className="flex items-start justify-between border-b border-slate-200 pb-6">
+                <div className="flex items-start justify-between border-b border-border pb-6">
                   <div>
-                    <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                    <h2 className="text-xl font-bold tracking-tight text-foreground">
                       {t("invoice.title")}
                     </h2>
-                    <p className="mt-1 font-mono text-xs text-slate-400">
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">
                       {t("invoice.id")}: #{selectedInvoice.id.slice(0, 8).toUpperCase()}
                     </p>
                   </div>
                   <div className="text-end">
-                    <h3 className="text-sm font-bold text-slate-900">
+                    <h3 className="text-sm font-bold text-foreground">
                       {t("invoice.prepaidService")}
                     </h3>
-                    <p className="mt-0.5 text-xs text-slate-400">
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {t("invoice.date")}: {formatDateTime(selectedInvoice.created_at, locale)}
                     </p>
                   </div>
@@ -459,48 +459,48 @@ export function OrganizationBilling() {
 
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div>
-                    <p className="font-semibold tracking-wider text-slate-400 uppercase">
+                    <p className="font-semibold tracking-wider text-muted-foreground uppercase">
                       {t("invoice.billedTo")}:
                     </p>
-                    <p className="mt-1 text-sm font-bold text-slate-800">{t("invoice.orgId")}</p>
-                    <p className="mt-0.5 font-mono break-all text-slate-400">
+                    <p className="mt-1 text-sm font-bold text-foreground">{t("invoice.orgId")}</p>
+                    <p className="mt-0.5 font-mono break-all text-muted-foreground">
                       {selectedInvoice.tenant_id}
                     </p>
                   </div>
                   <div className="text-end">
-                    <p className="font-semibold tracking-wider text-slate-400 uppercase">
+                    <p className="font-semibold tracking-wider text-muted-foreground uppercase">
                       {t("invoice.paymentMethod")}:
                     </p>
-                    <p className="mt-1 text-sm font-bold text-slate-800">
+                    <p className="mt-1 text-sm font-bold text-foreground">
                       {selectedInvoice.provider
                         ? selectedInvoice.provider.toUpperCase()
                         : "Gateway Payment"}
                     </p>
-                    <p className="mt-0.5 break-all text-slate-400">
+                    <p className="mt-0.5 break-all text-muted-foreground">
                       {t("invoice.refId")}: {selectedInvoice.order_id.slice(0, 15)}...
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-4 overflow-hidden rounded-xl border border-slate-100">
+                <div className="mt-4 overflow-hidden rounded-xl border border-border">
                   <table className="w-full border-collapse text-left text-xs">
                     <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50 font-semibold text-slate-500 uppercase">
+                      <tr className="border-b border-border bg-muted font-semibold text-muted-foreground uppercase">
                         <th className="px-4 py-3">{t("invoice.table.desc")}</th>
                         <th className="px-4 py-3 text-end">{t("invoice.table.total")}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                    <tbody className="divide-y divide-border text-foreground">
                       <tr>
                         <td className="px-4 py-4">
-                          <p className="font-bold text-slate-900 capitalize">
+                          <p className="font-bold text-foreground capitalize">
                             {selectedInvoice.plan_name}
                           </p>
-                          <p className="mt-1 text-[11px] text-slate-400">
+                          <p className="mt-1 text-[11px] text-muted-foreground">
                             {t("invoice.table.itemDesc")}
                           </p>
                         </td>
-                        <td className="px-4 py-4 text-end text-sm font-bold text-slate-900">
+                        <td className="px-4 py-4 text-end text-sm font-bold text-foreground">
                           {formatTransactionAmount(
                             selectedInvoice.amount,
                             selectedInvoice.currency,
@@ -513,9 +513,9 @@ export function OrganizationBilling() {
                   </table>
                 </div>
 
-                <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-sm font-bold">
-                  <span className="text-slate-700">{t("invoice.totalPaid")}</span>
-                  <span className="text-lg text-slate-950">
+                <div className="flex items-center justify-between rounded-xl border border-border bg-muted/50 p-4 text-sm font-bold">
+                  <span className="text-foreground">{t("invoice.totalPaid")}</span>
+                  <span className="text-lg text-foreground">
                     {formatTransactionAmount(
                       selectedInvoice.amount,
                       selectedInvoice.currency,
@@ -525,12 +525,12 @@ export function OrganizationBilling() {
                   </span>
                 </div>
 
-                <div className="border-t border-slate-100 pt-4 text-center text-[10px] text-slate-400">
+                <div className="border-t border-border pt-4 text-center text-[10px] text-muted-foreground">
                   {t("invoice.footer")}
                 </div>
               </div>
 
-              <DialogFooter className="gap-2 border-t border-slate-100 pt-4 sm:gap-0 print:hidden">
+              <DialogFooter className="gap-2 border-t border-border pt-4 sm:gap-0 print:hidden">
                 <Button
                   variant="outline"
                   onClick={() => setIsInvoiceOpen(false)}
@@ -541,7 +541,7 @@ export function OrganizationBilling() {
                   onClick={() => {
                     window.print();
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-950 text-white hover:bg-slate-800">
+                  className="inline-flex items-center gap-1.5 rounded-xl">
                   {t("buttons.print")}
                 </Button>
               </DialogFooter>
@@ -560,10 +560,10 @@ export function OrganizationBilling() {
           }
         }}>
         <DialogContent
-          className="w-[95vw] max-w-[450px] border border-slate-200 p-6 sm:p-8"
+          className="w-[95vw] max-w-[450px] border border-border p-6 sm:p-8"
           dir={meta.dir}>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-900">
+            <DialogTitle className="text-xl font-bold text-foreground">
               {t("dialogPurchase.title")}
             </DialogTitle>
             <DialogDescription>{t("dialogPurchase.desc")}</DialogDescription>
@@ -593,15 +593,15 @@ export function OrganizationBilling() {
 
               return (
                 <div className="space-y-5 py-2">
-                  <div className="space-y-2 border border-slate-100 bg-slate-50 p-4 text-sm">
+                  <div className="space-y-2 border border-border bg-muted/40 rounded-lg p-4 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-700">
+                      <span className="font-medium text-foreground">
                         {t("dialogPurchase.planCycle", {
                           planName: selectedPlanLocalizedName,
                           cycle: t(`cycles.${billingCycle}`)
                         })}
                       </span>
-                      <span className="font-semibold text-slate-950">
+                      <span className="font-semibold text-foreground">
                         {formatPrice(
                           billingCycle === "yearly"
                             ? selectedPlan.prices.yearly.convertedAmount
@@ -624,16 +624,16 @@ export function OrganizationBilling() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between border-t border-slate-200/60 pt-2 text-base font-bold text-slate-900">
+                    <div className="flex items-center justify-between border-t border-border pt-2 text-base font-bold text-foreground">
                       <span>{t("dialogPurchase.amountToPay")}</span>
                       <span className="text-lg text-emerald-600">{formatPrice(totalToPay)}</span>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 border-t border-slate-100 pt-3">
+                  <div className="space-y-1.5 border-t border-border pt-3">
                     <Label
                       htmlFor="coupon-input"
-                      className="text-xs font-bold tracking-wide text-slate-500 uppercase">
+                      className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
                       Punya Kode Promo?
                     </Label>
                     <div className="flex gap-2">
@@ -651,27 +651,27 @@ export function OrganizationBilling() {
                         type="button"
                         onClick={handleApplyCoupon}
                         disabled={isValidatingCoupon || !couponCodeInput.trim() || !!appliedCoupon}
-                        className="h-9 shrink-0 rounded-lg bg-slate-900 px-4 text-xs font-semibold text-white hover:bg-slate-800">
+                        className="h-9 shrink-0 rounded-lg px-4 text-xs font-semibold">
                         {isValidatingCoupon && <Loader2 className="me-1 h-3 w-3 animate-spin" />}
                         Terapkan
                       </Button>
                     </div>
                     {couponError && <p className="mt-1 text-xs text-red-500">{couponError}</p>}
                     {appliedCoupon && (
-                      <div className="mt-1 flex items-center justify-between rounded-lg border border-emerald-100 bg-emerald-50 p-2 text-xs text-emerald-700">
+                      <div className="mt-1 flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2 text-xs text-emerald-600">
                         <span>
                           Kupon <b>{appliedCoupon.code}</b> sukses diterapkan!
                         </span>
                         <button
                           onClick={() => setAppliedCoupon(null)}
-                          className="font-bold text-emerald-500 hover:text-emerald-950">
+                          className="font-bold text-emerald-500 hover:text-emerald-700">
                           Hapus
                         </button>
                       </div>
                     )}
                   </div>
 
-                  <div className="space-y-2 border-t border-slate-100 pt-3">
+                  <div className="space-y-2 border-t border-border pt-3">
                     <Button
                       onClick={() => handleInitiateCheckout(billingConfig.activeProvider)}
                       disabled={isVerifyingPayment}
@@ -689,10 +689,10 @@ export function OrganizationBilling() {
       {}
       <Dialog open={isRefundDialogOpen} onOpenChange={setIsRefundDialogOpen}>
         <DialogContent
-          className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8"
+          className="w-[95vw] max-w-[450px] rounded-2xl border border-border p-6 sm:p-8"
           dir={meta.dir}>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-900">
+            <DialogTitle className="text-xl font-bold text-foreground">
               {t("dialogRefund.title")}
             </DialogTitle>
             <DialogDescription>
@@ -700,9 +700,9 @@ export function OrganizationBilling() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-3 text-sm leading-relaxed text-slate-600">
+          <div className="space-y-4 py-3 text-sm leading-relaxed text-muted-foreground">
             <p>{t("dialogRefund.warn1")}</p>
-            <p className="rounded-xl border border-dashed border-red-500/20 bg-red-50 p-3 text-xs font-semibold text-red-600">
+            <p className="rounded-xl border border-dashed border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
               {t("dialogRefund.warn2")}
             </p>
           </div>
@@ -718,7 +718,7 @@ export function OrganizationBilling() {
             <Button
               onClick={handleClaimRefund}
               disabled={isUpdatingSub}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-red-700 text-white hover:bg-red-800">
+              className="inline-flex items-center gap-1.5 rounded-xl bg-destructive text-white hover:bg-destructive/90">
               {isUpdatingSub && <Loader2 className="h-4 w-4 animate-spin" />}
               {t("buttons.confirmRefund")}
             </Button>
@@ -729,10 +729,10 @@ export function OrganizationBilling() {
       {}
       <Dialog open={isEnterpriseOpen} onOpenChange={setIsEnterpriseOpen}>
         <DialogContent
-          className="w-[95vw] max-w-[450px] rounded-2xl border border-slate-200 p-6 sm:p-8"
+          className="w-[95vw] max-w-[450px] rounded-2xl border border-border p-6 sm:p-8"
           dir={meta.dir}>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-900">
+            <DialogTitle className="text-xl font-bold text-foreground">
               {enterpriseTarget?.name ? `Hubungi Kami — ${enterpriseTarget.name}` : "Hubungi Kami"}
             </DialogTitle>
             <DialogDescription>
@@ -741,7 +741,7 @@ export function OrganizationBilling() {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold tracking-wide text-slate-500 uppercase">
+              <Label className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
                 Nama
               </Label>
               <Input
@@ -752,7 +752,7 @@ export function OrganizationBilling() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold tracking-wide text-slate-500 uppercase">
+              <Label className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
                 Email
               </Label>
               <Input
@@ -764,7 +764,7 @@ export function OrganizationBilling() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold tracking-wide text-slate-500 uppercase">
+              <Label className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
                 Pesan
               </Label>
               <textarea
@@ -772,7 +772,7 @@ export function OrganizationBilling() {
                 onChange={(e: any) => setEnterpriseForm((f) => ({ ...f, message: e.target.value }))}
                 placeholder="Jumlah seat, kebutuhan khusus, dll."
                 rows={4}
-                className="w-full rounded-md border border-slate-200 p-2 text-sm"
+                className="w-full rounded-md border border-border bg-background p-2 text-sm text-foreground placeholder:text-muted-foreground"
               />
             </div>
           </div>
@@ -786,7 +786,7 @@ export function OrganizationBilling() {
             <Button
               onClick={handleEnterpriseSubmit}
               disabled={isSubmittingEnterprise || !enterpriseForm.email}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-950 text-white hover:bg-slate-800">
+              className="inline-flex items-center gap-1.5 rounded-xl">
               {isSubmittingEnterprise && <Loader2 className="h-4 w-4 animate-spin" />}
               Kirim Permintaan
             </Button>

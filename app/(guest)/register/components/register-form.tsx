@@ -44,6 +44,7 @@ export function RegisterForm() {
   // Options: "create" (Buat Tenant) vs "join" (Join dengan Kode)
   const [regType, setRegType] = useState<"create" | "join">(initialCode ? "join" : "create");
   const [orgName, setOrgName] = useState("");
+  const [schoolCode, setSchoolCode] = useState("");
   const [inviteCode, setInviteCode] = useState(initialCode);
 
   const [countries, setCountries] = useState<
@@ -133,7 +134,8 @@ export function RegisterForm() {
           userId: data.user.id,
           regType,
           orgName,
-          inviteCode
+          inviteCode,
+          schoolCode
         });
 
         if (tenantSetup.error) {
@@ -272,17 +274,33 @@ export function RegisterForm() {
 
         {/* Input Dinamis berdasarkan Pilihan Organisasi */}
         {regType === "create" ? (
-          <div className="grid gap-2">
-            <Label htmlFor="org_name">{t("orgName")}</Label>
-            <Input
-              id="org_name"
-              type="text"
-              required
-              value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
-              placeholder={t("orgNamePlaceholder")}
-              disabled={isLoading}
-            />
+          <div className="grid gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="org_name">{t("orgName")}</Label>
+              <Input
+                id="org_name"
+                type="text"
+                required
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                placeholder={t("orgNamePlaceholder")}
+                disabled={isLoading}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="school_code" className="text-xs text-muted-foreground font-medium">
+                Kode Sekolah Jurnal Mengajar (Opsional)
+              </Label>
+              <Input
+                id="school_code"
+                type="text"
+                value={schoolCode}
+                onChange={(e) => setSchoolCode(e.target.value)}
+                placeholder="Contoh: SMKN11, SMKN4"
+                disabled={isLoading}
+                className="h-9 text-xs"
+              />
+            </div>
           </div>
         ) : (
           <div className="grid gap-2">

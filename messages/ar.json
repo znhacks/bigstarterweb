@@ -411,6 +411,10 @@
       "account": "الحساب",
       "organization": "المؤسسة",
       "billing": "الفوترة",
+      "monitoring": "مراقبة المدرسة",
+      "activity-logs": "سجل نشاط التطبيق",
+      "monitoring-users": "مراقبة المستخدمين",
+      "journals": "السجلات والتقارير",
       "i18n-culture": "التدويل والثقافة"
     },
     "superadmin": {

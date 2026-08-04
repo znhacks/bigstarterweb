@@ -1,6 +1,6 @@
 export const siteConfig = {
-  name: "BigStarter",
-  description: "Website Sass dengan fitur yang super lengkap.",
+  name: "JM-Panel",
+  description: "Platform Pengelolaan & Monitoring Jurnal Mengajar Sekolah.",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   ogImage: "/logo.png",
   logo: "/logo.png",

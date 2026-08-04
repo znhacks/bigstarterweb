@@ -624,12 +624,30 @@ export function useAdminPlans() {
       validationErrors.id = t("form.errors.idRequired");
     }
 
-    if (!form.name[primaryLocale] || form.name[primaryLocale].trim() === "") {
+    // Cukup satu bahasa terisi (tidak wajib bahasa utama/en)
+    const hasAnyName = Object.values(form.name).some((v) => v && v.trim() !== "");
+    if (!hasAnyName) {
       validationErrors.name = t("form.errors.nameRequired");
     }
 
-    if (!form.description[primaryLocale] || form.description[primaryLocale].trim() === "") {
+    const hasAnyDescription = Object.values(form.description).some((v) => v && v.trim() !== "");
+    if (!hasAnyDescription) {
       validationErrors.description = t("form.errors.descRequired");
+    }
+
+    // Jika tidak ada nama dalam bahasa utama (en), salin dari bahasa yang tersedia
+    if (hasAnyName && !form.name[primaryLocale]?.trim()) {
+      const firstFilledName = Object.entries(form.name).find(([, v]) => v && v.trim() !== "");
+      if (firstFilledName) {
+        form.name[primaryLocale] = firstFilledName[1];
+      }
+    }
+
+    if (hasAnyDescription && !form.description[primaryLocale]?.trim()) {
+      const firstFilledDesc = Object.entries(form.description).find(([, v]) => v && v.trim() !== "");
+      if (firstFilledDesc) {
+        form.description[primaryLocale] = firstFilledDesc[1];
+      }
     }
 
     if (!form.isEnterprise) {
@@ -649,6 +667,7 @@ export function useAdminPlans() {
       }));
       return;
     }
+
 
     setErrors({});
 

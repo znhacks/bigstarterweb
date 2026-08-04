@@ -290,7 +290,11 @@ export function useOrganizationMembers() {
 
   const fetchMaxUsersLimit = async (orgId: string) => {
     try {
-      // Ambil paket aktif + daftar plan (DB-driven, featureGates sudah ter-decode) dari API publik
+      // Import config untuk mendapatkan limit anggota free plan
+      const { tenantConfig } = await import("@/config/tenant");
+      const configLimit = tenantConfig.organizations.freeMemberLimit;
+
+      // Coba ambil dari paket aktif jika billing diaktifkan
       const [subResult, plansRes] = await Promise.all([
         (await subscriptionRepository(supabase))
           .query()
@@ -310,10 +314,17 @@ export function useOrganizationMembers() {
       const planList = (plansRes?.plans as any[]) || [];
       const activePlan = planList.find((p) => p.id === activePlanId);
 
-      setMaxUsers(activePlan?.featureGates?.maxUsers ?? 2);
+      // Prioritas: featureGates dari plan DB → freeMemberLimit dari config → 3
+      setMaxUsers(activePlan?.featureGates?.maxUsers ?? configLimit ?? 3);
     } catch (error: any) {
       console.error("Gagal memuat limit maksimal paket:", error?.message || error);
-      setMaxUsers(2);
+      // Fallback ke nilai dari config tenant
+      try {
+        const { tenantConfig } = await import("@/config/tenant");
+        setMaxUsers(tenantConfig.organizations.freeMemberLimit ?? 3);
+      } catch {
+        setMaxUsers(3);
+      }
     }
   };
 

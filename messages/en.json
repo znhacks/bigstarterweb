@@ -411,6 +411,10 @@
       "account": "Account",
       "organization": "Organization",
       "billing": "Subscriptions",
+      "monitoring": "School Monitoring",
+      "activity-logs": "App Activity Logs",
+      "monitoring-users": "User Monitoring",
+      "journals": "Journals & Reports",
       "i18n-culture": "Internationalization & Culture"
     },
     "superadmin": {

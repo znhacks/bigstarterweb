@@ -9,7 +9,7 @@ import { tenantConfig } from "@/config/tenant"; // Pastikan path import ini sesu
 import { normalizeTenantUpdatePayload, updateTenantSchema } from "@/lib/validation/tenants";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { membershipRepository } from "@/supabase/repositories/memberships";
-import { deleteOrganizationAction } from "./actions";
+import { deleteOrganizationAction, updateSchoolCodeAction } from "./actions";
 
 export interface AlertState {
   title: string;
@@ -44,6 +44,8 @@ export function useOrganizationGeneral() {
   const [defaultLocale, setDefaultLocale] = useState(tenantConfig.defaults.locale);
   const [timezone, setTimezone] = useState(tenantConfig.defaults.timezone);
   const [currency, setCurrency] = useState(tenantConfig.defaults.currency);
+  const [schoolCode, setSchoolCode] = useState("");
+  const [isSavingSchoolCode, setIsSavingSchoolCode] = useState(false);
 
   // State permission pengguna aktif (RBAC)
   const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
@@ -87,7 +89,7 @@ export function useOrganizationGeneral() {
         (await tenantRepository(supabase))
           .query()
           .select(
-            "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, kecamatan, desa, business_email, phone_number, tax_id, default_locale, timezone, currency"
+            "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, kecamatan, desa, business_email, phone_number, tax_id, default_locale, timezone, currency, school_code"
           )
           .eq("id", orgId)
           .single(),
@@ -122,6 +124,7 @@ export function useOrganizationGeneral() {
         setDefaultLocale((tenantRes.data as any).default_locale || tenantConfig.defaults.locale);
         setTimezone((tenantRes.data as any).timezone || tenantConfig.defaults.timezone);
         setCurrency((tenantRes.data as any).currency || tenantConfig.defaults.currency);
+        setSchoolCode((tenantRes.data as any).school_code || "");
       }
 
       const mData = membershipRes.data as any;
@@ -312,6 +315,34 @@ export function useOrganizationGeneral() {
     }
   };
 
+  const handleSaveSchoolCode = async () => {
+    if (!activeOrgId) return;
+    setIsSavingSchoolCode(true);
+    setAlertMessage(null);
+
+    try {
+      const res = await updateSchoolCodeAction(activeOrgId, schoolCode);
+      if (res.error) throw new Error(res.error);
+
+      setAlertMessage({
+        title: locale === "en" ? "Success" : "Sukses",
+        description:
+          locale === "en"
+            ? "School code saved successfully."
+            : "Kode Sekolah berhasil disimpan.",
+        variant: "default"
+      });
+    } catch (error: any) {
+      setAlertMessage({
+        title: "Error",
+        description: error.message || "Gagal memperbarui Kode Sekolah.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingSchoolCode(false);
+    }
+  };
+
   const handleDeleteOrganization = async () => {
     if (!activeOrgId) return;
     setIsDeleting(true);
@@ -375,6 +406,11 @@ export function useOrganizationGeneral() {
     setDescription,
     website,
     setWebsite,
+
+    schoolCode,
+    setSchoolCode,
+    isSavingSchoolCode,
+    handleSaveSchoolCode,
 
     businessEmail,
     setBusinessEmail,

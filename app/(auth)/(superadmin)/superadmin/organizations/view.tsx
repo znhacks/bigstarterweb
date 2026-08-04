@@ -198,6 +198,19 @@ export function SuperadminOrganizationsPage({ data }: { data: SuperadminOrganiza
                 </Badge>
               </div>
 
+              {/* Kode Sekolah (Jurnal Mengajar) */}
+              <div className="space-y-1.5 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <h4 className="text-primary text-xs font-semibold uppercase tracking-wider">
+                  Koneksi Jurnal Mengajar
+                </h4>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground text-xs">Kode Sekolah (code_sekolah):</span>
+                  <span className="font-mono font-bold text-foreground">
+                    {activeOrgDetail.schoolCode || (activeOrgDetail as any).school_code || "Belum Dihubungkan"}
+                  </span>
+                </div>
+              </div>
+
               {activeOrgDetail.description && (
                 <div className="space-y-1.5">
                   <h4 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">

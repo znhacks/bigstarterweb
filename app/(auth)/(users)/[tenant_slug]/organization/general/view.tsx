@@ -75,6 +75,10 @@ export function OrganizationGeneralSettings() {
     setTimezone,
     currency,
     setCurrency,
+    schoolCode,
+    setSchoolCode,
+    isSavingSchoolCode,
+    handleSaveSchoolCode,
     handleSaveAdditionalDetails
   } = useOrganizationGeneral();
 
@@ -239,6 +243,44 @@ export function OrganizationGeneralSettings() {
                   size="sm"
                   className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-2 rounded-lg px-5 text-xs">
                   {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {tCommon("save")}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Section: Koneksi Jurnal Mengajar (Kode Sekolah) */}
+          <div className="border-border/60 space-y-4 border-t p-8">
+            <div className="flex flex-col items-start justify-between gap-4 md:flex-row">
+              <div className="md:max-w-md">
+                <h2 className="text-foreground text-base font-semibold">Koneksi Jurnal Mengajar</h2>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Masukkan Kode Sekolah yang terdaftar pada sistem Jurnal Mengajar (misal: SMKN11, SMKN4) untuk menghubungkan dan memantau data sekolah ini.
+                </p>
+              </div>
+              <div className="w-full md:max-w-xl space-y-2">
+                <Label htmlFor="school-code-input">Kode Sekolah (School Code)</Label>
+                <Input
+                  id="school-code-input"
+                  type="text"
+                  disabled={isSavingSchoolCode || isReadOnly}
+                  value={schoolCode}
+                  onChange={(e) => setSchoolCode(e.target.value)}
+                  placeholder="Contoh: SMKN11, SMKN4, SCH-2026-001"
+                  className="border-border/80 h-10 w-full focus-visible:ring-1"
+                />
+              </div>
+            </div>
+
+            {!isReadOnly && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSaveSchoolCode}
+                  disabled={isSavingSchoolCode}
+                  variant="secondary"
+                  size="sm"
+                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex items-center gap-2 rounded-lg px-5 text-xs">
+                  {isSavingSchoolCode && <Loader2 className="h-3 w-3 animate-spin" />}
                   {tCommon("save")}
                 </Button>
               </div>

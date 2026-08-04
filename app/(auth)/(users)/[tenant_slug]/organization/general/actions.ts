@@ -36,3 +36,28 @@ export async function deleteOrganizationAction(tenantId: string): Promise<Result
     return { error: e?.message || "Gagal menghapus organisasi." };
   }
 }
+
+/** Update Kode Sekolah (school_code) untuk koneksi Jurnal Mengajar. Wajib permission organization.update. */
+export async function updateSchoolCodeAction(tenantId: string, schoolCode: string): Promise<Result> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Tidak terautentikasi." };
+
+    const authority = await resolveTenantAuthorityFull(supabase, user.id, tenantId);
+    if (!hasPermission(authority.permissions, PERMISSIONS.organizationUpdate)) {
+      return { error: "Akses ditolak: Anda tidak memiliki izin untuk memperbarui Kode Sekolah." };
+    }
+
+    const { error } = await (await tenantRepository(supabase))
+      .query()
+      .update({ school_code: schoolCode.trim() })
+      .eq("id", tenantId);
+    if (error) return { error: error.message };
+    return {};
+  } catch (e: any) {
+    return { error: e?.message || "Gagal memperbarui Kode Sekolah." };
+  }
+}

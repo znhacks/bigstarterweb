@@ -51,6 +51,8 @@ export interface SuperadminOrganization {
   website?: string | null;
   kecamatan?: string | null;
   desa?: string | null;
+  schoolCode?: string | null;
+  school_code?: string | null;
 }
 
 export interface AlertState {
@@ -178,6 +180,20 @@ export function useAdminOrganizations(data: SuperadminOrganization[]) {
           {formatDateTime(row.created_at, locale)}
         </span>
       )
+    }),
+    textCol<SuperadminOrganization>({
+      key: "schoolCode",
+      header: "Kode Sekolah",
+      cell: (row) => {
+        const code = row.schoolCode || (row as any).school_code;
+        return code ? (
+          <Badge variant="outline" className="font-mono text-xs bg-accent/40">
+            {code}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground text-xs font-italic">-</span>
+        );
+      }
     }),
     textCol<SuperadminOrganization>({
       key: "planName",

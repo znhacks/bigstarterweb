@@ -29,7 +29,7 @@ export default async function CreateTenantPage() {
     if (!isSuperadmin) {
       return (
         <div className="bg-muted/40 flex min-h-screen flex-col items-center justify-center p-4">
-          <div className="w-full max-w-md space-y-4 rounded-md border bg-white p-8 text-center">
+          <div className="w-full max-w-md space-y-4 rounded-md border bg-card p-8 text-center">
             <h1 className="text-2xl font-bold tracking-tight">Anda perlu diundang</h1>
             <p className="text-muted-foreground text-sm leading-relaxed">
               Pembuatan organisasi dinonaktifkan. Hubungi administrator untuk diundang
@@ -43,7 +43,7 @@ export default async function CreateTenantPage() {
 
   return (
     <div className="bg-muted/40 flex min-h-screen flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6 rounded-md border bg-white p-8">
+      <div className="w-full max-w-md space-y-6 rounded-md border bg-card p-8">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground text-sm">{t("desc")}</p>

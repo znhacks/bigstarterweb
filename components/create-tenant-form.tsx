@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl";
 export function CreateTenantForm() {
   const [regType, setRegType] = useState<"create" | "join">("create");
   const [orgName, setOrgName] = useState("");
+  const [schoolCode, setSchoolCode] = useState("");
   const [inviteCode, setInviteCode] = useState("");
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -34,6 +35,9 @@ export function CreateTenantForm() {
 
         const formData = new FormData();
         formData.append("name", orgName.trim());
+        if (schoolCode.trim()) {
+          formData.append("school_code", schoolCode.trim());
+        }
         const result = await createTenant(formData);
 
         if (result?.error) {
@@ -120,19 +124,36 @@ export function CreateTenantForm() {
       </div>
 
       {regType === "create" ? (
-        <div className="space-y-2">
-          <Label htmlFor="name">{t("org-name")}</Label>
-          <Input
-            id="name"
-            name="name"
-            type="text"
-            placeholder="Contoh: Studio Tengah Malam"
-            value={orgName}
-            onChange={(e) => setOrgName(e.target.value)}
-            required
-            disabled={isLoading}
-            className="border-border/80 h-10"
-          />
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="name">{t("org-name")}</Label>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              placeholder="Contoh: SMKN 11 Jakarta"
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              required
+              disabled={isLoading}
+              className="border-border/80 h-10"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="school_code" className="text-xs text-muted-foreground font-medium">
+              Kode Sekolah Jurnal Mengajar (Opsional)
+            </Label>
+            <Input
+              id="school_code"
+              name="school_code"
+              type="text"
+              placeholder="Contoh: SMKN11, SMKN4"
+              value={schoolCode}
+              onChange={(e) => setSchoolCode(e.target.value)}
+              disabled={isLoading}
+              className="border-border/80 h-9 text-xs"
+            />
+          </div>
         </div>
       ) : (
         <div className="space-y-2">

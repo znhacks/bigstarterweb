@@ -415,6 +415,10 @@
       "account": "Akun",
       "organization": "Organisasi",
       "billing": "Berlangganan",
+      "monitoring": "Monitoring Sekolah",
+      "activity-logs": "Log Aktivitas App",
+      "monitoring-users": "Pemantauan Pengguna",
+      "journals": "Jurnal & Laporan",
       "i18n-culture": "Internasionalisasi & Budaya"
     },
     "superadmin": {

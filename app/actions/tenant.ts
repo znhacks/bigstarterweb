@@ -74,11 +74,14 @@ export async function createTenant(formData: FormData) {
       slug = `${slug}-${suffix}`;
     }
 
+    const schoolCode = (formData.get("school_code") as string) || null;
+
     const { data: newTenant, error: tenantError } = await tenantsRepo
       .insert({
         name: name.trim(),
         slug: slug,
-        db_model: finalModel
+        db_model: finalModel,
+        school_code: schoolCode ? schoolCode.trim() : null
       })
       .select()
       .single();
@@ -138,8 +141,9 @@ export async function setupRegistrationTenant(params: {
   regType: "create" | "join";
   orgName?: string;
   inviteCode?: string;
+  schoolCode?: string;
 }) {
-  let { userId, regType, orgName, inviteCode } = params;
+  let { userId, regType, orgName, inviteCode, schoolCode } = params;
 
   if (!userId) {
     const defaultSupabase = await createServerClient();
@@ -185,7 +189,8 @@ export async function setupRegistrationTenant(params: {
         .insert({
           name: name,
           slug: slug,
-          db_model: "SHARED"
+          db_model: "SHARED",
+          school_code: schoolCode ? schoolCode.trim() : null
         })
         .select()
         .single();
@@ -322,6 +327,23 @@ export async function setupRegistrationTenant(params: {
         .maybeSingle();
 
       if (!existingMembership) {
+        // ── Cek batas anggota (free plan limit) ──────────────────────
+        const { tenantConfig } = await import("@/config/tenant");
+        const limit = tenantConfig.organizations.freeMemberLimit;
+        if (limit > 0) {
+          const { count: currentCount } = await membershipsRepo
+            .query()
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", targetTenantId);
+
+          if ((currentCount ?? 0) >= limit) {
+            return {
+              error: `Organisasi ini sudah mencapai batas maksimal ${limit} anggota pada paket Free. Silakan hubungi pemilik organisasi untuk meningkatkan paket.`
+            };
+          }
+        }
+        // ─────────────────────────────────────────────────────────────
+
         const { error: memErr } = await membershipsRepo.insert({
           user_id: userId,
           tenant_id: targetTenantId,

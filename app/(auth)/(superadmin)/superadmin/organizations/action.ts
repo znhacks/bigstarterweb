@@ -40,6 +40,7 @@ export async function getSuperadminOrganizations(): Promise<SuperadminOrganizati
       website,
       kecamatan,
       desa,
+      school_code,
       memberships (
         id
       ),
@@ -102,7 +103,8 @@ export async function getSuperadminOrganizations(): Promise<SuperadminOrganizati
       description: tenant.description,
       website: tenant.website,
       kecamatan: tenant.kecamatan,
-      desa: tenant.desa
+      desa: tenant.desa,
+      schoolCode: tenant.school_code
     };
   });
 
