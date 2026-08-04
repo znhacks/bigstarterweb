@@ -1098,6 +1098,7 @@
       "desc": "Set roles and the permissions granted to each role across the organization.",
       "new": {
         "title": "New Role",
+        "desc": "Configure a new system role and permissions.",
         "nameLabel": "Role name",
         "hierarchyLabel": "Hierarchy level",
         "hierarchyHint": "Higher number = more power. Users can only assign roles with a lower level than their own.",
@@ -1113,6 +1114,7 @@
       },
       "detail": {
         "edit": "Edit",
+        "desc": "Modify the role properties and granted permissions below.",
         "editTitle": "Edit role",
         "save": "Save",
         "permissionsTitle": "Permissions",
