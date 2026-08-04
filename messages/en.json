@@ -1133,6 +1133,10 @@
       "form": {
         "general": "General Information",
         "configurationaccess": "Access Configuration & Permissions"
+      },
+      "buttons": {
+        "edit": "Edit",
+        "delete": "Delete"
       }
     },
     "coupons": {

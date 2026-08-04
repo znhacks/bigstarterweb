@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   PERMISSION_GROUPS,
   formatPermissionLabel,
+  formatGroupLabel,
   PERMISSION_DESCRIPTIONS,
   type PermissionName
 } from "@/modules/rbac/shared";
@@ -214,7 +215,7 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
                               <label
                                 htmlFor={`group-${group.domain}`}
                                 className="text-foreground text-sm font-bold cursor-pointer select-none">
-                                {group.label}
+                                {formatGroupLabel(group.domain, group.label, locale)}
                               </label>
                             </div>
 

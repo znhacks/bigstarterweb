@@ -99,38 +99,127 @@ export const PERMISSION_GROUPS: {
   }
 ];
 
-/** Nama manusiawi untuk tiap permission (Bahasa Indonesia & Inggris). */
-export const PERMISSION_LABELS: Record<string, { id: string; en: string }> = {
-  "organization.read": { id: "Lihat Detail Organisasi", en: "View Organization Details" },
-  "organization.update": { id: "Ubah Pengaturan Organisasi", en: "Update Organization Settings" },
-  "organization.delete": { id: "Hapus Organisasi", en: "Delete Organization" },
-  "organization.view": { id: "Lihat Organisasi", en: "View Organization" },
+/** Nama manusiawi untuk tiap permission (Bahasa Indonesia, Inggris, & Arab). */
+export const PERMISSION_LABELS: Record<string, { id: string; en: string; ar: string }> = {
+  "organization.read": {
+    id: "Lihat Detail Organisasi",
+    en: "View Organization Details",
+    ar: "عرض تفاصيل المؤسسة"
+  },
+  "organization.update": {
+    id: "Ubah Pengaturan Organisasi",
+    en: "Update Organization Settings",
+    ar: "تعديل إعدادات المؤسسة"
+  },
+  "organization.delete": {
+    id: "Hapus Organisasi",
+    en: "Delete Organization",
+    ar: "حذف المؤسسة"
+  },
+  "organization.view": {
+    id: "Lihat Organisasi",
+    en: "View Organization",
+    ar: "عرض المؤسسة"
+  },
 
-  "members.read": { id: "Lihat Daftar Anggota", en: "View Members List" },
-  "members.invite": { id: "Undang Anggota Baru", en: "Invite New Members" },
-  "members.manage": { id: "Kelola & Ubah Peran Anggota", en: "Manage Member Roles" },
-  "members.remove": { id: "Hapus/Keluarkan Anggota", en: "Remove Members" },
+  "members.read": {
+    id: "Lihat Daftar Anggota",
+    en: "View Members List",
+    ar: "عرض قائمة الأعضاء"
+  },
+  "members.invite": {
+    id: "Undang Anggota Baru",
+    en: "Invite New Members",
+    ar: "دعوة أعضاء جدد"
+  },
+  "members.manage": {
+    id: "Kelola & Ubah Peran Anggota",
+    en: "Manage Member Roles",
+    ar: "إدارة وتغيير أدوار الأعضاء"
+  },
+  "members.remove": {
+    id: "Hapus/Keluarkan Anggota",
+    en: "Remove Members",
+    ar: "إزالة الأعضاء من المؤسسة"
+  },
 
-  "billing.read": { id: "Lihat Penagihan & Transaksi", en: "View Billing & Transactions" },
-  "billing.manage": { id: "Kelola Paket & Langganan", en: "Manage Subscription & Billing" },
+  "billing.read": {
+    id: "Lihat Penagihan & Transaksi",
+    en: "View Billing & Transactions",
+    ar: "عرض الفواتير والمعاملات"
+  },
+  "billing.manage": {
+    id: "Kelola Paket & Langganan",
+    en: "Manage Subscription & Billing",
+    ar: "إدارة الاشتراكات والخطط"
+  },
 
-  "api_keys.manage": { id: "Kelola & Buat API Key", en: "Manage & Create API Keys" },
+  "api_keys.manage": {
+    id: "Kelola & Buat API Key",
+    en: "Manage & Create API Keys",
+    ar: "إدارة وإنشاء مفاتيح API"
+  },
 
-  "tasks.read": { id: "Lihat Daftar Tugas", en: "View Tasks" },
-  "tasks.create": { id: "Buat Tugas Baru", en: "Create Tasks" },
-  "tasks.update": { id: "Edit/Ubah Tugas", en: "Edit Tasks" },
-  "tasks.delete": { id: "Hapus Tugas", en: "Delete Tasks" },
+  "tasks.read": {
+    id: "Lihat Daftar Tugas",
+    en: "View Tasks",
+    ar: "عرض قائمة المهام"
+  },
+  "tasks.create": {
+    id: "Buat Tugas Baru",
+    en: "Create Tasks",
+    ar: "إنشاء مهام جديدة"
+  },
+  "tasks.update": {
+    id: "Edit/Ubah Tugas",
+    en: "Edit Tasks",
+    ar: "تعديل المهام الحالية"
+  },
+  "tasks.delete": {
+    id: "Hapus Tugas",
+    en: "Delete Tasks",
+    ar: "حذف المهام"
+  },
 
-  "dashboard.view": { id: "Akses Dasbor Organisasi", en: "Access Organization Dashboard" },
-  "settings.view": { id: "Akses Pengaturan Akun & Organisasi", en: "Access Settings" }
+  "dashboard.view": {
+    id: "Akses Dasbor Organisasi",
+    en: "Access Organization Dashboard",
+    ar: "الوصول إلى لوحة التحكم"
+  },
+  "settings.view": {
+    id: "Akses Pengaturan Akun & Organisasi",
+    en: "Access Settings",
+    ar: "الوصول إلى الإعدادات"
+  }
+};
+
+export const GROUP_LABELS: Record<string, { id: string; en: string; ar: string }> = {
+  organization: { id: "Organisasi", en: "Organization", ar: "المؤسسة" },
+  members: { id: "Anggota", en: "Members", ar: "الأعضاء" },
+  billing: { id: "Penagihan & Langganan", en: "Billing & Subscriptions", ar: "الاشتراكات والفلترة" },
+  api: { id: "Kunci API", en: "API Keys", ar: "مفاتيح API" },
+  tasks: { id: "Tugas & Aktivitas", en: "Tasks & Activities", ar: "المهام والأنشطة" },
+  general: { id: "Umum", en: "General", ar: "عام" }
 };
 
 export function formatPermissionLabel(name: string, locale = "id"): string {
   const item = PERMISSION_LABELS[name];
   if (item) {
-    return locale === "en" ? item.en : item.id;
+    if (locale === "ar") return item.ar;
+    if (locale === "en") return item.en;
+    return item.id;
   }
   return name
     .replace(/[._]/g, " ")
     .replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
+export function formatGroupLabel(domain: string, defaultLabel: string, locale = "id"): string {
+  const item = GROUP_LABELS[domain];
+  if (item) {
+    if (locale === "ar") return item.ar;
+    if (locale === "en") return item.en;
+    return item.id;
+  }
+  return defaultLabel;
 }

@@ -1133,6 +1133,10 @@
       "form": {
         "general": "معلومات عامة",
         "configurationaccess": "تهيئة الصلاحيات والحقوق"
+      },
+      "buttons": {
+        "edit": "تعديل",
+        "delete": "حذف"
       }
     },
     "coupons": {
