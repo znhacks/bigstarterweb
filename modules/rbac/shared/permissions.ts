@@ -98,3 +98,39 @@ export const PERMISSION_GROUPS: {
     names: [PERMISSIONS.dashboardView, PERMISSIONS.settingsView]
   }
 ];
+
+/** Nama manusiawi untuk tiap permission (Bahasa Indonesia & Inggris). */
+export const PERMISSION_LABELS: Record<string, { id: string; en: string }> = {
+  "organization.read": { id: "Lihat Detail Organisasi", en: "View Organization Details" },
+  "organization.update": { id: "Ubah Pengaturan Organisasi", en: "Update Organization Settings" },
+  "organization.delete": { id: "Hapus Organisasi", en: "Delete Organization" },
+  "organization.view": { id: "Lihat Organisasi", en: "View Organization" },
+
+  "members.read": { id: "Lihat Daftar Anggota", en: "View Members List" },
+  "members.invite": { id: "Undang Anggota Baru", en: "Invite New Members" },
+  "members.manage": { id: "Kelola & Ubah Peran Anggota", en: "Manage Member Roles" },
+  "members.remove": { id: "Hapus/Keluarkan Anggota", en: "Remove Members" },
+
+  "billing.read": { id: "Lihat Penagihan & Transaksi", en: "View Billing & Transactions" },
+  "billing.manage": { id: "Kelola Paket & Langganan", en: "Manage Subscription & Billing" },
+
+  "api_keys.manage": { id: "Kelola & Buat API Key", en: "Manage & Create API Keys" },
+
+  "tasks.read": { id: "Lihat Daftar Tugas", en: "View Tasks" },
+  "tasks.create": { id: "Buat Tugas Baru", en: "Create Tasks" },
+  "tasks.update": { id: "Edit/Ubah Tugas", en: "Edit Tasks" },
+  "tasks.delete": { id: "Hapus Tugas", en: "Delete Tasks" },
+
+  "dashboard.view": { id: "Akses Dasbor Organisasi", en: "Access Organization Dashboard" },
+  "settings.view": { id: "Akses Pengaturan Akun & Organisasi", en: "Access Settings" }
+};
+
+export function formatPermissionLabel(name: string, locale = "id"): string {
+  const item = PERMISSION_LABELS[name];
+  if (item) {
+    return locale === "en" ? item.en : item.id;
+  }
+  return name
+    .replace(/[._]/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+}

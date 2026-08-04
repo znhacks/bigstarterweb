@@ -1134,8 +1134,8 @@
         "confirmDelete": "Yakin ingin menghapus role ini?"
       },
       "form": {
-        "general": "Umum",
-        "configurationaccess": "Konfigurasi Hak Akses"
+        "general": "Informasi Umum",
+        "configurationaccess": "Konfigurasi Hak Akses & Permission"
       },
       "buttons": {
         "edit": "Edit",

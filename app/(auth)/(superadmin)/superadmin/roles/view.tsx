@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PERMISSION_GROUPS } from "@/modules/rbac/shared";
+import {
+  PERMISSION_GROUPS,
+  formatPermissionLabel,
+  PERMISSION_DESCRIPTIONS,
+  type PermissionName
+} from "@/modules/rbac/shared";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
@@ -42,6 +47,7 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
 
   const {
     t,
+    locale,
     isRtl,
     table,
     columns,
@@ -61,6 +67,7 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
     toggleSection,
     togglePermission,
     handleOpenCreate,
+    handleOpenEdit,
     handleSave,
     confirmDelete
   } = useAdminRoles(rows, permissions);
@@ -82,7 +89,7 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
         </p>
       )}
       <DataGrid table={table} columns={columns}>
-        <DataGridTable />
+        <DataGridTable onRowClick={(row) => handleOpenEdit(row.original)} />
       </DataGrid>
 
       <AlertDialog
@@ -126,7 +133,9 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
                   type="button"
                   onClick={() => toggleSection("general")}
                   className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
-                  <span className="text-foreground text-sm font-semibold">{t("form.general")}</span>
+                  <span className="text-foreground text-sm font-semibold">
+                    {t("form.general").includes(".") ? "Informasi Umum" : t("form.general")}
+                  </span>
                   {openSections.general ? (
                     <ChevronUp className="text-muted-foreground h-4 w-4" />
                   ) : (
@@ -156,7 +165,9 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
                   onClick={() => toggleSection("permissions")}
                   className="bg-dropdown/50 hover:bg-dropdown flex w-full items-center justify-between border text-left transition-colors">
                   <span className="text-foreground text-sm font-semibold">
-                    {t("form.configurationaccess")}
+                    {t("form.configurationaccess").includes(".")
+                      ? "Konfigurasi Hak Akses & Permission"
+                      : t("form.configurationaccess")}
                   </span>
                   {openSections.permissions ? (
                     <ChevronUp className="text-muted-foreground h-4 w-4" />
@@ -181,12 +192,10 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
                           groupPerms.some((p) => selectedPerms.has(p.id)) && !allSelected;
                         if (groupPerms.length === 0) return null;
                         return (
-                          <div key={group.domain} className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-foreground text-sm font-semibold">
-                                {group.label}
-                              </h4>
+                          <div key={group.domain} className="space-y-2 border-b border-border/50 pb-3 last:border-b-0">
+                            <div className="flex items-center gap-2.5 py-1">
                               <Checkbox
+                                id={`group-${group.domain}`}
                                 checked={
                                   allSelected ? true : someSelected ? "indeterminate" : false
                                 }
@@ -202,44 +211,54 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
                                   setSelectedPerms(next);
                                 }}
                               />
+                              <label
+                                htmlFor={`group-${group.domain}`}
+                                className="text-foreground text-sm font-bold cursor-pointer select-none">
+                                {group.label}
+                              </label>
                             </div>
 
-                            <div className="grid gap-1">
-                              {groupPerms.map((p) => (
-                                <label
-                                  key={p.id}
-                                  htmlFor={`perm-${p.id}`}
-                                  className="hover:bg-accent/40 flex cursor-pointer items-center justify-between rounded-lg py-1 pl-2 transition-colors">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-foreground text-sm font-medium">
-                                      {p.name}
-                                    </span>
+                            <div className="grid gap-1.5 pl-6">
+                              {groupPerms.map((p) => {
+                                const description = p.description || PERMISSION_DESCRIPTIONS[p.name as PermissionName];
+                                const humanLabel = formatPermissionLabel(p.name, locale);
 
-                                    {p.description && (
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <button
-                                              type="button"
-                                              className="text-muted-foreground hover:text-foreground"
-                                              onClick={(e) => e.preventDefault()}>
-                                              <CircleHelp className="h-4 w-4" />
-                                            </button>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="top">
-                                            <p>{p.description}</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    )}
-                                  </div>
-                                  <Checkbox
-                                    id={`perm-${p.id}`}
-                                    checked={selectedPerms.has(p.id)}
-                                    onCheckedChange={() => togglePermission(p.id)}
-                                  />
-                                </label>
-                              ))}
+                                return (
+                                  <label
+                                    key={p.id}
+                                    htmlFor={`perm-${p.id}`}
+                                    className="hover:bg-accent/40 flex cursor-pointer items-center gap-2.5 rounded-lg py-1.5 px-2 transition-colors select-none">
+                                    <Checkbox
+                                      id={`perm-${p.id}`}
+                                      checked={selectedPerms.has(p.id)}
+                                      onCheckedChange={() => togglePermission(p.id)}
+                                    />
+                                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                      <span className="text-foreground text-sm font-medium">
+                                        {humanLabel}
+                                      </span>
+
+                                      {description && (
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button
+                                                type="button"
+                                                className="text-muted-foreground hover:text-foreground"
+                                                onClick={(e) => e.preventDefault()}>
+                                                <CircleHelp className="h-4 w-4 text-muted-foreground/70" />
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top">
+                                              <p>{description}</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
+                                    </div>
+                                  </label>
+                                );
+                              })}
                             </div>
                           </div>
                         );

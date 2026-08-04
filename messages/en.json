@@ -1127,6 +1127,10 @@
         "delete": "Delete",
         "confirmDeleteTitle": "Confirm Delete",
         "confirmDelete": "Are you sure you want to delete this role?"
+      },
+      "form": {
+        "general": "General Information",
+        "configurationaccess": "Access Configuration & Permissions"
       }
     },
     "coupons": {

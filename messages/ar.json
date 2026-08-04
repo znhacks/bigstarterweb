@@ -1126,6 +1126,10 @@
         "delete": "حذف",
         "confirmDeleteTitle": "تأكيد الحذف",
         "confirmDelete": "هل أنت متأكد من رغبتك في حذف هذا الدور؟"
+      },
+      "form": {
+        "general": "معلومات عامة",
+        "configurationaccess": "تهيئة الصلاحيات والحقوق"
       }
     },
     "coupons": {
