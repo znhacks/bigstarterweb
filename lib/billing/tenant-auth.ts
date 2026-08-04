@@ -6,7 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { profileRepository } from "@/supabase/repositories/profiles";
-import { ALL_PERMISSIONS } from "@/lib/rbac/permissions";
+import { ALL_PERMISSIONS } from "@/modules/rbac/shared/permissions";
 
 /**
  * Cek apakah userId adalah anggota tenantId (tabel memberships).
@@ -41,7 +41,7 @@ export async function isTenantMember(
 }
 
 /**
- * Resolve otoritas user (hierarchy_level + nama permission) di sebuah tenant.
+ * Resolve otoritas user (role + nama permission) di sebuah tenant.
  *
  * Mengapa manual: function RLS `is_tenant_admin()` / `has_permission()` memakai
  * `auth.uid()`, yang bernilai NULL pada client service-role. Route billing
@@ -52,22 +52,22 @@ async function resolveTenantAuthority(
   supabase: SupabaseClient,
   userId: string,
   tenantId: string
-): Promise<{ hierarchyLevel: number | null; permissions: string[] } | null> {
+): Promise<{ permissions: string[] } | null> {
   const membershipRepo = await membershipRepository(supabase);
   const { data } = await membershipRepo
     .query()
-    .select("role_id, roles ( hierarchy_level, role_permissions ( permissions ( name ) ) )")
+    .select("role_id, roles ( role_permissions ( permissions ( name ) ) )")
     .eq("user_id", userId)
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
   if (!data) return null;
   const role = (data as any).roles;
-  if (!role) return { hierarchyLevel: null, permissions: [] };
+  if (!role) return { permissions: [] };
   const perms = ((role.role_permissions as any[]) ?? [])
     .map((rp: any) => rp?.permissions?.name)
     .filter((n: any): n is string => typeof n === "string");
-  return { hierarchyLevel: role.hierarchy_level ?? null, permissions: perms };
+  return { permissions: perms };
 }
 
 /**
@@ -89,30 +89,26 @@ export async function resolveTenantPermissions(
 }
 
 /**
- * Resolve otoritas lengkap (hierarchy + permissions + flag superadmin) untuk
- * (userId, tenantId). Superadmin → hierarchy tinggi (canAssignRole selalu true) +
- * semua permission. Dipakai server action org/member utk cek permission + hierarchy.
+ * Resolve otoritas lengkap (permissions + flag superadmin) untuk
+ * (userId, tenantId). Superadmin → semua permission.
  */
 export async function resolveTenantAuthorityFull(
   supabase: SupabaseClient,
   userId: string,
   tenantId: string
 ): Promise<{
-  hierarchyLevel: number | null;
   permissions: string[];
   isSuperadmin: boolean;
 }> {
   const isSuperadmin = await isSystemSuperadmin(supabase, userId);
   if (isSuperadmin) {
     return {
-      hierarchyLevel: Number.MAX_SAFE_INTEGER,
       permissions: ALL_PERMISSIONS as unknown as string[],
       isSuperadmin: true
     };
   }
   const authority = await resolveTenantAuthority(supabase, userId, tenantId);
   return {
-    hierarchyLevel: authority?.hierarchyLevel ?? null,
     permissions: authority?.permissions ?? [],
     isSuperadmin: false
   };
@@ -129,7 +125,7 @@ async function isSystemSuperadmin(supabase: SupabaseClient, userId: string): Pro
 }
 
 /**
- * Apakah user adalah admin/owner tenant (hierarchy_level >= 50) atau superadmin.
+ * Apakah user adalah admin tenant yang dapat mengundang/kelola member.
  */
 export async function isTenantAdmin(
   supabase: SupabaseClient,
@@ -140,13 +136,16 @@ export async function isTenantAdmin(
   if (await isSystemSuperadmin(supabase, userId)) return true;
   const authority = await resolveTenantAuthority(supabase, userId, tenantId);
   if (!authority) return false;
-  return authority.hierarchyLevel != null && authority.hierarchyLevel >= 50;
+  return (
+    authority.permissions.includes("members.invite") ||
+    authority.permissions.includes("members.manage") ||
+    authority.permissions.includes("members.remove")
+  );
 }
 
 /**
  * Apakah user boleh mengelola billing tenant (cancel/downgrade/resume/trial).
- * True bila: superadmin sistem, ATAU punya permission `billing.manage`,
- * ATAU admin/owner (hierarchy_level >= 50).
+ * True bila: superadmin sistem, ATAU punya permission `billing.manage`.
  */
 export async function canManageBilling(
   supabase: SupabaseClient,
@@ -157,6 +156,5 @@ export async function canManageBilling(
   if (await isSystemSuperadmin(supabase, userId)) return true;
   const authority = await resolveTenantAuthority(supabase, userId, tenantId);
   if (!authority) return false;
-  if (authority.permissions.includes("billing.manage")) return true;
-  return authority.hierarchyLevel != null && authority.hierarchyLevel >= 50;
+  return authority.permissions.includes("billing.manage");
 }

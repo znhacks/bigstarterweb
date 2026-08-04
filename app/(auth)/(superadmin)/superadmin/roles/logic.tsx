@@ -28,7 +28,6 @@ import {
 export interface RoleRow {
   id: string;
   name: string;
-  hierarchy_level: number;
   members_count: number;
   permissions_count: number;
 }
@@ -54,7 +53,6 @@ export function useAdminRoles(initialRows: RoleRow[], permissions: Permission[] 
   const [loadingPerms, setLoadingPerms] = React.useState(false);
 
   const [formName, setFormName] = React.useState("");
-  const [formHierarchy, setFormHierarchy] = React.useState(0);
   const [selectedPerms, setSelectedPerms] = React.useState<Set<string>>(new Set());
   const [deleteTargetId, setDeleteTargetId] = React.useState<string | null>(null);
 
@@ -93,7 +91,6 @@ export function useAdminRoles(initialRows: RoleRow[], permissions: Permission[] 
   const handleOpenCreate = () => {
     setSelectedRole(null);
     setFormName("");
-    setFormHierarchy(0);
     setSelectedPerms(new Set());
     setError(null);
     setOpenSections({ general: true, permissions: false });
@@ -103,7 +100,6 @@ export function useAdminRoles(initialRows: RoleRow[], permissions: Permission[] 
   const handleOpenEdit = React.useCallback(async (role: RoleRow) => {
     setSelectedRole(role);
     setFormName(role.name);
-    setFormHierarchy(role.hierarchy_level);
     setSelectedPerms(new Set());
     setError(null);
     setOpenSections({ general: true, permissions: false });
@@ -134,7 +130,6 @@ export function useAdminRoles(initialRows: RoleRow[], permissions: Permission[] 
     try {
       const fd = new FormData();
       fd.set("name", formName);
-      fd.set("hierarchy_level", String(formHierarchy));
 
       let roleId = selectedRole?.id;
 
@@ -163,7 +158,6 @@ export function useAdminRoles(initialRows: RoleRow[], permissions: Permission[] 
               ? {
                   ...r,
                   name: formName,
-                  hierarchy_level: formHierarchy,
                   permissions_count: selectedPerms.size
                 }
               : r
@@ -171,7 +165,6 @@ export function useAdminRoles(initialRows: RoleRow[], permissions: Permission[] 
         );
       } else {
         setFormName("");
-        setFormHierarchy(0);
         setSelectedPerms(new Set());
       }
     } catch (err: any) {
@@ -209,13 +202,6 @@ export function useAdminRoles(initialRows: RoleRow[], permissions: Permission[] 
         key: "name",
         header: t("list.name"),
         cell: (row) => <span className="text-foreground font-semibold">{row.name}</span>
-      }),
-      textCol<RoleRow>({
-        key: "hierarchy_level",
-        header: t("list.hierarchy"),
-        cell: (row) => (
-          <Badge variant="secondary">{formatNumber(row.hierarchy_level, locale)}</Badge>
-        )
       }),
       numCol<RoleRow>({
         key: "members_count",
@@ -281,8 +267,6 @@ export function useAdminRoles(initialRows: RoleRow[], permissions: Permission[] 
     loadingPerms,
     formName,
     setFormName,
-    formHierarchy,
-    setFormHierarchy,
     selectedPerms,
     setSelectedPerms,
     deleteTargetId,

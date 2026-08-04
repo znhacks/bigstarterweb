@@ -1,6 +1,3 @@
-export * from "./permissions";
-export * from "./types";
-
 import type { PermissionName } from "./permissions";
 
 /**
@@ -27,17 +24,15 @@ export function hasAnyPermission(
 }
 
 /**
- * Aturan assignment role berbasis hirarki:
- * pengguna hanya boleh menetapkan role dengan level LEBIH RENDAH dari
- * dirinya sendiri (targetHierarchy < myHierarchy). Sehingga:
- *  - Member (10) tidak bisa assign siapa pun.
- *  - Admin  (50) bisa assign Member (10).
- *  - Owner (100) bisa assign Admin (50) & Member (10).
+ * Aturan assignment role berbasis permission-capability.
+ * Pengguna hanya boleh menetapkan role bila seluruh permission
+ * yang dibawa role target sudah dimiliki oleh actor.
  */
 export function canAssignRole(
-  myHierarchy: number | null | undefined,
-  targetHierarchy: number
+  myPermissions: Array<string> | null | undefined,
+  targetPermissions: Array<string> | null | undefined
 ): boolean {
-  if (myHierarchy == null) return false;
-  return targetHierarchy < myHierarchy;
+  if (!myPermissions || myPermissions.length === 0) return false;
+  if (!targetPermissions || targetPermissions.length === 0) return true;
+  return targetPermissions.every((permission) => myPermissions.includes(permission));
 }

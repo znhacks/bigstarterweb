@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PERMISSION_GROUPS } from "@/lib/rbac";
+import { PERMISSION_GROUPS } from "@/modules/rbac/shared";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
@@ -53,8 +53,6 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
     loadingPerms,
     formName,
     setFormName,
-    formHierarchy,
-    setFormHierarchy,
     selectedPerms,
     setSelectedPerms,
     deleteTargetId,
@@ -147,17 +145,6 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
                         onChange={(e) => setFormName(e.target.value)}
                         placeholder="Contoh: Administrator"
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="panel-hierarchy">{t("new.hierarchyLabel")}</Label>
-                      <Input
-                        id="panel-hierarchy"
-                        type="number"
-                        min={0}
-                        value={formHierarchy}
-                        onChange={(e) => setFormHierarchy(Number(e.target.value) || 0)}
-                      />
-                      <p className="text-muted-foreground text-xs">{t("new.hierarchyHint")}</p>
                     </div>
                   </div>
                 )}

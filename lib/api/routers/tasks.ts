@@ -5,7 +5,7 @@ import { supabaseAdmin } from "../supabase-server";
 import { taskRepository } from "@/supabase/repositories/tasks";
 import { taskSchema, uuid, pagination, paginated } from "../schemas";
 import { notFound, dbError } from "../errors";
-import { PERMISSIONS } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 
 export const listTasks = protectedProcedure
   .route({

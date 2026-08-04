@@ -20,7 +20,7 @@ User → Membership → Tenant + Role → Role Permissions → Permissions
 
 ## 2. Permission Catalog
 
-Sumber: [`lib/rbac/permissions.ts`](../lib/rbac/permissions.ts) — **15 permissions**, 6 domain:
+Sumber: [`modules/rbac/shared/permissions.ts`](../modules/rbac/shared/permissions.ts) — **15 permissions**, 6 domain:
 
 | Domain | Permission | Deskripsi |
 |---|---|---|
@@ -42,7 +42,7 @@ Sumber: [`lib/rbac/permissions.ts`](../lib/rbac/permissions.ts) — **15 permiss
 | | `settings.view` | Akses pengaturan |
 
 ```ts
-import { PERMISSIONS } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 // PERMISSIONS.tasksCreate === "tasks.create"
 ```
 
@@ -50,7 +50,7 @@ import { PERMISSIONS } from "@/lib/rbac";
 
 ## 3. Role Hierarchy
 
-Sumber: [`config/rbac.ts`](../config/rbac.ts) — 3 role default:
+Sumber: [`modules/rbac/shared/config.ts`](../modules/rbac/shared/config.ts) — 3 role default:
 
 | Role | Hierarchy Level | Permissions |
 |---|---|---|
@@ -77,7 +77,7 @@ requirePermission(required, tenantSlug)
 **Contoh — gate halaman tasks** ([`tasks/page.tsx`](../app/(auth)/(users)/[tenant_slug]/tasks/page.tsx)):
 ```tsx
 import { requirePermission } from "@/lib/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 
 export default async function Page({ params }) {
   const { tenant_slug } = await params;
@@ -100,7 +100,7 @@ if (!ctx.permissions.includes(PERMISSIONS.tasksCreate)) return { error: "Akses d
 ### 4b. Client Component
 
 ```ts
-import { hasPermission, PERMISSIONS } from "@/lib/rbac";
+import { hasPermission, PERMISSIONS } from "@/modules/rbac/shared";
 
 // userPermissions: PermissionName[] — didapat dari fetch membership client-side
 const canEdit = hasPermission(userPermissions, PERMISSIONS.organizationUpdate);
@@ -163,7 +163,7 @@ npm run create:user
 
 ## 6. Menambah Permission Baru
 
-1. **Tambah ke catalog** ([`lib/rbac/permissions.ts`](../lib/rbac/permissions.ts)):
+1. **Tambah ke catalog** ([`modules/rbac/shared/permissions.ts`](../modules/rbac/shared/permissions.ts)):
 ```ts
 export const PERMISSIONS = {
   // ... existing
@@ -178,7 +178,7 @@ npm run db:sync-rbac
 ```
 Ini upsert role/permission ke DB secara idempoten.
 
-3. **Assign ke role** ([`config/rbac.ts`](../config/rbac.ts) `DEFAULT_GRANTS`):
+3. **Assign ke role** ([`modules/rbac/shared/config.ts`](../modules/rbac/shared/config.ts) `DEFAULT_GRANTS`):
 ```ts
 Owner: ALL_PERMISSIONS,
 Admin: [...existing, PERMISSIONS.invoicesRead],
@@ -194,7 +194,7 @@ await requirePermission(PERMISSIONS.invoicesRead, tenantSlug);
 
 ## 7. Menambah Role Baru
 
-1. **Definisikan** di [`config/rbac.ts`](../config/rbac.ts):
+1. **Definisikan** di [`modules/rbac/shared/config.ts`](../modules/rbac/shared/config.ts):
 ```ts
 ROLE_DEFINITIONS: [
   { name: "manager", hierarchy_level: 30, description: "Manager" },
@@ -274,7 +274,7 @@ Policy migration: [`supabase/migrations/20260727000000_rls-core-tables.sql`](../
 | API procedure read | `protectedProcedure.route(...)` |
 | API procedure mutasi | `sessionProcedure.route(...) + requirePermission(ctx, PERM)` |
 | API procedure superadmin | `adminProcedure.route(...)` |
-| Tambah permission | `PERMISSIONS` + `config/rbac.ts` + `db:sync-rbac` |
+| Tambah permission | `PERMISSIONS` + `modules/rbac/shared/config.ts` + `db:sync-rbac` |
 | Buat superadmin | `npm run create:user` |
 
 ---
@@ -283,10 +283,12 @@ Policy migration: [`supabase/migrations/20260727000000_rls-core-tables.sql`](../
 
 | File | Fungsi |
 |---|---|
-| `lib/rbac/permissions.ts` | Catalog 15 permission (SSOT) |
-| `lib/rbac/index.ts` | `hasPermission`, `canAssignRole` (pure function) |
-| `lib/rbac/types.ts` | `ResolvedAuthority`, `ActiveTenantContext` |
-| `config/rbac.ts` | Role definitions + default grants + `syncRbacToDb` |
+| `modules/rbac/shared/permissions.ts` | Catalog 15 permission (SSOT) |
+| `modules/rbac/shared/rules.ts` | `hasPermission`, `hasAnyPermission`, `canAssignRole` (pure function) |
+| `modules/rbac/shared/types.ts` | `ResolvedAuthority`, `ActiveTenantContext` |
+| `modules/rbac/shared/org-access.ts` | Aturan akses route organisation berbasis hierarchy |
+| `modules/rbac/shared/config.ts` | Role definitions + default grants (`ROLE_DEFINITIONS`, `DEFAULT_GRANTS`) |
+| `modules/rbac/server/services/sync.ts` | `syncRbacToDb` — sync role/permission ke DB |
 | `lib/auth.ts` | `requireAuth`, `requirePermission`, `requireSuperadmin`, `getActiveTenant` |
 | `services/tenant.ts` | `getActiveTenant(slug)` — resolve active tenant + authority |
 | `lib/billing/tenant-auth.ts` | `isTenantMember`, `isTenantAdmin`, `canManageBilling` |

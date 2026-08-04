@@ -16,7 +16,6 @@ type ActionResult =
 export async function createRole(formData: FormData): Promise<ActionResult> {
   await requireSuperadmin();
   const name = String(formData.get("name") || "").trim();
-  const hierarchy = Number(formData.get("hierarchy_level") ?? 0);
 
   if (!name) return { success: false, error: "Nama role wajib diisi." };
 
@@ -24,7 +23,7 @@ export async function createRole(formData: FormData): Promise<ActionResult> {
     await roleRepository(supabaseAdmin)
   )
     .query()
-    .insert({ name, hierarchy_level: Number.isFinite(hierarchy) ? hierarchy : 0 })
+    .insert({ name })
     .select("id")
     .single();
 
@@ -38,7 +37,6 @@ export async function updateRole(formData: FormData): Promise<ActionResult> {
   await requireSuperadmin();
   const id = String(formData.get("id") || "");
   const name = String(formData.get("name") || "").trim();
-  const hierarchy = Number(formData.get("hierarchy_level") ?? 0);
 
   if (!id || !name) return { success: false, error: "Data role tidak lengkap." };
 
@@ -46,7 +44,7 @@ export async function updateRole(formData: FormData): Promise<ActionResult> {
     await roleRepository(supabaseAdmin)
   )
     .query()
-    .update({ name, hierarchy_level: Number.isFinite(hierarchy) ? hierarchy : 0 })
+    .update({ name })
     .eq("id", id);
 
   if (error) return { success: false, error: error.message };
@@ -165,8 +163,8 @@ export async function getSuperadminRoles(): Promise<{
     await Promise.all([
       (await roleRepository(supabaseAdmin))
         .query()
-        .select("id, name, hierarchy_level, created_at")
-        .order("hierarchy_level", { ascending: false }),
+        .select("id, name, created_at")
+        .order("created_at", { ascending: false }),
       (await membershipRepository(supabaseAdmin)).query().select("role_id"),
       (await rolePermissionRepository(supabaseAdmin)).query().select("role_id"),
       (await permissionRepository(supabaseAdmin))
@@ -190,7 +188,6 @@ export async function getSuperadminRoles(): Promise<{
   const rows: RoleRow[] = (roles ?? []).map((r: any) => ({
     id: r.id,
     name: r.name,
-    hierarchy_level: r.hierarchy_level,
     members_count: memberCount.get(r.id) ?? 0,
     permissions_count: permCount.get(r.id) ?? 0
   }));

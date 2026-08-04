@@ -8,7 +8,7 @@ import { invitationRepository } from "@/supabase/repositories/invitations";
 import { memberSchema } from "../schemas";
 import { dbError, forbidden, badRequest } from "../errors";
 import { checkSeatLimit } from "@/lib/billing/enforcer";
-import { PERMISSIONS } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
 
 export const listMembers = protectedProcedure
   .route({

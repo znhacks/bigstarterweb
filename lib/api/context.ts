@@ -3,8 +3,8 @@ import type { Auth } from "./auth";
 import { unauthorized, forbidden } from "./errors";
 import { supabaseAdmin } from "./supabase-server";
 import { resolveTenantPermissions } from "@/lib/billing/tenant-auth";
-import { hasPermission } from "@/lib/rbac";
-import type { PermissionName } from "@/lib/rbac/permissions";
+import { hasPermission } from "@/modules/rbac/shared";
+import type { PermissionName } from "@/modules/rbac/shared/permissions";
 
 /**
  * Base context shared by every procedure. `auth` is resolved once per request in

@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useLocale, useTranslations } from "next-intl";
-import { PERMISSIONS, hasPermission, canAssignRole, type PermissionName } from "@/lib/rbac";
+import { PERMISSIONS, hasPermission, canAssignRole, type PermissionName } from "@/modules/rbac/shared";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { roleRepository } from "@/supabase/repositories/roles";
@@ -16,6 +16,7 @@ export interface Role {
   id: string;
   name: string;
   hierarchy_level: number;
+  permissions: PermissionName[];
 }
 
 export interface Member {
@@ -26,7 +27,7 @@ export interface Member {
   avatarUrl: string | null; // Menyimpan data dari kolom 'avatar' di database
   roleId: string | null;
   roleName: string;
-  roleHierarchy: number;
+  rolePermissions: PermissionName[];
 }
 
 export interface PendingInvite {
@@ -60,7 +61,6 @@ export function useOrganizationMembers() {
   const [inviteRoleId, setInviteRoleId] = useState<string>("");
 
   const [roles, setRoles] = useState<Role[]>([]);
-  const [currentUserHierarchy, setCurrentUserHierarchy] = useState<number | null>(null);
   const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -117,15 +117,25 @@ export function useOrganizationMembers() {
   const fetchRoles = async () => {
     const { data, error } = await (await roleRepository(supabase))
       .query()
-      .select("id, name, hierarchy_level")
+      .select("id, name, hierarchy_level, role_permissions(permissions(name))")
       .order("hierarchy_level", { ascending: false });
     if (error) {
       console.error("Gagal memuat daftar role:", error);
       return;
     }
-    setRoles(data || []);
-    if (data && data.length > 0 && !inviteRoleId) {
-      const lowest = [...data].sort((a, b) => a.hierarchy_level - b.hierarchy_level)[0];
+
+    const formattedRoles: Role[] = (data || []).map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      hierarchy_level: item.hierarchy_level ?? 0,
+      permissions: ((item.role_permissions as any[]) ?? [])
+        .map((rp: any) => rp?.permissions?.name)
+        .filter((name: any): name is string => typeof name === "string") as PermissionName[]
+    }));
+
+    setRoles(formattedRoles);
+    if (formattedRoles.length > 0 && !inviteRoleId) {
+      const lowest = [...formattedRoles].sort((a, b) => a.hierarchy_level - b.hierarchy_level)[0];
       setInviteRoleId(lowest.id);
     }
   };
@@ -138,18 +148,16 @@ export function useOrganizationMembers() {
 
     const { data, error } = await (await membershipRepository(supabase))
       .query()
-      .select("roles(name, hierarchy_level, role_permissions(permissions(name)))")
+      .select("roles(name, role_permissions(permissions(name)))")
       .eq("tenant_id", orgId)
       .eq("user_id", user.id)
       .maybeSingle();
 
     const d = data as any;
     if (error || !d?.roles) {
-      setCurrentUserHierarchy(null);
       setUserPermissions(null);
       return;
     }
-    setCurrentUserHierarchy(d.roles.hierarchy_level ?? null);
     const perms = (d.roles.role_permissions ?? [])
       .map((rp: any) => rp.permissions?.name)
       .filter((n: any): n is string => typeof n === "string") as PermissionName[];
@@ -178,7 +186,8 @@ export function useOrganizationMembers() {
           roles (
             id,
             name,
-            hierarchy_level
+            hierarchy_level,
+            role_permissions ( permissions ( name ) )
           ),
           profiles!inner (
             id,
@@ -200,6 +209,9 @@ export function useOrganizationMembers() {
 
       const formattedMembers: Member[] = (data || []).map((item: any) => {
         const fullName = item.profiles?.full_name || "Unknown User";
+        const permissions = ((item.roles?.role_permissions as any[]) ?? [])
+          .map((rp: any) => rp?.permissions?.name)
+          .filter((name: any): name is string => typeof name === "string") as PermissionName[];
         return {
           id: item.id,
           userId: item.user_id,
@@ -208,7 +220,7 @@ export function useOrganizationMembers() {
           avatarUrl: item.profiles?.avatar ?? null, // Memetakan kolom 'avatar' ke properti avatarUrl
           roleId: item.role_id ?? null,
           roleName: item.roles?.name ?? "Member",
-          roleHierarchy: item.roles?.hierarchy_level ?? 0
+          rolePermissions: permissions
         };
       });
 
@@ -315,7 +327,7 @@ export function useOrganizationMembers() {
                 ...m,
                 roleId: newRoleId,
                 roleName: newRole.name,
-                roleHierarchy: newRole.hierarchy_level
+                rolePermissions: newRole.permissions
               }
             : m
         )
@@ -435,12 +447,9 @@ export function useOrganizationMembers() {
   const canInvite = hasPermission(userPermissions, PERMISSIONS.membersInvite);
   const canManage = hasPermission(userPermissions, PERMISSIONS.membersManage);
   const canRemove = hasPermission(userPermissions, PERMISSIONS.membersRemove);
-  const assignableRoles = roles.filter((r) =>
-    canAssignRole(currentUserHierarchy, r.hierarchy_level)
-  );
+  const assignableRoles = roles.filter((r) => canAssignRole(userPermissions, r.permissions));
 
-  const canManageMember = (m: Member) =>
-    canManage && canAssignRole(currentUserHierarchy, m.roleHierarchy);
+  const canManageMember = (m: Member) => canManage && canAssignRole(userPermissions, m.rolePermissions);
 
   return {
     locale,

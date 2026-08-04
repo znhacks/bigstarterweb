@@ -6,8 +6,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { resolveTenantAuthorityFull } from "@/lib/billing/tenant-auth";
-import { PERMISSIONS } from "@/lib/rbac";
-import { hasPermission } from "@/lib/rbac";
+import { PERMISSIONS } from "@/modules/rbac/shared";
+import { hasPermission } from "@/modules/rbac/shared";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 
 type Result = { error?: string };

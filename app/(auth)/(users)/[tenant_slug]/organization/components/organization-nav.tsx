@@ -8,7 +8,7 @@ import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
-import type { OrgRouteSegment } from "@/lib/rbac/org-access";
+import type { OrgRouteSegment } from "@/modules/rbac/shared/org-access";
 
 type RouteMeta = {
   href: (tenantSlug: string) => string;
