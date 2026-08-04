@@ -94,9 +94,14 @@ export function useOrganizationMembers() {
     }
   }, [alertMessage]);
 
+  const [orgSlug, setOrgSlug] = useState<string>("");
+
   const fetchOrgDetails = async (orgId: string) => {
-    const { data } = await (await tenantRepository(supabase)).query().select("name").eq("id", orgId).single();
-    if (data) setOrgName(data.name);
+    const { data } = await (await tenantRepository(supabase)).query().select("name, slug").eq("id", orgId).single();
+    if (data) {
+      setOrgName(data.name);
+      if (data.slug) setOrgSlug(data.slug);
+    }
   };
 
   const loadAllData = async (orgId: string) => {
@@ -456,6 +461,7 @@ export function useOrganizationMembers() {
     t,
     activeOrgId,
     orgName,
+    orgSlug,
     members,
     pendingInvites,
     maxUsers,

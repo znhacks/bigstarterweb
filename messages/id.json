@@ -233,7 +233,17 @@
       "errorDefault": "Terjadi kesalahan.",
       "country": "Negara",
       "selectCountry": "Pilih negara Anda",
-      "countryNotFound": "Negara tidak ditemukan."
+      "countryNotFound": "Negara tidak ditemukan.",
+      "registrationType": "Tipe Pendaftaran",
+      "optionCreateOrg": "Buat Organisasi Baru",
+      "optionJoinOrg": "Gabung dengan Kode Organisasi",
+      "orgName": "Nama Organisasi",
+      "orgNamePlaceholder": "misal: PT Maju Bersama",
+      "inviteCode": "Kode / Token Organisasi",
+      "inviteCodePlaceholder": "Masukkan kode atau token dari pemilik tenant",
+      "invalidInviteCode": "Kode atau token organisasi tidak valid atau tidak ditemukan.",
+      "orgNameRequired": "Nama organisasi minimal harus 2 karakter.",
+      "inviteCodeRequired": "Silakan masukkan kode atau token organisasi."
     },
     "create-tenant": {
       "title": "Satu langkah lagi!",

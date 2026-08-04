@@ -11,7 +11,10 @@ import {
   Mail,
   Ban,
   ShieldAlert,
-  Search
+  Search,
+  Copy,
+  Check,
+  Key
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,10 +50,13 @@ import {
 import { useOrganizationMembers } from "./logic";
 
 export function OrganizationMembers() {
+  const [copiedCode, setCopiedCode] = React.useState(false);
+
   const {
     t,
     activeOrgId,
     orgName,
+    orgSlug,
     members,
     pendingInvites,
     maxUsers,
@@ -234,6 +240,40 @@ export function OrganizationMembers() {
                   </Button>
                 </div>
               </form>
+
+              {/* Sub-section: Kode Undangan Organisasi */}
+              {orgSlug && (
+                <div className="border-t border-border/60 bg-muted/20 p-4 rounded-xl space-y-2 mt-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Key className="h-4 w-4 text-emerald-600" /> Kode Undangan Organisasi
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Bagikan kode ini ke anggota baru agar mereka dapat bergabung saat melakukan pendaftaran.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-mono text-sm font-bold bg-background border border-border/80 px-3 py-1.5 rounded-lg text-foreground select-all">
+                        {orgSlug}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(orgSlug);
+                          setCopiedCode(true);
+                          setTimeout(() => setCopiedCode(false), 2000);
+                        }}
+                        className="h-9">
+                        {copiedCode ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                        <span className="ms-1.5 text-xs">{copiedCode ? "Tersalin!" : "Salin Kode"}</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

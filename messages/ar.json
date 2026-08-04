@@ -229,7 +229,17 @@
       "errorDefault": "حدث خطأ ما.",
       "country": "البلد",
       "selectCountry": "اختر بلدك",
-      "countryNotFound": "البلد غير موجود."
+      "countryNotFound": "البلد غير موجود.",
+      "registrationType": "نوع التسجيل",
+      "optionCreateOrg": "إنشاء مؤسسة جديدة",
+      "optionJoinOrg": "الانضمام عبر رمز المؤسسة",
+      "orgName": "اسم المؤسسة",
+      "orgNamePlaceholder": "مثال: شركة النجم",
+      "inviteCode": "رمز / توكن المؤسسة",
+      "inviteCodePlaceholder": "أدخل الرمز أو التوكن المقدم من مالك المؤسسة",
+      "invalidInviteCode": "رمز المؤسسة أو التوكن غير صالحة.",
+      "orgNameRequired": "يجب أن يتكون اسم المؤسسة من حرفين على الأقل.",
+      "inviteCodeRequired": "يرجى إدخال رمز المؤسسة أو التوكن."
     },
     "create-tenant": {
       "title": "خطوة واحدة متبقية!",

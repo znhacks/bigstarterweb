@@ -6,7 +6,7 @@ export const AUTH_FEATURES = {
   enableGithub: false,
   enablePasskey: true,
   enablePasswordReset: true,
-  enableSignup: false
+  enableSignup: true
 };
 
 export const hasSocialAuth =

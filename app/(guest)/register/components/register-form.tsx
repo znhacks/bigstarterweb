@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Building2, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -16,10 +16,10 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getCountryDefaults } from "@/lib/i18n/country-defaults";
 import { LOCALE_COOKIE } from "@/i18n/routing";
 
-// Impor repositori yang dibutuhkan (sesuaikan jalur path berkas Anda)
 import { countryRepository } from "@/supabase/repositories/countries";
 import { AUTH_FEATURES } from "@/config/auth";
 import { profileRepository } from "@/supabase/repositories/profiles";
+import { setupRegistrationTenant } from "@/app/actions/tenant";
 
 const COOKIE_OPTS = "path=/;max-age=31536000;SameSite=Lax";
 const setCookie = (name: string, value: string) => {
@@ -31,13 +31,20 @@ export function RegisterForm() {
   const searchParams = useSearchParams();
   const t = useTranslations("guest.register");
 
-  // Baca tujuan pengalihan berikutnya dari URL (?next=...)
+  // Baca tujuan pengalihan & token/code dari URL (?next=..., ?code=..., ?token=...)
   const nextTarget = searchParams.get("next");
+  const initialCode = searchParams.get("code") || searchParams.get("token") || "";
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [country, setCountry] = useState<string>("");
+
+  // Options: "create" (Buat Tenant) vs "join" (Join dengan Kode)
+  const [regType, setRegType] = useState<"create" | "join">(initialCode ? "join" : "create");
+  const [orgName, setOrgName] = useState("");
+  const [inviteCode, setInviteCode] = useState(initialCode);
 
   const [countries, setCountries] = useState<
     { id: number; name: string; iso2: string; currency: string | null; timezones: string | null }[]
@@ -47,13 +54,9 @@ export function RegisterForm() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [alreadyExists, setAlreadyExists] = useState(false);
 
-  // Mengambil daftar negara menggunakan repositori
   useEffect(() => {
     (async () => {
-      // 1. Inisialisasi countryRepository dengan melewatkan browser client
       const countriesRepo = await countryRepository(supabase);
-
-      // 2. Ambil data dengan .query()
       const { data } = await countriesRepo
         .query()
         .select("id, name, iso2, currency, timezones")
@@ -63,7 +66,6 @@ export function RegisterForm() {
     })();
   }, []);
 
-  // Registrasi Menggunakan Email & Password
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -71,15 +73,25 @@ export function RegisterForm() {
     setSuccessMsg(null);
     setAlreadyExists(false);
 
+    if (regType === "create" && (!orgName || orgName.trim().length < 2)) {
+      setErrorMsg(t("orgNameRequired"));
+      setIsLoading(false);
+      return;
+    }
+
+    if (regType === "join" && (!inviteCode || !inviteCode.trim())) {
+      setErrorMsg(t("inviteCodeRequired"));
+      setIsLoading(false);
+      return;
+    }
+
     const fullName = `${firstName} ${lastName}`.trim();
 
     try {
-      // 1. Definisikan URL redirect dinamis setelah verifikasi email sukses
       const redirectUrl = nextTarget
         ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`
         : `${window.location.origin}/auth/callback`;
 
-      // 2. Kirim signUp dengan opsi emailRedirectTo
       const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -92,7 +104,6 @@ export function RegisterForm() {
       if (authError) throw authError;
 
       if (data.user) {
-        // Resolve default i18n dari negara (currency/timezone dari DB countries; locale dari map)
         const row = countries.find((c) => c.iso2 === country);
         const defaults = getCountryDefaults(country);
         const currency = row?.currency || defaults.currency || "USD";
@@ -107,10 +118,7 @@ export function RegisterForm() {
         } catch {}
         const locale = defaults.locale || "en";
 
-        // 3. Inisialisasi profileRepository dengan browser client
         const profilesRepo = await profileRepository(supabase);
-
-        // 4. Masukkan data profil baru menggunakan metode .insert() repositori
         await profilesRepo.insert({
           id: data.user.id,
           full_name: fullName,
@@ -120,8 +128,22 @@ export function RegisterForm() {
           currency
         });
 
+        // Proses pembuatan/penyambungan tenant
+        const tenantSetup = await setupRegistrationTenant({
+          userId: data.user.id,
+          regType,
+          orgName,
+          inviteCode
+        });
+
+        if (tenantSetup.error) {
+          setErrorMsg(tenantSetup.error);
+          setIsLoading(false);
+          return;
+        }
+
         try {
-          const welcomeResponse = await fetch("/api/welcome-mail", {
+          await fetch("/api/welcome-mail", {
             method: "POST",
             headers: {
               "Content-Type": "application/json"
@@ -131,23 +153,16 @@ export function RegisterForm() {
               fullName
             })
           });
-
-          if (!welcomeResponse.ok) {
-            const errorText = await welcomeResponse.text();
-            console.warn("Welcome email failed:", errorText);
-          }
         } catch (welcomeError) {
           console.warn("Welcome email failed:", welcomeError);
         }
 
-        // Set cookie i18n + currency agar UI ikut negara saat redirect post-verifikasi
         if (country) {
           setCookie(LOCALE_COOKIE, locale);
           setCookie("USER_CURRENCY", currency);
           setCookie("USER_TIMEZONE", timezone);
         }
 
-        // Tampilkan pesan sukses dan instruksi verifikasi dari translasi
         setSuccessMsg(t("successText"));
       }
     } catch (err: any) {
@@ -161,7 +176,6 @@ export function RegisterForm() {
     }
   };
 
-  // Registrasi & Login Menggunakan Google OAuth
   const handleGoogleSignIn = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -176,7 +190,6 @@ export function RegisterForm() {
     }
   };
 
-  // Registrasi & Login Menggunakan GitHub OAuth
   const handleGitHubSignIn = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -226,6 +239,66 @@ export function RegisterForm() {
       )}
 
       <form onSubmit={handleRegister} className="grid gap-4">
+        {/* Switcher Tipe Pendaftaran Organisasi */}
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {t("registrationType")}
+          </Label>
+          <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl border border-border/60">
+            <button
+              type="button"
+              onClick={() => setRegType("create")}
+              className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium rounded-lg transition-all ${
+                regType === "create"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}>
+              <Building2 className="h-3.5 w-3.5" />
+              <span>{t("optionCreateOrg")}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRegType("join")}
+              className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium rounded-lg transition-all ${
+                regType === "join"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}>
+              <UserPlus className="h-3.5 w-3.5" />
+              <span>{t("optionJoinOrg")}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Input Dinamis berdasarkan Pilihan Organisasi */}
+        {regType === "create" ? (
+          <div className="grid gap-2">
+            <Label htmlFor="org_name">{t("orgName")}</Label>
+            <Input
+              id="org_name"
+              type="text"
+              required
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              placeholder={t("orgNamePlaceholder")}
+              disabled={isLoading}
+            />
+          </div>
+        ) : (
+          <div className="grid gap-2">
+            <Label htmlFor="invite_code">{t("inviteCode")}</Label>
+            <Input
+              id="invite_code"
+              type="text"
+              required
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder={t("inviteCodePlaceholder")}
+              disabled={isLoading}
+            />
+          </div>
+        )}
+
         <div className="grid gap-2">
           <Label htmlFor="first_name">{t("firstName")}</Label>
           <Input

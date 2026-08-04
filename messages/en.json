@@ -229,7 +229,17 @@
       "errorDefault": "An error occurred.",
       "country": "Country",
       "selectCountry": "Select your country",
-      "countryNotFound": "Country not found."
+      "countryNotFound": "Country not found.",
+      "registrationType": "Registration Type",
+      "optionCreateOrg": "Create New Organization",
+      "optionJoinOrg": "Join via Organization Code",
+      "orgName": "Organization Name",
+      "orgNamePlaceholder": "e.g. Acme Corp",
+      "inviteCode": "Organization Code / Token",
+      "inviteCodePlaceholder": "Enter code or token provided by tenant owner",
+      "invalidInviteCode": "Organization code or token is invalid or not found.",
+      "orgNameRequired": "Organization name must be at least 2 characters.",
+      "inviteCodeRequired": "Please enter an organization code or token."
     },
     "create-tenant": {
       "title": "One more step!",
