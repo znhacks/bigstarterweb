@@ -37,6 +37,8 @@ export async function deleteOrganizationAction(tenantId: string): Promise<Result
   }
 }
 
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+
 /** Update Kode Sekolah (school_code) untuk koneksi Jurnal Mengajar. Wajib permission organization.update. */
 export async function updateSchoolCodeAction(tenantId: string, schoolCode: string): Promise<Result> {
   try {
@@ -51,9 +53,33 @@ export async function updateSchoolCodeAction(tenantId: string, schoolCode: strin
       return { error: "Akses ditolak: Anda tidak memiliki izin untuk memperbarui Kode Sekolah." };
     }
 
+    const codes = schoolCode
+      .split(",")
+      .map((c: string) => c.trim())
+      .filter(Boolean);
+
+    // Cek status berlangganan tenant (free vs paid)
+    const subRepo = await subscriptionRepository(supabase);
+    const { data: subData } = await subRepo
+      .query()
+      .select("status")
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    const isPaid = subData?.status === "active" || subData?.status === "trialing";
+    const maxAllowed = isPaid ? 3 : 2;
+
+    if (codes.length > maxAllowed) {
+      return {
+        error: `Paket ${isPaid ? "Berlangganan" : "Gratis (Free)"} terbatas maksimal ${maxAllowed} sekolah untuk dipantau.`
+      };
+    }
+
+    const formattedCode = codes.join(", ");
+
     const { error } = await (await tenantRepository(supabase))
       .query()
-      .update({ school_code: schoolCode.trim() })
+      .update({ school_code: formattedCode })
       .eq("id", tenantId);
     if (error) return { error: error.message };
     return {};

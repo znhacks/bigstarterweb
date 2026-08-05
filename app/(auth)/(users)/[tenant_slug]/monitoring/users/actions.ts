@@ -46,33 +46,39 @@ export async function getSchoolUsersData(tenantSlug: string): Promise<{
       };
     }
 
-    const code = tenant.school_code.trim();
+    const schoolCodes = tenant.school_code
+      .split(",")
+      .map((c: string) => c.trim())
+      .filter(Boolean);
 
-    // 2. Cari data sekolah di DB Jurnal Mengajar berdasar `code`
-    const { data: school } = await jurnalMengajarSupabase
+    // 2. Cari data sekolah di DB Jurnal Mengajar berdasar `schoolCodes`
+    const { data: schools } = await jurnalMengajarSupabase
       .from("schools")
-      .select("id, name, code")
-      .ilike("code", code)
-      .maybeSingle();
+      .select("id, name, code");
 
-    const schoolId = school?.id;
+    const matchedSchools = (schools || []).filter((s: any) =>
+      schoolCodes.some((code: string) => s.code?.toLowerCase() === code.toLowerCase())
+    );
+
+    const schoolIds = matchedSchools.map((s: any) => s.id);
+    const tenantNameDisplay = matchedSchools.map((s: any) => s.name).join(", ") || tenant.name;
     const users: SchoolUserItem[] = [];
 
     // 3. Ambil data pengguna/guru asli dari DB Jurnal Mengajar (`users`)
-    if (schoolId) {
+    if (schoolIds.length > 0) {
       const { data: jUsers } = await jurnalMengajarSupabase
         .from("users")
-        .select("id, full_name, email, role, position, created_at, phone")
-        .eq("school_id", schoolId)
+        .select("id, full_name, email, role, position, created_at, phone, school_id")
+        .in("school_id", schoolIds)
         .order("full_name", { ascending: true });
 
       (jUsers || []).forEach((u: any) => {
-        const roleName = u.role === "guru" ? "Guru Pengajar" : u.role === "admin" ? "Admin Sekolah" : u.role || "Staf Sekolah";
-        const isPending = /pending/i.test(u.role || "");
+        const roleName = u.role === "admin" ? "Admin Sekolah" : u.role === "pending_guru" ? "Pending Guru" : "Guru Pengajar";
+        const isPending = u.role === "pending_guru" || /pending/i.test(u.role || "");
 
         users.push({
           id: u.id,
-          school_code: code,
+          school_code: schoolCodes.join(", "),
           full_name: u.full_name || "Guru Sekolah",
           email: u.email || null,
           nip: u.phone || "-",
@@ -94,7 +100,7 @@ export async function getSchoolUsersData(tenantSlug: string): Promise<{
       (jUsers || []).forEach((u: any) => {
         users.push({
           id: u.id,
-          school_code: code,
+          school_code: schoolCodes.join(", "),
           full_name: u.full_name || "Guru Sekolah",
           email: u.email || null,
           nip: u.phone || "-",
@@ -112,8 +118,8 @@ export async function getSchoolUsersData(tenantSlug: string): Promise<{
     const totalSubjects = new Set(users.map((u) => u.subject).filter((s) => s && s !== "-")).size;
 
     return {
-      schoolCode: code,
-      tenantName: school?.name || tenant.name,
+      schoolCode: schoolCodes.join(", "),
+      tenantName: tenantNameDisplay,
       users,
       stats: { totalTeachers, activeUsers, totalSubjects }
     };

@@ -58,7 +58,8 @@ export function useSchoolUsersLogic(data: SchoolUserItem[]) {
       }),
       dateCol<SchoolUserItem>({
         key: "last_active_at",
-        header: "Terakhir Aktif"
+        header: "Terakhir Aktif",
+        includeTime: true
       })
     ],
     []

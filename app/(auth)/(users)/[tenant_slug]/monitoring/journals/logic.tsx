@@ -66,8 +66,9 @@ export function useJournalLogsLogic(data: JournalLogItem[]) {
         )
       }),
       dateCol<JournalLogItem>({
-        key: "teaching_date",
-        header: "Tanggal Mengajar"
+        key: "created_at",
+        header: "Waktu Jurnal",
+        includeTime: true
       })
     ],
     []

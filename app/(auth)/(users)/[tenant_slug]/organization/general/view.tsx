@@ -77,6 +77,10 @@ export function OrganizationGeneralSettings() {
     setCurrency,
     schoolCode,
     setSchoolCode,
+    schoolCodesList,
+    handleSchoolCodeChange,
+    isPaidPlan,
+    maxSchoolSlots,
     isSavingSchoolCode,
     handleSaveSchoolCode,
     handleSaveAdditionalDetails
@@ -255,20 +259,31 @@ export function OrganizationGeneralSettings() {
               <div className="md:max-w-md">
                 <h2 className="text-foreground text-base font-semibold">Koneksi Jurnal Mengajar</h2>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Masukkan Kode Sekolah yang terdaftar pada sistem Jurnal Mengajar (misal: SMKN11, SMKN4) untuk menghubungkan dan memantau data sekolah ini.
+                  Masukkan Kode Sekolah yang terdaftar pada sistem Jurnal Mengajar pada masing-masing kolom untuk menghubungkan dan memantau sekolah.
                 </p>
               </div>
-              <div className="w-full md:max-w-xl space-y-2">
-                <Label htmlFor="school-code-input">Kode Sekolah (School Code)</Label>
-                <Input
-                  id="school-code-input"
-                  type="text"
-                  disabled={isSavingSchoolCode || isReadOnly}
-                  value={schoolCode}
-                  onChange={(e) => setSchoolCode(e.target.value)}
-                  placeholder="Contoh: SMKN11, SMKN4, SCH-2026-001"
-                  className="border-border/80 h-10 w-full focus-visible:ring-1"
-                />
+              <div className="w-full md:max-w-xl space-y-3">
+                <div className={`grid gap-3 ${maxSchoolSlots === 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2"}`}>
+                  {schoolCodesList.map((code, idx) => (
+                    <div key={idx} className="space-y-1.5">
+                      <Label htmlFor={`school-code-input-${idx}`} className="text-xs font-medium">
+                        Kode Sekolah {idx + 1} {idx === 0 ? "(Utama)" : ""}
+                      </Label>
+                      <Input
+                        id={`school-code-input-${idx}`}
+                        type="text"
+                        disabled={isSavingSchoolCode || isReadOnly}
+                        value={code}
+                        onChange={(e) => handleSchoolCodeChange(idx, e.target.value)}
+                        placeholder={`Contoh: ${idx === 0 ? "SMKN11" : idx === 1 ? "SMKN4" : "SMKN1"}`}
+                        className="border-border/80 h-10 w-full focus-visible:ring-1"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-muted-foreground text-[11px] leading-normal">
+                  💡 {isPaidPlan ? "Paket Berlangganan: Tersedia 3 kolom sekolah yang dapat dipantau sekaligus." : "Paket Gratis (Free): Tersedia 2 kolom sekolah. Upgrade ke paket berbayar untuk membuka kolom ke-3."}
+                </p>
               </div>
             </div>
 

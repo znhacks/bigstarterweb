@@ -45,25 +45,31 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
       };
     }
 
-    const code = tenant.school_code.trim();
+    const schoolCodes = tenant.school_code
+      .split(",")
+      .map((c: string) => c.trim())
+      .filter(Boolean);
 
-    // 2. Ambil data sekolah dari DB Jurnal Mengajar berdasarkan `code`
-    const { data: school } = await jurnalMengajarSupabase
+    // 2. Ambil data sekolah dari DB Jurnal Mengajar berdasarkan `schoolCodes`
+    const { data: schools } = await jurnalMengajarSupabase
       .from("schools")
-      .select("id, name, code")
-      .ilike("code", code)
-      .maybeSingle();
+      .select("id, name, code");
 
-    const schoolId = school?.id;
+    const matchedSchools = (schools || []).filter((s: any) =>
+      schoolCodes.some((code: string) => s.code?.toLowerCase() === code.toLowerCase())
+    );
+
+    const schoolIds = matchedSchools.map((s: any) => s.id);
+    const tenantNameDisplay = matchedSchools.map((s: any) => s.name).join(", ") || tenant.name;
 
     // 3. Ambil peta pengguna sekolah dari DB Jurnal Mengajar
     const userMap = new Map<string, { full_name: string; role: string }>();
 
-    if (schoolId) {
+    if (schoolIds.length > 0) {
       const { data: usersData } = await jurnalMengajarSupabase
         .from("users")
         .select("id, full_name, role, position")
-        .eq("school_id", schoolId);
+        .in("school_id", schoolIds);
 
       (usersData || []).forEach((u: any) => {
         userMap.set(u.id, {
@@ -76,11 +82,11 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
     const logs: ActivityLogItem[] = [];
 
     // 4. Ambil log aktivitas asli dari DB Jurnal Mengajar (tabel `audit_logs`)
-    if (schoolId) {
+    if (schoolIds.length > 0) {
       const { data: dbLogs } = await jurnalMengajarSupabase
         .from("audit_logs")
         .select("id, action, entity, ip_address, user_agent, created_at, user_id, user_role")
-        .eq("school_id", schoolId)
+        .in("school_id", schoolIds)
         .order("created_at", { ascending: false })
         .limit(100);
 
@@ -94,7 +100,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
 
         logs.push({
           id: dl.id,
-          school_code: code,
+          school_code: schoolCodes.join(", "),
           user_name: uInfo.full_name,
           user_role: uInfo.role,
           activity_type: (dl.action || dl.entity || "Aktivitas App").replace(/_/g, " "),
@@ -118,7 +124,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
         const isFailed = /FAILED|ERROR/i.test(dl.action || "");
         logs.push({
           id: dl.id,
-          school_code: code,
+          school_code: schoolCodes.join(", "),
           user_name: dl.user_role === "guru" ? "Guru Sekolah" : "Pengguna System",
           user_role: dl.user_role || "Sistem Mobile",
           activity_type: (dl.action || dl.entity || "Aktivitas App").replace(/_/g, " "),
@@ -136,8 +142,8 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
     const successRate = logs.length > 0 ? Math.round((successCount / logs.length) * 100) : 100;
 
     return {
-      schoolCode: code,
-      tenantName: school?.name || tenant.name,
+      schoolCode: schoolCodes.join(", "),
+      tenantName: tenantNameDisplay,
       logs,
       stats: { totalToday, activeDevices, successRate }
     };

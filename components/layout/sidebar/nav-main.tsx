@@ -120,6 +120,11 @@ export const navItems: NavGroup[] = [
             tenantScoped: true
           },
           {
+            title: "users.manage-users",
+            href: "/monitoring/manage-users",
+            tenantScoped: true
+          },
+          {
             title: "users.journals",
             href: "/monitoring/journals",
             tenantScoped: true

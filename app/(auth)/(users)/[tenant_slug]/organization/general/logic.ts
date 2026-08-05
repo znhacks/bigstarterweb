@@ -11,6 +11,8 @@ import { tenantRepository } from "@/supabase/repositories/tenants";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { deleteOrganizationAction, updateSchoolCodeAction } from "./actions";
 
+import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+
 export interface AlertState {
   title: string;
   description: string;
@@ -46,6 +48,9 @@ export function useOrganizationGeneral() {
   const [currency, setCurrency] = useState(tenantConfig.defaults.currency);
   const [schoolCode, setSchoolCode] = useState("");
   const [isSavingSchoolCode, setIsSavingSchoolCode] = useState(false);
+  const [isPaidPlan, setIsPaidPlan] = useState(false);
+  const [maxSchoolSlots, setMaxSchoolSlots] = useState(2);
+  const [schoolCodesList, setSchoolCodesList] = useState<string[]>(["", ""]);
 
   // State permission pengguna aktif (RBAC)
   const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
@@ -84,7 +89,7 @@ export function useOrganizationGeneral() {
         return;
       }
 
-      const [tenantRes, membershipRes] = await Promise.all([
+      const [tenantRes, membershipRes, subRes] = await Promise.all([
         // --- 2. UPDATE SELECT QUERY UNTUK MENGAMBIL KOLOM BARU ---
         (await tenantRepository(supabase))
           .query()
@@ -98,10 +103,20 @@ export function useOrganizationGeneral() {
           .select("roles(role_permissions(permissions(name)))")
           .eq("tenant_id", orgId)
           .eq("user_id", user.id)
+          .maybeSingle(),
+        (await subscriptionRepository(supabase))
+          .query()
+          .select("status")
+          .eq("tenant_id", orgId)
           .maybeSingle()
       ]);
 
       if (tenantRes.error) throw tenantRes.error;
+
+      const isPaid = subRes.data?.status === "active" || subRes.data?.status === "trialing";
+      setIsPaidPlan(isPaid);
+      const slotsCount = isPaid ? 3 : 2;
+      setMaxSchoolSlots(slotsCount);
 
       if (tenantRes.data) {
         setOrgName(tenantRes.data.name);
@@ -124,7 +139,12 @@ export function useOrganizationGeneral() {
         setDefaultLocale((tenantRes.data as any).default_locale || tenantConfig.defaults.locale);
         setTimezone((tenantRes.data as any).timezone || tenantConfig.defaults.timezone);
         setCurrency((tenantRes.data as any).currency || tenantConfig.defaults.currency);
-        setSchoolCode((tenantRes.data as any).school_code || "");
+        
+        const rawCodeStr = (tenantRes.data as any).school_code || "";
+        setSchoolCode(rawCodeStr);
+        const parsedCodes = rawCodeStr.split(",").map((s: string) => s.trim());
+        const filledSlots = Array.from({ length: slotsCount }, (_, i) => parsedCodes[i] || "");
+        setSchoolCodesList(filledSlots);
       }
 
       const mData = membershipRes.data as any;
@@ -146,6 +166,14 @@ export function useOrganizationGeneral() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSchoolCodeChange = (index: number, val: string) => {
+    setSchoolCodesList((prev) => {
+      const next = [...prev];
+      next[index] = val;
+      return next;
+    });
   };
 
   // Tutup alert otomatis setelah 5 detik
@@ -321,8 +349,15 @@ export function useOrganizationGeneral() {
     setAlertMessage(null);
 
     try {
-      const res = await updateSchoolCodeAction(activeOrgId, schoolCode);
+      const combinedCode = schoolCodesList
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .join(", ");
+
+      const res = await updateSchoolCodeAction(activeOrgId, combinedCode);
       if (res.error) throw new Error(res.error);
+
+      setSchoolCode(combinedCode);
 
       setAlertMessage({
         title: locale === "en" ? "Success" : "Sukses",
@@ -409,6 +444,10 @@ export function useOrganizationGeneral() {
 
     schoolCode,
     setSchoolCode,
+    schoolCodesList,
+    handleSchoolCodeChange,
+    isPaidPlan,
+    maxSchoolSlots,
     isSavingSchoolCode,
     handleSaveSchoolCode,
 

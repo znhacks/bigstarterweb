@@ -414,6 +414,7 @@
       "monitoring": "School Monitoring",
       "activity-logs": "App Activity Logs",
       "monitoring-users": "User Monitoring",
+      "manage-users": "User & Role Management",
       "journals": "Journals & Reports",
       "i18n-culture": "Internationalization & Culture"
     },

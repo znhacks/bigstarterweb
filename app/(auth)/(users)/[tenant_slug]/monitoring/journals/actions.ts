@@ -48,16 +48,22 @@ export async function getJournalLogsData(tenantSlug: string): Promise<{
       };
     }
 
-    const code = tenant.school_code.trim();
+    const schoolCodes = tenant.school_code
+      .split(",")
+      .map((c: string) => c.trim())
+      .filter(Boolean);
 
-    // 2. Cari data sekolah di DB Jurnal Mengajar berdasar `code`
-    const { data: school } = await jurnalMengajarSupabase
+    // 2. Cari data sekolah di DB Jurnal Mengajar berdasar `schoolCodes`
+    const { data: schools } = await jurnalMengajarSupabase
       .from("schools")
-      .select("id, name, code")
-      .ilike("code", code)
-      .maybeSingle();
+      .select("id, name, code");
 
-    const schoolId = school?.id;
+    const matchedSchools = (schools || []).filter((s: any) =>
+      schoolCodes.some((code: string) => s.code?.toLowerCase() === code.toLowerCase())
+    );
+
+    const schoolIds = matchedSchools.map((s: any) => s.id);
+    const tenantNameDisplay = matchedSchools.map((s: any) => s.name).join(", ") || tenant.name;
     const journals: JournalLogItem[] = [];
 
     // Peta pembantu untuk guru, kelas, mapel dari DB Jurnal Mengajar
@@ -82,8 +88,8 @@ export async function getJournalLogsData(tenantSlug: string): Promise<{
       .order("date", { ascending: false })
       .limit(100);
 
-    if (schoolId) {
-      journalQuery = journalQuery.eq("school_id", schoolId);
+    if (schoolIds.length > 0) {
+      journalQuery = journalQuery.in("school_id", schoolIds);
     }
 
     const { data: dbJournals } = await journalQuery;
@@ -111,7 +117,7 @@ export async function getJournalLogsData(tenantSlug: string): Promise<{
 
       journals.push({
         id: j.id,
-        school_code: code,
+        school_code: schoolCodes.join(", "),
         teacher_name: teacherName,
         class_name: className,
         subject: subjectName,
@@ -130,8 +136,8 @@ export async function getJournalLogsData(tenantSlug: string): Promise<{
     const totalClasses = new Set(journals.map((j) => j.class_name)).size;
 
     return {
-      schoolCode: code,
-      tenantName: school?.name || tenant.name,
+      schoolCode: schoolCodes.join(", "),
+      tenantName: tenantNameDisplay,
       journals,
       stats: { totalJournals, verifiedJournals, totalClasses }
     };

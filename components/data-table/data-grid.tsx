@@ -673,6 +673,7 @@ interface DateColOpts<T> extends BaseOpts {
   format?: (v: string | Date) => string;
   locale?: string;
   cell?: (row: T) => React.ReactNode;
+  includeTime?: boolean;
 }
 
 export function dateCol<T>(opts: DateColOpts<T>): ColumnDef<T> {
@@ -689,13 +690,24 @@ export function dateCol<T>(opts: DateColOpts<T>): ColumnDef<T> {
       : ({ row }) => {
           const raw = (row.original as any)[opts.key];
           if (!raw) return <div className="text-muted-foreground text-end">-</div>;
-          const formatted = opts.format
-            ? opts.format(raw)
-            : new Date(raw).toLocaleDateString(opts.locale || "en", {
-                year: "numeric",
-                month: "short",
-                day: "numeric"
-              });
+          if (opts.format) return <div className="text-end tabular-nums">{opts.format(raw)}</div>;
+
+          const dateObj = new Date(raw);
+          if (isNaN(dateObj.getTime())) return <div className="text-muted-foreground text-end">{String(raw)}</div>;
+
+          const options: Intl.DateTimeFormatOptions = {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            ...(opts.includeTime
+              ? { hour: "2-digit", minute: "2-digit", hour12: false }
+              : {})
+          };
+
+          const formatted = opts.includeTime
+            ? dateObj.toLocaleString(opts.locale || "id-ID", options)
+            : dateObj.toLocaleDateString(opts.locale || "en", options);
+
           return <div className="text-end tabular-nums">{formatted}</div>;
         }
   };

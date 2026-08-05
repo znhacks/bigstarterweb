@@ -56,7 +56,8 @@ export function useActivityLogsLogic(data: ActivityLogItem[]) {
       }),
       dateCol<ActivityLogItem>({
         key: "created_at",
-        header: "Waktu Aktivitas"
+        header: "Waktu Aktivitas",
+        includeTime: true
       })
     ],
     []
