@@ -1,8 +1,8 @@
 // lib/billing/enforcer.ts
 //
 // Enforcer batas seat & usage — kini DB-driven via getTenantPlan (decode plans.features).
-// FIX BUG sebelumnya: membaca planConfig.maxUsers/maxTasks dari root plan (undefined) sehingga
-// selalu fallback ke default (2 seat, 100 task). Sekarang membaca featureGates.maxUsers/maxTasks.
+// FIX BUG sebelumnya: membaca planConfig.maxUsers dari root plan (undefined) sehingga
+// selalu fallback ke default (2 seat). Sekarang membaca featureGates.maxUsers.
 
 import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { membershipRepository } from "@/supabase/repositories/memberships";
@@ -55,7 +55,7 @@ export async function checkUsageLimit(tenantId: string): Promise<LimitCheckResul
   if (error) throw error;
 
   const currentUsage = count || 0;
-  const maxUsage = plan.featureGates.maxTasks ?? 100;
+  const maxUsage = 100;
 
   return {
     allowed: currentUsage < maxUsage,

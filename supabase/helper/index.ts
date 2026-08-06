@@ -6,7 +6,7 @@
 // memodifikasi kolom/relasi yang diambil. Argumen `client` opsional untuk
 // mengganti client default (SSR server client, schema public):
 //   - service-role  : supabaseAdmin / systemClient
-//   - tenant-scoped : client dari createTenantServerClient()  ← WAJIB untuk `tasks`
+//   - tenant-scoped : client dari createTenantServerClient()
 //   - browser       : supabase (@/lib/supabase) — di Client Component
 //
 // Catatan: helper bersifat server-by-default (createClient memakai next/headers).
@@ -26,7 +26,6 @@ export * from "./subscriptions";
 export * from "./transactions";
 export * from "./coupons";
 export * from "./coupon-redemptions";
-export * from "./tasks";
 export * from "./notifications";
 export * from "./api-keys";
 export * from "./otp-codes";

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CommandIcon, SearchIcon, Loader2 } from "lucide-react";
+import { SearchIcon, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useRouter } from "next/navigation";
@@ -187,10 +187,6 @@ export default function Search() {
           onFocus={() => setOpen(true)}
           disabled={isLoading}
         />
-        <div className="absolute end-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-sm bg-zinc-200 p-1 font-mono text-xs font-medium sm:flex dark:bg-neutral-700">
-          <CommandIcon className="size-3" />
-          <span>k</span>
-        </div>
       </div>
       <div className="block lg:hidden">
         <Button size="icon" variant="ghost" onClick={() => setOpen(true)} disabled={isLoading}>

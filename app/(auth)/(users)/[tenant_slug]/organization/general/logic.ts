@@ -349,15 +349,17 @@ export function useOrganizationGeneral() {
     setAlertMessage(null);
 
     try {
-      const combinedCode = schoolCodesList
-        .map((c) => c.trim())
-        .filter(Boolean)
-        .join(", ");
+      const trimmedCodes = schoolCodesList.map((c) => c.trim());
+      const hasAnyCode = trimmedCodes.some(Boolean);
+      const combinedCode = hasAnyCode ? trimmedCodes.join(", ") : "";
 
       const res = await updateSchoolCodeAction(activeOrgId, combinedCode);
       if (res.error) throw new Error(res.error);
 
       setSchoolCode(combinedCode);
+      const parsedCodes = combinedCode.split(",").map((s) => s.trim());
+      const filledSlots = Array.from({ length: maxSchoolSlots }, (_, i) => parsedCodes[i] || "");
+      setSchoolCodesList(filledSlots);
 
       setAlertMessage({
         title: locale === "en" ? "Success" : "Sukses",

@@ -14,11 +14,6 @@ export const PERMISSIONS = {
 
   apiKeysManage: "api_keys.manage",
 
-  tasksRead: "tasks.read",
-  tasksCreate: "tasks.create",
-  tasksUpdate: "tasks.update",
-  tasksDelete: "tasks.delete",
-
   dashboardView: "dashboard.view",
   settingsView: "settings.view"
 } as const;
@@ -39,10 +34,6 @@ export const PERMISSION_DESCRIPTIONS: Record<PermissionName, string> = {
   "billing.read": "View billing and transaction history",
   "billing.manage": "Manage subscription, cancel, resume, downgrade",
   "api_keys.manage": "Create, rotate, and revoke API keys",
-  "tasks.read": "View tasks",
-  "tasks.create": "Create new tasks",
-  "tasks.update": "Edit existing tasks",
-  "tasks.delete": "Delete tasks",
   "dashboard.view": "Access the organization dashboard",
   "settings.view": "Access organization and account settings",
   "organization.view": "Can View Organization"
@@ -81,16 +72,6 @@ export const PERMISSION_GROUPS: {
     domain: "api",
     label: "API Keys",
     names: [PERMISSIONS.apiKeysManage]
-  },
-  {
-    domain: "tasks",
-    label: "Tasks",
-    names: [
-      PERMISSIONS.tasksRead,
-      PERMISSIONS.tasksCreate,
-      PERMISSIONS.tasksUpdate,
-      PERMISSIONS.tasksDelete
-    ]
   },
   {
     domain: "general",
@@ -160,27 +141,6 @@ export const PERMISSION_LABELS: Record<string, { id: string; en: string; ar: str
     ar: "إدارة وإنشاء مفاتيح API"
   },
 
-  "tasks.read": {
-    id: "Lihat Daftar Tugas",
-    en: "View Tasks",
-    ar: "عرض قائمة المهام"
-  },
-  "tasks.create": {
-    id: "Buat Tugas Baru",
-    en: "Create Tasks",
-    ar: "إنشاء مهام جديدة"
-  },
-  "tasks.update": {
-    id: "Edit/Ubah Tugas",
-    en: "Edit Tasks",
-    ar: "تعديل المهام الحالية"
-  },
-  "tasks.delete": {
-    id: "Hapus Tugas",
-    en: "Delete Tasks",
-    ar: "حذف المهام"
-  },
-
   "dashboard.view": {
     id: "Akses Dasbor Organisasi",
     en: "Access Organization Dashboard",
@@ -198,7 +158,6 @@ export const GROUP_LABELS: Record<string, { id: string; en: string; ar: string }
   members: { id: "Anggota", en: "Members", ar: "الأعضاء" },
   billing: { id: "Penagihan & Langganan", en: "Billing & Subscriptions", ar: "الاشتراكات والفلترة" },
   api: { id: "Kunci API", en: "API Keys", ar: "مفاتيح API" },
-  tasks: { id: "Tugas & Aktivitas", en: "Tasks & Activities", ar: "المهام والأنشطة" },
   general: { id: "Umum", en: "General", ar: "عام" }
 };
 

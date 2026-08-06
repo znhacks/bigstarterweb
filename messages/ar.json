@@ -31,10 +31,6 @@
         "title": "لوحة القيادة",
         "description": "تتبع الإيرادات، الاشتراكات، ونشاط الفريق باستخدام واجهة حديثة."
       },
-      "tasks": {
-        "title": "المهام",
-        "description": "إنشاء وتعيين وتتبع المهام في مؤسستك."
-      },
       "organization": {
         "general": {
           "title": "الإعدادات العامة للمؤسسة",
@@ -471,115 +467,6 @@
     "notifications": "الإشعارات",
     "logout": "تسجيل الخروج",
     "credits": "الرصيد"
-  },
-  "tasks": {
-    "title": "المهام",
-    "subtitle": "إنشاء وتعيين وتتبع المهام عبر مؤسستك.",
-    "newTask": "مهمة جديدة",
-    "download": "تنزيل",
-    "readOnly": {
-      "title": "وضع القراءة فقط",
-      "desc": "ليس لديك الصلاحية لإنشاء أو تعديل المهام في هذه المؤسسة."
-    },
-    "data-table": {
-      "headers": {
-        "title": "العنوان",
-        "description": "الوصف",
-        "status": "الحالة",
-        "priority": "الأولوية",
-        "assignee": "المسؤول عن المهمة",
-        "dueDate": "تاريخ الاستحقاق",
-        "createdBy": "تم الإنشاء بواسطة",
-        "createdAt": "تم الإنشاء في",
-        "updatedAt": "تم التحديث في"
-      },
-      "statuses": {
-        "todo": "قيد الانتظار",
-        "in_progress": "قيد التنفيذ",
-        "done": "مكتملة",
-        "cancelled": "ملغاة"
-      },
-      "priorities": {
-        "low": "منخفضة",
-        "medium": "متوسطة",
-        "high": "عالية",
-        "urgent": "عاجلة"
-      },
-      "actions": {
-        "view": "عرض التفاصيل",
-        "edit": "تعديل",
-        "delete": "حذف"
-      },
-      "filters": {
-        "search": "البحث عن المهام...",
-        "status": "الحالة",
-        "priority": "الأولوية",
-        "assignee": "المسؤول",
-        "columns": "الأعمدة",
-        "noStatus": "الحالة غير موجودة.",
-        "noPriority": "الأولوية غير موجودة.",
-        "noAssignee": "المسؤول غير موجود.",
-        "unassigned": "غير معين"
-      },
-      "footer": {
-        "selected": "تم تحديد {selected} من أصل {total} صفوف.",
-        "noResults": "لا توجد نتائج."
-      },
-      "editHint": "تلميح: انقر نقرًا مزدوجًا على الخلية للتعديل.",
-      "confirmDelete": "هل أنت متأكد أنك تريد حذف هذه المهمة؟"
-    },
-    "form": {
-      "createTitle": "إنشاء مهمة",
-      "editTitle": "تعديل المهمة",
-      "fields": {
-        "title": "العنوان",
-        "description": "الوصف",
-        "status": "الحالة",
-        "priority": "الأولوية",
-        "assignee": "المسؤول عن المهمة",
-        "dueDate": "تاريخ الاستحقاق"
-      },
-      "placeholders": {
-        "title": "عنوان المهمة",
-        "description": "أضف وصفًا...",
-        "assignee": "اختر المسؤول",
-        "dueDate": "اختر تاريخ الاستحقاق"
-      },
-      "unassigned": "غير معين",
-      "save": "حفظ",
-      "cancel": "إلغاء",
-      "titleRequired": "العنوان مطلوب."
-    },
-    "detail": {
-      "title": "تفاصيل المهمة",
-      "fields": {
-        "title": "العنوان",
-        "description": "الوصف",
-        "status": "الحالة",
-        "priority": "الأولوية",
-        "assignee": "المسؤول عن المهمة",
-        "createdBy": "تم الإنشاء بواسطة",
-        "dueDate": "تاريخ الاستحقاق",
-        "createdAt": "تم الإنشاء في",
-        "updatedAt": "تم التحديث في"
-      },
-      "noDescription": "لا يوجد وصف.",
-      "unassigned": "غير معين"
-    },
-    "export": {
-      "filename": "المهام",
-      "title": "المهام",
-      "generatedAt": "تم الإنشاء في",
-      "sheetName": "المهام"
-    },
-    "alerts": {
-      "created": "تم إنشاء المهمة بنجاح.",
-      "updated": "تم تحديث المهمة بنجاح.",
-      "deleted": "تم حذف المهمة بنجاح.",
-      "createFailed": "فشل إنشاء المهمة.",
-      "updateFailed": "فشل تحديث المهمة.",
-      "deleteFailed": "فشل حذف المهمة."
-    }
   },
   "organization": {
     "title": "إعدادات المؤسسة",

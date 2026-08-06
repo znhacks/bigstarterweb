@@ -23,13 +23,6 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     description: "Batas maksimal anggota tim yang dapat diundang ke dalam satu organisasi/tenant."
   },
   {
-    key: "maxTasks",
-    label: "Max Tasks Limit",
-    type: "number",
-    defaultValue: 20,
-    description: "Kuota pembuatan tugas (tasks) bulanan yang diizinkan untuk tenant."
-  },
-  {
     key: "allowPdfFormat",
     label: "Allow PDF Export",
     type: "boolean",
@@ -88,7 +81,6 @@ export type FeatureGateKeys = (typeof FEATURE_DEFINITIONS)[number]["key"];
 
 export interface FeatureGates {
   maxUsers: number;
-  maxTasks: number;
   allowPdfFormat: boolean;
   chooseIpLocation: boolean;
   removeAttribution: boolean;

@@ -22,14 +22,14 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
     name: "Member",
     label: "Member",
     hierarchy: 10,
-    description: "Read-only access + basic interactions (create tasks, view billing).",
+    description: "Read-only access + basic interactions (view billing).",
     color: "bg-blue-500/10 text-blue-600"
   },
   {
     name: "Admin",
     label: "Admin",
     hierarchy: 50,
-    description: "Operational writes: manage members, billing, tasks — cannot delete org.",
+    description: "Operational writes: manage members, billing — cannot delete org.",
     color: "bg-amber-500/10 text-amber-600"
   },
   {
@@ -46,8 +46,6 @@ export const DEFAULT_GRANTS: Record<string, PermissionName[]> = {
     PERMISSIONS.organizationRead,
     PERMISSIONS.membersRead,
     PERMISSIONS.billingRead,
-    PERMISSIONS.tasksRead,
-    PERMISSIONS.tasksCreate,
     PERMISSIONS.dashboardView,
     PERMISSIONS.settingsView
   ],
@@ -61,10 +59,6 @@ export const DEFAULT_GRANTS: Record<string, PermissionName[]> = {
     PERMISSIONS.billingRead,
     PERMISSIONS.billingManage,
     PERMISSIONS.apiKeysManage,
-    PERMISSIONS.tasksRead,
-    PERMISSIONS.tasksCreate,
-    PERMISSIONS.tasksUpdate,
-    PERMISSIONS.tasksDelete,
     PERMISSIONS.dashboardView,
     PERMISSIONS.settingsView
   ],

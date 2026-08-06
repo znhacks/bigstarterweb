@@ -1,6 +1,5 @@
 import { o } from "./context";
 import { plansRouter } from "./routers/plans";
-import { tasksRouter } from "./routers/tasks";
 import { organizationsRouter } from "./routers/organizations";
 import { membersRouter } from "./routers/members";
 import { subscriptionsRouter } from "./routers/subscriptions";
@@ -16,7 +15,6 @@ import { apiKeysRouter } from "./routers/api-keys";
  */
 export const apiRouter = o.router({
   plans: plansRouter,
-  tasks: tasksRouter,
   organizations: organizationsRouter,
   members: membersRouter,
   subscriptions: subscriptionsRouter,

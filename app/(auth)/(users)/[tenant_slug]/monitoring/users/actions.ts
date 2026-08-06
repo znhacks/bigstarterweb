@@ -57,11 +57,22 @@ export async function getSchoolUsersData(tenantSlug: string): Promise<{
       .select("id, name, code");
 
     const matchedSchools = (schools || []).filter((s: any) =>
-      schoolCodes.some((code: string) => s.code?.toLowerCase() === code.toLowerCase())
+      schoolCodes.some((code: string) => {
+        const cLower = code.toLowerCase();
+        return (
+          (s.code && s.code.toLowerCase() === cLower) ||
+          (s.id && s.id.toString().toLowerCase() === cLower) ||
+          (s.npsn && s.npsn.toString().toLowerCase() === cLower) ||
+          (s.name && s.name.toLowerCase().includes(cLower))
+        );
+      })
     );
 
     const schoolIds = matchedSchools.map((s: any) => s.id);
     const tenantNameDisplay = matchedSchools.map((s: any) => s.name).join(", ") || tenant.name;
+    const schoolMap = new Map<string, { name: string; code: string }>();
+    matchedSchools.forEach((s: any) => schoolMap.set(s.id, { name: s.name, code: s.code }));
+
     const users: SchoolUserItem[] = [];
 
     // 3. Ambil data pengguna/guru asli dari DB Jurnal Mengajar (`users`)
@@ -75,38 +86,18 @@ export async function getSchoolUsersData(tenantSlug: string): Promise<{
       (jUsers || []).forEach((u: any) => {
         const roleName = u.role === "admin" ? "Admin Sekolah" : u.role === "pending_guru" ? "Pending Guru" : "Guru Pengajar";
         const isPending = u.role === "pending_guru" || /pending/i.test(u.role || "");
+        const sInfo = schoolMap.get(u.school_id);
+        const schoolLabel = sInfo ? `${sInfo.name} (${sInfo.code})` : schoolCodes.join(", ");
 
         users.push({
           id: u.id,
-          school_code: schoolCodes.join(", "),
+          school_code: schoolLabel,
           full_name: u.full_name || "Guru Sekolah",
           email: u.email || null,
           nip: u.phone || "-",
           subject: u.position || "Mata Pelajaran Umum",
           role: roleName,
           status: isPending ? "nonaktif" : "aktif",
-          last_active_at: u.created_at || new Date().toISOString(),
-          created_at: u.created_at || new Date().toISOString()
-        });
-      });
-    } else {
-      // Jika school_code belum cocok dengan school.id di DB Jurnal Mengajar, ambil semua guru dari DB Jurnal Mengajar sebagai acuan
-      const { data: jUsers } = await jurnalMengajarSupabase
-        .from("users")
-        .select("id, full_name, email, role, position, created_at, phone")
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      (jUsers || []).forEach((u: any) => {
-        users.push({
-          id: u.id,
-          school_code: schoolCodes.join(", "),
-          full_name: u.full_name || "Guru Sekolah",
-          email: u.email || null,
-          nip: u.phone || "-",
-          subject: u.position || "Mata Pelajaran Umum",
-          role: u.role || "Guru Pengajar",
-          status: "aktif",
           last_active_at: u.created_at || new Date().toISOString(),
           created_at: u.created_at || new Date().toISOString()
         });

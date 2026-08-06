@@ -34,6 +34,7 @@ export function LanguageSwitcher() {
 
     startTransition(() => {
       router.refresh();
+      window.location.reload();
     });
   };
 

@@ -31,10 +31,6 @@
         "title": "Dasbor",
         "description": "Lacak pendapatan, langganan, dan aktivitas tim dengan antarmuka modern."
       },
-      "tasks": {
-        "title": "Tugas",
-        "description": "Buat, tugaskan, dan lacak tugas di organisasi Anda."
-      },
       "organization": {
         "general": {
           "title": "Pengaturan Umum Organisasi",
@@ -475,115 +471,6 @@
     "notifications": "Notifikasi",
     "logout": "Keluar akun",
     "credits": "Kredit"
-  },
-  "tasks": {
-    "title": "Tugas",
-    "subtitle": "Buat, tugaskan, dan lacak tugas di seluruh organisasi Anda.",
-    "newTask": "Tugas Baru",
-    "download": "Unduh",
-    "readOnly": {
-      "title": "Mode Hanya-Baca",
-      "desc": "Anda tidak memiliki izin untuk membuat atau mengubah tugas di organisasi ini."
-    },
-    "data-table": {
-      "headers": {
-        "title": "Judul",
-        "description": "Deskripsi",
-        "status": "Status",
-        "priority": "Prioritas",
-        "assignee": "Penanggung Jawab",
-        "dueDate": "Tenggat Waktu",
-        "createdBy": "Dibuat Oleh",
-        "createdAt": "Dibuat Pada",
-        "updatedAt": "Diperbarui Pada"
-      },
-      "statuses": {
-        "todo": "Akan Dikerjakan",
-        "in_progress": "Sedang Dikerjakan",
-        "done": "Selesai",
-        "cancelled": "Dibatalkan"
-      },
-      "priorities": {
-        "low": "Rendah",
-        "medium": "Sedang",
-        "high": "Tinggi",
-        "urgent": "Mendesak"
-      },
-      "actions": {
-        "view": "Lihat detail",
-        "edit": "Ubah",
-        "delete": "Hapus"
-      },
-      "filters": {
-        "search": "Cari tugas...",
-        "status": "Status",
-        "priority": "Prioritas",
-        "assignee": "Penanggung Jawab",
-        "columns": "Kolom",
-        "noStatus": "Status tidak ditemukan.",
-        "noPriority": "Prioritas tidak ditemukan.",
-        "noAssignee": "Penanggung jawab tidak ditemukan.",
-        "unassigned": "Belum Ditugaskan"
-      },
-      "footer": {
-        "selected": "{selected} dari {total} baris dipilih.",
-        "noResults": "Tidak ada hasil."
-      },
-      "editHint": "Tips: klik ganda sel untuk mengubah.",
-      "confirmDelete": "Apakah Anda yakin ingin menghapus tugas ini?"
-    },
-    "form": {
-      "createTitle": "Buat Tugas",
-      "editTitle": "Ubah Tugas",
-      "fields": {
-        "title": "Judul",
-        "description": "Deskripsi",
-        "status": "Status",
-        "priority": "Prioritas",
-        "assignee": "Penanggung Jawab",
-        "dueDate": "Tenggat Waktu"
-      },
-      "placeholders": {
-        "title": "Judul tugas",
-        "description": "Tambahkan deskripsi...",
-        "assignee": "Pilih penanggung jawab",
-        "dueDate": "Pilih tenggat waktu"
-      },
-      "unassigned": "Belum Ditugaskan",
-      "save": "Simpan",
-      "cancel": "Batal",
-      "titleRequired": "Judul wajib diisi."
-    },
-    "detail": {
-      "title": "Detail Tugas",
-      "fields": {
-        "title": "Judul",
-        "description": "Deskripsi",
-        "status": "Status",
-        "priority": "Prioritas",
-        "assignee": "Penanggung Jawab",
-        "createdBy": "Dibuat Oleh",
-        "dueDate": "Tenggat Waktu",
-        "createdAt": "Dibuat Pada",
-        "updatedAt": "Diperbarui Pada"
-      },
-      "noDescription": "Tidak ada deskripsi.",
-      "unassigned": "Belum Ditugaskan"
-    },
-    "export": {
-      "filename": "Tugas",
-      "title": "Tugas",
-      "generatedAt": "Dibuat pada",
-      "sheetName": "Tugas"
-    },
-    "alerts": {
-      "created": "Tugas berhasil dibuat.",
-      "updated": "Tugas berhasil diperbarui.",
-      "deleted": "Tugas berhasil dihapus.",
-      "createFailed": "Gagal membuat tugas.",
-      "updateFailed": "Gagal memperbarui tugas.",
-      "deleteFailed": "Gagal menghapus tugas."
-    }
   },
   "organization": {
     "title": "Pengaturan Organisasi",

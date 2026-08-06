@@ -56,25 +56,36 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
       .select("id, name, code");
 
     const matchedSchools = (schools || []).filter((s: any) =>
-      schoolCodes.some((code: string) => s.code?.toLowerCase() === code.toLowerCase())
+      schoolCodes.some((code: string) => {
+        const cLower = code.toLowerCase();
+        return (
+          (s.code && s.code.toLowerCase() === cLower) ||
+          (s.id && s.id.toString().toLowerCase() === cLower) ||
+          (s.npsn && s.npsn.toString().toLowerCase() === cLower) ||
+          (s.name && s.name.toLowerCase().includes(cLower))
+        );
+      })
     );
 
     const schoolIds = matchedSchools.map((s: any) => s.id);
     const tenantNameDisplay = matchedSchools.map((s: any) => s.name).join(", ") || tenant.name;
+    const schoolMap = new Map<string, { name: string; code: string }>();
+    matchedSchools.forEach((s: any) => schoolMap.set(s.id, { name: s.name, code: s.code }));
 
     // 3. Ambil peta pengguna sekolah dari DB Jurnal Mengajar
-    const userMap = new Map<string, { full_name: string; role: string }>();
+    const userMap = new Map<string, { full_name: string; role: string; school_id?: string }>();
 
     if (schoolIds.length > 0) {
       const { data: usersData } = await jurnalMengajarSupabase
         .from("users")
-        .select("id, full_name, role, position")
+        .select("id, full_name, role, position, school_id")
         .in("school_id", schoolIds);
 
       (usersData || []).forEach((u: any) => {
         userMap.set(u.id, {
           full_name: u.full_name || u.position || "Pengguna Jurnal",
-          role: u.position || u.role || "Guru"
+          role: u.position || u.role || "Guru",
+          school_id: u.school_id
         });
       });
     }
@@ -85,7 +96,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
     if (schoolIds.length > 0) {
       const { data: dbLogs } = await jurnalMengajarSupabase
         .from("audit_logs")
-        .select("id, action, entity, ip_address, user_agent, created_at, user_id, user_role")
+        .select("id, action, entity, ip_address, user_agent, created_at, user_id, user_role, school_id")
         .in("school_id", schoolIds)
         .order("created_at", { ascending: false })
         .limit(100);
@@ -93,14 +104,17 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
       (dbLogs || []).forEach((dl: any) => {
         const uInfo = userMap.get(dl.user_id) || {
           full_name: "Pengguna Mobile",
-          role: dl.user_role || "Guru"
+          role: dl.user_role || "Guru",
+          school_id: dl.school_id
         };
+        const sInfo = schoolMap.get(dl.school_id || uInfo.school_id || "");
+        const schoolLabel = sInfo ? `${sInfo.name} (${sInfo.code})` : schoolCodes.join(", ");
 
         const isFailed = /FAILED|ERROR/i.test(dl.action || "");
 
         logs.push({
           id: dl.id,
-          school_code: schoolCodes.join(", "),
+          school_code: schoolLabel,
           user_name: uInfo.full_name,
           user_role: uInfo.role,
           activity_type: (dl.action || dl.entity || "Aktivitas App").replace(/_/g, " "),

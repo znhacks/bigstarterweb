@@ -65,7 +65,15 @@ export async function getManageUsersData(tenantSlug: string): Promise<{
       .select("id, name, code");
 
     const matchedSchools = (schools || []).filter((s: any) =>
-      schoolCodes.some((code: string) => s.code?.toLowerCase() === code.toLowerCase())
+      schoolCodes.some((code: string) => {
+        const cLower = code.toLowerCase();
+        return (
+          (s.code && s.code.toLowerCase() === cLower) ||
+          (s.id && s.id.toString().toLowerCase() === cLower) ||
+          (s.npsn && s.npsn.toString().toLowerCase() === cLower) ||
+          (s.name && s.name.toLowerCase().includes(cLower))
+        );
+      })
     );
 
     const schoolIds = matchedSchools.map((s: any) => s.id);

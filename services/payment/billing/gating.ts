@@ -108,7 +108,7 @@ export async function getActivePlan(tenantId: string): Promise<TenantPlan> {
 
 export async function hasFeature(
   tenantId: string,
-  featureKey: keyof Omit<FeatureGates, "maxUsers" | "maxTasks">
+  featureKey: keyof Omit<FeatureGates, "maxUsers">
 ): Promise<boolean> {
   const plan = await getActivePlan(tenantId);
   return plan.featureGates[featureKey] === true;
@@ -116,7 +116,7 @@ export async function hasFeature(
 
 export async function getFeatureLimit(
   tenantId: string,
-  limitKey: "maxUsers" | "maxTasks"
+  limitKey: "maxUsers"
 ): Promise<number> {
   const plan = await getActivePlan(tenantId);
   return plan.featureGates[limitKey] ?? 0;

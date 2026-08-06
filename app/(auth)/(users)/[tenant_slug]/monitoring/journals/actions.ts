@@ -59,12 +59,32 @@ export async function getJournalLogsData(tenantSlug: string): Promise<{
       .select("id, name, code");
 
     const matchedSchools = (schools || []).filter((s: any) =>
-      schoolCodes.some((code: string) => s.code?.toLowerCase() === code.toLowerCase())
+      schoolCodes.some((code: string) => {
+        const cLower = code.toLowerCase();
+        return (
+          (s.code && s.code.toLowerCase() === cLower) ||
+          (s.id && s.id.toString().toLowerCase() === cLower) ||
+          (s.npsn && s.npsn.toString().toLowerCase() === cLower) ||
+          (s.name && s.name.toLowerCase().includes(cLower))
+        );
+      })
     );
 
     const schoolIds = matchedSchools.map((s: any) => s.id);
     const tenantNameDisplay = matchedSchools.map((s: any) => s.name).join(", ") || tenant.name;
+    const schoolMap = new Map<string, { name: string; code: string }>();
+    matchedSchools.forEach((s: any) => schoolMap.set(s.id, { name: s.name, code: s.code }));
+
     const journals: JournalLogItem[] = [];
+
+    if (schoolIds.length === 0) {
+      return {
+        schoolCode: schoolCodes.join(", "),
+        tenantName: tenantNameDisplay,
+        journals: [],
+        stats: { totalJournals: 0, verifiedJournals: 0, totalClasses: 0 }
+      };
+    }
 
     // Peta pembantu untuk guru, kelas, mapel dari DB Jurnal Mengajar
     const teacherMap = new Map<string, string>();
@@ -82,22 +102,19 @@ export async function getJournalLogsData(tenantSlug: string): Promise<{
     (jSubjects || []).forEach((s: any) => subjectMap.set(s.id, s.name));
 
     // 3. Query data jurnal mengajar asli dari DB Jurnal Mengajar (`journals`)
-    let journalQuery = jurnalMengajarSupabase
+    const { data: dbJournals } = await jurnalMengajarSupabase
       .from("journals")
       .select("id, date, teaching_hour, material, sick_count, permission_count, alpha_count, status, teacher_id, class_id, subject_id, created_at, school_id")
+      .in("school_id", schoolIds)
       .order("date", { ascending: false })
       .limit(100);
-
-    if (schoolIds.length > 0) {
-      journalQuery = journalQuery.in("school_id", schoolIds);
-    }
-
-    const { data: dbJournals } = await journalQuery;
 
     (dbJournals || []).forEach((j: any) => {
       const teacherName = teacherMap.get(j.teacher_id) || "Guru Pengajar";
       const className = classMap.get(j.class_id) || "Kelas XII";
       const subjectName = subjectMap.get(j.subject_id) || "Mata Pelajaran";
+      const sInfo = schoolMap.get(j.school_id);
+      const schoolLabel = sInfo ? `${sInfo.name} (${sInfo.code})` : schoolCodes.join(", ");
 
       const sick = j.sick_count || 0;
       const perm = j.permission_count || 0;
@@ -117,7 +134,7 @@ export async function getJournalLogsData(tenantSlug: string): Promise<{
 
       journals.push({
         id: j.id,
-        school_code: schoolCodes.join(", "),
+        school_code: schoolLabel,
         teacher_name: teacherName,
         class_name: className,
         subject: subjectName,

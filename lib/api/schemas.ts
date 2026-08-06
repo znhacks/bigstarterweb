@@ -22,14 +22,6 @@ export const planSchema = z.object({
   features: z.array(z.string()).default([])
 });
 
-export const taskSchema = z.object({
-  id: z.string().uuid(),
-  tenant_id: z.string().uuid(),
-  title: z.string().nullable(),
-  user_id: z.string().uuid().nullable(),
-  created_at: z.string().nullable()
-});
-
 export const organizationSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),

@@ -10,9 +10,9 @@ export const VIRTUAL_PLANS_CONFIG = {
         ar: "ابدأ مجانًا"
       },
       displayFeatures: {
-        en: ["Up to 3 members", "20 tasks/month", "Basic support"],
-        id: ["Hingga 3 anggota", "20 tugas/bulan", "Dukungan dasar"],
-        ar: ["حتى 3 أعضاء", "20 مهمة/شهر", "دعم أساسي"]
+        en: ["Up to 3 members", "Basic support"],
+        id: ["Hingga 3 anggota", "Dukungan dasar"],
+        ar: ["حتى 3 أعضاء", "دعم أساسي"]
       }
     }
   },

@@ -6,11 +6,11 @@ interface UseFeatureGateParams {
 }
 
 export function useFeatureGate({ featureGates, planName }: UseFeatureGateParams) {
-  const canUse = (featureKey: keyof Omit<FeatureGates, "maxUsers" | "maxTasks">): boolean => {
+  const canUse = (featureKey: keyof Omit<FeatureGates, "maxUsers">): boolean => {
     return featureGates[featureKey] === true;
   };
 
-  const getLimit = (limitKey: "maxUsers" | "maxTasks"): number => {
+  const getLimit = (limitKey: "maxUsers"): number => {
     return featureGates[limitKey] ?? 0;
   };
 

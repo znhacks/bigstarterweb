@@ -5,6 +5,7 @@
 // tabel tenants ada di schema public → pakai createClient() (server user client, RLS).
 
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { resolveTenantAuthorityFull } from "@/lib/billing/tenant-auth";
 import { PERMISSIONS } from "@/modules/rbac/shared";
 import { hasPermission } from "@/modules/rbac/shared";
@@ -26,7 +27,7 @@ export async function deleteOrganizationAction(tenantId: string): Promise<Result
       return { error: "Akses ditolak: butuh permission organization.delete." };
     }
 
-    const { error } = await (await tenantRepository(supabase))
+    const { error } = await (await tenantRepository(supabaseAdmin))
       .query()
       .update({ status: "deleted", deleted_at: new Date().toISOString() })
       .eq("id", tenantId);
@@ -55,11 +56,12 @@ export async function updateSchoolCodeAction(tenantId: string, schoolCode: strin
 
     const codes = schoolCode
       .split(",")
-      .map((c: string) => c.trim())
-      .filter(Boolean);
+      .map((c: string) => c.trim());
+
+    const nonEmptyCodes = codes.filter(Boolean);
 
     // Cek status berlangganan tenant (free vs paid)
-    const subRepo = await subscriptionRepository(supabase);
+    const subRepo = await subscriptionRepository(supabaseAdmin);
     const { data: subData } = await subRepo
       .query()
       .select("status")
@@ -69,15 +71,15 @@ export async function updateSchoolCodeAction(tenantId: string, schoolCode: strin
     const isPaid = subData?.status === "active" || subData?.status === "trialing";
     const maxAllowed = isPaid ? 3 : 2;
 
-    if (codes.length > maxAllowed) {
+    if (nonEmptyCodes.length > maxAllowed) {
       return {
         error: `Paket ${isPaid ? "Berlangganan" : "Gratis (Free)"} terbatas maksimal ${maxAllowed} sekolah untuk dipantau.`
       };
     }
 
-    const formattedCode = codes.join(", ");
+    const formattedCode = nonEmptyCodes.length === 0 ? "" : codes.join(", ");
 
-    const { error } = await (await tenantRepository(supabase))
+    const { error } = await (await tenantRepository(supabaseAdmin))
       .query()
       .update({ school_code: formattedCode })
       .eq("id", tenantId);

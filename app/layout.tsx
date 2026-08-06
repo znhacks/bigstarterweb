@@ -12,7 +12,7 @@ import { ActiveThemeProvider } from "@/components/active-theme";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { Toaster } from "@/components/ui/sonner";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale } from "next-intl/server";
+import { getLocale, getMessages } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
 import { DirectionProvider } from "@/components/ui/direction";
 import { SessionProvider } from "@/components/providers/session-provider";
@@ -27,6 +27,7 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const locale = await getLocale();
+  const messages = await getMessages();
 
   // Ambil metadata & variabel font dinamis dari Single Source of Truth
   const meta = getLocaleMeta(locale);
@@ -71,7 +72,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange>
           <ActiveThemeProvider initialTheme={themeSettings}>
-            <NextIntlClientProvider locale={locale}>
+            <NextIntlClientProvider locale={locale} messages={messages}>
               <DirectionProvider dir={dir}>
                 <SessionProvider>{children}</SessionProvider>
               </DirectionProvider>

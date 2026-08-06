@@ -17,7 +17,7 @@
 //                        - service-role : `supabaseAdmin`              (@/lib/api/supabase-server)
 //                                       / `systemClient`               (@/lib/supabase/manager)
 //                        - tenant-scoped: `client` dari                (@/lib/supabase/tenant-server)
-//                                       `createTenantServerClient()`   (WAJIB untuk tabel `tasks`)
+//                                       `createTenantServerClient()`
 //                        Contoh: `await getProfile(user.id, "*", await createClient())`
 //   Bila dipanggil di server tanpa `client`, akan throw Error agar tidak
 //   gagal diam-diam.

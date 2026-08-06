@@ -24,7 +24,6 @@ import {
   Users,
   Building2,
   ShieldCheck,
-  ListTodo,
   TicketPercent,
   Package,
   ReceiptText,
@@ -89,13 +88,6 @@ export const navItems: NavGroup[] = [
         tenantScoped: true,
         icon: ChartPieIcon,
         permissions: [PERMISSIONS.dashboardView]
-      },
-      {
-        title: "users.tasks",
-        href: "/tasks",
-        tenantScoped: true,
-        icon: ListTodo,
-        permissions: [PERMISSIONS.tasksRead]
       },
       {
         title: "users.billing",
