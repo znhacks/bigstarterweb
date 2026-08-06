@@ -12,6 +12,7 @@ import { membershipRepository } from "@/supabase/repositories/memberships";
 import { deleteOrganizationAction, updateSchoolCodeAction } from "./actions";
 
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
+import { uploadOrganizationLogoAction } from "@/app/actions/upload";
 
 export interface AlertState {
   title: string;
@@ -193,32 +194,20 @@ export function useOrganizationGeneral() {
     setAlertMessage(null);
 
     try {
-      const filePath = `organizations/${activeOrgId}/${Date.now()}.webp`;
+      const formData = new FormData();
+      const file = new File([croppedBlob], `logo-${Date.now()}.webp`, {
+        type: "image/webp"
+      });
+      formData.append("tenantId", activeOrgId);
+      formData.append("file", file);
 
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, croppedBlob, {
-          contentType: "image/webp",
-          cacheControl: "3600",
-          upsert: true
-        });
+      const res = await uploadOrganizationLogoAction(formData);
 
-      if (uploadError) throw uploadError;
+      if (res.error || !res.publicUrl) {
+        throw new Error(res.error || "Gagal mengunggah logo organisasi.");
+      }
 
-      const {
-        data: { publicUrl }
-      } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-      const { error: tenantError } = await (
-        await tenantRepository(supabase)
-      )
-        .query()
-        .update({ logo: publicUrl })
-        .eq("id", activeOrgId);
-
-      if (tenantError) throw tenantError;
-
-      setLogoPreview(publicUrl);
+      setLogoPreview(res.publicUrl);
       window.dispatchEvent(new Event("storage")); // Refresh Sidebar Icon
 
       setAlertMessage({

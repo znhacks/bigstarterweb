@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getMembershipsByUser } from "@/supabase/helper/memberships";
 import { membershipRepository } from "@/supabase/repositories/memberships";
@@ -45,7 +46,7 @@ const MEMBERSHIP_SELECT = `
   )
 `;
 
-export async function getUserTenants() {
+export const getUserTenants = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user }
@@ -74,76 +75,76 @@ export async function getUserTenants() {
       };
     })
     .filter((t): t is ResolvedAuthority & { tenant: ActiveTenant } => t !== null);
-}
+});
 
-export async function getActiveTenant(
-  tenantSlug?: string | null
-): Promise<ActiveTenantContext | null> {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+export const getActiveTenant = cache(
+  async (tenantSlug?: string | null): Promise<ActiveTenantContext | null> => {
+    const supabase = await createClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user) return null;
 
-  const membershipRepo = await membershipRepository(supabase);
+    const membershipRepo = await membershipRepository(supabase);
 
-  if (tenantSlug) {
-    const { data, error } = await membershipRepo
+    if (tenantSlug) {
+      const { data, error } = await membershipRepo
+        .query()
+        .select(`${MEMBERSHIP_SELECT}`)
+        .eq("user_id", user.id)
+        .eq("tenants.slug", tenantSlug)
+        .single();
+
+      if (error || !data) return null;
+
+      const authority = resolveAuthority(data as any);
+      if (!authority) return null;
+
+      return {
+        ...authority,
+        tenant: (data as any).tenants
+      };
+    }
+
+    const cookieStore = await cookies();
+    const activeTenantId = cookieStore.get("active_tenant_id")?.value;
+
+    if (activeTenantId) {
+      const { data, error } = await membershipRepo
+        .query()
+        .select(`${MEMBERSHIP_SELECT}`)
+        .eq("user_id", user.id)
+        .eq("tenant_id", activeTenantId)
+        .single();
+
+      if (!error && data) {
+        const authority = resolveAuthority(data as any);
+        if (authority) {
+          return {
+            ...authority,
+            tenant: (data as any).tenants
+          };
+        }
+      }
+    }
+
+    const { data: fallbackData, error: fallbackError } = await membershipRepo
       .query()
       .select(`${MEMBERSHIP_SELECT}`)
       .eq("user_id", user.id)
-      .eq("tenants.slug", tenantSlug)
+      .limit(1)
       .single();
 
-    if (error || !data) return null;
+    if (fallbackError || !fallbackData) {
+      return null;
+    }
 
-    const authority = resolveAuthority(data as any);
+    const authority = resolveAuthority(fallbackData as any);
     if (!authority) return null;
 
     return {
       ...authority,
-      tenant: (data as any).tenants
+      tenant: (fallbackData as any).tenants
     };
   }
-
-  const cookieStore = await cookies();
-  const activeTenantId = cookieStore.get("active_tenant_id")?.value;
-
-  if (activeTenantId) {
-    const { data, error } = await membershipRepo
-      .query()
-      .select(`${MEMBERSHIP_SELECT}`)
-      .eq("user_id", user.id)
-      .eq("tenant_id", activeTenantId)
-      .single();
-
-    if (!error && data) {
-      const authority = resolveAuthority(data as any);
-      if (authority) {
-        return {
-          ...authority,
-          tenant: (data as any).tenants
-        };
-      }
-    }
-  }
-
-  const { data: fallbackData, error: fallbackError } = await membershipRepo
-    .query()
-    .select(`${MEMBERSHIP_SELECT}`)
-    .eq("user_id", user.id)
-    .limit(1)
-    .single();
-
-  if (fallbackError || !fallbackData) {
-    return null;
-  }
-
-  const authority = resolveAuthority(fallbackData as any);
-  if (!authority) return null;
-
-  return {
-    ...authority,
-    tenant: (fallbackData as any).tenants
-  };
-}
+);

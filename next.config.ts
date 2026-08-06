@@ -26,6 +26,24 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  compress: true,
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "@remixicon/react",
+      "@radix-ui/react-icons",
+      "date-fns",
+      "recharts",
+      "framer-motion",
+      "motion",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-tooltip",
+      "@radix-ui/react-select"
+    ]
+  },
   turbopack: {
     root: __dirname
   },

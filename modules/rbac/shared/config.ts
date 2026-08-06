@@ -47,7 +47,10 @@ export const DEFAULT_GRANTS: Record<string, PermissionName[]> = {
     PERMISSIONS.membersRead,
     PERMISSIONS.billingRead,
     PERMISSIONS.dashboardView,
-    PERMISSIONS.settingsView
+    PERMISSIONS.settingsView,
+    PERMISSIONS.monitoringView,
+    PERMISSIONS.monitoringJournals,
+    PERMISSIONS.notificationsRead
   ],
   Admin: [
     PERMISSIONS.organizationRead,
@@ -60,7 +63,17 @@ export const DEFAULT_GRANTS: Record<string, PermissionName[]> = {
     PERMISSIONS.billingManage,
     PERMISSIONS.apiKeysManage,
     PERMISSIONS.dashboardView,
-    PERMISSIONS.settingsView
+    PERMISSIONS.settingsView,
+    PERMISSIONS.monitoringView,
+    PERMISSIONS.monitoringJournals,
+    PERMISSIONS.monitoringActivityLogs,
+    PERMISSIONS.monitoringUsers,
+    PERMISSIONS.monitoringManageUsers,
+    PERMISSIONS.monitoringReports,
+    PERMISSIONS.notificationsRead,
+    PERMISSIONS.notificationsManage,
+    PERMISSIONS.reportsView,
+    PERMISSIONS.reportsExport
   ],
   Owner: ALL_PERMISSIONS
 };

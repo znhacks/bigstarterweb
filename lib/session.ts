@@ -3,6 +3,7 @@
 // Tipe domain + helper sesi SERVER (DX layer ala supastarter) di atas raw Supabase Auth.
 // Idiomatik & strongly-typed: `getServerSession()` -> { session, user } | null.
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { profileRepository } from "@/supabase/repositories/profiles";
@@ -42,8 +43,9 @@ function mapUser(supabaseUser: any, profile: any): AuthUser {
 /**
  * Ambil sesi server (Server Component / Route Handler / Server Action).
  * Mengembalikan { session, user } ter-tipe, atau null bila belum login.
+ * Ter-cache per HTTP request menggunakan React cache().
  */
-export async function getServerSession(): Promise<ServerSession | null> {
+export const getServerSession = cache(async (): Promise<ServerSession | null> => {
   const supabase = await createClient();
   const {
     data: { user }
@@ -80,7 +82,7 @@ export async function getServerSession(): Promise<ServerSession | null> {
     },
     user: mapUser(activeUser, profile)
   };
-}
+});
 
 /**
  * Sama seperti `getServerSession` tapi redirect ke `redirectTo` bila belum login.

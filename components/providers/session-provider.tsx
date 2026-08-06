@@ -62,7 +62,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
       load();
     });
-    return () => sub.subscription.unsubscribe();
+    window.addEventListener("storage", load);
+    return () => {
+      sub.subscription.unsubscribe();
+      window.removeEventListener("storage", load);
+    };
   }, [load]);
 
   return (

@@ -157,6 +157,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   useEffect(() => {
     loadUserAndOrganizations();
+    window.addEventListener("storage", loadUserAndOrganizations);
+    return () => window.removeEventListener("storage", loadUserAndOrganizations);
   }, []);
 
   useEffect(() => {

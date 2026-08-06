@@ -9,6 +9,7 @@ import { AddressData } from "@/components/ui/address-form";
 import { getAddressConfig } from "@/config/i18n-culture";
 import { updateProfileSchema } from "@/lib/validation/profiles";
 import { profileRepository } from "@/supabase/repositories/profiles";
+import { uploadUserAvatarAction } from "@/app/actions/upload";
 
 export interface AlertState {
   title: string;
@@ -244,29 +245,20 @@ export function useGeneralSettings() {
     setAlertMessage(null);
 
     try {
-      const filePath = `users/${userId}/${Date.now()}.webp`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, croppedBlob, {
-          contentType: "image/webp",
-          cacheControl: "3600",
-          upsert: true
-        });
+      const formData = new FormData();
+      const file = new File([croppedBlob], `avatar-${Date.now()}.webp`, {
+        type: "image/webp"
+      });
+      formData.append("file", file);
 
-      if (uploadError) throw uploadError;
+      const res = await uploadUserAvatarAction(formData);
 
-      const {
-        data: { publicUrl }
-      } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      if (res.error || !res.publicUrl) {
+        throw new Error(res.error || "Gagal mengunggah foto profil.");
+      }
 
-      const { error: profileError } = await (await profileRepository(supabase))
-        .query()
-        .update({ avatar: publicUrl })
-        .eq("id", userId);
-
-      if (profileError) throw profileError;
-
-      setAvatarUrl(publicUrl);
+      setAvatarUrl(res.publicUrl);
+      window.dispatchEvent(new Event("storage"));
       setAlertMessage({
         title: "Success",
         description: "Foto profil Anda berhasil diperbarui.",

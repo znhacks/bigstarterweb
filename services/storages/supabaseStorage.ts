@@ -17,6 +17,20 @@ export class SupabaseStorageService implements IStorageService {
   ): Promise<string> {
     const finalPath = dbModel === "SHARED" && tenantId ? `${tenantId}/${path}` : path;
 
+    try {
+      // Pastikan bucket ada dan bersifat publik
+      const { data: buckets } = await this.client.storage.listBuckets();
+      const bucketExists = buckets?.some((b) => b.name === bucket);
+      if (!bucketExists) {
+        await this.client.storage.createBucket(bucket, {
+          public: true,
+          fileSizeLimit: 5242880 // 5MB limit
+        });
+      }
+    } catch (e) {
+      // Abaikan error pembuatan jika bucket sudah ada
+    }
+
     const { error } = await this.client.storage
       .from(bucket)
       .upload(finalPath, fileBuffer, { contentType, upsert: true });

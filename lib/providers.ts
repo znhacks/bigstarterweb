@@ -1,6 +1,5 @@
 import { IStorageService } from "@/interfaces/storage";
 import { SupabaseStorageService } from "@/services/storages/supabaseStorage";
-import { PrismaDatabaseService } from "@/services/databases/prisma";
 import { SupabaseDatabaseService } from "@/services/databases/supabase";
 // lib/providers.ts
 import { bigstarterConfig } from "@/bigstarter.config";
@@ -21,7 +20,10 @@ export function getDatabaseService(): IDatabaseService {
     throw new Error(`Akses Ditolak: Provider Database "${active}" dilarang dalam konfigurasi.`);
   }
 
-  if (active === "prisma") return new PrismaDatabaseService();
+  if (active === "prisma") {
+    const { PrismaDatabaseService } = require("@/services/databases/prisma");
+    return new PrismaDatabaseService();
+  }
   return new SupabaseDatabaseService(); // default 'supabase'
 }
 
