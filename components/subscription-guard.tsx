@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { ShieldAlert, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { billingConfig } from "@/config/payment";
@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 
 export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const params = useParams();
+  const tenantSlug = (params as any)?.tenant_slug as string | undefined;
+
   const [status, setStatus] = useState<"loading" | "ok" | "denied">(
     billingConfig.requireActiveSubscription ? "loading" : "ok"
   );
@@ -29,7 +32,19 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const orgId = typeof window !== "undefined" ? localStorage.getItem("active_org_id") : null;
+        let orgId = typeof window !== "undefined" ? localStorage.getItem("active_org_id") : null;
+        if (!orgId && tenantSlug) {
+          const { data: tData } = await supabase
+            .from("tenants")
+            .select("id")
+            .ilike("slug", tenantSlug)
+            .maybeSingle();
+          if (tData?.id) {
+            orgId = tData.id;
+            localStorage.setItem("active_org_id", tData.id);
+          }
+        }
+
         if (!orgId) {
           if (!cancelled) setStatus("denied");
           return;

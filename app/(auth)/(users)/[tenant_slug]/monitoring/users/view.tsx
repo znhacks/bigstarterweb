@@ -10,9 +10,13 @@ import { DataGrid, DataGridTable } from "@/components/data-table";
 import { type SchoolUserItem } from "./actions";
 import { useSchoolUsersLogic } from "./logic";
 
+import { SchoolMultiFilter, type SchoolFilterOption } from "@/components/monitoring/school-multi-filter";
+import { useParams } from "next/navigation";
+
 interface ViewProps {
   schoolCode: string | null;
   tenantName: string | null;
+  connectedSchools?: SchoolFilterOption[];
   users: SchoolUserItem[];
   stats: {
     totalTeachers: number;
@@ -21,8 +25,34 @@ interface ViewProps {
   };
 }
 
-export function SchoolUsersView({ schoolCode, tenantName, users, stats }: ViewProps) {
-  const { table, columns } = useSchoolUsersLogic(users);
+export function SchoolUsersView({
+  schoolCode,
+  tenantName,
+  connectedSchools = [],
+  users,
+  stats
+}: ViewProps) {
+  const params = useParams();
+  const tenantSlug = (params?.tenant_slug as string) || "";
+  const [selectedSchoolIds, setSelectedSchoolIds] = React.useState<string[]>([]);
+
+  const filteredUsers = React.useMemo(() => {
+    if (selectedSchoolIds.length === 0) return users;
+    return users.filter((u) =>
+      selectedSchoolIds.some(
+        (id) =>
+          u.school_code.toLowerCase().includes(id.toLowerCase()) ||
+          connectedSchools.some(
+            (s) =>
+              s.id === id &&
+              (u.school_code.toLowerCase().includes(s.name.toLowerCase()) ||
+                u.school_code.toLowerCase().includes(s.code.toLowerCase()))
+          )
+      )
+    );
+  }, [users, selectedSchoolIds, connectedSchools]);
+
+  const { table, columns } = useSchoolUsersLogic(filteredUsers);
 
   if (!schoolCode) {
     return (
@@ -35,7 +65,7 @@ export function SchoolUsersView({ schoolCode, tenantName, users, stats }: ViewPr
           Hubungkan Kode Sekolah dari basis data Jurnal Mengajar pada Pengaturan Organisasi untuk mengaktifkan pemantauan daftar pengguna dan guru.
         </p>
         <Button asChild>
-          <Link href="../organization/general">
+          <Link href={`/${tenantSlug}/organization/general`}>
             <LinkIcon className="me-2 h-4 w-4" /> Hubungkan Kode Sekolah Sekarang
           </Link>
         </Button>
@@ -57,6 +87,11 @@ export function SchoolUsersView({ schoolCode, tenantName, users, stats }: ViewPr
             Daftar guru, pengurus, NIP, mata pelajaran, dan status keaktifan pengguna yang terdaftar di sekolah {tenantName || ""}.
           </p>
         </div>
+        <SchoolMultiFilter
+          schools={connectedSchools}
+          selectedIds={selectedSchoolIds}
+          onChange={setSelectedSchoolIds}
+        />
       </div>
 
       {/* Ringkasan Statistik */}

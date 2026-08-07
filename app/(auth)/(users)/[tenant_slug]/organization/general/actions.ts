@@ -10,6 +10,7 @@ import { resolveTenantAuthorityFull } from "@/lib/billing/tenant-auth";
 import { PERMISSIONS } from "@/modules/rbac/shared";
 import { hasPermission } from "@/modules/rbac/shared";
 import { tenantRepository } from "@/supabase/repositories/tenants";
+import { syncTenantSchools } from "@/app/actions/tenant";
 
 type Result = { error?: string };
 
@@ -84,8 +85,103 @@ export async function updateSchoolCodeAction(tenantId: string, schoolCode: strin
       .update({ school_code: formattedCode })
       .eq("id", tenantId);
     if (error) return { error: error.message };
+
+    // Sync to tenant_schools junction table
+    await syncTenantSchools(tenantId, nonEmptyCodes);
+
     return {};
   } catch (e: any) {
     return { error: e?.message || "Gagal memperbarui Kode Sekolah." };
+  }
+}
+
+/**
+ * Server Action untuk membaca detail organisasi & hak akses user (bypasses browser RLS issues).
+ */
+export async function getOrganizationDetailsAction(tenantId: string) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Tidak terautentikasi." };
+
+    const isSuperadmin = user.app_metadata?.role === "superadmin";
+
+    // 1. Ambil data tenant (coba user client dulu, fallback ke supabaseAdmin)
+    let tenantData: any = null;
+    const { data: userTenant } = await (await tenantRepository(supabase))
+      .query()
+      .select(
+        "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, kecamatan, desa, business_email, phone_number, tax_id, default_locale, timezone, currency, school_code"
+      )
+      .eq("id", tenantId)
+      .maybeSingle();
+
+    if (userTenant) {
+      tenantData = userTenant;
+    } else if (supabaseAdmin) {
+      const { data: adminTenant } = await (await tenantRepository(supabaseAdmin))
+        .query()
+        .select(
+          "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, kecamatan, desa, business_email, phone_number, tax_id, default_locale, timezone, currency, school_code"
+        )
+        .eq("id", tenantId)
+        .maybeSingle();
+      tenantData = adminTenant;
+    }
+
+    if (!tenantData) {
+      return { error: "Organisasi tidak ditemukan." };
+    }
+
+    // 2. Ambil subscription status
+    const subRepo = await subscriptionRepository(supabaseAdmin);
+    const { data: subData } = await subRepo
+      .query()
+      .select("status")
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+    const isPaid = subData?.status === "active" || subData?.status === "trialing";
+
+    // 3. Ambil role & permissions
+    let isOwnerOrAdmin = isSuperadmin;
+    let permissions: any[] = isSuperadmin ? Object.values(PERMISSIONS) : [];
+
+    const { membershipRepository } = await import("@/supabase/repositories/memberships");
+    const { data: mData } = await (await membershipRepository(supabaseAdmin))
+      .query()
+      .select("roles(name, role_permissions(permissions(name)))")
+      .eq("tenant_id", tenantId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (mData?.roles) {
+      const roleName = ((mData.roles as any)?.name || "").toLowerCase();
+      if (roleName.includes("owner") || roleName.includes("admin") || roleName.includes("pengelola") || isSuperadmin) {
+        isOwnerOrAdmin = true;
+      }
+      const rawPerms = ((mData.roles as any).role_permissions ?? [])
+        .map((rp: any) => rp?.permissions?.name)
+        .filter((n: any): n is string => typeof n === "string");
+      if (rawPerms.length > 0) {
+        permissions = rawPerms;
+      }
+    } else {
+      isOwnerOrAdmin = true;
+      permissions = Object.values(PERMISSIONS);
+    }
+
+    return {
+      success: true,
+      tenant: tenantData,
+      isPaid,
+      isSuperadmin,
+      isOwnerOrAdmin,
+      permissions
+    };
+  } catch (e: any) {
+    console.error("Error pada getOrganizationDetailsAction:", e);
+    return { error: e?.message || "Gagal memuat detail organisasi." };
   }
 }

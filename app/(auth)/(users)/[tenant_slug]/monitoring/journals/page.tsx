@@ -15,6 +15,7 @@ export default async function JournalLogsPage({ params }: PageProps) {
     <JournalLogsView
       schoolCode={data.schoolCode}
       tenantName={data.tenantName}
+      connectedSchools={data.connectedSchools}
       journals={data.journals}
       stats={data.stats}
     />

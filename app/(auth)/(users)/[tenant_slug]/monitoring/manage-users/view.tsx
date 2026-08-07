@@ -21,6 +21,8 @@ import { DataGrid, DataGridTable } from "@/components/data-table";
 import { type ManageUserItem, type ConnectedSchoolOption } from "./actions";
 import { useManageUsersLogic } from "./logic";
 
+import { SchoolMultiFilter, type SchoolFilterOption } from "@/components/monitoring/school-multi-filter";
+
 interface ViewProps {
   tenantSlug: string;
   schoolCode: string | null;
@@ -42,6 +44,20 @@ export function ManageUsersView({
   users,
   stats
 }: ViewProps) {
+  const [selectedSchoolIds, setSelectedSchoolIds] = React.useState<string[]>([]);
+
+  const filteredUsers = React.useMemo(() => {
+    if (selectedSchoolIds.length === 0) return users;
+    return users.filter((u) =>
+      selectedSchoolIds.some(
+        (id) =>
+          u.school_id === id ||
+          u.school_code.toLowerCase().includes(id.toLowerCase()) ||
+          u.school_name.toLowerCase().includes(id.toLowerCase())
+      )
+    );
+  }, [users, selectedSchoolIds]);
+
   const {
     table,
     isAddOpen,
@@ -55,7 +71,7 @@ export function ManageUsersView({
     handleCreateUser,
     handleUpdateUser,
     handleDeleteUser
-  } = useManageUsersLogic(tenantSlug, users, connectedSchools);
+  } = useManageUsersLogic(tenantSlug, filteredUsers, connectedSchools);
 
   // Form local states untuk Create Modal
   const [addFullName, setAddFullName] = React.useState("");
@@ -95,7 +111,7 @@ export function ManageUsersView({
           Hubungkan Kode Sekolah dari basis data Jurnal Mengajar pada Pengaturan Organisasi untuk mengaktifkan fitur manajemen role dan pengguna.
         </p>
         <Button asChild>
-          <Link href="../organization/general">
+          <Link href={`/${tenantSlug}/organization/general`}>
             <LinkIcon className="me-2 h-4 w-4" /> Hubungkan Kode Sekolah Sekarang
           </Link>
         </Button>
@@ -148,9 +164,16 @@ export function ManageUsersView({
             Atur peran (role), jabatan, email, dan NIP pengguna pada database Jurnal Mengajar untuk sekolah {tenantName || ""}.
           </p>
         </div>
-        <Button onClick={() => setIsAddOpen(true)} className="inline-flex items-center gap-2">
-          <UserPlus className="h-4 w-4" /> Tambah User Baru
-        </Button>
+        <div className="flex items-center gap-2">
+          <SchoolMultiFilter
+            schools={connectedSchools}
+            selectedIds={selectedSchoolIds}
+            onChange={setSelectedSchoolIds}
+          />
+          <Button onClick={() => setIsAddOpen(true)} className="inline-flex items-center gap-2">
+            <UserPlus className="h-4 w-4" /> Tambah User Baru
+          </Button>
+        </div>
       </div>
 
       {/* Ringkasan Statistik */}

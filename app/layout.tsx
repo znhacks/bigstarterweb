@@ -16,6 +16,7 @@ import { getLocale, getMessages } from "next-intl/server";
 import { constructMetadata } from "@/lib/metadata";
 import { DirectionProvider } from "@/components/ui/direction";
 import { SessionProvider } from "@/components/providers/session-provider";
+import { SchoolProvider } from "@/components/providers/school-provider";
 import { getLocaleMeta, getFontVariable } from "@/config/i18n-culture";
 
 export const metadata = constructMetadata();
@@ -74,7 +75,9 @@ export default async function RootLayout({
           <ActiveThemeProvider initialTheme={themeSettings}>
             <NextIntlClientProvider locale={locale} messages={messages}>
               <DirectionProvider dir={dir}>
-                <SessionProvider>{children}</SessionProvider>
+                <SessionProvider>
+                  <SchoolProvider>{children}</SchoolProvider>
+                </SessionProvider>
               </DirectionProvider>
             </NextIntlClientProvider>
             <Toaster position="top-center" richColors />

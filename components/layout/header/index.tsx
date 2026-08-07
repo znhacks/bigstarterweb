@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "./language-switcher";
 
+import { SchoolRoleSwitcher } from "./school-role-switcher";
+
 export function SiteHeader() {
   const { toggleSidebar, open } = useSidebar();
 
@@ -23,6 +25,8 @@ export function SiteHeader() {
           {open ? <PanelLeftClose /> : <PanelLeftOpen />}
         </Button>
         <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+        <SchoolRoleSwitcher />
+        <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4 hidden sm:block" />
         <Search />
 
         <div className="ms-auto flex items-center gap-2">

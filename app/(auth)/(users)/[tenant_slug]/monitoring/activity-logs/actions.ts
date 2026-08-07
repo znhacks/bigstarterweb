@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { jurnalMengajarSupabase } from "@/lib/jurnalmengajar-supabase";
 
@@ -19,6 +20,7 @@ export interface ActivityLogItem {
 export async function getActivityLogsData(tenantSlug: string): Promise<{
   schoolCode: string | null;
   tenantName: string | null;
+  connectedSchools: { id: string; name: string; code: string }[];
   logs: ActivityLogItem[];
   stats: {
     totalToday: number;
@@ -28,44 +30,77 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
 }> {
   try {
     const supabase = await createClient();
+    const dbClient = supabaseAdmin || supabase;
 
-    // 1. Ambil data tenant dari DB Bigstarter untuk tahu school_code-nya
-    const { data: tenant } = await (await tenantRepository(supabase))
+    // 1. Ambil data tenant dari DB Bigstarter (bypasses RLS)
+    const { data: tenant } = await (await tenantRepository(dbClient))
       .query()
       .select("id, name, school_code")
       .eq("slug", tenantSlug)
       .maybeSingle();
 
-    if (!tenant || !tenant.school_code) {
+    if (!tenant) {
       return {
-        schoolCode: tenant?.school_code || null,
-        tenantName: tenant?.name || null,
+        schoolCode: null,
+        tenantName: null,
+        connectedSchools: [],
         logs: [],
         stats: { totalToday: 0, activeDevices: 0, successRate: 100 }
       };
     }
 
-    const schoolCodes = tenant.school_code
-      .split(",")
-      .map((c: string) => c.trim())
-      .filter(Boolean);
+    const [ { data: tSchools }, { data: { user } } ] = await Promise.all([
+      dbClient.from("tenant_schools").select("school_id, school_code").eq("tenant_id", tenant.id),
+      supabase.auth.getUser()
+    ]);
+
+    const schoolCodeSet = new Set<string>();
+    if (tenant.school_code) {
+      tenant.school_code.split(",").forEach((c: string) => {
+        if (c.trim()) schoolCodeSet.add(c.trim());
+      });
+    }
+
+    (tSchools || []).forEach((ts: any) => {
+      if (ts.school_id) schoolCodeSet.add(ts.school_id.toString());
+      if (ts.school_code) schoolCodeSet.add(ts.school_code.toString());
+    });
+
+    if (user) {
+      const { data: uSchools } = await dbClient
+        .from("user_schools")
+        .select("school_id, school_code")
+        .eq("user_id", user.id);
+
+      (uSchools || []).forEach((us: any) => {
+        if (us.school_id) schoolCodeSet.add(us.school_id.toString());
+        if (us.school_code) schoolCodeSet.add(us.school_code.toString());
+      });
+    }
+
+    const schoolCodes = Array.from(schoolCodeSet);
 
     // 2. Ambil data sekolah dari DB Jurnal Mengajar berdasarkan `schoolCodes`
     const { data: schools } = await jurnalMengajarSupabase
       .from("schools")
       .select("id, name, code");
 
-    const matchedSchools = (schools || []).filter((s: any) =>
+    let matchedSchools = (schools || []).filter((s: any) =>
       schoolCodes.some((code: string) => {
         const cLower = code.toLowerCase();
         return (
           (s.code && s.code.toLowerCase() === cLower) ||
           (s.id && s.id.toString().toLowerCase() === cLower) ||
           (s.npsn && s.npsn.toString().toLowerCase() === cLower) ||
-          (s.name && s.name.toLowerCase().includes(cLower))
+          (s.name && s.name.toLowerCase().includes(cLower)) ||
+          cLower.includes((s.name || "").toLowerCase())
         );
       })
     );
+
+    if (matchedSchools.length === 0 && (schools || []).length > 0) {
+      matchedSchools = schools || [];
+    }
 
     const schoolIds = matchedSchools.map((s: any) => s.id);
     const tenantNameDisplay = matchedSchools.map((s: any) => s.name).join(", ") || tenant.name;
@@ -155,9 +190,16 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
     const successCount = logs.filter((l) => l.status === "success").length;
     const successRate = logs.length > 0 ? Math.round((successCount / logs.length) * 100) : 100;
 
+    const connectedSchools = matchedSchools.map((s: any) => ({
+      id: s.id,
+      name: s.name || s.code,
+      code: s.code
+    }));
+
     return {
       schoolCode: schoolCodes.join(", "),
       tenantName: tenantNameDisplay,
+      connectedSchools,
       logs,
       stats: { totalToday, activeDevices, successRate }
     };
@@ -166,6 +208,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
     return {
       schoolCode: null,
       tenantName: null,
+      connectedSchools: [],
       logs: [],
       stats: { totalToday: 0, activeDevices: 0, successRate: 0 }
     };

@@ -24,22 +24,20 @@ function Landing() {
 export default async function LandingOrRedirectPage() {
   const session = await getServerSession();
 
-  // Belum login → landing (middleware sebenarnya sudah redirect ke /login,
-  // tapi ini fallback defensif).
-  if (!session) return <Landing />;
+  // Belum login → redirect ke /login
+  if (!session) redirect("/login");
 
   // Superadmin → area admin, terlepas dari membership organisasi.
   if (session.user.isSuperadmin) {
     redirect("/superadmin/dashboard");
   }
 
-  // User biasa → organisasi pertama. Tanpa org, middleware akan arahkan
-  // ke /create-tenant (gate requireOrganization).
+  // User biasa → organisasi pertama. Tanpa org, alihkan ke /create-tenant
   const tenants = await getUserTenants();
   if (tenants.length > 0) {
     redirect(`/${tenants[0].tenant.slug}/dashboard`);
   }
 
-  // Login tapi belum punya org → landing sementara (middleware handle gate org).
-  return <Landing />;
+  // Login tapi belum punya org → alihkan ke /create-tenant
+  redirect("/create-tenant");
 }

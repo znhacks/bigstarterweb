@@ -75,6 +75,17 @@ export async function createTenant(formData: FormData) {
     }
 
     const schoolCode = (formData.get("school_code") as string) || null;
+    const schoolIdsRaw = (formData.get("school_ids") as string) || null;
+    let schoolList: string[] = [];
+    if (schoolIdsRaw) {
+      try {
+        schoolList = JSON.parse(schoolIdsRaw);
+      } catch {
+        schoolList = schoolCode ? schoolCode.split(",") : [];
+      }
+    } else if (schoolCode) {
+      schoolList = schoolCode.split(",");
+    }
 
     const { data: newTenant, error: tenantError } = await tenantsRepo
       .insert({
@@ -88,6 +99,11 @@ export async function createTenant(formData: FormData) {
 
     if (tenantError || !newTenant) {
       return { error: tenantError?.message || "Gagal mendaftarkan organisasi baru." };
+    }
+
+    // Sync to tenant_schools junction table
+    if (schoolList.length > 0) {
+      await syncTenantSchools(newTenant.id, schoolList);
     }
 
     const { data: ownerRole } = await getRoleByName("Owner", "id", systemSupabase);
@@ -382,5 +398,164 @@ export async function setupRegistrationTenant(params: {
   } catch (err: any) {
     console.error("Error pada setupRegistrationTenant:", err);
     return { error: err?.message || "Gagal memproses pendaftaran organisasi." };
+  }
+}
+
+/**
+  * Helper untuk menyinkronkan daftar sekolah terpilih ke junction table tenant_schools
+  */
+export async function syncTenantSchools(tenantId: string, schoolCodesOrIds: string[]) {
+  if (!tenantId) return;
+  try {
+    const defaultSupabase = await createServerClient();
+
+    const cleanList = (schoolCodesOrIds || [])
+      .flatMap((c) => (typeof c === "string" ? c.split(",") : []))
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    // Hapus relasi lama
+    await defaultSupabase.from("tenant_schools").delete().eq("tenant_id", tenantId);
+
+    if (cleanList.length > 0) {
+      const records = cleanList.map((codeOrId) => ({
+        tenant_id: tenantId,
+        school_id: codeOrId,
+        school_code: codeOrId
+      }));
+
+      const { error } = await defaultSupabase.from("tenant_schools").insert(records);
+      if (error) {
+        console.warn("Notice inserting tenant_schools:", error.message);
+      }
+    }
+  } catch (err) {
+    console.error("Error pada syncTenantSchools:", err);
+  }
+}
+
+/**
+ * Server Action untuk mengambil daftar organisasi milik user aktif (Bypasses browser RLS issues).
+ */
+export async function getUserOrganizationsAction() {
+  try {
+    const { getUserTenants } = await import("@/services/tenant");
+    const tenants = await getUserTenants();
+    return tenants.map((t) => ({
+      id: t.tenant.id,
+      name: t.tenant.name,
+      slug: t.tenant.slug,
+      logo: t.tenant.logo || null
+    }));
+  } catch (err) {
+    console.error("Error pada getUserOrganizationsAction:", err);
+    return [];
+  }
+}
+
+/**
+ * Server Action untuk mengambil daftar sekolah terhubung bagi user aktif & tenant (Bypasses browser RLS).
+ */
+export async function getUserSchoolsAction(tenantSlug?: string) {
+  try {
+    const supabase = await createServerClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const dbClient = systemSupabase || supabase;
+    const list: any[] = [];
+    const addedIds = new Set<string>();
+
+    // 1. Ambil dari user_schools
+    const { data: uSchools } = await dbClient
+      .from("user_schools")
+      .select("id, user_id, school_id, role, school_code, schools(name, code)")
+      .eq("user_id", user.id);
+
+    (uSchools || []).forEach((item: any) => {
+      const sId = item.school_id || item.school_code || item.id;
+      if (sId && !addedIds.has(sId.toString())) {
+        addedIds.add(sId.toString());
+        list.push({
+          id: item.id,
+          user_id: item.user_id,
+          school_id: sId.toString(),
+          role: item.role || "Guru",
+          school_name: item.schools?.name || item.school_code || "Sekolah",
+          school_code: item.schools?.code || item.school_code || ""
+        });
+      }
+    });
+
+    // 2. Ambil tenant aktif (dari parameter tenantSlug atau cookie active_tenant_id)
+    let targetTenant: any = null;
+    if (tenantSlug) {
+      const { data: tData } = await dbClient
+        .from("tenants")
+        .select("id, name, school_code")
+        .ilike("slug", tenantSlug)
+        .maybeSingle();
+      targetTenant = tData;
+    }
+
+    if (!targetTenant) {
+      const cookieStore = await cookies();
+      const activeId = cookieStore.get("active_tenant_id")?.value;
+      if (activeId) {
+        const { data: tData } = await dbClient
+          .from("tenants")
+          .select("id, name, school_code")
+          .eq("id", activeId)
+          .maybeSingle();
+        targetTenant = tData;
+      }
+    }
+
+    if (targetTenant) {
+      // Ambil dari tenant_schools
+      const { data: tSchools } = await dbClient
+        .from("tenant_schools")
+        .select("school_id, school_code")
+        .eq("tenant_id", targetTenant.id);
+
+      (tSchools || []).forEach((ts: any) => {
+        const sId = ts.school_id || ts.school_code;
+        if (sId && !addedIds.has(sId.toString())) {
+          addedIds.add(sId.toString());
+          list.push({
+            id: sId.toString(),
+            user_id: user.id,
+            school_id: sId.toString(),
+            role: "Owner/Admin",
+            school_name: ts.school_code || targetTenant.name || "Sekolah",
+            school_code: ts.school_code || ""
+          });
+        }
+      });
+
+      if (targetTenant.school_code) {
+        targetTenant.school_code.split(",").forEach((codeStr: string) => {
+          const trimmed = codeStr.trim();
+          if (trimmed && !addedIds.has(trimmed)) {
+            addedIds.add(trimmed);
+            list.push({
+              id: trimmed,
+              user_id: user.id,
+              school_id: trimmed,
+              role: "Owner/Admin",
+              school_name: targetTenant.name ? `${targetTenant.name} (${trimmed})` : trimmed,
+              school_code: trimmed
+            });
+          }
+        });
+      }
+    }
+
+    return list;
+  } catch (err) {
+    console.error("Error pada getUserSchoolsAction:", err);
+    return [];
   }
 }

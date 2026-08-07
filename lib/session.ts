@@ -8,6 +8,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { profileRepository } from "@/supabase/repositories/profiles";
 
+import { UserSchool } from "@/interfaces/school";
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -15,6 +17,8 @@ export interface AuthUser {
   name: string | null;
   image: string | null;
   isSuperadmin: boolean;
+  userSchools?: UserSchool[];
+  activeSchoolId?: string | null;
 }
 
 export interface AuthSession {
@@ -28,7 +32,7 @@ export interface ServerSession {
   user: AuthUser;
 }
 
-function mapUser(supabaseUser: any, profile: any): AuthUser {
+function mapUser(supabaseUser: any, profile: any, userSchools: UserSchool[] = []): AuthUser {
   const meta = supabaseUser?.user_metadata ?? {};
   return {
     id: supabaseUser.id,
@@ -36,7 +40,8 @@ function mapUser(supabaseUser: any, profile: any): AuthUser {
     emailVerified: !!supabaseUser.email_confirmed_at,
     name: profile?.full_name ?? meta.full_name ?? meta.name ?? null,
     image: profile?.avatar ?? meta.avatar_url ?? meta.avatar ?? null,
-    isSuperadmin: !!profile?.is_superadmin
+    isSuperadmin: !!profile?.is_superadmin,
+    userSchools
   };
 }
 
@@ -68,11 +73,26 @@ export const getServerSession = cache(async (): Promise<ServerSession | null> =>
   if (!activeUser) return null;
 
   const profileRepo = await profileRepository(supabase);
-  const { data: profile } = await profileRepo
-    .query()
-    .select("full_name, avatar, is_superadmin")
-    .eq("id", activeUser.id)
-    .maybeSingle();
+  const [{ data: profile }, { data: uSchools }] = await Promise.all([
+    profileRepo
+      .query()
+      .select("full_name, avatar, is_superadmin")
+      .eq("id", activeUser.id)
+      .maybeSingle(),
+    supabase
+      .from("user_schools")
+      .select("id, user_id, school_id, role, schools(name, code)")
+      .eq("user_id", activeUser.id)
+  ]);
+
+  const userSchools: UserSchool[] = (uSchools || []).map((us: any) => ({
+    id: us.id,
+    user_id: us.user_id,
+    school_id: us.school_id,
+    role: us.role || "Guru",
+    school_name: us.schools?.name || "Sekolah",
+    school_code: us.schools?.code || ""
+  }));
 
   return {
     session: {
@@ -80,7 +100,7 @@ export const getServerSession = cache(async (): Promise<ServerSession | null> =>
       expiresAt,
       accessToken
     },
-    user: mapUser(activeUser, profile)
+    user: mapUser(activeUser, profile, userSchools)
   };
 });
 

@@ -12,6 +12,8 @@ import { invitationRepository } from "@/supabase/repositories/invitations";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { changeMemberRoleAction, removeMemberAction, cancelInvitationAction } from "./actions";
 
+import { useParams } from "next/navigation";
+
 export interface Role {
   id: string;
   name: string;
@@ -74,16 +76,38 @@ export function useOrganizationMembers() {
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
 
+  const params = useParams();
+  const tenantSlug = (params as any)?.tenant_slug as string | undefined;
+
   useEffect(() => {
-    const orgId = localStorage.getItem("active_org_id");
-    if (orgId) {
-      setActiveOrgId(orgId);
-      fetchOrgDetails(orgId);
-      loadAllData(orgId);
-    } else {
-      setIsLoading(false);
+    async function resolveAndLoad() {
+      setIsLoading(true);
+      let targetId = localStorage.getItem("active_org_id");
+
+      if (tenantSlug) {
+        const { data: tData } = await supabase
+          .from("tenants")
+          .select("id")
+          .ilike("slug", tenantSlug)
+          .maybeSingle();
+
+        if (tData?.id) {
+          targetId = tData.id;
+          localStorage.setItem("active_org_id", tData.id);
+          document.cookie = `active_tenant_id=${tData.id}; path=/; max-age=2592000; SameSite=Lax;`;
+        }
+      }
+
+      if (targetId) {
+        setActiveOrgId(targetId);
+        fetchOrgDetails(targetId);
+        loadAllData(targetId);
+      } else {
+        setIsLoading(false);
+      }
     }
-  }, []);
+    resolveAndLoad();
+  }, [tenantSlug]);
 
   useEffect(() => {
     if (alertMessage) {

@@ -10,9 +10,13 @@ import { DataGrid, DataGridTable } from "@/components/data-table";
 import { type ActivityLogItem } from "./actions";
 import { useActivityLogsLogic } from "./logic";
 
+import { SchoolMultiFilter, type SchoolFilterOption } from "@/components/monitoring/school-multi-filter";
+import { useParams } from "next/navigation";
+
 interface ViewProps {
   schoolCode: string | null;
   tenantName: string | null;
+  connectedSchools?: SchoolFilterOption[];
   logs: ActivityLogItem[];
   stats: {
     totalToday: number;
@@ -21,8 +25,34 @@ interface ViewProps {
   };
 }
 
-export function ActivityLogsView({ schoolCode, tenantName, logs, stats }: ViewProps) {
-  const { table, columns } = useActivityLogsLogic(logs);
+export function ActivityLogsView({
+  schoolCode,
+  tenantName,
+  connectedSchools = [],
+  logs,
+  stats
+}: ViewProps) {
+  const params = useParams();
+  const tenantSlug = (params?.tenant_slug as string) || "";
+  const [selectedSchoolIds, setSelectedSchoolIds] = React.useState<string[]>([]);
+
+  const filteredLogs = React.useMemo(() => {
+    if (selectedSchoolIds.length === 0) return logs;
+    return logs.filter((l) =>
+      selectedSchoolIds.some(
+        (id) =>
+          l.school_code.toLowerCase().includes(id.toLowerCase()) ||
+          connectedSchools.some(
+            (s) =>
+              s.id === id &&
+              (l.school_code.toLowerCase().includes(s.name.toLowerCase()) ||
+                l.school_code.toLowerCase().includes(s.code.toLowerCase()))
+          )
+      )
+    );
+  }, [logs, selectedSchoolIds, connectedSchools]);
+
+  const { table, columns } = useActivityLogsLogic(filteredLogs);
 
   if (!schoolCode) {
     return (
@@ -35,7 +65,7 @@ export function ActivityLogsView({ schoolCode, tenantName, logs, stats }: ViewPr
           Hubungkan Kode Sekolah dari basis data Jurnal Mengajar pada Pengaturan Organisasi untuk mengaktifkan pemantauan aktivitas aplikasi mobile.
         </p>
         <Button asChild>
-          <Link href="../organization/general">
+          <Link href={`/${tenantSlug}/organization/general`}>
             <LinkIcon className="me-2 h-4 w-4" /> Hubungkan Kode Sekolah Sekarang
           </Link>
         </Button>
@@ -57,6 +87,11 @@ export function ActivityLogsView({ schoolCode, tenantName, logs, stats }: ViewPr
             Pemantauan riwayat aktivitas login, check-in, dan input jurnal guru pada aplikasi mobile sekolah {tenantName || ""}.
           </p>
         </div>
+        <SchoolMultiFilter
+          schools={connectedSchools}
+          selectedIds={selectedSchoolIds}
+          onChange={setSelectedSchoolIds}
+        />
       </div>
 
       {/* Ringkasan Statistik */}

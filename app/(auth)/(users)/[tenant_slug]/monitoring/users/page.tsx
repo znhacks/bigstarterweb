@@ -15,6 +15,7 @@ export default async function SchoolUsersPage({ params }: PageProps) {
     <SchoolUsersView
       schoolCode={data.schoolCode}
       tenantName={data.tenantName}
+      connectedSchools={data.connectedSchools}
       users={data.users}
       stats={data.stats}
     />

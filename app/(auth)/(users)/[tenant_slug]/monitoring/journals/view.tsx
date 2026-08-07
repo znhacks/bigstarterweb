@@ -10,9 +10,14 @@ import { DataGrid, DataGridTable } from "@/components/data-table";
 import { type JournalLogItem } from "./actions";
 import { useJournalLogsLogic } from "./logic";
 
+import { SchoolMultiFilter, type SchoolFilterOption } from "@/components/monitoring/school-multi-filter";
+
+import { useParams } from "next/navigation";
+
 interface ViewProps {
   schoolCode: string | null;
   tenantName: string | null;
+  connectedSchools?: SchoolFilterOption[];
   journals: JournalLogItem[];
   stats: {
     totalJournals: number;
@@ -21,8 +26,34 @@ interface ViewProps {
   };
 }
 
-export function JournalLogsView({ schoolCode, tenantName, journals, stats }: ViewProps) {
-  const { table, columns } = useJournalLogsLogic(journals);
+export function JournalLogsView({
+  schoolCode,
+  tenantName,
+  connectedSchools = [],
+  journals,
+  stats
+}: ViewProps) {
+  const params = useParams();
+  const tenantSlug = (params?.tenant_slug as string) || "";
+  const [selectedSchoolIds, setSelectedSchoolIds] = React.useState<string[]>([]);
+
+  const filteredJournals = React.useMemo(() => {
+    if (selectedSchoolIds.length === 0) return journals;
+    return journals.filter((j) =>
+      selectedSchoolIds.some(
+        (id) =>
+          j.school_code.toLowerCase().includes(id.toLowerCase()) ||
+          connectedSchools.some(
+            (s) =>
+              s.id === id &&
+              (j.school_code.toLowerCase().includes(s.name.toLowerCase()) ||
+                j.school_code.toLowerCase().includes(s.code.toLowerCase()))
+          )
+      )
+    );
+  }, [journals, selectedSchoolIds, connectedSchools]);
+
+  const { table, columns } = useJournalLogsLogic(filteredJournals);
 
   if (!schoolCode) {
     return (
@@ -35,7 +66,7 @@ export function JournalLogsView({ schoolCode, tenantName, journals, stats }: Vie
           Hubungkan Kode Sekolah dari basis data Jurnal Mengajar pada Pengaturan Organisasi untuk mengaktifkan pemantauan entri jurnal dan laporan mengajar.
         </p>
         <Button asChild>
-          <Link href="../organization/general">
+          <Link href={`/${tenantSlug}/organization/general`}>
             <LinkIcon className="me-2 h-4 w-4" /> Hubungkan Kode Sekolah Sekarang
           </Link>
         </Button>
@@ -57,6 +88,11 @@ export function JournalLogsView({ schoolCode, tenantName, journals, stats }: Vie
             Pemantauan entri jurnal mengajar harian, materi pembelajaran, dan rekapitulasi kehadiran siswa di {tenantName || ""}.
           </p>
         </div>
+        <SchoolMultiFilter
+          schools={connectedSchools}
+          selectedIds={selectedSchoolIds}
+          onChange={setSelectedSchoolIds}
+        />
       </div>
 
       {/* Ringkasan Statistik */}

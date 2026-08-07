@@ -99,34 +99,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
       setUser(currentUser);
 
-      const { data, error } = await (
-        await membershipRepository(supabase)
-      )
-        .query()
-        .select(
-          `
-          tenant_id,
-          tenants (
-            id,
-            name,
-            slug,
-            logo
-          )
-        `
-        )
-        .eq("user_id", currentUser.id);
+      // Panggil Server Action agar keanggotaan terdeteksi dengan tepat di server (bypass RLS browser)
+      const { getUserOrganizationsAction } = await import("@/app/actions/tenant");
+      let orgs: Organization[] = await getUserOrganizationsAction();
 
-      if (error) throw error;
+      // Fallback: Jika tenantSlug aktif di URL tapi belum ada di orgs, ambil langsung dari tabel tenants
+      if (tenantSlug && !orgs.some((o) => o.slug === tenantSlug)) {
+        const { data: directTenant } = await supabase
+          .from("tenants")
+          .select("id, name, slug, logo")
+          .ilike("slug", tenantSlug)
+          .maybeSingle();
 
-      const orgs: Organization[] = (data || [])
-        .map((item: any) => item.tenants)
-        .filter((tenant): tenant is any => tenant !== null)
-        .map((t: any) => ({
-          id: t.id,
-          name: t.name,
-          slug: t.slug,
-          logo: t.logo || null
-        }));
+        if (directTenant) {
+          orgs.unshift({
+            id: directTenant.id,
+            name: directTenant.name,
+            slug: directTenant.slug,
+            logo: directTenant.logo || null
+          });
+        }
+      }
 
       setOrganizations(orgs);
     } catch (error: any) {

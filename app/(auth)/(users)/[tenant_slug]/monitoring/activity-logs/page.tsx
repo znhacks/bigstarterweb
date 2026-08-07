@@ -15,6 +15,7 @@ export default async function ActivityLogsPage({ params }: PageProps) {
     <ActivityLogsView
       schoolCode={data.schoolCode}
       tenantName={data.tenantName}
+      connectedSchools={data.connectedSchools}
       logs={data.logs}
       stats={data.stats}
     />

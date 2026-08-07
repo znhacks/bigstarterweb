@@ -5,20 +5,40 @@ import { setupRegistrationTenant, createTenant } from "@/app/actions/tenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, AlertCircle, Building2, UserPlus } from "lucide-react";
+import { Loader2, AlertCircle, Building2, UserPlus, LogOut, User } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useTranslations } from "next-intl";
+import { supabase } from "@/lib/supabase";
+import { useSession } from "@/hooks/use-session";
+import { MultiSelectSchools } from "@/components/ui/multi-select-schools";
 
 export function CreateTenantForm() {
+  const { user } = useSession();
   const [regType, setRegType] = useState<"create" | "join">("create");
   const [orgName, setOrgName] = useState("");
-  const [schoolCode, setSchoolCode] = useState("");
+  const [selectedSchools, setSelectedSchools] = useState<string[]>([]);
   const [inviteCode, setInviteCode] = useState("");
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const t = useTranslations("guest.create-tenant");
   const tReg = useTranslations("guest.register");
+
+  const handleLogout = async () => {
+    try {
+      setIsLoading(true);
+      await supabase.auth.signOut();
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+      }
+      document.cookie = "active_school_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "active_tenant_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      window.location.href = "/login";
+    } catch (e) {
+      console.error("Logout error:", e);
+      setIsLoading(false);
+    }
+  };
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,8 +55,9 @@ export function CreateTenantForm() {
 
         const formData = new FormData();
         formData.append("name", orgName.trim());
-        if (schoolCode.trim()) {
-          formData.append("school_code", schoolCode.trim());
+        if (selectedSchools.length > 0) {
+          formData.append("school_code", selectedSchools.join(","));
+          formData.append("school_ids", JSON.stringify(selectedSchools));
         }
         const result = await createTenant(formData);
 
@@ -83,14 +104,41 @@ export function CreateTenantForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      {errorMsg && (
-        <Alert variant="destructive" className="rounded-xl">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("error.title")}</AlertTitle>
-          <AlertDescription>{errorMsg}</AlertDescription>
-        </Alert>
+    <div className="space-y-4">
+      {user && (
+        <div className="flex items-center justify-between p-2.5 bg-muted/60 rounded-xl border border-border/60 text-xs">
+          <div className="flex items-center gap-2 min-w-0 pr-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
+              <User className="h-3.5 w-3.5" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold truncate text-foreground">
+                {user.name || "Akun Terhubung"}
+              </span>
+              <span className="text-muted-foreground truncate text-[11px]">{user.email}</span>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            disabled={isLoading}
+            className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 px-2 gap-1 font-medium shrink-0">
+            <LogOut className="h-3.5 w-3.5" />
+            <span>Keluar</span>
+          </Button>
+        </div>
       )}
+
+      <form onSubmit={onSubmit} className="space-y-4">
+        {errorMsg && (
+          <Alert variant="destructive" className="rounded-xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{t("error.title")}</AlertTitle>
+            <AlertDescription>{errorMsg}</AlertDescription>
+          </Alert>
+        )}
 
       {/* Switcher Tipe Pendaftaran Organisasi */}
       <div className="space-y-2">
@@ -141,17 +189,13 @@ export function CreateTenantForm() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="school_code" className="text-xs text-muted-foreground font-medium">
-              Kode Sekolah Jurnal Mengajar (Opsional)
+              Sekolah Terhubung (Multi-Sekolah Monitoring)
             </Label>
-            <Input
-              id="school_code"
-              name="school_code"
-              type="text"
-              placeholder="Contoh: SMKN11, SMKN4"
-              value={schoolCode}
-              onChange={(e) => setSchoolCode(e.target.value)}
+            <MultiSelectSchools
+              value={selectedSchools}
+              onChange={setSelectedSchools}
               disabled={isLoading}
-              className="border-border/80 h-9 text-xs"
+              placeholder="Pilih atau cari 2+ sekolah..."
             />
           </div>
         </div>
@@ -177,5 +221,6 @@ export function CreateTenantForm() {
         {regType === "create" ? t("create") : tReg("optionJoinOrg")}
       </Button>
     </form>
+    </div>
   );
 }

@@ -350,22 +350,40 @@ export function useOrganizationBilling() {
   };
 
   useEffect(() => {
-    const orgId = localStorage.getItem("active_org_id");
+    async function resolveAndLoad() {
+      setIsLoading(true);
+      let targetId = localStorage.getItem("active_org_id");
 
-    const providersEnv = process.env.NEXT_PUBLIC_ENABLED_PAYMENT_PROVIDERS;
-    if (providersEnv) {
-      setEnabledProviders(providersEnv.split(",").map((p) => p.trim().toLowerCase()));
-    } else {
-      setEnabledProviders(["mayar"]);
-    }
+      const providersEnv = process.env.NEXT_PUBLIC_ENABLED_PAYMENT_PROVIDERS;
+      if (providersEnv) {
+        setEnabledProviders(providersEnv.split(",").map((p) => p.trim().toLowerCase()));
+      } else {
+        setEnabledProviders(["mayar"]);
+      }
 
-    if (orgId) {
-      setActiveOrgId(orgId);
-      loadBillingData(orgId);
-    } else {
-      setIsLoading(false);
+      if (tenantSlug) {
+        const { data: tData } = await supabase
+          .from("tenants")
+          .select("id")
+          .ilike("slug", tenantSlug)
+          .maybeSingle();
+
+        if (tData?.id) {
+          targetId = tData.id;
+          localStorage.setItem("active_org_id", tData.id);
+          document.cookie = `active_tenant_id=${tData.id}; path=/; max-age=2592000; SameSite=Lax;`;
+        }
+      }
+
+      if (targetId) {
+        setActiveOrgId(targetId);
+        loadBillingData(targetId);
+      } else {
+        setIsLoading(false);
+      }
     }
-  }, []);
+    resolveAndLoad();
+  }, [tenantSlug]);
 
   useEffect(() => {
     if (alertMessage) {

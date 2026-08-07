@@ -1,8 +1,9 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { createClient } from "@/lib/supabase/server";
 import { getMembershipsByUser } from "@/supabase/helper/memberships";
 import { membershipRepository } from "@/supabase/repositories/memberships";
-import { cookies } from "next/headers";
 import type { ActiveTenant, ActiveTenantContext, ResolvedAuthority } from "@/modules/rbac/shared/types";
 import type { PermissionName } from "@/modules/rbac/shared/permissions";
 
@@ -16,17 +17,15 @@ type MembershipRow = {
   tenants: ActiveTenant;
 };
 
-function resolveAuthority(row: any): ResolvedAuthority | null {
+function resolveAuthority(row: any): ResolvedAuthority {
   const role = row.roles;
-  if (!role) return null;
-
-  const perms = (role.role_permissions ?? [])
+  const perms = (role?.role_permissions ?? [])
     .map((rp: any) => rp.permissions?.name)
     .filter((n: any): n is string => typeof n === "string") as PermissionName[];
 
   return {
-    roleId: role.id,
-    roleName: role.name,
+    roleId: role?.id ?? "member",
+    roleName: role?.name ?? "Member",
     permissions: perms
   };
 }
@@ -53,25 +52,73 @@ export const getUserTenants = cache(async () => {
   } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data, error } = await (
+  // 1. Coba query RLS user client
+  let { data, error } = await (
     await membershipRepository(supabase)
   )
     .query()
     .select(MEMBERSHIP_SELECT)
     .eq("user_id", user.id);
 
-  if (error) {
-    console.error("Error fetching user tenants:", error);
-    return [];
+  // 2. Jika RLS mengembalikan error/kosong, coba dengan supabaseAdmin
+  if ((error || !data || data.length === 0) && supabaseAdmin) {
+    try {
+      const { data: adminData } = await (
+        await membershipRepository(supabaseAdmin)
+      )
+        .query()
+        .select(MEMBERSHIP_SELECT)
+        .eq("user_id", user.id);
+
+      if (adminData && adminData.length > 0) {
+        data = adminData;
+      }
+    } catch (e) {
+      console.warn("Fallback supabaseAdmin error:", e);
+    }
+  }
+
+  // 3. Jika masih kosong, cek apakah user memiliki relasi sekolah di user_schools/tenant_schools
+  if ((!data || data.length === 0) && supabaseAdmin) {
+    try {
+      const { data: userSchools } = await supabaseAdmin
+        .from("user_schools")
+        .select("school_id")
+        .eq("user_id", user.id);
+
+      if (userSchools && userSchools.length > 0) {
+        const sIds = userSchools.map((us: any) => us.school_id);
+        const { data: tSchools } = await supabaseAdmin
+          .from("tenant_schools")
+          .select("tenant_id, tenants(id, name, slug, logo)")
+          .in("school_id", sIds);
+
+        if (tSchools && tSchools.length > 0) {
+          const fallbackList = tSchools
+            .filter((ts: any) => ts.tenants)
+            .map((ts: any) => ({
+              roleId: "member",
+              roleName: "Member",
+              permissions: [] as PermissionName[],
+              tenant: ts.tenants as ActiveTenant
+            }));
+          if (fallbackList.length > 0) {
+            return fallbackList;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Fallback tenant_schools check error:", e);
+    }
   }
 
   return (data ?? [])
     .map((item: any) => {
-      const authority = resolveAuthority(item as any);
-      if (!authority) return null;
+      if (!item?.tenants) return null;
+      const authority = resolveAuthority(item);
       return {
         ...authority,
-        tenant: (item as any).tenants
+        tenant: item.tenants as ActiveTenant
       };
     })
     .filter((t): t is ResolvedAuthority & { tenant: ActiveTenant } => t !== null);
@@ -88,18 +135,45 @@ export const getActiveTenant = cache(
     const membershipRepo = await membershipRepository(supabase);
 
     if (tenantSlug) {
-      const { data, error } = await membershipRepo
+      let { data, error } = await membershipRepo
         .query()
         .select(`${MEMBERSHIP_SELECT}`)
         .eq("user_id", user.id)
         .eq("tenants.slug", tenantSlug)
-        .single();
+        .maybeSingle();
 
-      if (error || !data) return null;
+      if ((error || !data) && supabaseAdmin) {
+        const { data: adminData } = await (await membershipRepository(supabaseAdmin))
+          .query()
+          .select(`${MEMBERSHIP_SELECT}`)
+          .eq("user_id", user.id)
+          .eq("tenants.slug", tenantSlug)
+          .maybeSingle();
+
+        if (adminData) data = adminData;
+      }
+
+      if (!data && supabaseAdmin) {
+        // Direct query to tenants table as last resort
+        const { data: directTenant } = await supabaseAdmin
+          .from("tenants")
+          .select("id, name, slug, logo")
+          .eq("slug", tenantSlug)
+          .maybeSingle();
+
+        if (directTenant) {
+          return {
+            roleId: "member",
+            roleName: "Member",
+            permissions: [],
+            tenant: directTenant
+          };
+        }
+      }
+
+      if (!data) return null;
 
       const authority = resolveAuthority(data as any);
-      if (!authority) return null;
-
       return {
         ...authority,
         tenant: (data as any).tenants

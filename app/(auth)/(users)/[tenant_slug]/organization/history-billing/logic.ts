@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { transactionRepository } from "@/supabase/repositories/transactions";
 
@@ -23,6 +24,8 @@ export function useBillingHistory() {
   const locale = useLocale();
   const t = useTranslations("organization.organization-billing");
   const tBilling = useTranslations("billing");
+  const params = useParams();
+  const tenantSlug = (params as any)?.tenant_slug as string | undefined;
 
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -53,14 +56,33 @@ export function useBillingHistory() {
   }, []);
 
   useEffect(() => {
-    const orgId = localStorage.getItem("active_org_id");
-    if (orgId) {
-      setActiveOrgId(orgId);
-      fetchTransactionHistory(orgId);
-    } else {
-      setIsLoading(false);
+    async function resolveAndLoad() {
+      setIsLoading(true);
+      let targetId = localStorage.getItem("active_org_id");
+
+      if (tenantSlug) {
+        const { data: tData } = await supabase
+          .from("tenants")
+          .select("id")
+          .ilike("slug", tenantSlug)
+          .maybeSingle();
+
+        if (tData?.id) {
+          targetId = tData.id;
+          localStorage.setItem("active_org_id", tData.id);
+          document.cookie = `active_tenant_id=${tData.id}; path=/; max-age=2592000; SameSite=Lax;`;
+        }
+      }
+
+      if (targetId) {
+        setActiveOrgId(targetId);
+        fetchTransactionHistory(targetId);
+      } else {
+        setIsLoading(false);
+      }
     }
-  }, [fetchTransactionHistory]);
+    resolveAndLoad();
+  }, [tenantSlug, fetchTransactionHistory]);
 
   return {
     locale,

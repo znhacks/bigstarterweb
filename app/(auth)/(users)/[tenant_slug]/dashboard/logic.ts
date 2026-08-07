@@ -78,14 +78,50 @@ export function useUserWorkspaceDashboard() {
         )
         .eq("user_id", user.id);
 
-      if (error) throw error;
-      setMemberships(memberList || []);
+      let list: any[] = (memberList as any[]) || [];
+
+      if (list.length === 0) {
+        const { getUserOrganizationsAction } = await import("@/app/actions/tenant");
+        const serverOrgs = await getUserOrganizationsAction();
+        if (serverOrgs.length > 0) {
+          list = serverOrgs.map((o) => ({
+            id: o.id,
+            tenant_id: o.id,
+            role_id: "member",
+            tenants: o,
+            roles: { id: "member", name: "Member" }
+          }));
+        }
+      }
+
+      // Fallback: Jika memberList kosong tetapi tenantSlug ada di URL, query langsung dari tabel tenants
+      if (list.length === 0 && tenantSlug) {
+        const { data: directTenant } = await supabase
+          .from("tenants")
+          .select("id, name, slug, logo, status, created_at, default_locale, timezone, currency, business_email")
+          .ilike("slug", tenantSlug)
+          .maybeSingle();
+
+        if (directTenant) {
+          list = [
+            {
+              id: "fallback",
+              tenant_id: directTenant.id,
+              role_id: "member",
+              tenants: directTenant,
+              roles: { id: "member", name: "Member" }
+            }
+          ];
+        }
+      }
+
+      setMemberships(list);
     } catch (e) {
       console.error("Gagal memuat parameter keanggotaan pengguna:", e);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [tenantSlug]);
 
   useEffect(() => {
     loadUserAndMemberships();

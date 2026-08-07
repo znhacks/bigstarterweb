@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { PERMISSIONS, hasPermission, type PermissionName } from "@/modules/rbac/shared";
 import { useLocale, useTranslations } from "next-intl";
@@ -22,6 +22,9 @@ export interface AlertState {
 
 export function useOrganizationGeneral() {
   const router = useRouter();
+  const params = useParams();
+  const tenantSlug = (params as any)?.tenant_slug as string | undefined;
+
   const t = useTranslations("organization.organization-general");
   const tCommon = useTranslations("common");
   const locale = useLocale();
@@ -55,6 +58,8 @@ export function useOrganizationGeneral() {
 
   // State permission pengguna aktif (RBAC)
   const [userPermissions, setUserPermissions] = useState<PermissionName[] | null>(null);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
+  const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(false);
 
   // State untuk manajemen pemotongan gambar (Cropping)
   const [cropperOpen, setCropperOpen] = useState(false);
@@ -67,96 +72,83 @@ export function useOrganizationGeneral() {
   const [alertMessage, setAlertMessage] = useState<AlertState | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  // Ambil ID organisasi aktif dari localStorage saat halaman dimuat
+  // Resolusi ID organisasi dari parameter URL (tenantSlug) atau localStorage
   useEffect(() => {
-    const orgId = localStorage.getItem("active_org_id");
-    if (orgId) {
-      setActiveOrgId(orgId);
-      fetchOrgAndRoleDetails(orgId);
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
+    async function resolveAndFetch() {
+      setIsLoading(true);
+      let targetId = localStorage.getItem("active_org_id");
 
-  // Ambil data detail organisasi & Hak Akses Role dari Supabase secara Paralel
+      if (tenantSlug) {
+        const { data: tData } = await supabase
+          .from("tenants")
+          .select("id")
+          .ilike("slug", tenantSlug)
+          .maybeSingle();
+
+        if (tData?.id) {
+          targetId = tData.id;
+          localStorage.setItem("active_org_id", tData.id);
+          document.cookie = `active_tenant_id=${tData.id}; path=/; max-age=2592000; SameSite=Lax;`;
+        }
+      }
+
+      if (targetId) {
+        setActiveOrgId(targetId);
+        fetchOrgAndRoleDetails(targetId);
+      } else {
+        setIsLoading(false);
+      }
+    }
+    resolveAndFetch();
+  }, [tenantSlug]);
+
+  // Ambil data detail organisasi & Hak Akses Role dari Server Action
   const fetchOrgAndRoleDetails = async (orgId: string) => {
     setIsLoading(true);
     try {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-        return;
+      const { getOrganizationDetailsAction } = await import("./actions");
+      const res = await getOrganizationDetailsAction(orgId);
+
+      if (res.error || !res.tenant) {
+        throw new Error(res.error || "Gagal memuat data organisasi.");
       }
 
-      const [tenantRes, membershipRes, subRes] = await Promise.all([
-        // --- 2. UPDATE SELECT QUERY UNTUK MENGAMBIL KOLOM BARU ---
-        (await tenantRepository(supabase))
-          .query()
-          .select(
-            "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, kecamatan, desa, business_email, phone_number, tax_id, default_locale, timezone, currency, school_code"
-          )
-          .eq("id", orgId)
-          .single(),
-        (await membershipRepository(supabase))
-          .query()
-          .select("roles(role_permissions(permissions(name)))")
-          .eq("tenant_id", orgId)
-          .eq("user_id", user.id)
-          .maybeSingle(),
-        (await subscriptionRepository(supabase))
-          .query()
-          .select("status")
-          .eq("tenant_id", orgId)
-          .maybeSingle()
-      ]);
+      setIsSuperadmin(!!res.isSuperadmin);
+      setIsOwnerOrAdmin(!!res.isOwnerOrAdmin);
+      setUserPermissions((res.permissions as PermissionName[]) || null);
 
-      if (tenantRes.error) throw tenantRes.error;
-
-      const isPaid = subRes.data?.status === "active" || subRes.data?.status === "trialing";
+      const isPaid = !!res.isPaid;
       setIsPaidPlan(isPaid);
       const slotsCount = isPaid ? 3 : 2;
       setMaxSchoolSlots(slotsCount);
 
-      if (tenantRes.data) {
-        setOrgName(tenantRes.data.name);
-        setLogoPreview((tenantRes.data as any).logo || null);
-        setDescription((tenantRes.data as any).description || "");
-        setWebsite((tenantRes.data as any).website || "");
+      const tenant = res.tenant;
+      setOrgName(tenant.name || "");
+      setLogoPreview(tenant.logo || null);
+      setDescription(tenant.description || "");
+      setWebsite(tenant.website || "");
 
-        // --- 3. POPULATE DATA BARU KE DALAM STATE ---
-        setBusinessEmail((tenantRes.data as any).business_email || "");
-        setPhoneNumber((tenantRes.data as any).phone_number || "");
-        setTaxId((tenantRes.data as any).tax_id || "");
-        setAddressLine1((tenantRes.data as any).address_line1 || "");
-        setAddressLine2((tenantRes.data as any).address_line2 || "");
-        setCity((tenantRes.data as any).city || "");
-        setStateProvince((tenantRes.data as any).state_province || "");
-        setPostalCode((tenantRes.data as any).postal_code || "");
-        setCountryCode((tenantRes.data as any).country_code || "");
-        setKecamatan((tenantRes.data as any).kecamatan || "");
-        setDesa((tenantRes.data as any).desa || "");
-        setDefaultLocale((tenantRes.data as any).default_locale || tenantConfig.defaults.locale);
-        setTimezone((tenantRes.data as any).timezone || tenantConfig.defaults.timezone);
-        setCurrency((tenantRes.data as any).currency || tenantConfig.defaults.currency);
-        
-        const rawCodeStr = (tenantRes.data as any).school_code || "";
-        setSchoolCode(rawCodeStr);
-        const parsedCodes = rawCodeStr.split(",").map((s: string) => s.trim());
-        const filledSlots = Array.from({ length: slotsCount }, (_, i) => parsedCodes[i] || "");
-        setSchoolCodesList(filledSlots);
-      }
-
-      const mData = membershipRes.data as any;
-      if (mData?.roles) {
-        const perms = (mData.roles.role_permissions ?? [])
-          .map((rp: any) => rp.permissions?.name)
-          .filter((n: any): n is string => typeof n === "string") as PermissionName[];
-        setUserPermissions(perms);
-      } else {
-        setUserPermissions(null);
-      }
+      // Populate data detail
+      setBusinessEmail(tenant.business_email || "");
+      setPhoneNumber(tenant.phone_number || "");
+      setTaxId(tenant.tax_id || "");
+      setAddressLine1(tenant.address_line1 || "");
+      setAddressLine2(tenant.address_line2 || "");
+      setCity(tenant.city || "");
+      setStateProvince(tenant.state_province || "");
+      setPostalCode(tenant.postal_code || "");
+      setCountryCode(tenant.country_code || "");
+      setKecamatan(tenant.kecamatan || "");
+      setDesa(tenant.desa || "");
+      setDefaultLocale(tenant.default_locale || tenantConfig.defaults.locale);
+      setTimezone(tenant.timezone || tenantConfig.defaults.timezone);
+      setCurrency(tenant.currency || tenantConfig.defaults.currency);
+      
+      const rawCodeStr = tenant.school_code || "";
+      setSchoolCode(rawCodeStr);
+      const parsedCodes = rawCodeStr.split(",").map((s: string) => s.trim());
+      const filledSlots = Array.from({ length: slotsCount }, (_, i) => parsedCodes[i] || "");
+      setSchoolCodesList(filledSlots);
     } catch (error: any) {
       console.error("Error fetching org details & role:", error);
       setAlertMessage({
@@ -399,10 +391,10 @@ export function useOrganizationGeneral() {
     }
   };
 
-  // Read-only jika pengguna tidak punya permission organization.update
-  const isReadOnly = !hasPermission(userPermissions, PERMISSIONS.organizationUpdate);
-  // Hapus organisasi hanya utk pemegang organization.delete (Owner).
-  const canDeleteOrg = hasPermission(userPermissions, PERMISSIONS.organizationDelete);
+  // Read-only hanya jika BUKAN Superadmin/Owner dan permission organization.update tidak ada
+  const isReadOnly = !isSuperadmin && !isOwnerOrAdmin && userPermissions !== null && !hasPermission(userPermissions, PERMISSIONS.organizationUpdate);
+  // Hapus organisasi hanya utk Superadmin atau Owner
+  const canDeleteOrg = isSuperadmin || isOwnerOrAdmin || hasPermission(userPermissions, PERMISSIONS.organizationDelete);
 
   // --- 5. PASTIKAN SEMUA STATE DAN FUNGSI BARU DIKEMBALIKAN ---
   return {

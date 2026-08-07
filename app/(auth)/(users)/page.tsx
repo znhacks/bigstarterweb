@@ -7,27 +7,15 @@ import Link from "next/link";
 export default async function LandingOrRedirectPage() {
   const user = await getUser();
 
-  console.log("=== [DEBUG ROOT PAGE] ===");
-  console.log("User Logged In:", user?.email || "Belum Login");
-
-  if (user) {
-    const tenants = await getUserTenants();
-    console.log("User Tenants di Database:", tenants);
-
-    if (tenants.length > 0) {
-      console.log(`Mengalihkan ke tenant pertama: /${tenants[0].tenant.slug}`);
-      redirect(`/${tenants[0].tenant.slug}/dashboard`);
-    } else {
-      if (!user) {
-        redirect(`/login`);
-      }
-    }
+  if (!user) {
+    redirect("/login");
   }
 
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="mb-4 text-4xl font-bold">Selamat Datang di SaaS Kami</h1>
-      <p className="mb-8 text-gray-500">Kolaborasi tim menjadi lebih mudah dan terorganisir.</p>
-    </div>
-  );
+  const tenants = await getUserTenants();
+
+  if (tenants.length > 0) {
+    redirect(`/${tenants[0].tenant.slug}/dashboard`);
+  }
+
+  redirect("/create-tenant");
 }

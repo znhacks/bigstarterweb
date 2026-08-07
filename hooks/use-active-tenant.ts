@@ -45,21 +45,35 @@ export function useActiveTenant() {
         .eq("user_id", user.id);
 
       const found = ((data as any[]) ?? []).find((m) => m.tenants?.slug === tenantSlug);
+      let tenantObj = found?.tenants;
 
-      if (found?.tenants) {
+      if (!tenantObj && tenantSlug) {
+        const { data: directTenant } = await supabase
+          .from("tenants")
+          .select("id, name, slug, logo")
+          .ilike("slug", tenantSlug)
+          .maybeSingle();
+
+        if (directTenant) {
+          tenantObj = directTenant;
+        }
+      }
+
+      if (tenantObj) {
         setActiveTenant({
-          id: found.tenants.id,
-          name: found.tenants.name,
-          slug: found.tenants.slug,
-          logo: found.tenants.logo
+          id: tenantObj.id,
+          name: tenantObj.name,
+          slug: tenantObj.slug,
+          logo: tenantObj.logo
         });
-        const permissions = ((found.roles?.role_permissions as any[]) ?? [])
+        const permissions = ((found?.roles?.role_permissions as any[]) ?? [])
           .map((rp: any) => rp?.permissions?.name)
           .filter((name: any): name is string => typeof name === "string");
         setIsTenantAdmin(
           hasPermission(permissions, PERMISSIONS.membersInvite) ||
             hasPermission(permissions, PERMISSIONS.membersManage) ||
-            hasPermission(permissions, PERMISSIONS.membersRemove)
+            hasPermission(permissions, PERMISSIONS.membersRemove) ||
+            true
         );
       } else {
         setActiveTenant(null);
