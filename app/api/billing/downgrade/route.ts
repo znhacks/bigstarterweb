@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { isTenantMember, canManageBilling } from "@/lib/billing/tenant-auth";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { resolveBillingOwner, ownerFilter } from "@/lib/billing/owner";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
 
 export async function POST(req: Request) {
   try {

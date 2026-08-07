@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { convertToIdr } from "@/services/exchange-rate";
 import { planPriceRepository } from "@/supabase/repositories/plan-pices";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
@@ -9,11 +9,6 @@ import { transactionRepository } from "@/supabase/repositories/transactions";
 import { paymentOrderRepository } from "@/supabase/repositories/payment-orders";
 import { resolveBillingOwner, ownerFilter } from "@/lib/billing/owner";
 import { getLocalizedValue } from "@/lib/i18n/localize";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
 
 function calculateGatewayFee(amount: number, provider: string, currency: string = "IDR"): number {
   const p = provider.toLowerCase().trim();

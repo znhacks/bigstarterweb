@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import {
   decodeFeatureGates,
   FeatureGates,
@@ -9,11 +9,6 @@ import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { billingConfig } from "@/config/payment";
 import { ownerFilter, type BillingOwner } from "@/lib/billing/owner";
 import { getUser } from "@/lib/auth";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
 
 export interface TenantPlan {
   id: string;

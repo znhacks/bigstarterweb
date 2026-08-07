@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { PaymentFactory } from "@/services/payment/factory";
 import { isTenantMember } from "@/lib/billing/tenant-auth";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { planPriceRepository } from "@/supabase/repositories/plan-pices";
 import { planRepository } from "@/supabase/repositories/plans";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
@@ -9,11 +9,6 @@ import { couponRepository } from "@/supabase/repositories/coupons";
 import { paymentOrderRepository } from "@/supabase/repositories/payment-orders";
 import { convertToIdr } from "@/services/exchange-rate";
 import { resolveBillingOwner, ownerFilter } from "@/lib/billing/owner";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
 
 async function convertToIdrSafe(amount: number, fromCurrency: string): Promise<number> {
   try {

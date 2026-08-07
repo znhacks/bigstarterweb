@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { couponRepository } from "@/supabase/repositories/coupons";
 import { couponRedemptionRepository } from "@/supabase/repositories/coupon-redemptions";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
 
 export async function POST(req: Request) {
   try {

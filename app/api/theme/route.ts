@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { DEFAULT_THEME, type ThemeType } from "@/lib/themes";
 import { profileRepository } from "@/supabase/repositories/profiles";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { membershipRepository } from "@/supabase/repositories/memberships";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
 
 function isValidTheme(obj: any): boolean {
   return (

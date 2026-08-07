@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { decodeFeatureGates } from "@/config/feature-definitions";
 import { planRepository } from "@/supabase/repositories/plans";
 import { planPriceRepository } from "@/supabase/repositories/plan-pices";
 import { getActiveVirtualPlans } from "@/config/virtual-plans";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-);
 
 export async function GET() {
   try {
