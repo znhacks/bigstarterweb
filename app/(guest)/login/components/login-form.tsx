@@ -85,9 +85,13 @@ export function LoginForm() {
   // Semua user (superadmin maupun biasa) dilepas ke `/` (atau nextTarget),
   // dan root page `/` yang menjadi otoritas routing berbasis profiles.is_superadmin.
   // Lihat app/page.tsx.
-  const handleRedirect = () => {
-    router.push(nextTarget || "/");
-    router.refresh();
+  const handleRedirect = (targetPath?: string) => {
+    const destination = targetPath || nextTarget || "/";
+    if (typeof window !== "undefined") {
+      window.location.href = destination;
+    } else {
+      router.push(destination);
+    }
   };
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
@@ -96,6 +100,30 @@ export function LoginForm() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    // Pertama, coba via Server Action (lebih stabil di Vercel & server-side cookies)
+    try {
+      const { loginAction } = await import("@/app/actions/auth");
+      const serverRes = await loginAction({ email, password });
+
+      if (!serverRes.error && serverRes.success) {
+        setSuccessMsg(t("logsucces"));
+        setTimeout(() => {
+          handleRedirect(serverRes.redirectUrl);
+        }, 500);
+        return;
+      }
+
+      // Jika ada error spesifik kredensial dari server action, tampilkan
+      if (serverRes.error && !serverRes.error.includes("Gagal terhubung")) {
+        setErrorMsg(serverRes.error);
+        setIsLoading(false);
+        return;
+      }
+    } catch (serverErr) {
+      console.warn("Server action login fallback to client:", serverErr);
+    }
+
+    // Fallback kedua: Client-side login via Supabase SDK
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -108,28 +136,9 @@ export function LoginForm() {
         setSuccessMsg(t("logsucces"));
         setTimeout(() => {
           handleRedirect();
-        }, 1000);
+        }, 500);
       }
     } catch (err: any) {
-      // Fallback: Jika Client Fetch gagal (CORS, Adblocker, atau masalah Env di Vercel), panggil Server Action
-      if (err.message?.includes("Failed to fetch") || err.name === "TypeError" || !err.status) {
-        try {
-          const { loginAction } = await import("@/app/actions/auth");
-          const serverRes = await loginAction({ email, password });
-          if (serverRes.error) {
-            setErrorMsg(serverRes.error);
-          } else {
-            setSuccessMsg(t("logsucces"));
-            setTimeout(() => {
-              handleRedirect();
-            }, 1000);
-          }
-          return;
-        } catch (serverErr: any) {
-          setErrorMsg(serverErr.message || t("wronginput"));
-          return;
-        }
-      }
       setErrorMsg(err.message || t("wronginput"));
     } finally {
       setIsLoading(false);
