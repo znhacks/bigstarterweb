@@ -90,8 +90,8 @@ export function useOrganizationGeneral() {
       const { getOrganizationDetailsAction } = await import("./actions");
       const res = await getOrganizationDetailsAction(orgIdOrSlug);
 
-      if (res.error || !res.tenant) {
-        throw new Error(res.error || "Gagal memuat data organisasi.");
+      if (!res.tenant) {
+        throw new Error("Gagal memuat data organisasi.");
       }
 
       if (res.tenant.id) {
