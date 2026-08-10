@@ -98,7 +98,7 @@ export async function updateSchoolCodeAction(tenantId: string, schoolCode: strin
 /**
  * Server Action untuk membaca detail organisasi & hak akses user (bypasses browser RLS issues).
  */
-export async function getOrganizationDetailsAction(tenantId: string) {
+export async function getOrganizationDetailsAction(tenantIdOrSlug: string) {
   try {
     const supabase = await createClient();
     const {
@@ -108,39 +108,40 @@ export async function getOrganizationDetailsAction(tenantId: string) {
 
     const isSuperadmin = user.app_metadata?.role === "superadmin";
 
-    // 1. Ambil data tenant (coba user client dulu, fallback ke supabaseAdmin)
+    // 1. Ambil data tenant (bisa berdasar id atau slug, fallback ke main tenant)
     let tenantData: any = null;
-    const { data: userTenant } = await (await tenantRepository(supabase))
-      .query()
-      .select(
-        "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, kecamatan, desa, business_email, phone_number, tax_id, default_locale, timezone, currency, school_code"
-      )
-      .eq("id", tenantId)
-      .maybeSingle();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantIdOrSlug);
 
-    if (userTenant) {
-      tenantData = userTenant;
-    } else if (supabaseAdmin) {
-      const { data: adminTenant } = await (await tenantRepository(supabaseAdmin))
-        .query()
-        .select(
-          "name, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, kecamatan, desa, business_email, phone_number, tax_id, default_locale, timezone, currency, school_code"
-        )
-        .eq("id", tenantId)
-        .maybeSingle();
-      tenantData = adminTenant;
+    if (supabaseAdmin) {
+      const repo = await tenantRepository(supabaseAdmin);
+      const fields = "id, name, slug, logo, description, website, address_line1, address_line2, city, state_province, postal_code, country_code, kecamatan, desa, business_email, phone_number, tax_id, default_locale, timezone, currency, school_code";
+
+      if (isUuid) {
+        const { data: t } = await repo.query().select(fields).eq("id", tenantIdOrSlug).maybeSingle();
+        tenantData = t;
+      } else {
+        const { data: t } = await repo.query().select(fields).ilike("slug", tenantIdOrSlug).maybeSingle();
+        tenantData = t;
+      }
+
+      if (!tenantData) {
+        const { data: firstT } = await repo.query().select(fields).limit(1).maybeSingle();
+        tenantData = firstT;
+      }
     }
 
     if (!tenantData) {
       return { error: "Organisasi tidak ditemukan." };
     }
 
+    const resolvedTenantId = tenantData.id;
+
     // 2. Ambil subscription status
     const subRepo = await subscriptionRepository(supabaseAdmin);
     const { data: subData } = await subRepo
       .query()
       .select("status")
-      .eq("tenant_id", tenantId)
+      .eq("tenant_id", resolvedTenantId)
       .maybeSingle();
     const isPaid = subData?.status === "active" || subData?.status === "trialing";
 
@@ -152,7 +153,7 @@ export async function getOrganizationDetailsAction(tenantId: string) {
     const { data: mData } = await (await membershipRepository(supabaseAdmin))
       .query()
       .select("roles(name, role_permissions(permissions(name)))")
-      .eq("tenant_id", tenantId)
+      .eq("tenant_id", resolvedTenantId)
       .eq("user_id", user.id)
       .maybeSingle();
 

@@ -76,25 +76,9 @@ export function useOrganizationGeneral() {
   useEffect(() => {
     async function resolveAndFetch() {
       setIsLoading(true);
-      let targetId = localStorage.getItem("active_org_id");
-
-      if (tenantSlug) {
-        const { data: tData } = await supabase
-          .from("tenants")
-          .select("id")
-          .ilike("slug", tenantSlug)
-          .maybeSingle();
-
-        if (tData?.id) {
-          targetId = tData.id;
-          localStorage.setItem("active_org_id", tData.id);
-          document.cookie = `active_tenant_id=${tData.id}; path=/; max-age=2592000; SameSite=Lax;`;
-        }
-      }
-
-      if (targetId) {
-        setActiveOrgId(targetId);
-        fetchOrgAndRoleDetails(targetId);
+      const queryKey = tenantSlug || localStorage.getItem("active_org_id") || "";
+      if (queryKey) {
+        fetchOrgAndRoleDetails(queryKey);
       } else {
         setIsLoading(false);
       }
@@ -103,14 +87,20 @@ export function useOrganizationGeneral() {
   }, [tenantSlug]);
 
   // Ambil data detail organisasi & Hak Akses Role dari Server Action
-  const fetchOrgAndRoleDetails = async (orgId: string) => {
+  const fetchOrgAndRoleDetails = async (orgIdOrSlug: string) => {
     setIsLoading(true);
     try {
       const { getOrganizationDetailsAction } = await import("./actions");
-      const res = await getOrganizationDetailsAction(orgId);
+      const res = await getOrganizationDetailsAction(orgIdOrSlug);
 
       if (res.error || !res.tenant) {
         throw new Error(res.error || "Gagal memuat data organisasi.");
+      }
+
+      if (res.tenant.id) {
+        setActiveOrgId(res.tenant.id);
+        localStorage.setItem("active_org_id", res.tenant.id);
+        document.cookie = `active_tenant_id=${res.tenant.id}; path=/; max-age=2592000; SameSite=Lax;`;
       }
 
       setIsSuperadmin(!!res.isSuperadmin);

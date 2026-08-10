@@ -82,26 +82,26 @@ export function useOrganizationMembers() {
   useEffect(() => {
     async function resolveAndLoad() {
       setIsLoading(true);
-      let targetId = localStorage.getItem("active_org_id");
-
-      if (tenantSlug) {
-        const { data: tData } = await supabase
-          .from("tenants")
-          .select("id")
-          .ilike("slug", tenantSlug)
-          .maybeSingle();
-
-        if (tData?.id) {
-          targetId = tData.id;
-          localStorage.setItem("active_org_id", tData.id);
-          document.cookie = `active_tenant_id=${tData.id}; path=/; max-age=2592000; SameSite=Lax;`;
+      const queryKey = tenantSlug || localStorage.getItem("active_org_id") || "";
+      if (queryKey) {
+        try {
+          const { getOrganizationDetailsAction } = await import("../general/actions");
+          const res = await getOrganizationDetailsAction(queryKey);
+          if (res.tenant?.id) {
+            const orgId = res.tenant.id;
+            setActiveOrgId(orgId);
+            setOrgName(res.tenant.name || "");
+            if (res.tenant.slug) setOrgSlug(res.tenant.slug);
+            localStorage.setItem("active_org_id", orgId);
+            document.cookie = `active_tenant_id=${orgId}; path=/; max-age=2592000; SameSite=Lax;`;
+            await loadAllData(orgId);
+          } else {
+            setIsLoading(false);
+          }
+        } catch (e) {
+          console.error("Gagal memuat detail organisasi member:", e);
+          setIsLoading(false);
         }
-      }
-
-      if (targetId) {
-        setActiveOrgId(targetId);
-        fetchOrgDetails(targetId);
-        loadAllData(targetId);
       } else {
         setIsLoading(false);
       }
