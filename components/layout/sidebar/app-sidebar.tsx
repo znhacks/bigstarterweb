@@ -359,22 +359,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 )}
                               </div>
                               <div className="flex min-w-0 flex-1 flex-col">
-                                <span className="text-muted-foreground truncate text-sm font-medium">
+                                <span className="text-foreground truncate text-sm font-medium">
                                   {org.name}
                                 </span>
-                                <span
-                                  className={`text-xs ${
-                                    activeOrg?.slug === org.slug || activeOrg?.id === org.id
-                                      ? "font-semibold text-green-700"
-                                      : "text-muted-foreground"
-                                  }`}>
-                                  {activeOrg?.slug === org.slug || activeOrg?.id === org.id
-                                    ? t("menu.users.active")
-                                    : t("menu.users.switch")}
-                                </span>
                               </div>
-                              {activeOrg?.id === org.id && (
-                                <Check className="ms-auto size-4 text-green-700" />
+                              {(activeOrg?.slug === org.slug || activeOrg?.id === org.id) && (
+                                <Check className="text-primary ms-auto size-4" />
                               )}
                             </DropdownMenuItem>
                           ))

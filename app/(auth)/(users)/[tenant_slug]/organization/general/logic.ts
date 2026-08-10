@@ -208,14 +208,9 @@ export function useOrganizationGeneral() {
     setAlertMessage(null);
 
     try {
-      const { error } = await (
-        await tenantRepository(supabase)
-      )
-        .query()
-        .update({ name: orgName.trim() })
-        .eq("id", activeOrgId);
-
-      if (error) throw error;
+      const { updateOrganizationDetailsAction } = await import("./actions");
+      const res = await updateOrganizationDetailsAction(activeOrgId, { name: orgName.trim() });
+      if (res.error) throw new Error(res.error);
 
       setAlertMessage({
         title: locale === "en" ? "Success" : "Sukses",
@@ -224,6 +219,7 @@ export function useOrganizationGeneral() {
       });
 
       window.dispatchEvent(new Event("storage"));
+      router.refresh();
     } catch (error: any) {
       setAlertMessage({
         title: "Error",
@@ -281,14 +277,9 @@ export function useOrganizationGeneral() {
         throw new Error(parsed.error.issues[0]?.message || "Validasi gagal.");
       }
 
-      const { error } = await (
-        await tenantRepository(supabase)
-      )
-        .query()
-        .update(normalizedPayload)
-        .eq("id", activeOrgId);
-
-      if (error) throw error;
+      const { updateOrganizationDetailsAction } = await import("./actions");
+      const res = await updateOrganizationDetailsAction(activeOrgId, normalizedPayload);
+      if (res.error) throw new Error(res.error);
 
       setAlertMessage({
         title: locale === "en" ? "Success" : "Sukses",
@@ -296,6 +287,7 @@ export function useOrganizationGeneral() {
           locale === "en" ? "Settings updated successfully." : "Pengaturan berhasil diperbarui.",
         variant: "default"
       });
+      router.refresh();
     } catch (error: any) {
       setAlertMessage({
         title: "Error",

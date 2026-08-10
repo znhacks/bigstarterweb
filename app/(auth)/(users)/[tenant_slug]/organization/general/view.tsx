@@ -251,17 +251,17 @@ export function OrganizationGeneralSettings() {
                 </p>
               </div>
               <div className="w-full md:max-w-xl space-y-3">
-                <div className={`grid gap-3 ${maxSchoolSlots === 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2"}`}>
+                <div className="flex flex-col space-y-4">
                   {schoolCodesList.map((code, idx) => (
-                    <div key={idx} className="flex flex-col justify-between space-y-1.5">
-                      <div className="flex items-center justify-between min-h-[24px]">
-                        <Label htmlFor={`school-code-input-${idx}`} className="text-xs font-medium">
+                    <div key={idx} className="flex flex-col space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`school-code-input-${idx}`} className="text-xs font-semibold text-foreground">
                           Kode Sekolah {idx + 1}
                         </Label>
                         {idx === 0 && (
-                          <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-bold uppercase">
+                          <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wide">
                             Utama
-                          </Badge>
+                          </span>
                         )}
                       </div>
                       <Input
@@ -276,7 +276,7 @@ export function OrganizationGeneralSettings() {
                     </div>
                   ))}
                 </div>
-                <p className="text-muted-foreground text-[11px] leading-normal">
+                <p className="text-muted-foreground text-[11px] leading-normal pt-1">
                   💡 {isPaidPlan ? "Paket Berlangganan: Tersedia 3 kolom sekolah yang dapat dipantau sekaligus." : "Paket Gratis (Free): Tersedia 2 kolom sekolah. Upgrade ke paket berbayar untuk membuka kolom ke-3."}
                 </p>
               </div>

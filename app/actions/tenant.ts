@@ -471,22 +471,6 @@ export async function getUserOrganizationsAction() {
       }
     }
 
-    if (!tenants || tenants.length === 0) {
-      // Fallback 2: Fetch default main tenants in supabaseAdmin
-      const { data: allTenants } = await supabaseAdmin
-        .from("tenants")
-        .select("id, name, slug, logo");
-
-      if (allTenants && allTenants.length > 0) {
-        return allTenants.map((t: any) => ({
-          id: t.id,
-          name: t.name,
-          slug: t.slug,
-          logo: t.logo || null
-        }));
-      }
-    }
-
     return (tenants || []).map((t) => ({
       id: t.tenant.id,
       name: t.tenant.name,

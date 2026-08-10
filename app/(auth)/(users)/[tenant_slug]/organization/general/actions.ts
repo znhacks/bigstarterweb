@@ -39,6 +39,27 @@ export async function deleteOrganizationAction(tenantId: string): Promise<Result
   }
 }
 
+/** Update Detail Organisasi (Nama, Deskripsi, Alamat, dll). Bypass RLS via supabaseAdmin. */
+export async function updateOrganizationDetailsAction(tenantId: string, payload: Record<string, any>): Promise<Result> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user) return { error: "Tidak terautentikasi." };
+
+    const { error } = await (await tenantRepository(supabaseAdmin))
+      .query()
+      .update(payload)
+      .eq("id", tenantId);
+
+    if (error) return { error: error.message };
+    return {};
+  } catch (e: any) {
+    return { error: e?.message || "Gagal memperbarui data organisasi." };
+  }
+}
+
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 
 /** Update Kode Sekolah (school_code) untuk koneksi Jurnal Mengajar. Wajib permission organization.update. */
@@ -161,8 +182,8 @@ export async function getOrganizationDetailsAction(tenantIdOrSlug: string) {
 
     const resolvedTenantId = tenantData.id;
 
-    // 2. Ambil subscription status
-    let isPaid = true;
+    // 2. Ambil subscription status (default false untuk paket Free)
+    let isPaid = false;
     try {
       const subRepo = await subscriptionRepository(supabaseAdmin);
       const { data: subData } = await subRepo
@@ -171,10 +192,10 @@ export async function getOrganizationDetailsAction(tenantIdOrSlug: string) {
         .eq("tenant_id", resolvedTenantId)
         .maybeSingle();
       if (subData) {
-        isPaid = subData.status === "active" || subData.status === "trialing";
+        isPaid = subData.status === "active" && (subData as any).plan_id !== "free";
       }
     } catch {
-      isPaid = true;
+      isPaid = false;
     }
 
     // 3. Ambil role & permissions
@@ -226,7 +247,7 @@ export async function getOrganizationDetailsAction(tenantIdOrSlug: string) {
         slug: "jurnal-mengajar",
         logo: null
       },
-      isPaid: true,
+      isPaid: false,
       isSuperadmin: false,
       isOwnerOrAdmin: true,
       permissions: Object.values(PERMISSIONS)
