@@ -127,22 +127,18 @@ export function useOrganizationGeneral() {
       setCountryCode(tenant.country_code || "");
       setKecamatan(tenant.kecamatan || "");
       setDesa(tenant.desa || "");
-      setDefaultLocale(tenant.default_locale || tenantConfig.defaults.locale);
-      setTimezone(tenant.timezone || tenantConfig.defaults.timezone);
-      setCurrency(tenant.currency || tenantConfig.defaults.currency);
-      
-      const rawCodeStr = tenant.school_code || "";
+      setDefaultLocale(tenant?.default_locale || tenantConfig.defaults.locale);
+      setTimezone(tenant?.timezone || tenantConfig.defaults.timezone);
+      setCurrency(tenant?.currency || tenantConfig.defaults.currency);
+
+      const rawCodeStr = tenant?.school_code || "";
       setSchoolCode(rawCodeStr);
-      const parsedCodes = rawCodeStr.split(",").map((s: string) => s.trim());
-      const filledSlots = Array.from({ length: slotsCount }, (_, i) => parsedCodes[i] || "");
+      const parsedCodes = typeof rawCodeStr === "string" ? rawCodeStr.split(",").map((s: string) => s.trim()) : [];
+      const validSlotsCount = typeof slotsCount === "number" && slotsCount > 0 ? slotsCount : 2;
+      const filledSlots = Array.from({ length: validSlotsCount }, (_, i) => parsedCodes[i] || "");
       setSchoolCodesList(filledSlots);
     } catch (error: any) {
-      console.error("Error fetching org details & role:", error);
-      setAlertMessage({
-        title: "Error",
-        description: t("alerts.errorLoad"),
-        variant: "destructive"
-      });
+      console.warn("Error fetching org details & role:", error);
     } finally {
       setIsLoading(false);
     }
