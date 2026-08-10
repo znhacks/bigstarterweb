@@ -111,6 +111,25 @@ export function LoginForm() {
         }, 1000);
       }
     } catch (err: any) {
+      // Fallback: Jika Client Fetch gagal (CORS, Adblocker, atau masalah Env di Vercel), panggil Server Action
+      if (err.message?.includes("Failed to fetch") || err.name === "TypeError" || !err.status) {
+        try {
+          const { loginAction } = await import("@/app/actions/auth");
+          const serverRes = await loginAction({ email, password });
+          if (serverRes.error) {
+            setErrorMsg(serverRes.error);
+          } else {
+            setSuccessMsg(t("logsucces"));
+            setTimeout(() => {
+              handleRedirect();
+            }, 1000);
+          }
+          return;
+        } catch (serverErr: any) {
+          setErrorMsg(serverErr.message || t("wronginput"));
+          return;
+        }
+      }
       setErrorMsg(err.message || t("wronginput"));
     } finally {
       setIsLoading(false);
