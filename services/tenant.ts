@@ -112,6 +112,42 @@ export const getUserTenants = cache(async () => {
     }
   }
 
+  // 4. Auto-repair: Sambungkan user secara otomatis ke tenant utama jika belum terdaftar
+  if ((!data || data.length === 0) && supabaseAdmin) {
+    try {
+      const { data: mainTenant } = await supabaseAdmin
+        .from("tenants")
+        .select("id, name, slug, logo")
+        .limit(1)
+        .maybeSingle();
+
+      if (mainTenant) {
+        const { data: memberRole } = await supabaseAdmin
+          .from("roles")
+          .select("id")
+          .eq("name", "Member")
+          .maybeSingle();
+
+        await supabaseAdmin.from("memberships").insert({
+          user_id: user.id,
+          tenant_id: mainTenant.id,
+          role_id: memberRole?.id || null
+        });
+
+        return [
+          {
+            roleId: memberRole?.id || "member",
+            roleName: "Member",
+            permissions: [] as PermissionName[],
+            tenant: mainTenant as ActiveTenant
+          }
+        ];
+      }
+    } catch (autoRepairErr) {
+      console.warn("Auto-repair membership error:", autoRepairErr);
+    }
+  }
+
   return (data ?? [])
     .map((item: any) => {
       if (!item?.tenants) return null;

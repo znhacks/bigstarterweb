@@ -157,29 +157,7 @@ export async function middleware(request: NextRequest) {
 
     // ONBOARDING GATE (Dilewati agar tidak terjebak loop pada rute yang tidak ada)
 
-    // ORGANIZATION GATE: organizations.requireOrganization = true → user tanpa org
-    // → redirect ke /create-tenant (kecuali route yg dikecualikan utk hindari loop).
-    if (tenantConfig.organizations.requireOrganization && !isSuperadmin) {
-      const orgAllowed =
-        path.startsWith("/create-tenant") ||
-        path.startsWith("/auth") ||
-        path.startsWith("/logout") ||
-        path.startsWith("/onboarding") ||
-        path.startsWith("/settings") ||
-        path.startsWith("/superadmin");
-      if (!orgAllowed) {
-        const memRepo = await membershipRepository(supabase);
-        const { count } = await memRepo
-          .query()
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", user.id);
-        if (!count || count === 0) {
-          url.pathname = "/create-tenant";
-          url.search = "";
-          return NextResponse.redirect(url);
-        }
-      }
-    }
+    // ORGANIZATION GATE (Dilewati agar penanganan organisasi dikelola otoritatif oleh getUserTenants)
 
     return response;
   } catch (error) {
