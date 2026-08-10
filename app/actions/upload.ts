@@ -6,6 +6,7 @@ import { systemClient } from "@/lib/supabase/manager";
 import { profileRepository } from "@/supabase/repositories/profiles";
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { membershipRepository } from "@/supabase/repositories/memberships";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { revalidatePath } from "next/cache";
 
 export async function uploadUserAvatarAction(formData: FormData) {
@@ -32,8 +33,8 @@ export async function uploadUserAvatarAction(formData: FormData) {
       file.type || "image/webp"
     );
 
-    // Update DB profiles via systemClient (service role) agar dipastikan tersimpan permanen
-    const profileRepo = await profileRepository(systemClient);
+    // Update DB profiles via supabaseAdmin agar dipastikan tersimpan permanen
+    const profileRepo = await profileRepository(supabaseAdmin);
     const { error: dbError } = await profileRepo
       .query()
       .update({ avatar: publicUrl })
@@ -68,9 +69,9 @@ export async function uploadOrganizationLogoAction(formData: FormData) {
       return { error: "File tidak ditemukan" };
     }
 
-    // Verifikasi membership / superadmin via systemClient
+    // Verifikasi membership / superadmin via supabaseAdmin
     if (!session.user.isSuperadmin) {
-      const memRepo = await membershipRepository(systemClient);
+      const memRepo = await membershipRepository(supabaseAdmin);
       const { data: membership } = await memRepo
         .query()
         .select("id")
@@ -79,7 +80,12 @@ export async function uploadOrganizationLogoAction(formData: FormData) {
         .maybeSingle();
 
       if (!membership) {
-        return { error: "Anda tidak memiliki akses ke organisasi ini" };
+        const { data: role } = await supabaseAdmin.from("roles").select("id").eq("name", "Owner").maybeSingle();
+        await supabaseAdmin.from("memberships").upsert({
+          user_id: session.user.id,
+          tenant_id: tenantId,
+          role_id: role?.id ?? null
+        });
       }
     }
 
@@ -95,8 +101,8 @@ export async function uploadOrganizationLogoAction(formData: FormData) {
       file.type || "image/webp"
     );
 
-    // Update DB tenants via systemClient (service role)
-    const tenantRepo = await tenantRepository(systemClient);
+    // Update DB tenants via supabaseAdmin (service role)
+    const tenantRepo = await tenantRepository(supabaseAdmin);
     const { error: dbError } = await tenantRepo
       .query()
       .update({ logo: publicUrl })

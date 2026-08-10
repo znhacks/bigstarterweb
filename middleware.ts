@@ -14,11 +14,11 @@ export async function middleware(request: NextRequest) {
 
   const urlStr =
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    "https://bsicqpiqskrwqesqijtf.supabase.co";
+    "https://egcxjuudphnbjwqhhbra.supabase.co";
 
   const anonKey =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzaWNxcGlxc2tyd3Flc3FpanRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3MTcxMzksImV4cCI6MjEwMTI5MzEzOX0.JDm93ruPLqJL-xwp48G4e7IQJLyQKPf5A0HwmoUjrwM";
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnY3hqdXVkcGhuYmp3cWhoYnJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNTIzNDAsImV4cCI6MjA5NjgyODM0MH0.cmSDtVTxAcouchEt38uNZXyKvR860fzsa9TKxVhfVtw";
 
   const supabase = createServerClient(
     urlStr,

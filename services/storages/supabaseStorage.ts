@@ -1,11 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 import { IStorageService } from "@/interfaces/storage";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 
 export class SupabaseStorageService implements IStorageService {
-  private client = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  private getClient() {
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (serviceKey && !serviceKey.includes("YOUR_")) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://egcxjuudphnbjwqhhbra.supabase.co";
+      return createClient(url, serviceKey);
+    }
+    return supabaseAdmin;
+  }
 
   async uploadFile(
     bucket: string,
@@ -16,13 +21,14 @@ export class SupabaseStorageService implements IStorageService {
     dbModel?: "SHARED" | "ISOLATED"
   ): Promise<string> {
     const finalPath = dbModel === "SHARED" && tenantId ? `${tenantId}/${path}` : path;
+    const client = this.getClient();
 
     try {
       // Pastikan bucket ada dan bersifat publik
-      const { data: buckets } = await this.client.storage.listBuckets();
+      const { data: buckets } = await client.storage.listBuckets();
       const bucketExists = buckets?.some((b) => b.name === bucket);
       if (!bucketExists) {
-        await this.client.storage.createBucket(bucket, {
+        await client.storage.createBucket(bucket, {
           public: true,
           fileSizeLimit: 5242880 // 5MB limit
         });
@@ -31,17 +37,17 @@ export class SupabaseStorageService implements IStorageService {
       // Abaikan error pembuatan jika bucket sudah ada
     }
 
-    const { error } = await this.client.storage
+    const { error } = await client.storage
       .from(bucket)
       .upload(finalPath, fileBuffer, { contentType, upsert: true });
 
     if (error) throw error;
 
-    const { data } = this.client.storage.from(bucket).getPublicUrl(finalPath);
+    const { data } = client.storage.from(bucket).getPublicUrl(finalPath);
     return data.publicUrl;
   }
 
   async deleteFile(bucket: string, path: string): Promise<void> {
-    await this.client.storage.from(bucket).remove([path]);
+    await this.getClient().storage.from(bucket).remove([path]);
   }
 }

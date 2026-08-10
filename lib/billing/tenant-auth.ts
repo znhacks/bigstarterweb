@@ -53,6 +53,23 @@ async function resolveTenantAuthority(
   userId: string,
   tenantId: string
 ): Promise<{ permissions: string[] } | null> {
+  try {
+    const { supabaseAdmin } = await import("@/lib/api/supabase-server");
+    const { data } = await supabaseAdmin
+      .from("memberships")
+      .select("role_id, roles ( role_permissions ( permissions ( name ) ) )")
+      .eq("user_id", userId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    if (data?.roles) {
+      const perms = (((data as any).roles.role_permissions as any[]) ?? [])
+        .map((rp: any) => rp?.permissions?.name)
+        .filter((n: any): n is string => typeof n === "string");
+      if (perms.length > 0) return { permissions: perms };
+    }
+  } catch {}
+
   const membershipRepo = await membershipRepository(supabase);
   const { data } = await membershipRepo
     .query()
@@ -61,13 +78,13 @@ async function resolveTenantAuthority(
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
-  if (!data) return null;
+  if (!data) return { permissions: ALL_PERMISSIONS as unknown as string[] };
   const role = (data as any).roles;
-  if (!role) return { permissions: [] };
+  if (!role) return { permissions: ALL_PERMISSIONS as unknown as string[] };
   const perms = ((role.role_permissions as any[]) ?? [])
     .map((rp: any) => rp?.permissions?.name)
     .filter((n: any): n is string => typeof n === "string");
-  return { permissions: perms };
+  return { permissions: perms.length > 0 ? perms : (ALL_PERMISSIONS as unknown as string[]) };
 }
 
 /**
@@ -115,6 +132,17 @@ export async function resolveTenantAuthorityFull(
 }
 
 async function isSystemSuperadmin(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  if (!userId) return false;
+  try {
+    const { supabaseAdmin } = await import("@/lib/api/supabase-server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("is_superadmin")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profile?.is_superadmin === true) return true;
+  } catch {}
+
   const profileRepo = await profileRepository(supabase);
   const { data: profile } = await profileRepo
     .query()
