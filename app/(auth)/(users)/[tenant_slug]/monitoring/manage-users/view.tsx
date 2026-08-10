@@ -154,12 +154,7 @@ export function ManageUsersView({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">Kelola Role & User Jurnal</h1>
-            <Badge variant="outline" className="font-mono text-xs bg-primary/10 text-primary border-primary/20">
-              Kode Sekolah: {schoolCode}
-            </Badge>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Kelola Role & User Jurnal</h1>
           <p className="text-muted-foreground text-xs mt-1">
             Atur peran (role), jabatan, email, dan NIP pengguna pada database Jurnal Mengajar untuk sekolah {tenantName || ""}.
           </p>

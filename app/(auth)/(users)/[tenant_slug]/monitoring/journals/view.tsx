@@ -78,12 +78,7 @@ export function JournalLogsView({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">Jurnal & Laporan Mengajar</h1>
-            <Badge variant="outline" className="font-mono text-xs bg-primary/10 text-primary border-primary/20">
-              Kode Sekolah: {schoolCode}
-            </Badge>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Jurnal & Laporan Mengajar</h1>
           <p className="text-muted-foreground text-xs mt-1">
             Pemantauan entri jurnal mengajar harian, materi pembelajaran, dan rekapitulasi kehadiran siswa di {tenantName || ""}.
           </p>

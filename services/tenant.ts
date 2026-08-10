@@ -162,6 +162,25 @@ export const getActiveTenant = cache(
           .maybeSingle();
 
         if (directTenant) {
+          try {
+            const { data: memberRole } = await supabaseAdmin
+              .from("roles")
+              .select("id")
+              .eq("name", "Member")
+              .maybeSingle();
+
+            await supabaseAdmin.from("memberships").upsert(
+              {
+                user_id: user.id,
+                tenant_id: directTenant.id,
+                role_id: memberRole?.id || null
+              },
+              { onConflict: "user_id,tenant_id" }
+            );
+          } catch (upsertErr) {
+            console.warn("Notice auto-creating membership in getActiveTenant:", upsertErr);
+          }
+
           return {
             roleId: "member",
             roleName: "Member",

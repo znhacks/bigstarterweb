@@ -48,11 +48,6 @@ export function SchoolRoleSwitcher() {
             <span className="font-semibold truncate">
               {activeSchool?.school_name || "Pilih Sekolah"}
             </span>
-            <Badge
-              variant="secondary"
-              className="text-[10px] px-1.5 py-0 font-medium shrink-0 bg-primary/10 text-primary border-primary/20">
-              {currentRole}
-            </Badge>
           </div>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground ms-auto" />
         </Button>
@@ -83,7 +78,7 @@ export function SchoolRoleSwitcher() {
                       <UserCheck className="h-3 w-3 text-muted-foreground shrink-0" />
                     )}
                     <span className="text-[11px] text-muted-foreground truncate">
-                      {item.role} {item.school_code ? `(${item.school_code})` : ""}
+                      {item.role && item.role !== "Owner/Admin" ? item.role : ""} {item.school_code ? `(${item.school_code})` : ""}
                     </span>
                   </div>
                 </div>

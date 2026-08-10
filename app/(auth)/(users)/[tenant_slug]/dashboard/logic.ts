@@ -10,6 +10,7 @@ import { profileRepository } from "@/supabase/repositories/profiles";
 import { membershipRepository } from "@/supabase/repositories/memberships";
 import { subscriptionRepository } from "@/supabase/repositories/subscriptions";
 import { transactionRepository } from "@/supabase/repositories/transactions";
+import { useSchoolContext } from "@/hooks/use-school-context";
 
 // Helper client-side untuk Cookie (Diselaraskan dengan AppSidebar)
 const getCookie = (name: string) => {
@@ -24,6 +25,16 @@ export function useUserWorkspaceDashboard() {
   const locale = useLocale();
   const params = useParams();
   const tenantSlug = params?.tenant_slug as string | undefined;
+
+  let schoolContext: any = null;
+  try {
+    schoolContext = useSchoolContext();
+  } catch (e) {
+    // Fallback
+  }
+
+  const activeSchool = schoolContext?.activeSchool;
+  const activeSchoolCode = activeSchool?.school_code || activeSchool?.school_id || schoolContext?.activeSchoolId;
 
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<any | null>(null);
@@ -94,24 +105,27 @@ export function useUserWorkspaceDashboard() {
         }
       }
 
-      // Fallback: Jika memberList kosong tetapi tenantSlug ada di URL, query langsung dari tabel tenants
-      if (list.length === 0 && tenantSlug) {
-        const { data: directTenant } = await supabase
-          .from("tenants")
-          .select("id, name, slug, logo, status, created_at, default_locale, timezone, currency, business_email")
-          .ilike("slug", tenantSlug)
-          .maybeSingle();
+      // Ensure tenant matching URL slug is fetched if not present in memberships list
+      if (tenantSlug) {
+        const hasSlug = list.some(
+          (m) => m.tenants?.slug?.toLowerCase() === tenantSlug.toLowerCase()
+        );
+        if (!hasSlug) {
+          const { data: directTenant } = await supabase
+            .from("tenants")
+            .select("id, name, slug, logo, status, created_at, default_locale, timezone, currency, business_email")
+            .ilike("slug", tenantSlug)
+            .maybeSingle();
 
-        if (directTenant) {
-          list = [
-            {
-              id: "fallback",
+          if (directTenant) {
+            list.unshift({
+              id: "direct-" + directTenant.id,
               tenant_id: directTenant.id,
               role_id: "member",
               tenants: directTenant,
               roles: { id: "member", name: "Member" }
-            }
-          ];
+            });
+          }
         }
       }
 
@@ -135,11 +149,15 @@ export function useUserWorkspaceDashboard() {
 
     if (tenantSlug) {
       // Prioritas 1: Sesuai dengan parameter slug URL saat ini
-      const matched = memberships.find((m) => m.tenants?.slug === tenantSlug);
+      const matched = memberships.find(
+        (m) => m.tenants?.slug?.toLowerCase() === tenantSlug.toLowerCase()
+      );
       if (matched) targetTenant = matched.tenants;
-    } else {
-      // Prioritas 2: Membaca fallback cookie/localStorage (Diselaraskan dengan AppSidebar)
-      const savedTenantId = getCookie("active_tenant_id") || localStorage.getItem("active_org_id");
+    }
+
+    if (!targetTenant) {
+      // Prioritas 2: Membaca fallback cookie/localStorage
+      const savedTenantId = getCookie("active_tenant_id") || (typeof localStorage !== "undefined" ? localStorage.getItem("active_org_id") : null);
       const matched = memberships.find((m) => m.tenant_id === savedTenantId);
       if (matched) targetTenant = matched.tenants;
     }
@@ -152,36 +170,70 @@ export function useUserWorkspaceDashboard() {
     }
   }, [tenantSlug, memberships]);
 
-  // 3. Mengambil data transaksi, langganan, dan anggota tim untuk Tenant yang aktif
-  const loadActiveTenantData = useCallback(async (tenantId: string) => {
-    try {
-      const [membersRes, subRes, txsRes] = await Promise.all([
-        (await membershipRepository(supabase)).query().select("*, profiles(*), roles(*)").eq("tenant_id", tenantId),
-        (await subscriptionRepository(supabase)).query().select("*").eq("tenant_id", tenantId).maybeSingle(),
-        (await transactionRepository(supabase))
-          .query()
-          .select("*")
-          .eq("tenant_id", tenantId)
-          .order("created_at", { ascending: false })
-          .limit(5)
-      ]);
+  // State Sekolah Aktif untuk Filtering Otomatis
+  const [activeSchoolId, setActiveSchoolId] = useState<string | null>(null);
 
-      setTenantMembers(membersRes.data || []);
-      setTenantSubscription(subRes.data || null);
-      setTenantTransactions(txsRes.data || []);
+  useEffect(() => {
+    const initialCode =
+      activeSchoolCode ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("activeSchoolId") || getCookie("active_school_id")
+        : null);
+    if (initialCode && !activeSchoolId) {
+      setActiveSchoolId(initialCode);
+    }
+  }, [activeSchoolCode, activeSchoolId]);
+
+  // 3. Mengambil data transaksi, langganan, dan anggota tim untuk Tenant & Sekolah yang aktif
+  const loadActiveTenantData = useCallback(async (tenantId: string, schoolId?: string | null) => {
+    try {
+      const selectedSchool = schoolId !== undefined ? schoolId : activeSchoolId;
+      const { getTenantDashboardDataAction } = await import("@/app/actions/tenant");
+      const serverData = await getTenantDashboardDataAction(tenantId, tenantSlug, selectedSchool);
+
+      let membersList: any[] = serverData.members || [];
+
+      // Unshift profile only if no specific school code filter or profile is part of tenant
+      if (profile && !membersList.some((m) => m.user_id === profile.id)) {
+        const userMem = memberships.find((m) => m.tenant_id === tenantId);
+        membersList.unshift({
+          id: userMem?.id || "self-" + profile.id,
+          user_id: profile.id,
+          created_at: userMem?.created_at || new Date().toISOString(),
+          role_id: userMem?.role_id || "member",
+          profiles: profile,
+          roles: userMem?.roles || { id: "member", name: "Member" }
+        });
+      }
+
+      setTenantMembers(membersList);
+      setTenantSubscription(serverData.subscription || null);
+      setTenantTransactions(serverData.transactions || []);
     } catch (e) {
       console.error("Gagal memuat relasi data workspace aktif:", e);
     }
-  }, []);
+  }, [profile, memberships, tenantSlug, activeSchoolId]);
 
   useEffect(() => {
     if (activeTenantId) {
-      loadActiveTenantData(activeTenantId);
+      loadActiveTenantData(activeTenantId, activeSchoolId);
+    } else {
+      loadActiveTenantData(tenantSlug || "", activeSchoolId);
     }
-  }, [activeTenantId, loadActiveTenantData]);
+  }, [activeTenantId, activeSchoolId, tenantSlug, loadActiveTenantData]);
 
-  // 4. Integrasi Event Listener "active-org-changed" dari Sidebar
+  // 4. Integrasi Event Listener "activeSchoolChange" & "active-org-changed"
   useEffect(() => {
+    const handleSchoolChangeEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const newSchoolId = customEvent.detail?.schoolId;
+      if (newSchoolId) {
+        setActiveSchoolId(newSchoolId);
+        const tId = activeTenantId || "";
+        loadActiveTenantData(tId, newSchoolId);
+      }
+    };
+
     const handleOrgChangedEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
       const newTenantId = customEvent.detail?.tenantId;
@@ -194,11 +246,13 @@ export function useUserWorkspaceDashboard() {
       }
     };
 
+    window.addEventListener("activeSchoolChange", handleSchoolChangeEvent);
     window.addEventListener("active-org-changed", handleOrgChangedEvent);
     return () => {
+      window.removeEventListener("activeSchoolChange", handleSchoolChangeEvent);
       window.removeEventListener("active-org-changed", handleOrgChangedEvent);
     };
-  }, [memberships]);
+  }, [activeTenantId, memberships, loadActiveTenantData]);
 
   const getRelativeTime = useCallback(
     (dateStr: string) => {
@@ -217,25 +271,26 @@ export function useUserWorkspaceDashboard() {
   const metrics = useMemo(() => {
     const totalOrganizations = memberships.length;
     const totalTeamMembers = tenantMembers.length;
+    const isId = locale === "id";
 
-    let activePlanName = "No Active Subscription";
+    let activePlanName = isId ? "Tidak Ada Langganan" : "No Active Subscription";
     if (tenantSubscription && tenantSubscription.status === "active") {
       activePlanName = tenantSubscription.plan_id
         ? `${tenantSubscription.plan_id.toUpperCase()} PLAN`
-        : "FREE PLAN";
+        : isId ? "PAKET GRATIS" : "FREE PLAN";
     }
 
-    let billingStatus = "No Upcoming Billing";
+    let billingStatus = isId ? "Tidak Ada Tagihan" : "No Upcoming Billing";
     if (tenantSubscription && tenantSubscription.ends_at) {
       const expirationDate = new Date(tenantSubscription.ends_at);
-      const formattedDate = expirationDate.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
+      const formattedDate = expirationDate.toLocaleDateString(isId ? "id-ID" : "en-US", {
         day: "numeric",
         month: "long"
       });
       billingStatus =
         tenantSubscription.status === "active"
-          ? `Renew ${formattedDate}`
-          : `Expires ${formattedDate}`;
+          ? isId ? `Perpanjang ${formattedDate}` : `Renew ${formattedDate}`
+          : isId ? `Kedaluwarsa ${formattedDate}` : `Expires ${formattedDate}`;
     }
 
     return {
@@ -246,23 +301,20 @@ export function useUserWorkspaceDashboard() {
     };
   }, [memberships, tenantMembers, tenantSubscription, locale]);
 
-  const usageStats = useMemo(
-    () => [
-      { name: "Storage", percentage: 45, label: "4.5 GB / 10 GB" },
-      { name: "API Calls", percentage: 12, label: "1,200 / 10,000" },
-      { name: "Projects", percentage: 40, label: "4 / 10" },
-      { name: "Seats", percentage: 72, label: `${tenantMembers.length} / 25` }
-    ],
-    [tenantMembers]
-  );
-
   const recentActivities = useMemo(
-    () => [
-      { event: "Subscription renewed successfully", time: "2 hours ago" },
-      { event: "Workspace configuration updated", time: "1 day ago" },
-      { event: "Coupon WELCOME50 applied", time: "Last week" }
-    ],
-    []
+    () =>
+      locale === "id"
+        ? [
+            { event: "Langganan berhasil diperbarui", time: "2 jam yang lalu" },
+            { event: "Konfigurasi workspace diperbarui", time: "1 hari yang lalu" },
+            { event: "Kupon WELCOME50 diterapkan", time: "Minggu lalu" }
+          ]
+        : [
+            { event: "Subscription renewed successfully", time: "2 hours ago" },
+            { event: "Workspace configuration updated", time: "1 day ago" },
+            { event: "Coupon WELCOME50 applied", time: "Last week" }
+          ],
+    [locale]
   );
 
   return {
@@ -275,7 +327,6 @@ export function useUserWorkspaceDashboard() {
     tenantSubscription,
     tenantTransactions,
     metrics,
-    usageStats,
     recentActivities,
     getRelativeTime,
     reloadWorkspaceData: () => activeTenantId && loadActiveTenantData(activeTenantId)

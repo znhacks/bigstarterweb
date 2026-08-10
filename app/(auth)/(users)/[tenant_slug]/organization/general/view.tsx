@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
@@ -265,10 +266,17 @@ export function OrganizationGeneralSettings() {
               <div className="w-full md:max-w-xl space-y-3">
                 <div className={`grid gap-3 ${maxSchoolSlots === 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2"}`}>
                   {schoolCodesList.map((code, idx) => (
-                    <div key={idx} className="space-y-1.5">
-                      <Label htmlFor={`school-code-input-${idx}`} className="text-xs font-medium">
-                        Kode Sekolah {idx + 1} {idx === 0 ? "(Utama)" : ""}
-                      </Label>
+                    <div key={idx} className="flex flex-col justify-between space-y-1.5">
+                      <div className="flex items-center justify-between min-h-[24px]">
+                        <Label htmlFor={`school-code-input-${idx}`} className="text-xs font-medium">
+                          Kode Sekolah {idx + 1}
+                        </Label>
+                        {idx === 0 && (
+                          <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-bold uppercase">
+                            Utama
+                          </Badge>
+                        )}
+                      </div>
                       <Input
                         id={`school-code-input-${idx}`}
                         type="text"
@@ -343,21 +351,6 @@ export function OrganizationGeneralSettings() {
                   disabled={isReadOnly || isSaving}
                   className="border-border/80 h-10 w-full focus-visible:ring-1"
                 />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-sm font-medium">{t("currencyLabel") || "Currency"}</Label>
-                <Select value={currency} onValueChange={setCurrency} disabled={isReadOnly || isSaving}>
-                  <SelectTrigger className="border-border/80 h-10 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tenantConfig.supported.currencies.map((c) => (
-                      <SelectItem key={c.code} value={c.code}>
-                        {c.code} ({c.symbol})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
             {!isReadOnly && (

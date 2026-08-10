@@ -8,6 +8,7 @@ import { cookies } from "next/headers";
 
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { membershipRepository } from "@/supabase/repositories/memberships";
+import { jurnalMengajarSupabase } from "@/lib/jurnalmengajar-supabase";
 
 const serviceKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY &&
@@ -528,7 +529,7 @@ export async function getUserSchoolsAction(tenantSlug?: string) {
             id: sId.toString(),
             user_id: user.id,
             school_id: sId.toString(),
-            role: "Owner/Admin",
+            role: "Guru",
             school_name: ts.school_code || targetTenant.name || "Sekolah",
             school_code: ts.school_code || ""
           });
@@ -544,7 +545,7 @@ export async function getUserSchoolsAction(tenantSlug?: string) {
               id: trimmed,
               user_id: user.id,
               school_id: trimmed,
-              role: "Owner/Admin",
+              role: "Guru",
               school_name: targetTenant.name ? `${targetTenant.name} (${trimmed})` : trimmed,
               school_code: trimmed
             });
@@ -559,3 +560,166 @@ export async function getUserSchoolsAction(tenantSlug?: string) {
     return [];
   }
 }
+
+export async function getTenantDashboardDataAction(
+  tenantId?: string | null,
+  tenantSlug?: string,
+  schoolCode?: string | null
+) {
+  try {
+    let resolvedTenantId = tenantId || null;
+    let targetTenant: any = null;
+
+    if (resolvedTenantId && resolvedTenantId !== "fallback" && !resolvedTenantId.startsWith("direct-")) {
+      const { data: t } = await systemSupabase
+        .from("tenants")
+        .select("id, name, slug, school_code")
+        .eq("id", resolvedTenantId)
+        .maybeSingle();
+      targetTenant = t;
+    }
+
+    if (!targetTenant && tenantSlug) {
+      const { data: t } = await systemSupabase
+        .from("tenants")
+        .select("id, name, slug, school_code")
+        .ilike("slug", tenantSlug)
+        .maybeSingle();
+      targetTenant = t;
+    }
+
+    if (!targetTenant) {
+      const { data: firstT } = await systemSupabase
+        .from("tenants")
+        .select("id, name, slug, school_code")
+        .limit(1)
+        .maybeSingle();
+      targetTenant = firstT;
+    }
+
+    if (!targetTenant) {
+      return { members: [], subscription: null, transactions: [] };
+    }
+
+    resolvedTenantId = targetTenant.id;
+
+    // Auto-repair: Ensure currently logged in user has a membership row in this tenant
+    try {
+      const defaultSupabase = await createServerClient();
+      const { data: { user: currentUser } } = await defaultSupabase.auth.getUser();
+
+      if (currentUser) {
+        const { data: existingMem } = await systemSupabase
+          .from("memberships")
+          .select("id")
+          .eq("tenant_id", resolvedTenantId)
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+
+        if (!existingMem) {
+          const { data: memberRole } = await systemSupabase
+            .from("roles")
+            .select("id")
+            .eq("name", "Member")
+            .maybeSingle();
+
+          await systemSupabase.from("memberships").insert({
+            user_id: currentUser.id,
+            tenant_id: resolvedTenantId,
+            role_id: memberRole?.id || null
+          });
+        }
+      }
+    } catch (memRepairErr) {
+      console.warn("Notice auto-repairing membership:", memRepairErr);
+    }
+
+    const membersMap = new Map<string, any>();
+
+    // Fetch auth users for accurate names & emails from Supabase Auth admin
+    let authUserMap = new Map<string, any>();
+    try {
+      const { data: authUsers } = await systemSupabase.auth.admin.listUsers();
+      if (authUsers?.users) {
+        authUserMap = new Map(authUsers.users.map((u) => [u.id, u]));
+      }
+    } catch (authErr) {
+      console.warn("Notice fetching auth users:", authErr);
+    }
+
+    // 1. Query Bigstarter DB memberships for this specific tenant
+    const { data: rawMemberships } = await systemSupabase
+      .from("memberships")
+      .select("id, user_id, created_at, role_id, roles(id, name)")
+      .eq("tenant_id", resolvedTenantId);
+
+    if (rawMemberships && rawMemberships.length > 0) {
+      const userIds = rawMemberships.map((m: any) => m.user_id).filter(Boolean);
+      const { data: profs } = await systemSupabase
+        .from("profiles")
+        .select("*")
+        .in("id", userIds);
+
+      const profMap = new Map((profs || []).map((p: any) => [p.id, p]));
+      rawMemberships.forEach((m: any) => {
+        const prof = profMap.get(m.user_id);
+        const authUser = authUserMap.get(m.user_id);
+
+        const realName =
+          prof?.full_name ||
+          prof?.name ||
+          prof?.username ||
+          authUser?.user_metadata?.full_name ||
+          authUser?.user_metadata?.name ||
+          (authUser?.email ? authUser.email.split("@")[0] : null) ||
+          "Workspace Member";
+
+        const realEmail =
+          prof?.email ||
+          authUser?.email ||
+          "";
+
+        membersMap.set(m.user_id, {
+          id: m.id,
+          user_id: m.user_id,
+          created_at: m.created_at,
+          role_id: m.role_id,
+          profiles: {
+            id: m.user_id,
+            full_name: realName,
+            email: realEmail,
+            avatar: prof?.avatar || prof?.avatar_url || null
+          },
+          roles: m.roles || { id: "member", name: "Member" }
+        });
+      });
+    }
+
+    const membersList = Array.from(membersMap.values());
+
+    // 4. Fetch Subscription
+    const { data: subData } = await systemSupabase
+      .from("subscriptions")
+      .select("*")
+      .eq("tenant_id", resolvedTenantId)
+      .maybeSingle();
+
+    // 5. Fetch Transactions
+    const { data: txsData } = await systemSupabase
+      .from("transactions")
+      .select("*")
+      .eq("tenant_id", resolvedTenantId)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    return {
+      members: membersList,
+      subscription: subData || null,
+      transactions: txsData || []
+    };
+  } catch (err) {
+    console.error("Error pada getTenantDashboardDataAction:", err);
+    return { members: [], subscription: null, transactions: [] };
+  }
+}
+
