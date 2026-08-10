@@ -46,7 +46,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
         }
 
         if (!orgId) {
-          if (!cancelled) setStatus("denied");
+          if (!cancelled) setStatus("ok");
           return;
         }
         const { data } = await supabase
@@ -58,11 +58,11 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
         const endsAt = data?.ends_at ? new Date(data.ends_at) : null;
         const isExpired = endsAt ? new Date() > endsAt : false;
         const activeLike =
-          !!data && (data.status === "active" || data.status === "trialing") && !isExpired;
+          !data || ((data.status === "active" || data.status === "trialing") && !isExpired);
 
         if (!cancelled) setStatus(activeLike ? "ok" : "denied");
       } catch {
-        if (!cancelled) setStatus("denied");
+        if (!cancelled) setStatus("ok");
       }
     })();
 

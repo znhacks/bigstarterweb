@@ -5,6 +5,7 @@ import { createClient as createSystemClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getRoleByName } from "@/supabase/helper/roles";
 import { cookies } from "next/headers";
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 
 import { tenantRepository } from "@/supabase/repositories/tenants";
 import { membershipRepository } from "@/supabase/repositories/memberships";
@@ -62,7 +63,7 @@ export async function createTenant(formData: FormData) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)+/g, "");
 
-    const tenantsRepo = await tenantRepository(systemSupabase);
+    const tenantsRepo = await tenantRepository(supabaseAdmin);
 
     const { data: existingTenant } = await tenantsRepo
       .query()
@@ -107,8 +108,8 @@ export async function createTenant(formData: FormData) {
       await syncTenantSchools(newTenant.id, schoolList);
     }
 
-    const { data: ownerRole } = await getRoleByName("Owner", "id", systemSupabase);
-    const membershipsRepo = await membershipRepository(systemSupabase);
+    const { data: ownerRole } = await getRoleByName("Owner", "id", supabaseAdmin);
+    const membershipsRepo = await membershipRepository(supabaseAdmin);
 
     const { error: membershipError } = await membershipsRepo.insert({
       user_id: user.id,
@@ -121,7 +122,7 @@ export async function createTenant(formData: FormData) {
     }
 
     if (finalModel === "ISOLATED") {
-      const { error: rpcError } = await systemSupabase.rpc("create_new_tenant_schema", {
+      const { error: rpcError } = await supabaseAdmin.rpc("create_new_tenant_schema", {
         tenant_subdomain: slug
       });
 

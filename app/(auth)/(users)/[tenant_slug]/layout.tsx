@@ -28,7 +28,7 @@ export default async function TenantLayout({
         const { data: tenant } = await supabaseAdmin
           .from("tenants")
           .select("id")
-          .eq("slug", tenant_slug)
+          .ilike("slug", tenant_slug)
           .maybeSingle();
 
         if (tenant) {
