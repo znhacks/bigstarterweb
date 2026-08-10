@@ -90,34 +90,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setIsLoading(true);
     try {
       const {
-        data: { user: currentUser },
-        error: userError
+        data: { user: currentUser }
       } = await supabase.auth.getUser();
-      if (userError || !currentUser) {
-        setIsLoading(false);
-        return;
+      if (currentUser) {
+        setUser(currentUser);
       }
-      setUser(currentUser);
 
-      // Panggil Server Action agar keanggotaan terdeteksi dengan tepat di server (bypass RLS browser)
+      // Panggil Server Action (terautentikasi via HTTP cookies di Vercel, bypass RLS client)
       const { getUserOrganizationsAction } = await import("@/app/actions/tenant");
       let orgs: Organization[] = await getUserOrganizationsAction();
 
-      // Fallback: Jika tenantSlug aktif di URL tapi belum ada di orgs, ambil langsung dari tabel tenants
+      // Fallback: Jika tenantSlug aktif di URL tapi belum ada di orgs, panggil Server Action detail
       if (tenantSlug && !orgs.some((o) => o.slug === tenantSlug)) {
-        const { data: directTenant } = await supabase
-          .from("tenants")
-          .select("id, name, slug, logo")
-          .ilike("slug", tenantSlug)
-          .maybeSingle();
-
-        if (directTenant) {
-          orgs.unshift({
-            id: directTenant.id,
-            name: directTenant.name,
-            slug: directTenant.slug,
-            logo: directTenant.logo || null
-          });
+        try {
+          const { getOrganizationDetailsAction } = await import(
+            "@/app/(auth)/(users)/[tenant_slug]/organization/general/actions"
+          );
+          const res = await getOrganizationDetailsAction(tenantSlug);
+          if (res.tenant) {
+            orgs.unshift({
+              id: res.tenant.id,
+              name: res.tenant.name,
+              slug: res.tenant.slug || tenantSlug,
+              logo: res.tenant.logo || null
+            });
+          }
+        } catch (errFallback) {
+          console.warn("Fallback tenant resolution error:", errFallback);
         }
       }
 
@@ -205,23 +204,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, [subscription]);
 
   useEffect(() => {
-    if (organizations.length === 0) return;
+    if (organizations.length > 0) {
+      let targetOrg: Organization | null = null;
 
-    let targetOrg: Organization | null = null;
+      if (tenantSlug) {
+        targetOrg = organizations.find((o) => o.slug === tenantSlug) || null;
+      } else {
+        const savedOrgId = getCookie("active_tenant_id") || localStorage.getItem("active_org_id");
+        targetOrg = organizations.find((o) => o.id === savedOrgId) || null;
+      }
 
-    if (tenantSlug) {
-      targetOrg = organizations.find((o) => o.slug === tenantSlug) || null;
-    } else {
-      const savedOrgId = getCookie("active_tenant_id") || localStorage.getItem("active_org_id");
-      targetOrg = organizations.find((o) => o.id === savedOrgId) || null;
-    }
+      const finalActiveOrg = targetOrg || organizations[0];
+      setActiveOrg(finalActiveOrg);
 
-    const finalActiveOrg = targetOrg || organizations[0];
-    setActiveOrg(finalActiveOrg);
-
-    if (finalActiveOrg) {
-      localStorage.setItem("active_org_id", finalActiveOrg.id);
-      setCookie("active_tenant_id", finalActiveOrg.id);
+      if (finalActiveOrg) {
+        localStorage.setItem("active_org_id", finalActiveOrg.id);
+        setCookie("active_tenant_id", finalActiveOrg.id);
+      }
+    } else if (tenantSlug) {
+      setActiveOrg({
+        id: "",
+        name: tenantSlug
+          .split("-")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" "),
+        slug: tenantSlug,
+        logo: null
+      });
     }
   }, [tenantSlug, organizations]);
 
