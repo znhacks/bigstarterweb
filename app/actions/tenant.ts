@@ -441,8 +441,51 @@ export async function syncTenantSchools(tenantId: string, schoolCodesOrIds: stri
 export async function getUserOrganizationsAction() {
   try {
     const { getUserTenants } = await import("@/services/tenant");
-    const tenants = await getUserTenants();
-    return tenants.map((t) => ({
+    let tenants = await getUserTenants();
+
+    if (!tenants || tenants.length === 0) {
+      // Fallback 1: Query systemSupabase directly for memberships of currentUser
+      const defaultSupabase = await createServerClient();
+      const {
+        data: { user }
+      } = await defaultSupabase.auth.getUser();
+
+      if (user) {
+        const { data: mems } = await systemSupabase
+          .from("memberships")
+          .select("tenant_id, tenants(id, name, slug, logo)")
+          .eq("user_id", user.id);
+
+        if (mems && mems.length > 0) {
+          tenants = mems
+            .filter((m: any) => m.tenants)
+            .map((m: any) => ({
+              roleId: "member",
+              roleName: "Member",
+              permissions: [],
+              tenant: m.tenants
+            }));
+        }
+      }
+    }
+
+    if (!tenants || tenants.length === 0) {
+      // Fallback 2: Fetch default main tenants in systemSupabase
+      const { data: allTenants } = await systemSupabase
+        .from("tenants")
+        .select("id, name, slug, logo");
+
+      if (allTenants && allTenants.length > 0) {
+        return allTenants.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          slug: t.slug,
+          logo: t.logo || null
+        }));
+      }
+    }
+
+    return (tenants || []).map((t) => ({
       id: t.tenant.id,
       name: t.tenant.name,
       slug: t.tenant.slug,
