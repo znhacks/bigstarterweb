@@ -22,22 +22,30 @@ function Landing() {
 }
 
 export default async function LandingOrRedirectPage() {
-  const session = await getServerSession();
+  try {
+    const session = await getServerSession();
 
-  // Belum login → redirect ke /login
-  if (!session) redirect("/login");
+    // Belum login → redirect ke /login
+    if (!session) redirect("/login");
 
-  // Superadmin → area admin, terlepas dari membership organisasi.
-  if (session.user.isSuperadmin) {
-    redirect("/superadmin/dashboard");
+    // Superadmin → area admin, terlepas dari membership organisasi.
+    if (session.user.isSuperadmin) {
+      redirect("/superadmin/dashboard");
+    }
+
+    // User biasa → organisasi pertama. Tanpa org, alihkan ke /create-tenant
+    const tenants = await getUserTenants();
+    if (tenants && tenants.length > 0) {
+      redirect(`/${tenants[0].tenant.slug}/dashboard`);
+    }
+
+    // Login tapi belum punya org → alihkan ke /create-tenant
+    redirect("/create-tenant");
+  } catch (err: any) {
+    if (err?.digest?.startsWith("NEXT_REDIRECT")) {
+      throw err;
+    }
+    console.error("Error pada LandingOrRedirectPage:", err);
+    redirect("/login");
   }
-
-  // User biasa → organisasi pertama. Tanpa org, alihkan ke /create-tenant
-  const tenants = await getUserTenants();
-  if (tenants.length > 0) {
-    redirect(`/${tenants[0].tenant.slug}/dashboard`);
-  }
-
-  // Login tapi belum punya org → alihkan ke /create-tenant
-  redirect("/create-tenant");
 }
