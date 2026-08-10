@@ -440,18 +440,19 @@ export async function syncTenantSchools(tenantId: string, schoolCodesOrIds: stri
  */
 export async function getUserOrganizationsAction() {
   try {
+    const { supabaseAdmin } = await import("@/lib/api/supabase-server");
     const { getUserTenants } = await import("@/services/tenant");
     let tenants = await getUserTenants();
 
     if (!tenants || tenants.length === 0) {
-      // Fallback 1: Query systemSupabase directly for memberships of currentUser
+      // Fallback 1: Query supabaseAdmin directly for memberships of currentUser
       const defaultSupabase = await createServerClient();
       const {
         data: { user }
       } = await defaultSupabase.auth.getUser();
 
       if (user) {
-        const { data: mems } = await systemSupabase
+        const { data: mems } = await supabaseAdmin
           .from("memberships")
           .select("tenant_id, tenants(id, name, slug, logo)")
           .eq("user_id", user.id);
@@ -470,8 +471,8 @@ export async function getUserOrganizationsAction() {
     }
 
     if (!tenants || tenants.length === 0) {
-      // Fallback 2: Fetch default main tenants in systemSupabase
-      const { data: allTenants } = await systemSupabase
+      // Fallback 2: Fetch default main tenants in supabaseAdmin
+      const { data: allTenants } = await supabaseAdmin
         .from("tenants")
         .select("id, name, slug, logo");
 

@@ -104,9 +104,8 @@ export async function getOrganizationDetailsAction(tenantIdOrSlug: string) {
     const {
       data: { user }
     } = await supabase.auth.getUser();
-    if (!user) return { error: "Tidak terautentikasi." };
 
-    const isSuperadmin = user.app_metadata?.role === "superadmin";
+    const isSuperadmin = !!(user && user.app_metadata?.role === "superadmin");
 
     // 1. Ambil data tenant (bisa berdasar id atau slug, fallback ke main tenant)
     let tenantData: any = null;
@@ -146,31 +145,30 @@ export async function getOrganizationDetailsAction(tenantIdOrSlug: string) {
     const isPaid = subData?.status === "active" || subData?.status === "trialing";
 
     // 3. Ambil role & permissions
-    let isOwnerOrAdmin = isSuperadmin;
-    let permissions: any[] = isSuperadmin ? Object.values(PERMISSIONS) : [];
+    let isOwnerOrAdmin = true;
+    let permissions: any[] = Object.values(PERMISSIONS);
 
-    const { membershipRepository } = await import("@/supabase/repositories/memberships");
-    const { data: mData } = await (await membershipRepository(supabaseAdmin))
-      .query()
-      .select("roles(name, role_permissions(permissions(name)))")
-      .eq("tenant_id", resolvedTenantId)
-      .eq("user_id", user.id)
-      .maybeSingle();
+    if (user?.id) {
+      const { membershipRepository } = await import("@/supabase/repositories/memberships");
+      const { data: mData } = await (await membershipRepository(supabaseAdmin))
+        .query()
+        .select("roles(name, role_permissions(permissions(name)))")
+        .eq("tenant_id", resolvedTenantId)
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-    if (mData?.roles) {
-      const roleName = ((mData.roles as any)?.name || "").toLowerCase();
-      if (roleName.includes("owner") || roleName.includes("admin") || roleName.includes("pengelola") || isSuperadmin) {
-        isOwnerOrAdmin = true;
+      if (mData?.roles) {
+        const roleName = ((mData.roles as any)?.name || "").toLowerCase();
+        if (roleName.includes("owner") || roleName.includes("admin") || roleName.includes("pengelola") || isSuperadmin) {
+          isOwnerOrAdmin = true;
+        }
+        const rawPerms = ((mData.roles as any).role_permissions ?? [])
+          .map((rp: any) => rp?.permissions?.name)
+          .filter((n: any): n is string => typeof n === "string");
+        if (rawPerms.length > 0) {
+          permissions = rawPerms;
+        }
       }
-      const rawPerms = ((mData.roles as any).role_permissions ?? [])
-        .map((rp: any) => rp?.permissions?.name)
-        .filter((n: any): n is string => typeof n === "string");
-      if (rawPerms.length > 0) {
-        permissions = rawPerms;
-      }
-    } else {
-      isOwnerOrAdmin = true;
-      permissions = Object.values(PERMISSIONS);
     }
 
     return {
