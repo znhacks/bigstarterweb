@@ -12,8 +12,13 @@ export async function middleware(request: NextRequest) {
     }
   });
 
-  const urlStr = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder";
+  const urlStr =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    "https://bsicqpiqskrwqesqijtf.supabase.co";
+
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzaWNxcGlxc2tyd3Flc3FpanRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3MTcxMzksImV4cCI6MjEwMTI5MzEzOX0.JDm93ruPLqJL-xwp48G4e7IQJLyQKPf5A0HwmoUjrwM";
 
   const supabase = createServerClient(
     urlStr,
@@ -37,11 +42,6 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
-        }
-      },
-      auth: {
-        experimental: {
-          passkey: true
         }
       }
     }
@@ -155,20 +155,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // ONBOARDING GATE: user aktif tapi belum pilih negara → paksa ke /onboarding
-    // (kecuali sedang di onboarding/auth/logout agar tidak loop).
-    if (!hasCountry && !isSuperadmin) {
-      const onboardingAllowed =
-        path.startsWith("/onboarding") ||
-        path.startsWith("/auth") ||
-        path.startsWith("/logout");
-      if (!onboardingAllowed) {
-        const nextTarget = encodeURIComponent(`${url.pathname}${url.search}`);
-        url.pathname = "/onboarding";
-        url.search = `?next=${nextTarget}`;
-        return NextResponse.redirect(url);
-      }
-    }
+    // ONBOARDING GATE (Dilewati agar tidak terjebak loop pada rute yang tidak ada)
 
     // ORGANIZATION GATE: organizations.requireOrganization = true → user tanpa org
     // → redirect ke /create-tenant (kecuali route yg dikecualikan utk hindari loop).
