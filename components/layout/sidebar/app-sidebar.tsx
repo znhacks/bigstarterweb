@@ -333,14 +333,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           <div className="flex items-center justify-center py-4">
                             <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
                           </div>
-                        ) : organizations.length === 0 ? (
-                          <div className="text-muted-foreground px-2 py-3 text-center text-xs">
-                            {t("common.noorgfound")}
-                          </div>
                         ) : (
-                          organizations.map((org) => (
+                          (organizations.length > 0
+                            ? organizations
+                            : activeOrg
+                            ? [activeOrg]
+                            : []
+                          ).map((org) => (
                             <DropdownMenuItem
-                              key={org.id}
+                              key={org.id || org.slug}
                               className="flex cursor-pointer items-center gap-3"
                               onSelect={() => handleSelectOrg(org)}>
                               <div
@@ -363,11 +364,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 </span>
                                 <span
                                   className={`text-xs ${
-                                    activeOrg?.id === org.id
+                                    activeOrg?.slug === org.slug || activeOrg?.id === org.id
                                       ? "font-semibold text-green-700"
                                       : "text-muted-foreground"
                                   }`}>
-                                  {activeOrg?.id === org.id ? "Active" : "Inactive"}
+                                  {activeOrg?.slug === org.slug || activeOrg?.id === org.id
+                                    ? t("menu.users.active")
+                                    : t("menu.users.switch")}
                                 </span>
                               </div>
                               {activeOrg?.id === org.id && (

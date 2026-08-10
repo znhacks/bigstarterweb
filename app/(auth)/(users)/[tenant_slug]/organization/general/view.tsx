@@ -135,20 +135,7 @@ export function OrganizationGeneralSettings() {
     );
   }
 
-  if (!activeOrgId) {
-    return (
-      <div className="mx-auto w-full max-w-5xl px-4 py-10">
-        <Alert variant="destructive" className="rounded-2xl">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>No Active Organization</AlertTitle>
-          <AlertDescription>
-            Silakan pilih organisasi terlebih dahulu pada menu pilihan organisasi di sidebar kiri
-            Anda.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">

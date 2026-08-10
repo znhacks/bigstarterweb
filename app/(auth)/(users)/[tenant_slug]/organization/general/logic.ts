@@ -76,12 +76,9 @@ export function useOrganizationGeneral() {
   useEffect(() => {
     async function resolveAndFetch() {
       setIsLoading(true);
-      const queryKey = tenantSlug || localStorage.getItem("active_org_id") || "";
-      if (queryKey) {
-        fetchOrgAndRoleDetails(queryKey);
-      } else {
-        setIsLoading(false);
-      }
+      const pathSlug = typeof window !== "undefined" ? window.location.pathname.split("/")[1] : "";
+      const queryKey = tenantSlug || pathSlug || localStorage.getItem("active_org_id") || "jurnal-mengajar";
+      fetchOrgAndRoleDetails(queryKey);
     }
     resolveAndFetch();
   }, [tenantSlug]);
