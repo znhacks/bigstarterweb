@@ -16,9 +16,8 @@ const CACHE_TTL = process.env.EXCHANGE_RATE_CACHE_TTL
   ? parseInt(process.env.EXCHANGE_RATE_CACHE_TTL)
   : 6 * 60 * 60 * 1000;
 
-const HARDCODED_RATE = process.env.HARDCODED_USD_TO_IDR_RATE
-  ? parseFloat(process.env.HARDCODED_USD_TO_IDR_RATE)
-  : 15800;
+const rawRate = process.env.HARDCODED_USD_TO_IDR_RATE ? parseFloat(process.env.HARDCODED_USD_TO_IDR_RATE) : NaN;
+const HARDCODED_RATE = Number.isFinite(rawRate) && rawRate > 0 ? rawRate : 15800;
 
 async function fetchFromFrankfurter(targetCurrency: string): Promise<number> {
   const url = `https://api.frankfurter.app/latest?from=${targetCurrency}&to=IDR`;
