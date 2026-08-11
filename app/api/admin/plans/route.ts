@@ -51,7 +51,14 @@ export async function GET(req: Request) {
       .select("*")
       .order("created_at", { ascending: true });
 
-    if (plansErr) throw plansErr;
+    if (plansErr) {
+      if (plansErr.code === "PGRST205" || plansErr.message?.includes("schema cache")) {
+        throw new Error(
+          "Tabel 'public.plans' belum dibuat di Supabase atau schema cache belum diperbarui. Silakan jalankan migrasi database atau eksekusi `NOTIFY pgrst, 'reload schema';` di Supabase SQL Editor."
+        );
+      }
+      throw plansErr;
+    }
 
     const { data: prices, error: pricesErr } = await (
       await planPriceRepository(supabaseAdmin)
