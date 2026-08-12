@@ -3,7 +3,7 @@ export const tenantConfig = {
     enabled: true,
     requireOrganization: true,
     hideOrganization: false,
-    enableUsersToCreateOrganizations: true,
+    enableUsersToCreateOrganizations: false,
     /** Batas maksimum anggota untuk paket Free (0 = tidak ada batas) */
     freeMemberLimit: 3
   },

@@ -14,6 +14,7 @@ export interface SearchableOption {
 }
 
 interface SearchableSelectProps {
+  id?: string;
   options: SearchableOption[];
   value: string;
   onChange: (value: string) => void;
@@ -29,6 +30,7 @@ interface SearchableSelectProps {
  * (country/state/city/kecamatan/desa) karena datanya bisa ratusan per level.
  */
 export function SearchableSelect({
+  id,
   options,
   value,
   onChange,
@@ -45,6 +47,7 @@ export function SearchableSelect({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type="button"
           variant="outline"
           role="combobox"

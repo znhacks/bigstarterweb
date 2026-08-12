@@ -44,8 +44,6 @@ interface AddressFormProps {
   disabled?: boolean;
 }
 
-const LIMIT = 500;
-
 export function AddressForm({
   locale,
   data,
@@ -94,39 +92,83 @@ export function AddressForm({
       .select("id, name")
       .eq("country_id", cId)
       .order("name", { ascending: true })
-      .limit(LIMIT);
+      .range(0, 2000);
     const opts = (rows || []).map((r: any) => ({ value: String(r.id), label: r.name }));
     setStates(opts);
     return opts;
   }, []);
 
-  const fetchCities = React.useCallback(async (sId: number): Promise<GeoOption[]> => {
-    const { data: rows } = await (
-      await cityRepository(supabase)
-    )
-      .query()
-      .select("id, name")
-      .eq("state_id", sId)
-      .order("name", { ascending: true })
-      .limit(LIMIT);
-    const opts = (rows || []).map((r: any) => ({ value: String(r.id), label: r.name }));
-    setCities(opts);
-    return opts;
-  }, []);
+  const fetchCities = React.useCallback(
+    async (sId: number): Promise<GeoOption[]> => {
+      const { data: rows } = await (
+        await cityRepository(supabase)
+      )
+        .query()
+        .select("id, name")
+        .eq("state_id", sId)
+        .order("name", { ascending: true })
+        .range(0, 2000);
 
-  const fetchKecamatan = React.useCallback(async (kabId: number): Promise<GeoOption[]> => {
-    const { data: rows } = await (
-      await subdistrictRepository(supabase)
-    )
-      .query()
-      .select("id, nama_kecamatan")
-      .eq("id_kab_kota", kabId)
-      .order("nama_kecamatan", { ascending: true })
-      .limit(LIMIT);
-    const opts = (rows || []).map((r: any) => ({ value: String(r.id), label: r.nama_kecamatan }));
-    setKecamatans(opts);
-    return opts;
-  }, []);
+      let filteredRows = rows || [];
+      if (isID && filteredRows.length > 0) {
+        // Untuk Indonesia, prioritaskan entri resmi "Kabupaten ..." dan "Kota ..." yang memiliki Kecamatan & Desa lengkap
+        const official = filteredRows.filter(
+          (r: any) => r.name.startsWith("Kabupaten ") || r.name.startsWith("Kota ")
+        );
+        if (official.length > 0) {
+          filteredRows = official;
+        }
+      }
+
+      const opts = filteredRows.map((r: any) => ({ value: String(r.id), label: r.name }));
+      setCities(opts);
+      return opts;
+    },
+    [isID]
+  );
+
+  const fetchKecamatan = React.useCallback(
+    async (kabId: number, currentCityLabel?: string): Promise<GeoOption[]> => {
+      let { data: rows } = await (
+        await subdistrictRepository(supabase)
+      )
+        .query()
+        .select("id, nama_kecamatan")
+        .eq("id_kab_kota", kabId)
+        .order("nama_kecamatan", { ascending: true })
+        .range(0, 2000);
+
+      // Fallback: Jika id_kab_kota tidak mengembalikan kecamatan, cari entri Kota/Kabupaten alternatif di stateId
+      if ((!rows || rows.length === 0) && currentCityLabel && stateId) {
+        const cleanName = currentCityLabel.replace(/^(Kota|Kabupaten)\s+/i, "").trim();
+        const { data: altCities } = await (await cityRepository(supabase))
+          .query()
+          .select("id")
+          .eq("state_id", stateId)
+          .ilike("name", `%${cleanName}%`);
+
+        if (altCities && altCities.length > 0) {
+          for (const altC of altCities) {
+            const { data: altRows } = await (await subdistrictRepository(supabase))
+              .query()
+              .select("id, nama_kecamatan")
+              .eq("id_kab_kota", altC.id)
+              .order("nama_kecamatan", { ascending: true })
+              .range(0, 2000);
+            if (altRows && altRows.length > 0) {
+              rows = altRows;
+              break;
+            }
+          }
+        }
+      }
+
+      const opts = (rows || []).map((r: any) => ({ value: String(r.id), label: r.nama_kecamatan }));
+      setKecamatans(opts);
+      return opts;
+    },
+    [stateId]
+  );
 
   const fetchDesa = React.useCallback(async (kecId: number): Promise<DesaRow[]> => {
     const { data: rows } = await (
@@ -136,7 +178,7 @@ export function AddressForm({
       .select("id, nama_desa_kelurahan, kode_pos")
       .eq("id_kecamatan", kecId)
       .order("nama_desa_kelurahan", { ascending: true })
-      .limit(LIMIT);
+      .range(0, 2000);
     const opts = (rows || []).map((r: any) => ({
       value: String(r.id),
       label: r.nama_desa_kelurahan,
@@ -179,7 +221,7 @@ export function AddressForm({
 
         if (c.iso2 !== "ID") return;
 
-        const kecamatanOpts = await fetchKecamatan(cId);
+        const kecamatanOpts = await fetchKecamatan(cId, data.city);
         if (!data.kecamatan) return;
         const cleanedKecamatan = data.kecamatan.trim().toLowerCase();
         const k = kecamatanOpts.find((o) => o.label.trim().toLowerCase() === cleanedKecamatan);
@@ -279,11 +321,12 @@ export function AddressForm({
     setDesas([]);
     setKecamatanId(null);
     const opt = cities.find((o) => o.value === val);
-    onChange("city", opt?.label || "");
+    const cityLabel = opt?.label || "";
+    onChange("city", cityLabel);
     onChange("kecamatan", "");
     onChange("desa", "");
     onChange("postalCode", "");
-    if (isID && cId) fetchKecamatan(cId);
+    if (isID && cId) fetchKecamatan(cId, cityLabel);
   };
 
   const onKecamatan = (val: string) => {
@@ -307,33 +350,56 @@ export function AddressForm({
 
   return (
     <div className="space-y-4">
-      {}
+      {/* Alamat Baris 1 */}
       <div className="space-y-1.5">
-        <Label className="text-sm font-medium">{t("line1")}</Label>
+        <Label htmlFor="address-line1" className="text-sm font-medium">
+          {t("line1")}
+        </Label>
         <Input
+          id="address-line1"
           value={data.line1 || ""}
           onChange={(e) => onChange("line1", e.target.value)}
           disabled={disabled}
+          aria-invalid={!!errors.line1}
+          aria-describedby={errors.line1 ? "address-line1-error" : undefined}
           className="border-border/80"
         />
-        {errors.line1 && <p className="text-destructive mt-1 text-xs">{errors.line1}</p>}
+        {errors.line1 && (
+          <p id="address-line1-error" className="text-destructive mt-1 text-xs">
+            {errors.line1}
+          </p>
+        )}
       </div>
+
+      {/* Alamat Baris 2 */}
       <div className="space-y-1.5">
-        <Label className="text-sm font-medium">{t("line2")}</Label>
+        <Label htmlFor="address-line2" className="text-sm font-medium">
+          {t("line2")}
+        </Label>
         <Input
+          id="address-line2"
           value={data.line2 || ""}
           onChange={(e) => onChange("line2", e.target.value)}
           disabled={disabled}
+          aria-invalid={!!errors.line2}
+          aria-describedby={errors.line2 ? "address-line2-error" : undefined}
           className="border-border/80"
         />
-        {errors.line2 && <p className="text-destructive mt-1 text-xs">{errors.line2}</p>}
+        {errors.line2 && (
+          <p id="address-line2-error" className="text-destructive mt-1 text-xs">
+            {errors.line2}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {}
+        {/* Country */}
         <div className="space-y-1.5">
-          <Label className="text-sm font-medium">{t("country")}</Label>
+          <Label htmlFor="address-country" className="text-sm font-medium">
+            {t("country")}
+          </Label>
           <SearchableSelect
+            id="address-country"
             options={countryOpts}
             value={data.country || ""}
             onChange={onCountry}
@@ -345,10 +411,13 @@ export function AddressForm({
           {errors.country && <p className="text-destructive mt-1 text-xs">{errors.country}</p>}
         </div>
 
-        {}
+        {/* State/Province */}
         <div className="space-y-1.5">
-          <Label className="text-sm font-medium">{t("region")}</Label>
+          <Label htmlFor="address-state" className="text-sm font-medium">
+            {t("region")}
+          </Label>
           <SearchableSelect
+            id="address-state"
             options={states}
             value={stateId ? String(stateId) : ""}
             onChange={onState}
@@ -360,10 +429,13 @@ export function AddressForm({
           {errors.region && <p className="text-destructive mt-1 text-xs">{errors.region}</p>}
         </div>
 
-        {}
+        {/* City/Regency */}
         <div className="space-y-1.5">
-          <Label className="text-sm font-medium">{t("city")}</Label>
+          <Label htmlFor="address-city" className="text-sm font-medium">
+            {t("city")}
+          </Label>
           <SearchableSelect
+            id="address-city"
             options={cities}
             value={cityId ? String(cityId) : ""}
             onChange={onCity}
@@ -375,10 +447,13 @@ export function AddressForm({
           {errors.city && <p className="text-destructive mt-1 text-xs">{errors.city}</p>}
         </div>
 
-        {}
+        {/* District (Kecamatan) */}
         <div className="space-y-1.5">
-          <Label className="text-sm font-medium">{t("kecamatan")}</Label>
+          <Label htmlFor="address-kecamatan" className="text-sm font-medium">
+            {t("kecamatan")}
+          </Label>
           <SearchableSelect
+            id="address-kecamatan"
             options={kecamatans}
             value={kecamatanId ? String(kecamatanId) : ""}
             onChange={onKecamatan}
@@ -390,10 +465,13 @@ export function AddressForm({
           {errors.kecamatan && <p className="text-destructive mt-1 text-xs">{errors.kecamatan}</p>}
         </div>
 
-        {}
+        {/* Village/Sub-district (Desa) */}
         <div className="space-y-1.5">
-          <Label className="text-sm font-medium">{t("desa")}</Label>
+          <Label htmlFor="address-desa" className="text-sm font-medium">
+            {t("desa")}
+          </Label>
           <SearchableSelect
+            id="address-desa"
             options={desas}
             value={getDesaValue()}
             onChange={onDesa}
@@ -405,17 +483,26 @@ export function AddressForm({
           {errors.desa && <p className="text-destructive mt-1 text-xs">{errors.desa}</p>}
         </div>
 
-        {}
+        {/* Postal Code */}
         <div className="space-y-1.5">
-          <Label className="text-sm font-medium">{t("postalCode")}</Label>
+          <Label htmlFor="address-postalCode" className="text-sm font-medium">
+            {t("postalCode")}
+          </Label>
           <Input
+            id="address-postalCode"
             value={formatPostalCode(data.postalCode)}
             onChange={(e) => onChange("postalCode", e.target.value)}
-            disabled={disabled || isID || !cityId}
+            disabled={disabled}
             placeholder={isID ? t("autoFromDesa") : t("postalCode")}
+            aria-invalid={!!errors.postalCode}
+            aria-describedby={isID ? "address-postalCode-desc" : undefined}
             className="border-border/80"
           />
-          {isID && <p className="text-muted-foreground text-[10px]">{t("autoFromDesaDesc")}</p>}
+          {isID && (
+            <p id="address-postalCode-desc" className="text-muted-foreground text-[10px]">
+              {t("autoFromDesaDesc")}
+            </p>
+          )}
           {errors.postalCode && (
             <p className="text-destructive mt-1 text-xs">{errors.postalCode}</p>
           )}
