@@ -72,7 +72,7 @@ export async function getBillingPlan(owner: BillingOwner): Promise<TenantPlan> {
     !isExpired;
 
   if (!isActive && billingConfig.requireActiveSubscription) {
-    return { id: "denied", name: "No Active Subscription", featureGates: deniedGates() };
+    return { id: "denied", name: "Nothing Here", featureGates: deniedGates() };
   }
 
   const planId = (isActive && subscription?.plan_id) || "free";

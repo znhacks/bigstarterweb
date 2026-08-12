@@ -273,7 +273,7 @@ export function useUserWorkspaceDashboard() {
     const totalTeamMembers = tenantMembers.length;
     const isId = locale === "id";
 
-    let activePlanName = isId ? "Tidak Ada Langganan" : "No Active Subscription";
+    let activePlanName = isId ? "Tidak Ada" : "Nothing Here";
     if (tenantSubscription && tenantSubscription.status === "active") {
       activePlanName = tenantSubscription.plan_id
         ? `${tenantSubscription.plan_id.toUpperCase()} PLAN`
@@ -305,15 +305,15 @@ export function useUserWorkspaceDashboard() {
     () =>
       locale === "id"
         ? [
-            { event: "Langganan berhasil diperbarui", time: "2 jam yang lalu" },
-            { event: "Konfigurasi workspace diperbarui", time: "1 hari yang lalu" },
-            { event: "Kupon WELCOME50 diterapkan", time: "Minggu lalu" }
-          ]
+          { event: "Langganan berhasil diperbarui", time: "2 jam yang lalu" },
+          { event: "Konfigurasi workspace diperbarui", time: "1 hari yang lalu" },
+          { event: "Kupon WELCOME50 diterapkan", time: "Minggu lalu" }
+        ]
         : [
-            { event: "Subscription renewed successfully", time: "2 hours ago" },
-            { event: "Workspace configuration updated", time: "1 day ago" },
-            { event: "Coupon WELCOME50 applied", time: "Last week" }
-          ],
+          { event: "Subscription renewed successfully", time: "2 hours ago" },
+          { event: "Workspace configuration updated", time: "1 day ago" },
+          { event: "Coupon WELCOME50 applied", time: "Last week" }
+        ],
     [locale]
   );
 
