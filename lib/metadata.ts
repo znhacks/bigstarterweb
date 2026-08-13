@@ -38,7 +38,14 @@ export function constructMetadata({
       images: [image],
       creator: "@username_twitter"
     },
-    metadataBase: new URL(siteConfig.url),
+    metadataBase: (() => {
+      try {
+        const u = siteConfig.url.startsWith("http") ? siteConfig.url : `https://${siteConfig.url}`;
+        return new URL(u);
+      } catch {
+        return new URL("http://localhost:3000");
+      }
+    })(),
     ...(noIndex && {
       robots: {
         index: false,
