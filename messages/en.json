@@ -408,10 +408,9 @@
       "organization": "Organization",
       "billing": "Subscriptions",
       "monitoring": "School Monitoring",
-      "activity-logs": "App Activity Logs",
-      "monitoring-users": "User Monitoring",
-      "manage-users": "User & Role Management",
-      "journals": "Journals & Reports",
+      "activity-logs": "Authentication Logs",
+      "manage-users": "Users Monitoring",
+      "journals": "Journals",
       "i18n-culture": "Internationalization & Culture"
     },
     "superadmin": {
@@ -430,7 +429,8 @@
       "notifications-templates": "Templates",
       "notifications-announcements": "Announcements",
       "notifications-delivery-logs": "Delivery Logs",
-      "notifications-preferences": "Preferences"
+      "notifications-preferences": "Preferences",
+      "security-logs": "Security & Intruder Logs"
     }
   },
   "currency": {

@@ -23,9 +23,9 @@ const COUNTRY_DEFAULTS: Record<string, CountryDefaults> = {
   PH: { currency: "PHP", locale: "en", timezone: "Asia/Manila" },
   VN: { currency: "VND", locale: "en", timezone: "Asia/Ho_Chi_Minh" },
   // Middle East
-  SA: { currency: "SAR", locale: "ar", timezone: "Asia/Riyadh" },
-  AE: { currency: "AED", locale: "ar", timezone: "Asia/Dubai" },
-  EG: { currency: "EGP", locale: "ar", timezone: "Africa/Cairo" },
+  SA: { currency: "SAR", locale: "en", timezone: "Asia/Riyadh" },
+  AE: { currency: "AED", locale: "en", timezone: "Asia/Dubai" },
+  EG: { currency: "EGP", locale: "en", timezone: "Africa/Cairo" },
   // Americas
   US: { currency: "USD", locale: "en", timezone: "America/New_York" },
   CA: { currency: "CAD", locale: "en", timezone: "America/Toronto" },

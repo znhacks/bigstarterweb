@@ -21,37 +21,69 @@ export function useActivityLogsLogic(data: ActivityLogItem[]) {
       }),
       textCol<ActivityLogItem>({
         key: "activity_type",
-        header: "Tipe Aktivitas",
+        header: "Tipe Event",
         cell: (row) => (
-          <Badge variant="secondary" className="font-medium text-[11px]">
-            {row.activity_type}
-          </Badge>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium">{row.activity_type}</span>
+            <Badge
+              className={`w-fit font-bold text-[9px] uppercase ${
+                row.event_type === "LOGIN"
+                  ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                  : row.event_type === "REGISTER"
+                  ? "bg-purple-500/10 text-purple-600 border-purple-500/20"
+                  : row.event_type === "LOGOUT"
+                  ? "bg-gray-500/10 text-gray-600 border-gray-500/20"
+                  : row.event_type === "SUSPICIOUS_ATTEMPT"
+                  ? "bg-red-500/20 text-red-600 border-red-500/30"
+                  : "bg-secondary text-secondary-foreground"
+              }`}
+            >
+              {row.event_type}
+            </Badge>
+          </div>
         )
       }),
       textCol<ActivityLogItem>({
         key: "device_info",
         header: "Perangkat / App",
-        cell: (row) => <span className="text-muted-foreground text-xs">{row.device_info || "-"}</span>
+        cell: (row) => (
+          <span className="text-muted-foreground text-xs max-w-[200px] truncate block" title={row.device_info}>
+            {row.device_info || "-"}
+          </span>
+        )
       }),
       textCol<ActivityLogItem>({
         key: "ip_address",
-        header: "IP Address",
-        cell: (row) => <span className="font-mono text-xs text-muted-foreground/80">{row.ip_address}</span>
+        header: "IP & Lokasi",
+        cell: (row) => (
+          <div>
+            <p className="font-mono text-xs font-semibold">{row.ip_address}</p>
+            <p className="text-[10px] text-muted-foreground">{row.location || "Indonesia"}</p>
+          </div>
+        )
       }),
       textCol<ActivityLogItem>({
         key: "status",
-        header: "Status",
+        header: "Status Keamanan",
         cell: (row) => (
-          <Badge
-            className={`rounded-full px-2 py-0.5 text-[10px] uppercase font-bold ${
-              row.status === "success"
-                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                : row.status === "warning"
-                ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                : "bg-destructive/10 text-destructive border-destructive/20"
-            }`}>
-            {row.status}
-          </Badge>
+          row.is_suspicious ? (
+            <div className="flex flex-col">
+              <Badge variant="destructive" className="w-fit text-[10px] font-bold gap-1">
+                ⚠️ INTRUDER RISK
+              </Badge>
+              {row.suspicious_reason && (
+                <span className="text-[9px] text-destructive mt-0.5 max-w-[150px] leading-tight">
+                  {row.suspicious_reason}
+                </span>
+              )}
+            </div>
+          ) : (
+            <Badge
+              className="rounded-full px-2 py-0.5 text-[10px] uppercase font-bold bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+            >
+              ✓ SAFE
+            </Badge>
+          )
         )
       }),
       dateCol<ActivityLogItem>({

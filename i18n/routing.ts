@@ -4,7 +4,6 @@ export const routing = defineRouting({
   locales: [
     "en",
     "id",
-    "ar",
     "ja",
     "zh",
     "ko",

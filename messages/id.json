@@ -412,10 +412,9 @@
       "organization": "Organisasi",
       "billing": "Berlangganan",
       "monitoring": "Monitoring Sekolah",
-      "activity-logs": "Log Aktivitas App",
-      "monitoring-users": "Pemantauan Pengguna",
-      "manage-users": "Kelola Role & User",
-      "journals": "Jurnal & Laporan",
+      "activity-logs": "Log Autentikasi",
+      "manage-users": "Kelola User",
+      "journals": "Jurnal",
       "i18n-culture": "Internasionalisasi & Budaya"
     },
     "superadmin": {
@@ -434,7 +433,8 @@
       "notifications-templates": "Template",
       "notifications-announcements": "Pengumuman",
       "notifications-delivery-logs": "Log Pengiriman",
-      "notifications-preferences": "Preferensi"
+      "notifications-preferences": "Preferensi",
+      "security-logs": "Log Keamanan & Intruder"
     }
   },
   "currency": {

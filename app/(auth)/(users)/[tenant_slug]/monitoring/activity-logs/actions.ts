@@ -11,8 +11,12 @@ export interface ActivityLogItem {
   user_name: string;
   user_role: string;
   activity_type: string;
+  event_type: "LOGIN" | "LOGOUT" | "REGISTER" | "PASSWORD_RESET" | "SUSPICIOUS_ATTEMPT" | "ACTIVITY";
   device_info: string;
   ip_address: string;
+  location: string;
+  is_suspicious: boolean;
+  suspicious_reason?: string;
   status: "success" | "warning" | "error";
   created_at: string;
 }
@@ -25,6 +29,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
   stats: {
     totalToday: number;
     activeDevices: number;
+    suspiciousCount: number;
     successRate: number;
   };
 }> {
@@ -45,7 +50,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
         tenantName: null,
         connectedSchools: [],
         logs: [],
-        stats: { totalToday: 0, activeDevices: 0, successRate: 100 }
+        stats: { totalToday: 0, activeDevices: 0, suspiciousCount: 0, successRate: 100 }
       };
     }
 
@@ -127,6 +132,32 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
 
     const logs: ActivityLogItem[] = [];
 
+    // Helper intruder detection
+    const analyzeIntruderRisk = (action: string, agent: string, ip: string) => {
+      const actionLower = (action || "").toLowerCase();
+      const agentLower = (agent || "").toLowerCase();
+      
+      const isScript = agentLower.includes("postman") || agentLower.includes("python") || agentLower.includes("curl") || agentLower.includes("axios");
+      const isForeignIP = Boolean(ip && ip !== "-" && !ip.startsWith("180.") && !ip.startsWith("36.") && !ip.startsWith("114.") && ip !== "127.0.0.1");
+      const isFailedAuth = actionLower.includes("fail") || actionLower.includes("unauthorized") || actionLower.includes("denied");
+
+      const isSuspicious = isScript || isForeignIP || isFailedAuth;
+      let reason = "";
+
+      if (isScript) reason = "Perangkat Script/Tool HTTP (Postman/Python/Curl)";
+      else if (isForeignIP) reason = "IP Luar Negeri / Server Proxy";
+      else if (isFailedAuth) reason = "Percobaan Gagal / Akses Tidak Sah";
+
+      let eventType: ActivityLogItem["event_type"] = "ACTIVITY";
+      if (actionLower.includes("login") || actionLower.includes("sign_in")) eventType = "LOGIN";
+      else if (actionLower.includes("logout") || actionLower.includes("sign_out")) eventType = "LOGOUT";
+      else if (actionLower.includes("register") || actionLower.includes("sign_up")) eventType = "REGISTER";
+      else if (actionLower.includes("reset") || actionLower.includes("password")) eventType = "PASSWORD_RESET";
+      else if (isSuspicious) eventType = "SUSPICIOUS_ATTEMPT";
+
+      return { isSuspicious, reason, eventType, location: isForeignIP ? "Luar Negeri / Proxy" : "Indonesia (ISP Lokal)" };
+    };
+
     // 4. Ambil log aktivitas asli dari DB Jurnal Mengajar (tabel `audit_logs`)
     if (schoolIds.length > 0) {
       const { data: dbLogs } = await jurnalMengajarSupabase
@@ -145,23 +176,29 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
         const sInfo = schoolMap.get(dl.school_id || uInfo.school_id || "");
         const schoolLabel = sInfo ? `${sInfo.name} (${sInfo.code})` : schoolCodes.join(", ");
 
-        const isFailed = /FAILED|ERROR/i.test(dl.action || "");
+        const actionText = dl.action || dl.entity || "Aktivitas App";
+        const isFailed = /FAILED|ERROR/i.test(actionText);
+        const { isSuspicious, reason, eventType, location } = analyzeIntruderRisk(actionText, dl.user_agent || "", dl.ip_address || "");
 
         logs.push({
           id: dl.id,
           school_code: schoolLabel,
           user_name: uInfo.full_name,
           user_role: uInfo.role,
-          activity_type: (dl.action || dl.entity || "Aktivitas App").replace(/_/g, " "),
+          activity_type: actionText.replace(/_/g, " "),
+          event_type: eventType,
           device_info: dl.user_agent || "Mobile App Jurnal Mengajar",
           ip_address: dl.ip_address || "-",
-          status: isFailed ? "error" : "success",
+          location,
+          is_suspicious: isSuspicious,
+          suspicious_reason: reason,
+          status: isFailed || isSuspicious ? "error" : "success",
           created_at: dl.created_at
         });
       });
     }
 
-    // Jika audit_logs sekolah tersebut belum banyak, ambil log aktivitas umum dari audit_logs terbaru
+    // Jika audit_logs belum ada data, ambil log umum
     if (logs.length === 0) {
       const { data: generalLogs } = await jurnalMengajarSupabase
         .from("audit_logs")
@@ -170,23 +207,48 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
         .limit(20);
 
       (generalLogs || []).forEach((dl: any) => {
-        const isFailed = /FAILED|ERROR/i.test(dl.action || "");
+        const actionText = dl.action || dl.entity || "Aktivitas App";
+        const isFailed = /FAILED|ERROR/i.test(actionText);
+        const { isSuspicious, reason, eventType, location } = analyzeIntruderRisk(actionText, dl.user_agent || "", dl.ip_address || "");
+
         logs.push({
           id: dl.id,
           school_code: schoolCodes.join(", "),
           user_name: dl.user_role === "guru" ? "Guru Sekolah" : "Pengguna System",
           user_role: dl.user_role || "Sistem Mobile",
-          activity_type: (dl.action || dl.entity || "Aktivitas App").replace(/_/g, " "),
+          activity_type: actionText.replace(/_/g, " "),
+          event_type: eventType,
           device_info: dl.user_agent || "Mobile App",
           ip_address: dl.ip_address || "-",
-          status: isFailed ? "error" : "success",
+          location,
+          is_suspicious: isSuspicious,
+          suspicious_reason: reason,
+          status: isFailed || isSuspicious ? "error" : "success",
           created_at: dl.created_at
         });
       });
     }
 
-    const totalToday = logs.length;
-    const activeDevices = new Set(logs.map((l) => l.device_info).filter((d) => d && d !== "-")).size;
+    // Hitung statistik akurat berdasarkan waktu hari ini (Asia/Jakarta)
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    const todayLogs = logs.filter((l) => {
+      const logTime = new Date(l.created_at).getTime();
+      return !isNaN(logTime) && logTime >= startOfToday;
+    });
+
+    const totalToday = todayLogs.length;
+
+    // Perangkat/IP unik hari ini (jika tidak ada log hari ini, hitung dari 20 log terbaru)
+    const deviceScope = todayLogs.length > 0 ? todayLogs : logs.slice(0, 20);
+    const activeDevices = new Set(
+      deviceScope
+        .map((l) => (l.ip_address && l.ip_address !== "-" ? l.ip_address : l.device_info))
+        .filter((d) => d && d !== "-" && d !== "Mobile App" && d !== "Mobile App Jurnal Mengajar")
+    ).size || (logs.length > 0 ? 1 : 0);
+
+    const suspiciousCount = logs.filter((l) => l.is_suspicious).length;
     const successCount = logs.filter((l) => l.status === "success").length;
     const successRate = logs.length > 0 ? Math.round((successCount / logs.length) * 100) : 100;
 
@@ -201,7 +263,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
       tenantName: tenantNameDisplay,
       connectedSchools,
       logs,
-      stats: { totalToday, activeDevices, successRate }
+      stats: { totalToday, activeDevices, suspiciousCount, successRate }
     };
   } catch (error) {
     console.error("Failed to fetch activity logs from Jurnal Mengajar DB:", error);
@@ -210,7 +272,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
       tenantName: null,
       connectedSchools: [],
       logs: [],
-      stats: { totalToday: 0, activeDevices: 0, successRate: 0 }
+      stats: { totalToday: 0, activeDevices: 0, suspiciousCount: 0, successRate: 0 }
     };
   }
 }

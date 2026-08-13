@@ -1,4 +1,4 @@
-export const LOCALES = ["en", "id", "ar"] as const;
+export const LOCALES = ["en", "id"] as const;
 export type LocaleCode = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: LocaleCode = "en";
 
@@ -37,17 +37,6 @@ export const LOCALE_META: Record<LocaleCode, LocaleMeta> = {
     measurementSystem: "metric",
     phoneCountry: "ID",
     font: "inter"
-  },
-  ar: {
-    label: "العربية",
-    dir: "rtl",
-    bcp47: "ar-SA",
-    dateFnsLocale: "ar",
-    weekStartsOn: 6,
-    measurementSystem: "metric",
-    phoneCountry: "SA",
-    font: "arabic",
-    numberingSystem: "arab"
   }
 };
 

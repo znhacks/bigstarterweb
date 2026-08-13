@@ -1,5 +1,4 @@
-import { getSchoolUsersData } from "./actions";
-import { SchoolUsersView } from "./view";
+import { redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{
@@ -9,15 +8,5 @@ interface PageProps {
 
 export default async function SchoolUsersPage({ params }: PageProps) {
   const { tenant_slug } = await params;
-  const data = await getSchoolUsersData(tenant_slug);
-
-  return (
-    <SchoolUsersView
-      schoolCode={data.schoolCode}
-      tenantName={data.tenantName}
-      connectedSchools={data.connectedSchools}
-      users={data.users}
-      stats={data.stats}
-    />
-  );
+  redirect(`/${tenant_slug}/monitoring/manage-users`);
 }

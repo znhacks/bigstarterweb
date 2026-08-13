@@ -89,6 +89,20 @@ export function RegisterForm() {
     const fullName = `${firstName} ${lastName}`.trim();
 
     try {
+      // Pre-check invite code / org name validity BEFORE creating auth user
+      if (regType === "join") {
+        const preCheck = await setupRegistrationTenant({
+          userId: "precheck",
+          regType: "join",
+          inviteCode
+        });
+        if (preCheck.error && !preCheck.error.includes("Pengguna tidak terautentikasi")) {
+          setErrorMsg(preCheck.error);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const redirectUrl = nextTarget
         ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`
         : `${window.location.origin}/auth/callback`;

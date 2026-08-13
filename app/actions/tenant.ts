@@ -173,7 +173,9 @@ export async function setupRegistrationTenant(params: {
     }
   }
 
-  if (!userId) {
+  const isPrecheck = userId === "precheck";
+
+  if (!userId && !isPrecheck) {
     return { error: "Pengguna tidak terautentikasi." };
   }
 
@@ -334,6 +336,10 @@ export async function setupRegistrationTenant(params: {
 
       if (!targetTenantId) {
         return { error: "Kode atau token organisasi tidak valid atau tidak ditemukan." };
+      }
+
+      if (isPrecheck) {
+        return { success: true };
       }
 
       // Cek apakah membership sudah ada

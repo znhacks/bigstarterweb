@@ -201,71 +201,20 @@ export function useOrganizationMembers() {
   ) => {
     try {
       setIsFetchingMore(true);
-      const from = pageNum * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
 
-      // DISESUAIKAN: Menggunakan kolom 'avatar' sesuai dengan skema tabel profiles Anda
-      let query = (await membershipRepository(supabase))
-        .query()
-        .select(
-          `
-          id,
-          user_id,
-          role_id,
-          roles (
-            id,
-            name,
-            hierarchy_level,
-            role_permissions ( permissions ( name ) )
-          ),
-          profiles!inner (
-            id,
-            full_name,
-            avatar
-          )
-        `,
-          { count: "exact" }
-        )
-        .eq("tenant_id", orgId);
+      const { getOrganizationMembersAction } = await import("./actions");
+      const { members: serverMembers } = await getOrganizationMembersAction(orgId);
 
+      let filtered = serverMembers as Member[];
       if (searchVal.trim()) {
-        query = query.ilike("profiles.full_name", `%${searchVal.trim()}%`);
+        const q = searchVal.trim().toLowerCase();
+        filtered = filtered.filter(
+          (m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
+        );
       }
 
-      const { data, error, count } = await query.order("id", { ascending: true }).range(from, to);
-
-      if (error) throw error;
-
-      const formattedMembers: Member[] = (data || []).map((item: any) => {
-        const fullName = item.profiles?.full_name || "Unknown User";
-        const permissions = ((item.roles?.role_permissions as any[]) ?? [])
-          .map((rp: any) => rp?.permissions?.name)
-          .filter((name: any): name is string => typeof name === "string") as PermissionName[];
-        return {
-          id: item.id,
-          userId: item.user_id,
-          name: fullName,
-          email: `${fullName.toLowerCase().replace(/\s+/g, "")}@gmail.com`,
-          avatarUrl: item.profiles?.avatar ?? null, // Memetakan kolom 'avatar' ke properti avatarUrl
-          roleId: item.role_id ?? null,
-          roleName: item.roles?.name ?? "Member",
-          rolePermissions: permissions
-        };
-      });
-
-      if (replace) {
-        setMembers(formattedMembers);
-      } else {
-        setMembers((prev) => {
-          const existingIds = new Set(prev.map((m) => m.id));
-          const filteredNew = formattedMembers.filter((m) => !existingIds.has(m.id));
-          return [...prev, ...filteredNew];
-        });
-      }
-
-      const totalCount = count ?? 0;
-      const currentListLength = (replace ? 0 : members.length) + formattedMembers.length;
-      setHasMore(currentListLength < totalCount);
+      setMembers(filtered);
+      setHasMore(false);
     } catch (error) {
       console.error("Gagal memuat halaman anggota:", error);
     } finally {

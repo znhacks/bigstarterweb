@@ -106,6 +106,21 @@ export async function setRolePermissions(
   return { success: true };
 }
 
+/** Server Action untuk sinkronisasi otomatis preset permission default (Owner, Admin, Member) */
+export async function syncDefaultRbacAction(): Promise<ActionResult> {
+  await requireSuperadmin();
+  try {
+    const { syncRbacToDb } = await import("@/modules/rbac/server/services/sync");
+    const result = await syncRbacToDb(supabaseAdmin);
+    if (!result.success) return { success: false, error: result.error || "Gagal sinkronisasi RBAC." };
+
+    revalidatePath("/superadmin/roles");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Gagal sinkronisasi preset role." };
+  }
+}
+
 export async function getRolePermissions(
   roleId: string
 ): Promise<{ success: true; grantedIds: string[] } | { success: false; error: string }> {

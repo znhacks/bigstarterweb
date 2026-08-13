@@ -75,13 +75,35 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground text-xs mt-1">
+            Kelola hak akses dan alokasi permission untuk peran Owner, Admin, dan Member pada platform.
+          </p>
         </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="me-1.5 h-4 w-4" /> {t("new.title")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                const { syncDefaultRbacAction } = await import("./actions");
+                const res = await syncDefaultRbacAction();
+                if (res.success) {
+                  window.location.reload();
+                }
+              } catch (err) {
+                console.error("Gagal sync RBAC:", err);
+              }
+            }}
+            className="text-xs font-semibold"
+          >
+            🔄 Sync Preset Role Default
+          </Button>
+          <Button onClick={handleOpenCreate} className="text-xs font-semibold">
+            <Plus className="me-1.5 h-4 w-4" /> {t("new.title")}
+          </Button>
+        </div>
       </div>
 
       {error && (

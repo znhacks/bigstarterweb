@@ -23,8 +23,7 @@ export const tenantConfig = {
   supported: {
     locales: [
       { code: "en", label: "English" },
-      { code: "id", label: "Bahasa Indonesia" },
-      { code: "ar", label: "العربية" }
+      { code: "id", label: "Bahasa Indonesia" }
     ],
 
     currencies: [

@@ -96,7 +96,7 @@ export function OnboardingForm({ next }: { next: string }) {
       setCookie(USER_TIMEZONE_COOKIE, timezone);
       if (typeof document !== "undefined") {
         document.documentElement.lang = locale;
-        document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
+        document.documentElement.dir = "ltr";
       }
 
       router.replace(next);

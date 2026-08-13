@@ -31,7 +31,8 @@ import {
   BadgeCheck,
   Headset,
   Bell,
-  Activity
+  Activity,
+  ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -107,11 +108,6 @@ export const navItems: NavGroup[] = [
             tenantScoped: true
           },
           {
-            title: "users.monitoring-users",
-            href: "/monitoring/users",
-            tenantScoped: true
-          },
-          {
             title: "users.manage-users",
             href: "/monitoring/manage-users",
             tenantScoped: true
@@ -160,6 +156,11 @@ export const navItems: NavGroup[] = [
         title: "superadmin.roles",
         href: "/superadmin/roles",
         icon: ShieldCheck
+      },
+      {
+        title: "superadmin.security-logs",
+        href: "/superadmin/security-logs",
+        icon: ShieldAlert
       },
       {
         title: "superadmin.organization",
@@ -222,6 +223,11 @@ export const navItems: NavGroup[] = [
         title: "superadmin.enterprise",
         href: "/superadmin/enterprise",
         icon: Headset
+      },
+      {
+        title: "superadmin.security-logs",
+        href: "/superadmin/security-logs",
+        icon: ShieldAlert
       }
     ]
   }
