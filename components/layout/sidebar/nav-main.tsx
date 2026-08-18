@@ -223,11 +223,6 @@ export const navItems: NavGroup[] = [
         title: "superadmin.enterprise",
         href: "/superadmin/enterprise",
         icon: Headset
-      },
-      {
-        title: "superadmin.security-logs",
-        href: "/superadmin/security-logs",
-        icon: ShieldAlert
       }
     ]
   }

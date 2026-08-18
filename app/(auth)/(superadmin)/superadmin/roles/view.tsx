@@ -98,7 +98,7 @@ export function RolesView({ data }: SuperadminRolesPageProps) {
             }}
             className="text-xs font-semibold"
           >
-            🔄 Sync Preset Role Default
+            Sync Preset Role Default
           </Button>
           <Button onClick={handleOpenCreate} className="text-xs font-semibold">
             <Plus className="me-1.5 h-4 w-4" /> {t("new.title")}
