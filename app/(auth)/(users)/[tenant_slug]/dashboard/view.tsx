@@ -64,29 +64,18 @@ function UserWorkspaceDashboardView({
   const tenantSlug = activeTenant?.slug || "";
   const activeMembership = memberships.find((m) => m.tenant_id === activeTenant?.id);
   const userRole = activeMembership?.roles?.name || (isId ? "Anggota" : "Member");
-  const userInitials = (profile?.full_name || "Workspace Member")
-    .split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase();
+
 
   return (
     <div className="mx-auto w-full space-y-6 py-4">
       {/* TOP BANNER / GREETING & QUICK ACTIONS */}
       <div className="bg-card border-border flex flex-col gap-4 rounded-xl border p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <div className="bg-primary/10 text-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-xl font-bold text-lg">
-            {userInitials}
-          </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-foreground text-xl font-bold tracking-tight sm:text-2xl">
-                {isId ? "Selamat datang kembali," : "Welcome back,"} {profile?.full_name || (isId ? "Anggota Workspace" : "Workspace Member")}
+                {isId ? "Selamat datang," : "Welcome,"} {profile?.full_name || (isId ? "Anggota Workspace" : "Workspace Member")}
               </h1>
-              <Badge variant="secondary" className="text-xs font-medium">
-                {userRole}
-              </Badge>
             </div>
 
           </div>
@@ -256,8 +245,8 @@ function UserWorkspaceDashboardView({
                             <td className="py-3">
                               <Badge
                                 className={`rounded-full text-[10px] font-bold uppercase ${isSuccess
-                                    ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15"
-                                    : "bg-red-500/15 text-red-600 hover:bg-red-500/15"
+                                  ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15"
+                                  : "bg-red-500/15 text-red-600 hover:bg-red-500/15"
                                   }`}>
                                 {tx.status}
                               </Badge>
@@ -362,8 +351,8 @@ function UserWorkspaceDashboardView({
                     <span className="text-muted-foreground">Status</span>
                     <Badge
                       className={`rounded-full text-[10px] font-bold uppercase ${tenantSubscription.status === "active"
-                          ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15"
-                          : "bg-amber-500/15 text-amber-600 hover:bg-amber-500/15"
+                        ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15"
+                        : "bg-amber-500/15 text-amber-600 hover:bg-amber-500/15"
                         }`}>
                       {tenantSubscription.status}
                     </Badge>
