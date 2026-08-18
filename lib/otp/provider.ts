@@ -21,6 +21,11 @@ class EmailOtpProvider implements OtpChannelProvider {
       purpose === "login" || purpose === "password_reset"
         ? `Your verification code: ${code}`
         : `Verification code: ${code}`;
+        
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`\n\n[DEV MODE - OTP DEBUG] KODE OTP UNTUK ${target} ADALAH: ${code}\n\n`);
+    }
+
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px">
         <h2>Your verification code</h2>

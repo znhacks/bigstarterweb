@@ -4,7 +4,7 @@ export const AUTH_FEATURES = {
   enableMagicLink: true,
   enableGoogle: true,
   enableGithub: false,
-  enablePasskey: true,
+  enablePasskey: false,
   enablePasswordReset: true,
   enableSignup: true
 };

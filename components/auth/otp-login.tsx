@@ -80,48 +80,53 @@ export function OtpLoginForm() {
         </Alert>
       )}
 
+      <div className="grid gap-2">
+        <Label htmlFor="otp-email">{t("email")}</Label>
+        <Input
+          id="otp-email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder={t("email")}
+          disabled={busy || sent}
+        />
+      </div>
+
       {!sent ? (
-        <>
-          <div className="grid gap-2">
-            <Label htmlFor="otp-email">{t("email")}</Label>
-            <Input
-              id="otp-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t("email")}
-              disabled={busy}
-            />
-          </div>
-          <Button onClick={sendCode} disabled={busy || !email} className="h-10 w-full">
-            {busy && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-            {t("sendCode")}
-          </Button>
-        </>
+        <Button onClick={sendCode} disabled={busy || !email} className="h-10 w-full mt-2">
+          {busy && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+          {t("sendCode")}
+        </Button>
       ) : (
-        <>
+        <div className="grid gap-4 mt-2">
           <p className="text-muted-foreground text-sm">{t("codeSent", { email })}</p>
-          <div className="flex justify-center">
-            <InputOTP maxLength={6} value={code} onChange={setCode}>
-              <InputOTPGroup>
-                <InputOTPSlot index={0} />
-                <InputOTPSlot index={1} />
-                <InputOTPSlot index={2} />
-                <InputOTPSlot index={3} />
-                <InputOTPSlot index={4} />
-                <InputOTPSlot index={5} />
-              </InputOTPGroup>
-            </InputOTP>
+          
+          <div className="grid gap-2">
+            <Label className="text-center">Masukkan Kode OTP</Label>
+            <div className="flex justify-center">
+              <InputOTP maxLength={6} value={code} onChange={setCode}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
           </div>
+
           <Button onClick={verify} disabled={busy || code.length < 6} className="h-10 w-full">
             {busy && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             {t("verify")}
           </Button>
+          
           <Button variant="link" onClick={sendCode} disabled={busy} className="text-xs">
             {t("resend")}
           </Button>
-        </>
+        </div>
       )}
     </div>
   );
