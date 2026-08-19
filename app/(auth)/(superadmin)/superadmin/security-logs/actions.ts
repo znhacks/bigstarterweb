@@ -29,22 +29,14 @@ export async function getSuperadminSecurityLogsAction(): Promise<{
   let logs: SuperadminSecurityLogItem[] = [];
 
   try {
-    // 1. Cek log autentikasi dari schema auth (auth.audit_log_entries)
-    const authPromise = supabaseAdmin
-      .schema("auth")
-      .from("audit_log_entries")
-      .select("id, created_at, payload")
-      .order("created_at", { ascending: false })
-      .limit(100);
-
-    // 2. Baca dari public.audit_logs web jmpanel
-    const dbPromise = supabaseAdmin
+    // Baca dari public.audit_logs web jmpanel dan filter log mobile app
+    const { data: dbData, error: dbError } = await supabaseAdmin
       .from("audit_logs")
       .select("id, action, entity, ip_address, user_agent, created_at, user_id, user_role, payload_changes")
+      .not("user_agent", "ilike", "%Supabase Database Trigger%") // Abaikan trigger dari mobile
+      .not("action", "ilike", "%MOBILE%") // Abaikan aksi dari mobile
       .order("created_at", { ascending: false })
       .limit(100);
-
-    const [authRes, dbRes] = await Promise.all([authPromise, dbPromise]);
 
     const rawLogs: any[] = [];
     
@@ -58,16 +50,8 @@ export async function getSuperadminSecurityLogsAction(): Promise<{
     // Kumpulkan semua user_id unik
     const uniqueUserIds = new Set<string>();
     
-    if (!authRes.error && authRes.data) {
-      authRes.data.forEach((entry: any) => {
-        const payload = entry.payload || {};
-        const actorId = payload.actor_id || payload.user_id;
-        if (actorId) uniqueUserIds.add(actorId);
-      });
-    }
-
-    if (!dbRes.error && dbRes.data) {
-      dbRes.data.forEach((item: any) => {
+    if (!dbError && dbData) {
+      dbData.forEach((item: any) => {
         if (item.user_id) uniqueUserIds.add(item.user_id);
       });
     }
@@ -88,59 +72,8 @@ export async function getSuperadminSecurityLogsAction(): Promise<{
       await Promise.all(userPromises);
     }
 
-    if (!authRes.error && authRes.data) {
-      authRes.data.forEach((entry: any) => {
-        const payload = entry.payload || {};
-        const ip = payload.ip_address || "127.0.0.1";
-        const userAgent = payload.user_agent || "Browser / Web Session";
-        const action = String(payload.action || "user_login").toLowerCase();
-        
-        const actorId = payload.actor_id || payload.user_id;
-        let email = payload.actor_email || payload.email;
-        if (!email && actorId) {
-          email = authUserMap.get(actorId);
-        }
-        if (!email) {
-          email = "user@jmpanel.id";
-        }
-
-        let event: SuperadminSecurityLogItem["event"] = "LOGIN";
-        if (action.includes("signup") || action.includes("register")) event = "REGISTER";
-        else if (action.includes("logout") || action.includes("sign_out")) event = "LOGOUT";
-        else if (action.includes("reset") || action.includes("recovery")) event = "PASSWORD_RESET";
-
-        const isScript =
-          userAgent.toLowerCase().includes("python") ||
-          userAgent.toLowerCase().includes("postman") ||
-          userAgent.toLowerCase().includes("curl") ||
-          userAgent.toLowerCase().includes("axios");
-
-        const isForeignIP = checkForeignIP(ip);
-        const isFailed = action.includes("fail") || action.includes("error") || action.includes("denied");
-
-        const isSuspicious = isScript || isForeignIP || isFailed;
-
-        let suspiciousReason = "";
-        if (isScript) suspiciousReason = "Deteksi Script/Tool HTTP (Postman/Python/Curl)";
-        else if (isForeignIP) suspiciousReason = "IP Luar Negeri / Proxy Terdeteksi";
-        else if (isFailed) suspiciousReason = "Percobaan Login Gagal / Akses Ditolak";
-
-        rawLogs.push({
-          id: entry.id,
-          rawDate: entry.created_at,
-          email,
-          event,
-          ip,
-          location: isForeignIP ? "Luar Negeri / Proxy" : "Indonesia (ISP Lokal)",
-          device: userAgent,
-          isSuspicious,
-          suspiciousReason
-        });
-      });
-    }
-
-    if (!dbRes.error && dbRes.data) {
-      dbRes.data.forEach((item: any) => {
+    if (!dbError && dbData) {
+      dbData.forEach((item: any) => {
         const actionText = String(item.action || item.entity || "LOGIN").toLowerCase();
         const ip = item.ip_address || "127.0.0.1";
         const userAgent = item.user_agent || "JM-Panel Web Portal";

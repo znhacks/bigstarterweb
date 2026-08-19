@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient as createServerClient } from "@/lib/supabase/server";
-
+import { supabaseAdmin } from "@/lib/api/supabase-server";
 import { headers } from "next/headers";
 
 export async function loginAction(formData: { email: string; password: string }) {
@@ -25,6 +25,8 @@ export async function loginAction(formData: { email: string; password: string })
           .eq("id", data.user.id)
           .maybeSingle();
 
+        const role = prof?.is_superadmin ? "superadmin" : "admin";
+
         if (prof?.is_superadmin) {
           redirectUrl = "/superadmin/dashboard";
         } else {
@@ -35,6 +37,24 @@ export async function loginAction(formData: { email: string; password: string })
           } else {
             redirectUrl = "/create-tenant";
           }
+        }
+
+        // Catat Web Login ke public.audit_logs
+        try {
+          const headersList = await headers();
+          const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+          const userAgent = headersList.get("user-agent") || "JM-Panel Web Portal";
+          
+          await supabaseAdmin.from("audit_logs").insert({
+            action: "WEB_LOGIN",
+            entity: "auth",
+            ip_address: ip,
+            user_agent: userAgent,
+            user_id: data.user.id,
+            user_role: role
+          });
+        } catch (e) {
+          console.error("Gagal mencatat login audit:", e);
         }
       }
     } catch {
@@ -66,7 +86,7 @@ export async function logoutAction() {
         
       const role = prof?.is_superadmin ? "superadmin" : "admin";
 
-      await supabase.from("audit_logs").insert({
+      await supabaseAdmin.from("audit_logs").insert({
         action: "LOGOUT",
         entity: "auth",
         ip_address: ip,
