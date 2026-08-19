@@ -39,6 +39,10 @@ export function NavUser() {
 
   const handleLogOut = async () => {
     try {
+      // Catat log logout ke database sebelum sesi dihapus
+      const { logoutAction } = await import("@/app/actions/auth");
+      await logoutAction();
+
       await supabase.auth.signOut();
 
       localStorage.removeItem("active_org_id");

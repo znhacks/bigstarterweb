@@ -54,7 +54,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
       };
     }
 
-    const [ { data: tSchools }, { data: { user } } ] = await Promise.all([
+    const [{ data: tSchools }, { data: { user } }] = await Promise.all([
       dbClient.from("tenant_schools").select("school_id, school_code").eq("tenant_id", tenant.id),
       supabase.auth.getUser()
     ]);
@@ -132,11 +132,11 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
 
     const logs: ActivityLogItem[] = [];
 
-    // Helper intruder detection
-    const analyzeIntruderRisk = (action: string, agent: string, ip: string) => {
+    // Helper  detection
+    const analyzeRisk = (action: string, agent: string, ip: string) => {
       const actionLower = (action || "").toLowerCase();
       const agentLower = (agent || "").toLowerCase();
-      
+
       const isScript = agentLower.includes("postman") || agentLower.includes("python") || agentLower.includes("curl") || agentLower.includes("axios");
       const isForeignIP = Boolean(ip && ip !== "-" && !ip.startsWith("180.") && !ip.startsWith("36.") && !ip.startsWith("114.") && ip !== "127.0.0.1");
       const isFailedAuth = actionLower.includes("fail") || actionLower.includes("unauthorized") || actionLower.includes("denied");
@@ -178,7 +178,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
 
         const actionText = dl.action || dl.entity || "Aktivitas App";
         const isFailed = /FAILED|ERROR/i.test(actionText);
-        const { isSuspicious, reason, eventType, location } = analyzeIntruderRisk(actionText, dl.user_agent || "", dl.ip_address || "");
+        const { isSuspicious, reason, eventType, location } = analyzeRisk(actionText, dl.user_agent || "", dl.ip_address || "");
 
         logs.push({
           id: dl.id,
@@ -209,7 +209,7 @@ export async function getActivityLogsData(tenantSlug: string): Promise<{
       (generalLogs || []).forEach((dl: any) => {
         const actionText = dl.action || dl.entity || "Aktivitas App";
         const isFailed = /FAILED|ERROR/i.test(actionText);
-        const { isSuspicious, reason, eventType, location } = analyzeIntruderRisk(actionText, dl.user_agent || "", dl.ip_address || "");
+        const { isSuspicious, reason, eventType, location } = analyzeRisk(actionText, dl.user_agent || "", dl.ip_address || "");
 
         logs.push({
           id: dl.id,

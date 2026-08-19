@@ -91,7 +91,7 @@ export function ActivityLogsView({
             Log Keamanan &amp; Aktivitas App
           </h1>
           <p className="text-muted-foreground text-xs mt-1">
-            Pemantauan riwayat login, logout, register, serta deteksi potensi intruder pada aplikasi mobile {tenantName || ""}.
+            Pemantauan riwayat login, logout, register, serta deteksi potensi  pada aplikasi mobile {tenantName || ""}.
           </p>
         </div>
         <SchoolMultiFilter
@@ -128,7 +128,7 @@ export function ActivityLogsView({
             <ShieldAlert className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Deteksi Intruder/Proxy</p>
+            <p className="text-xs text-muted-foreground">Deteksi /Proxy</p>
             <p className="text-2xl font-bold text-destructive">{stats.suspiciousCount}</p>
           </div>
         </Card>
@@ -154,7 +154,7 @@ export function ActivityLogsView({
             onClick={() => setEventFilter(filterKey)}
             className="text-xs font-semibold"
           >
-            {filterKey === "ALL" ? "Semua Event" : filterKey === "SUSPICIOUS" ? "⚠️ Intruder/Mencurigakan" : filterKey}
+            {filterKey === "ALL" ? "Semua Event" : filterKey === "SUSPICIOUS" ? "⚠️ /Mencurigakan" : filterKey}
           </Button>
         ))}
       </div>

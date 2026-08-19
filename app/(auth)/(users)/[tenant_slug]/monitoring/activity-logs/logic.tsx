@@ -26,17 +26,16 @@ export function useActivityLogsLogic(data: ActivityLogItem[]) {
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium">{row.activity_type}</span>
             <Badge
-              className={`w-fit font-bold text-[9px] uppercase ${
-                row.event_type === "LOGIN"
+              className={`w-fit font-bold text-[9px] uppercase ${row.event_type === "LOGIN"
                   ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
                   : row.event_type === "REGISTER"
-                  ? "bg-purple-500/10 text-purple-600 border-purple-500/20"
-                  : row.event_type === "LOGOUT"
-                  ? "bg-gray-500/10 text-gray-600 border-gray-500/20"
-                  : row.event_type === "SUSPICIOUS_ATTEMPT"
-                  ? "bg-red-500/20 text-red-600 border-red-500/30"
-                  : "bg-secondary text-secondary-foreground"
-              }`}
+                    ? "bg-purple-500/10 text-purple-600 border-purple-500/20"
+                    : row.event_type === "LOGOUT"
+                      ? "bg-gray-500/10 text-gray-600 border-gray-500/20"
+                      : row.event_type === "SUSPICIOUS_ATTEMPT"
+                        ? "bg-red-500/20 text-red-600 border-red-500/30"
+                        : "bg-secondary text-secondary-foreground"
+                }`}
             >
               {row.event_type}
             </Badge>
@@ -69,7 +68,7 @@ export function useActivityLogsLogic(data: ActivityLogItem[]) {
           row.is_suspicious ? (
             <div className="flex flex-col">
               <Badge variant="destructive" className="w-fit text-[10px] font-bold gap-1">
-                ⚠️ INTRUDER RISK
+                ⚠️  RISK
               </Badge>
               {row.suspicious_reason && (
                 <span className="text-[9px] text-destructive mt-0.5 max-w-[150px] leading-tight">
