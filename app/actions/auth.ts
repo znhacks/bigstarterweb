@@ -12,7 +12,23 @@ export async function loginAction(formData: { email: string; password: string })
       password: formData.password
     });
 
+    const headersList = await headers();
+    const ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+    const userAgent = headersList.get("user-agent") || "JM-Panel Web Portal";
+
     if (error) {
+      // Catat Percobaan Login Gagal (Suspicious / Failed Attempt)
+      try {
+        await supabaseAdmin.from("audit_logs").insert({
+          action: "LOGIN_FAILED",
+          entity: "auth",
+          ip_address: ip,
+          user_agent: userAgent,
+          payload_changes: { email: formData.email, reason: error.message }
+        });
+      } catch (e) {
+        console.error("Gagal mencatat login_failed audit:", e);
+      }
       return { error: error.message };
     }
 
@@ -41,17 +57,14 @@ export async function loginAction(formData: { email: string; password: string })
 
         // Catat Web Login ke public.audit_logs
         try {
-          const headersList = await headers();
-          const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
-          const userAgent = headersList.get("user-agent") || "JM-Panel Web Portal";
-          
           await supabaseAdmin.from("audit_logs").insert({
             action: "WEB_LOGIN",
             entity: "auth",
             ip_address: ip,
             user_agent: userAgent,
             user_id: data.user.id,
-            user_role: role
+            user_role: role,
+            payload_changes: { email: data.user.email || formData.email }
           });
         } catch (e) {
           console.error("Gagal mencatat login audit:", e);
@@ -68,31 +81,38 @@ export async function loginAction(formData: { email: string; password: string })
   }
 }
 
-export async function logoutAction() {
+export async function logoutAction(params?: { email?: string; userId?: string }) {
   try {
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (user) {
+    const targetUserId = user?.id || params?.userId || null;
+    const targetEmail = user?.email || params?.email || null;
+
+    if (targetUserId || targetEmail) {
       const headersList = await headers();
-      const ip = headersList.get("x-forwarded-for") || "127.0.0.1";
+      const ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
       const userAgent = headersList.get("user-agent") || "JM-Panel Web Portal";
       
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("is_superadmin")
-        .eq("id", user.id)
-        .maybeSingle();
-        
-      const role = prof?.is_superadmin ? "superadmin" : "admin";
+      let role = "user";
+      if (targetUserId) {
+        const { data: prof } = await supabaseAdmin
+          .from("profiles")
+          .select("is_superadmin")
+          .eq("id", targetUserId)
+          .maybeSingle();
+          
+        role = prof?.is_superadmin ? "superadmin" : "admin";
+      }
 
       await supabaseAdmin.from("audit_logs").insert({
         action: "LOGOUT",
         entity: "auth",
         ip_address: ip,
         user_agent: userAgent,
-        user_id: user.id,
-        user_role: role
+        user_id: targetUserId,
+        user_role: role,
+        payload_changes: { email: targetEmail }
       });
     }
 

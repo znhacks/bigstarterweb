@@ -240,6 +240,20 @@ export async function setupRegistrationTenant(params: {
         sameSite: "lax"
       });
 
+      // Catat WEB_REGISTER ke audit_logs
+      try {
+        const { supabaseAdmin } = await import("@/lib/api/supabase-server");
+        await supabaseAdmin.from("audit_logs").insert({
+          action: "WEB_REGISTER",
+          entity: "auth",
+          user_id: userId,
+          user_role: "owner",
+          payload_changes: { tenant_name: name, tenant_slug: newTenant.slug }
+        });
+      } catch (logErr) {
+        console.warn("Gagal mencatat audit log WEB_REGISTER:", logErr);
+      }
+
       return { success: true, tenantSlug: newTenant.slug, tenantId: newTenant.id };
     } else {
       // JOIN OPTION

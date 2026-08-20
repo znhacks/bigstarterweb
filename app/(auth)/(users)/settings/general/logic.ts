@@ -405,7 +405,7 @@ export function useGeneralSettings() {
 
       // Catat log logout ke database sebelum sesi dihapus
       const { logoutAction } = await import("@/app/actions/auth");
-      await logoutAction();
+      await logoutAction({ email, userId });
 
       await supabase.auth.signOut();
       localStorage.removeItem("active_org_id");
