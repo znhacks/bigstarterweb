@@ -160,19 +160,42 @@ export function TemplatesView({
     textCol<SuperadminTemplate>({
       key: "id",
       header: t("table.event"),
-      cell: (row) => <span className="font-mono text-xs">{row.id}</span>,
+      cell: (row) => {
+        const humanTitle = getLocalizedValue(row.title, locale) || row.id;
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-semibold text-xs text-foreground">{humanTitle}</span>
+            <code className="text-[10px] text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded w-fit">
+              {row.id}
+            </code>
+          </div>
+        );
+      },
       enableGlobalFilter: true
     }),
     textCol<SuperadminTemplate>({
       key: "category",
       header: t("table.category"),
       cell: (row) => <Badge variant="secondary">{categoryLabel(row.category)}</Badge>,
-      enableGlobalFilter: true // Ubah menjadi true agar kolom ini ikut dicari secara global
+      enableGlobalFilter: true
     }),
     textCol<SuperadminTemplate>({
       key: "title",
       header: t("table.title"),
-      cell: (row) => row.title?.en ?? row.title?.[Object.keys(row.title)[0]] ?? "—",
+      cell: (row) => {
+        const titleText = getLocalizedValue(row.title, locale);
+        const bodyText = getLocalizedValue(row.body, locale);
+        return (
+          <div className="flex flex-col gap-0.5 max-w-[320px]">
+            <span className="font-medium text-xs text-foreground truncate">{titleText || "—"}</span>
+            {bodyText && (
+              <span className="text-muted-foreground text-[11px] truncate" title={bodyText}>
+                {bodyText}
+              </span>
+            )}
+          </div>
+        );
+      },
       enableGlobalFilter: true
     }),
     textCol<SuperadminTemplate>({

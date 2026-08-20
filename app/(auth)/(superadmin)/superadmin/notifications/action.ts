@@ -23,16 +23,64 @@ import type {
 const NOTIFICATIONS_BASE = "/superadmin/notifications";
 
 /* ------------------------------------------------------------------ */
-/* Reads                                                               */
+/* Seeds & Reads                                                       */
 /* ------------------------------------------------------------------ */
+
+async function ensureNotificationSeeds() {
+  try {
+    const catRepo = await notificationCategoryRepository(supabaseAdmin);
+    const { data: existingCats } = await catRepo.query().select("id").limit(1);
+
+    if (!existingCats || existingCats.length === 0) {
+      const categoriesSeed = [
+        { id: "system", label_key: "notifications.category.system", description: "System & app-level alerts", default_channels: { in_app: true, email: true, push: false }, sort_order: 0, is_system: true },
+        { id: "payment", label_key: "notifications.category.payment", description: "Payment events", default_channels: { in_app: true, email: true, push: false }, sort_order: 10, is_system: true },
+        { id: "subscription", label_key: "notifications.category.subscription", description: "Subscription lifecycle", default_channels: { in_app: true, email: true, push: false }, sort_order: 20, is_system: true },
+        { id: "trial", label_key: "notifications.category.trial", description: "Trial reminders", default_channels: { in_app: true, email: true, push: false }, sort_order: 30, is_system: true },
+        { id: "security", label_key: "notifications.category.security", description: "Security & account access", default_channels: { in_app: true, email: true, push: true }, sort_order: 40, is_system: true },
+        { id: "account", label_key: "notifications.category.account", description: "Account changes", default_channels: { in_app: true, email: true, push: false }, sort_order: 50, is_system: true },
+        { id: "invitation", label_key: "notifications.category.invitation", description: "Tenant invitations", default_channels: { in_app: true, email: true, push: false }, sort_order: 60, is_system: true },
+        { id: "member", label_key: "notifications.category.member", description: "Membership changes", default_channels: { in_app: true, email: true, push: false }, sort_order: 70, is_system: true },
+        { id: "announcement", label_key: "notifications.category.announcement", description: "Admin announcements", default_channels: { in_app: true, email: true, push: false }, sort_order: 80, is_system: true },
+        { id: "marketing", label_key: "notifications.category.marketing", description: "Marketing & promotional", default_channels: { in_app: false, email: true, push: false }, sort_order: 90, is_system: true }
+      ];
+      await catRepo.insert(categoriesSeed);
+    }
+
+    const tplRepo = await notificationTemplateRepository(supabaseAdmin);
+    const { data: existingTpls } = await tplRepo.query().select("id").limit(1);
+
+    if (!existingTpls || existingTpls.length === 0) {
+      const templatesSeed = [
+        { id: "security.login_new_device", category: "security", title: { id: "Login dari Perangkat Baru", en: "New Device Login" }, body: { id: "Akun Anda baru saja digunakan untuk login dari perangkat baru.", en: "Your account was recently used to log in from a new device." }, channels: ["in_app", "email"], variables: { device: { type: "string" } }, link: "/settings/security", is_enabled: true, is_system: true },
+        { id: "security.password_changed", category: "security", title: { id: "Kata Sandi Diubah", en: "Password Changed" }, body: { id: "Kata sandi akun Anda telah berhasil diperbarui.", en: "Your account password has been successfully updated." }, channels: ["in_app", "email"], variables: {}, link: "/settings/security", is_enabled: true, is_system: true },
+        { id: "payment.success", category: "payment", title: { id: "Pembayaran Berhasil", en: "Payment Successful" }, body: { id: "Pembayaran untuk paket {{plan}} sebesar {{amount}} telah diterima.", en: "Payment for {{plan}} of {{amount}} was successfully received." }, channels: ["in_app", "email"], variables: { plan: { type: "string" }, amount: { type: "string" } }, link: "/settings/billing", is_enabled: true, is_system: true },
+        { id: "subscription.expiring", category: "subscription", title: { id: "Langganan Akan Berakhir", en: "Subscription Expiring Soon" }, body: { id: "Langganan Anda akan berakhir dalam {{days}} hari.", en: "Your subscription will expire in {{days}} days." }, channels: ["in_app", "email"], variables: { days: { type: "number" } }, link: "/settings/billing", is_enabled: true, is_system: true },
+        { id: "invitation.received", category: "invitation", title: { id: "Undangan Organisasi Baru", en: "New Organization Invitation" }, body: { id: "Anda telah diundang untuk bergabung ke organisasi {{tenant}}.", en: "You have been invited to join organization {{tenant}}." }, channels: ["in_app", "email"], variables: { tenant: { type: "string" }, invitationId: { type: "string" } }, link: "/invitations/{{invitationId}}", is_enabled: true, is_system: true },
+        { id: "announcement.new", category: "announcement", title: { id: "Pengumuman Baru dari Admin", en: "New Admin Announcement" }, body: { id: "{{title}}", en: "{{title}}" }, channels: ["in_app", "email"], variables: { title: { type: "string" } }, link: "/notifications", is_enabled: true, is_system: true },
+        { id: "system.alert", category: "system", title: { id: "Peringatan Sistem", en: "System Alert" }, body: { id: "{{message}}", en: "{{message}}" }, channels: ["in_app", "email"], variables: { message: { type: "string" } }, link: "/notifications", is_enabled: true, is_system: true }
+      ];
+      await tplRepo.insert(templatesSeed);
+    }
+  } catch (err) {
+    console.warn("Notice seeding notification defaults:", err);
+  }
+}
 
 export async function getNotificationCategories(): Promise<SuperadminCategory[]> {
   await requireSuperadmin();
   const repo = await notificationCategoryRepository(supabaseAdmin);
-  const { data } = await repo
+  let { data } = await repo
     .query()
     .select("*")
     .order("sort_order", { ascending: true });
+
+  if (!data || data.length === 0) {
+    await ensureNotificationSeeds();
+    const res = await repo.query().select("*").order("sort_order", { ascending: true });
+    data = res.data;
+  }
+
   return (data ?? []).map((c) => ({
     id: c.id,
     labelKey: c.label_key,
@@ -46,10 +94,17 @@ export async function getNotificationCategories(): Promise<SuperadminCategory[]>
 export async function getNotificationTemplates(): Promise<SuperadminTemplate[]> {
   await requireSuperadmin();
   const repo = await notificationTemplateRepository(supabaseAdmin);
-  const { data } = await repo
+  let { data } = await repo
     .query()
     .select("*")
     .order("category", { ascending: true });
+
+  if (!data || data.length === 0) {
+    await ensureNotificationSeeds();
+    const res = await repo.query().select("*").order("category", { ascending: true });
+    data = res.data;
+  }
+
   return (data ?? []).map((t) => ({
     id: t.id,
     category: t.category,
@@ -87,9 +142,6 @@ export async function getAnnouncements(): Promise<SuperadminAnnouncement[]> {
 
 export async function getDeliveryLogs(limit = 200): Promise<SuperadminDeliveryLog[]> {
   await requireSuperadmin();
-  // Service-role (supabaseAdmin) → bypass RLS → superadmin membaca SEMUA log
-  // lintas user. Email di-fetch terpisah (bukan embedded join) agar tidak gagal
-  // bila schema cache belum resolve relasi.
   const repo = await notificationDeliveryLogRepository(supabaseAdmin);
   const { data, error } = await repo
     .query()
@@ -171,15 +223,31 @@ export async function toggleTemplate(
 
 export async function sendTestNotification(
   event: string,
-  userId: string
+  userId?: string
 ): Promise<ActionResult> {
-  await requireSuperadmin();
-  if (!event || !userId) return { error: "event & userId wajib diisi." };
-  const results = await notificationService.send({ event, userId, data: {} });
+  const superadminUser = await requireSuperadmin();
+  const targetUserId = (userId && userId.trim()) ? userId.trim() : superadminUser.id;
+
+  const results = await notificationService.send({
+    event,
+    userId: targetUserId,
+    data: {
+      plan: "Enterprise Pro",
+      amount: "Rp1.500.000",
+      days: "7",
+      tenant: "JM Panel Portal",
+      title: "Uji Coba Pengumuman",
+      message: "Ini adalah notifikasi uji coba sistem.",
+      device: "Windows Chrome Browser",
+      invitationId: "test-invite-id"
+    }
+  });
+
   const anySent = results.some((r) => r.status === "sent" || r.status === "delivered");
   revalidatePath(`${NOTIFICATIONS_BASE}/delivery-logs`);
+
   if (!anySent) {
-    return { error: `Tidak ada channel aktif. Hasil: ${results.map((r) => `${r.channel}:${r.status}`).join(", ")}` };
+    return { error: `Hasil tes pengiriman: ${results.map((r) => `${r.channel}:${r.status}`).join(", ")}` };
   }
   return { success: true, data: { results } };
 }
