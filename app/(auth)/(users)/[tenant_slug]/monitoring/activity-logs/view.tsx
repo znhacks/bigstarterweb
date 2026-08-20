@@ -88,7 +88,7 @@ export function ActivityLogsView({
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <ShieldAlert className="h-6 w-6 text-primary" />
-            Log Keamanan; Aktivitas App
+            Log Keamanan &amp; Aktivitas App
           </h1>
           <p className="text-muted-foreground text-xs mt-1">
             Pemantauan riwayat login, logout, register, serta deteksi potensi  pada aplikasi mobile {tenantName || ""}.
