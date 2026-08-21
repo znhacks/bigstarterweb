@@ -51,12 +51,22 @@ function interpolate(template: string, data: Record<string, any> = {}): string {
 
 async function resolveRecipient(userId: string) {
   const repo = await profileRepository(supabaseAdmin);
-  const { data } = await repo
+  const { data: profile } = await repo
     .query()
-    .select("id, email, address_country")
+    .select("id, address_country")
     .eq("id", userId)
     .maybeSingle();
-  return data;
+
+  let email: string | undefined;
+  try {
+    const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    email = authData?.user?.email;
+  } catch (err) {
+    // ignore
+  }
+
+  if (!profile) return { id: userId, email };
+  return { ...profile, email };
 }
 
 function resolveLocale(profile: any, override?: string): string {
